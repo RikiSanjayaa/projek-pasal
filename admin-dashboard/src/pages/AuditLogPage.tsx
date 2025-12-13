@@ -19,7 +19,9 @@ import { useDebouncedValue, useDisclosure } from '@mantine/hooks'
 import { IconSearch, IconRefresh } from '@tabler/icons-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { DataTable, type Column } from '@/components/DataTable'
+import { AuditLogHint } from '@/components/AuditLogHint'
 import { supabase } from '@/lib/supabase'
+import { useDataMapping } from '@/contexts/DataMappingContext'
 import type { AuditLog } from '@/lib/database.types'
 
 const PAGE_SIZE = 20
@@ -73,12 +75,12 @@ export function AuditLogPage() {
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null)
 
   const queryClient = useQueryClient()
+  const { undangUndangData, pasalData } = useDataMapping()
 
   const handleRefresh = () => {
     // Invalidate all audit-related queries
     queryClient.invalidateQueries({ queryKey: ['audit_logs'] })
-    queryClient.invalidateQueries({ queryKey: ['undang_undang'] })
-    queryClient.invalidateQueries({ queryKey: ['pasal'] })
+    queryClient.invalidateQueries({ queryKey: ['data_mapping'] })
   }
 
   // Fetch audit logs
@@ -119,71 +121,6 @@ export function AuditLogPage() {
       return { data: data as AuditLog[], count: count || 0 }
     },
   })
-
-  // Fetch undang_undang for mapping IDs to names
-  const { data: undangUndangData } = useQuery({
-    queryKey: ['undang_undang'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('undang_undang')
-        .select('id, nama')
-        .eq('is_active', true)
-      if (error) throw error
-      return data as { id: string; nama: string }[]
-    },
-  })
-
-  // Fetch pasal for mapping IDs to numbers
-  const { data: pasalData } = useQuery({
-    queryKey: ['pasal'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pasal')
-        .select('id, nomor, undang_undang_id')
-        .is('deleted_at', null)
-      if (error) throw error
-      return data as { id: string; nomor: string; undang_undang_id: string }[]
-    },
-  })
-
-  const uuMap = new Map(undangUndangData?.map(uu => [uu.id, uu.nama]) || [])
-
-  const getPasalString = (pasalId: string): string => {
-    const pasal = pasalData?.find(p => p.id === pasalId)
-    if (!pasal) return pasalId
-    const uuNama = uuMap.get(pasal.undang_undang_id) || pasal.undang_undang_id
-    return `${uuNama} ${pasal.nomor}`
-  }
-
-  // Helper to get hint about what was changed
-  const getChangeHint = (log: AuditLog): string => {
-    const data = (log.new_data || log.old_data) as Record<string, unknown> | null
-    if (!data || typeof data !== 'object') return '-'
-
-    if (log.table_name === 'pasal') {
-      const nomor = (data.nomor as string) || ''
-      const judul = (data.judul as string) || ''
-      const undangUndangId = data.undang_undang_id as string
-      const undangUndangNama = undangUndangId ? uuMap.get(undangUndangId) || undangUndangId : ''
-      return `Pasal ${nomor}${judul ? ` - ${judul}` : ''}${undangUndangNama ? ` (${undangUndangNama})` : ''}`
-    }
-
-    if (log.table_name === 'undang_undang') {
-      const kode = (data.kode as string) || ''
-      const nama = (data.nama as string) || ''
-      return `${kode}${nama ? ` - ${nama}` : ''}`
-    }
-
-    if (log.table_name === 'pasal_links') {
-      const sourceId = data.source_pasal_id as string
-      const targetId = data.target_pasal_id as string
-      const sourceStr = sourceId ? getPasalString(sourceId) : sourceId
-      const targetStr = targetId ? getPasalString(targetId) : targetId
-      return `Link Pasal (${sourceStr} -> ${targetStr})`
-    }
-
-    return '-'
-  }
 
   // Define table columns for audit logs
   const auditLogColumns: Column<AuditLog>[] = [
@@ -243,9 +180,12 @@ export function AuditLogPage() {
       key: 'change_hint',
       title: 'Keterangan',
       render: (_, record) => (
-        <Text size="sm" lineClamp={1}>
-          {getChangeHint(record)}
-        </Text>
+        <AuditLogHint
+          log={record}
+          undangUndangData={undangUndangData}
+          pasalData={pasalData}
+          maxLength={50}
+        />
       ),
     },
   ]
@@ -367,7 +307,14 @@ export function AuditLogPage() {
             </Group>
             <Group>
               <Text fw={500}>Keterangan:</Text>
-              <Text>{getChangeHint(selectedLog)}</Text>
+              <Box>
+                <AuditLogHint
+                  log={selectedLog}
+                  undangUndangData={undangUndangData}
+                  pasalData={pasalData}
+                  showFull={true}
+                />
+              </Box>
             </Group>
             <Group>
               <Text fw={500}>Record ID:</Text>

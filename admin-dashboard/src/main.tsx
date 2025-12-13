@@ -13,11 +13,12 @@ import '@mantine/dropzone/styles.css'
 
 import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
+import { DataMappingProvider } from './contexts/DataMappingContext'
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 30 * 1000, // 30 seconds - more aggressive for real-time app
       retry: 1,
     },
   },
@@ -39,7 +40,9 @@ createRoot(document.getElementById('root')!).render(
         <ModalsProvider>
           <BrowserRouter>
             <AuthProvider>
-              <App />
+              <DataMappingProvider>
+                <App />
+              </DataMappingProvider>
             </AuthProvider>
           </BrowserRouter>
         </ModalsProvider>

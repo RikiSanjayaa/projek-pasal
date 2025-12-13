@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Title,
   Text,
@@ -25,6 +26,7 @@ import { supabase } from '@/lib/supabase'
 import type { UndangUndang, UndangUndangInsert, UndangUndangUpdate } from '@/lib/database.types'
 
 export function UndangUndangListPage() {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [createModal, { open: openCreate, close: closeCreate }] = useDisclosure(false)
   const [editModal, { open: openEdit, close: closeEdit }] = useDisclosure(false)
@@ -168,6 +170,7 @@ export function UndangUndangListPage() {
               <Table.Tr>
                 <Table.Th>Kode</Table.Th>
                 <Table.Th>Nama</Table.Th>
+                <Table.Th>Deskripsi</Table.Th>
                 <Table.Th>Tahun</Table.Th>
                 <Table.Th>Status</Table.Th>
                 <Table.Th w={100}>Aksi</Table.Th>
@@ -175,7 +178,13 @@ export function UndangUndangListPage() {
             </Table.Thead>
             <Table.Tbody>
               {undangUndangList?.map((uu) => (
-                <Table.Tr key={uu.id}>
+                <Table.Tr
+                  key={uu.id}
+                  style={{
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => navigate(`/pasal?uu=${uu.id}`)}
+                >
                   <Table.Td>
                     <Badge color="blue" variant="filled">
                       {uu.kode}
@@ -187,6 +196,7 @@ export function UndangUndangListPage() {
                       {uu.nama_lengkap}
                     </Text>
                   </Table.Td>
+                  <Table.Td>{uu.deskripsi || '-'}</Table.Td>
                   <Table.Td>{uu.tahun || '-'}</Table.Td>
                   <Table.Td>
                     <Badge color={uu.is_active ? 'green' : 'red'} variant="light">
@@ -198,7 +208,10 @@ export function UndangUndangListPage() {
                       <ActionIcon
                         variant="subtle"
                         color="blue"
-                        onClick={() => handleEdit(uu)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEdit(uu)
+                        }}
                       >
                         <IconEdit size={16} />
                       </ActionIcon>

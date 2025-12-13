@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Title,
   Text,
@@ -241,12 +241,13 @@ function LinkedPasalDetail({ pasalId, excludePasalId }: { pasalId: string; exclu
 
 export function PasalListPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
   const [debouncedSearch] = useDebouncedValue(search, 300)
-  const [filterUU, setFilterUU] = useState<string | null>(null)
+  const [filterUU, setFilterUU] = useState<string | null>(searchParams.get('uu'))
   const [deleteModal, { open: openDelete, close: closeDelete }] = useDisclosure(false)
   const [bulkDeleteModal, { open: openBulkDelete, close: closeBulkDelete }] = useDisclosure(false)
   const [viewModal, { open: openView, close: closeView }] = useDisclosure(false)
@@ -268,6 +269,20 @@ export function PasalListPage() {
       return data as { id: string; kode: string; nama: string }[]
     },
   })
+
+  // Update URL params when filterUU changes
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams)
+    if (filterUU) {
+      params.set('uu', filterUU)
+    } else {
+      params.delete('uu')
+    }
+    const newSearch = params.toString()
+    if (newSearch !== searchParams.toString()) {
+      navigate({ search: newSearch }, { replace: true })
+    }
+  }, [filterUU, navigate, searchParams])
 
   // Fetch pasal with pagination
   const { data: pasalData, isLoading } = useQuery({

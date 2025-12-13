@@ -16,7 +16,10 @@ import {
   IconUsers,
 } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { AuditLogHint } from '@/components/AuditLogHint'
+import { useDataMapping } from '@/contexts/DataMappingContext'
 
 interface StatsCardProps {
   title: string
@@ -51,80 +54,96 @@ function StatsCard({ title, value, icon, color, loading }: StatsCardProps) {
 }
 
 export function DashboardPage() {
-  // Fetch stats
-  const { data: pasalCount, isLoading: loadingPasal } = useQuery({
-    queryKey: ['stats', 'pasal'],
+  const navigate = useNavigate()
+  const { undangUndangData, pasalData } = useDataMapping()
+
+  // Fetch all dashboard data in one query for better performance
+  const { data: dashboardData, isLoading: loadingDashboard } = useQuery({
+    queryKey: ['dashboard', 'stats'],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('pasal')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', true)
+      // Fetch all stats in parallel
+      const [
+        pasalResult,
+        uuResult,
+        recentLogsResult,
+        totalChangesTodayResult,
+        undangUndangListResult,
+        pasalCountsResult
+      ] = await Promise.all([
+        // Total pasal count
+        supabase
+          .from('pasal')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_active', true),
 
-      if (error) throw error
-      return count || 0
-    },
-  })
+        // Total undang-undang count
+        supabase
+          .from('undang_undang')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_active', true),
 
-  const { data: uuCount, isLoading: loadingUU } = useQuery({
-    queryKey: ['stats', 'undang_undang'],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('undang_undang')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', true)
+        // Recent audit logs (limited to 10 for display)
+        supabase
+          .from('audit_logs')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(10),
 
-      if (error) throw error
-      return count || 0
-    },
-  })
+        // Total changes today count (unlimited for stats)
+        supabase
+          .from('audit_logs')
+          .select('*', { count: 'exact', head: true })
+          .gte('created_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString()),
 
-  const { data: recentLogs, isLoading: loadingLogs } = useQuery({
-    queryKey: ['stats', 'recent_logs'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('audit_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(5)
+        // Undang-undang list for cards
+        supabase
+          .from('undang_undang')
+          .select('*')
+          .eq('is_active', true)
+          .order('kode'),
 
-      if (error) throw error
-      return data
-    },
-  })
+        // Pasal counts per undang-undang
+        supabase
+          .from('pasal')
+          .select('undang_undang_id')
+          .eq('is_active', true)
+          .is('deleted_at', null)
+      ])
 
-  const { data: undangUndangList, isLoading: loadingUUList } = useQuery({
-    queryKey: ['undang_undang', 'list'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('undang_undang')
-        .select('*')
-        .eq('is_active', true)
-        .order('kode')
-
-      if (error) throw error
-      return data
-    },
-  })
-
-  const { data: pasalCounts, isLoading: loadingPasalCounts } = useQuery({
-    queryKey: ['pasal', 'counts'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pasal')
-        .select('undang_undang_id')
-        .eq('is_active', true)
-        .is('deleted_at', null)
-
-      if (error) throw error
+      // Check for errors
+      if (pasalResult.error) throw pasalResult.error
+      if (uuResult.error) throw uuResult.error
+      if (recentLogsResult.error) throw recentLogsResult.error
+      if (totalChangesTodayResult.error) throw totalChangesTodayResult.error
+      if (undangUndangListResult.error) throw undangUndangListResult.error
+      if (pasalCountsResult.error) throw pasalCountsResult.error
 
       // Count pasal per undang_undang_id
       const counts: Record<string, number> = {}
-      data.forEach((pasal: any) => {
+      pasalCountsResult.data.forEach((pasal: any) => {
         counts[pasal.undang_undang_id] = (counts[pasal.undang_undang_id] || 0) + 1
       })
-      return counts
+
+      return {
+        pasalCount: pasalResult.count || 0,
+        uuCount: uuResult.count || 0,
+        recentLogs: recentLogsResult.data || [],
+        totalChangesToday: totalChangesTodayResult.count || 0,
+        undangUndangList: undangUndangListResult.data || [],
+        pasalCounts: counts
+      }
     },
+    staleTime: 5 * 1000, // 5 seconds - real-time updates for dashboard
+    refetchInterval: 10 * 1000, // Auto-refresh every 10 seconds
   })
+
+  // Extract data from the combined query
+  const pasalCount = dashboardData?.pasalCount
+  const uuCount = dashboardData?.uuCount
+  const recentLogs = dashboardData?.recentLogs
+  const totalChangesToday = dashboardData?.totalChangesToday
+  const undangUndangList = dashboardData?.undangUndangList
+  const pasalCounts = dashboardData?.pasalCounts
 
   return (
     <Stack gap="lg">
@@ -140,21 +159,21 @@ export function DashboardPage() {
           value={pasalCount || 0}
           icon={<IconScale size={24} />}
           color="blue"
-          loading={loadingPasal}
+          loading={loadingDashboard}
         />
         <StatsCard
           title="Undang-Undang"
           value={uuCount || 0}
           icon={<IconBook size={24} />}
           color="green"
-          loading={loadingUU}
+          loading={loadingDashboard}
         />
         <StatsCard
           title="Perubahan Hari Ini"
-          value={recentLogs?.length || 0}
+          value={totalChangesToday || 0}
           icon={<IconHistory size={24} />}
           color="orange"
-          loading={loadingLogs}
+          loading={loadingDashboard}
         />
         <StatsCard
           title="Admin Aktif"
@@ -169,7 +188,7 @@ export function DashboardPage() {
         <Title order={4} mb="md">
           Ringkasan Undang-Undang
         </Title>
-        {loadingUUList || loadingPasalCounts ? (
+        {loadingDashboard ? (
           <Stack gap="sm">
             <Skeleton height={40} />
             <Skeleton height={40} />
@@ -179,12 +198,33 @@ export function DashboardPage() {
         ) : (
           <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
             {undangUndangList?.map((uu: any) => (
-              <Card key={uu.id} padding="md" radius="md" withBorder>
-                <Badge color="blue" variant="light" mb="xs">
-                  {uu.kode}
-                </Badge>
+              <Card
+                key={uu.id}
+                padding="md"
+                radius="md"
+                withBorder
+                style={{
+                  cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+                onClick={() => navigate(`/pasal?uu=${uu.id}`)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = ''
+                }}
+              >
+                <Group justify="space-between" mb={12}>
+                  <Text size="sm" fw={1000}>
+                    {uu.nama}
+                  </Text>
+                  <Badge color="blue" variant="light">
+                    {uu.kode}
+                  </Badge>
+                </Group>
                 <Text size="sm" fw={500}>
-                  {uu.nama}
+                  {uu.nama_lengkap}
                 </Text>
                 <Text size="xs" c="dimmed" mt={4}>
                   {pasalCounts?.[uu.id] || 0} pasal
@@ -200,7 +240,7 @@ export function DashboardPage() {
         <Title order={4} mb="md">
           Aktivitas Terbaru
         </Title>
-        {loadingLogs ? (
+        {loadingDashboard ? (
           <Stack gap="sm">
             <Skeleton height={30} />
             <Skeleton height={30} />
@@ -225,8 +265,19 @@ export function DashboardPage() {
                     {log.action}
                   </Badge>
                   <Text size="sm">
-                    {log.admin_email} - {log.table_name}
+                    {log.admin_email}
                   </Text>
+                  <Badge
+                    variant="outline"
+                  >
+                    {log.table_name.replace('_', ' ')}
+                  </Badge>
+                  <AuditLogHint
+                    log={log}
+                    undangUndangData={undangUndangData}
+                    pasalData={pasalData}
+                    maxLength={80}
+                  />
                 </Group>
                 <Text size="xs" c="dimmed">
                   {new Date(log.created_at).toLocaleString('id-ID')}
