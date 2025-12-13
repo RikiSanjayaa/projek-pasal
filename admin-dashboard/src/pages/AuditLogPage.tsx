@@ -6,48 +6,23 @@ import {
   Card,
   Group,
   Select,
-  Table,
-  Badge,
-  Pagination,
-  Skeleton,
   TextInput,
-  Code,
   Modal,
   ScrollArea,
   Box,
+  Button,
+  Badge,
+  Code,
 } from '@mantine/core'
 import { DatePickerInput } from '@mantine/dates'
 import { useDebouncedValue, useDisclosure } from '@mantine/hooks'
-import { IconSearch } from '@tabler/icons-react'
-import { useQuery } from '@tanstack/react-query'
+import { IconSearch, IconRefresh } from '@tabler/icons-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { DataTable, type Column } from '@/components/DataTable'
 import { supabase } from '@/lib/supabase'
 import type { AuditLog } from '@/lib/database.types'
 
 const PAGE_SIZE = 20
-
-// Helper to get hint about what was changed
-function getChangeHint(log: AuditLog): string {
-  const data = (log.new_data || log.old_data) as Record<string, unknown> | null
-  if (!data || typeof data !== 'object') return '-'
-
-  if (log.table_name === 'pasal') {
-    const nomor = (data.nomor as string) || ''
-    const judul = (data.judul as string) || ''
-    return `Pasal ${nomor}${judul ? ` - ${judul}` : ''}`
-  }
-
-  if (log.table_name === 'undang_undang') {
-    const kode = (data.kode as string) || ''
-    const nama = (data.nama as string) || ''
-    return `${kode}${nama ? ` - ${nama}` : ''}`
-  }
-
-  if (log.table_name === 'pasal_links') {
-    return 'Link Pasal'
-  }
-
-  return '-'
-}
 
 // Helper to compare objects and find differences
 function getDiff(oldData: Record<string, unknown> | null, newData: Record<string, unknown> | null) {
@@ -64,7 +39,7 @@ function getDiff(oldData: Record<string, unknown> | null, newData: Record<string
   }[] = []
 
   // Keys to skip in diff display
-  const skipKeys = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by', 'search_vector']
+  const skipKeys = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by', 'search_vector', 'undang_undang_id']
 
   allKeys.forEach((key) => {
     if (skipKeys.includes(key)) return
@@ -88,6 +63,7 @@ function getDiff(oldData: Record<string, unknown> | null, newData: Record<string
 
 export function AuditLogPage() {
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const [search, setSearch] = useState('')
   const [debouncedSearch] = useDebouncedValue(search, 300)
   const [filterAction, setFilterAction] = useState<string | null>(null)
@@ -96,15 +72,24 @@ export function AuditLogPage() {
   const [detailModal, { open: openDetail, close: closeDetail }] = useDisclosure(false)
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null)
 
+  const queryClient = useQueryClient()
+
+  const handleRefresh = () => {
+    // Invalidate all audit-related queries
+    queryClient.invalidateQueries({ queryKey: ['audit_logs'] })
+    queryClient.invalidateQueries({ queryKey: ['undang_undang'] })
+    queryClient.invalidateQueries({ queryKey: ['pasal'] })
+  }
+
   // Fetch audit logs
   const { data: logsData, isLoading } = useQuery({
-    queryKey: ['audit_logs', page, debouncedSearch, filterAction, filterTable, dateRange],
+    queryKey: ['audit_logs', page, pageSize, debouncedSearch, filterAction, filterTable, dateRange],
     queryFn: async () => {
       let query = supabase
         .from('audit_logs')
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
-        .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
+        .range((page - 1) * pageSize, page * pageSize - 1)
 
       if (debouncedSearch) {
         query = query.or(`admin_email.ilike.%${debouncedSearch}%,record_id.eq.${debouncedSearch}`)
@@ -135,24 +120,139 @@ export function AuditLogPage() {
     },
   })
 
+  // Fetch undang_undang for mapping IDs to names
+  const { data: undangUndangData } = useQuery({
+    queryKey: ['undang_undang'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('undang_undang')
+        .select('id, nama')
+        .eq('is_active', true)
+      if (error) throw error
+      return data as { id: string; nama: string }[]
+    },
+  })
+
+  // Fetch pasal for mapping IDs to numbers
+  const { data: pasalData } = useQuery({
+    queryKey: ['pasal'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pasal')
+        .select('id, nomor, undang_undang_id')
+        .is('deleted_at', null)
+      if (error) throw error
+      return data as { id: string; nomor: string; undang_undang_id: string }[]
+    },
+  })
+
+  const uuMap = new Map(undangUndangData?.map(uu => [uu.id, uu.nama]) || [])
+
+  const getPasalString = (pasalId: string): string => {
+    const pasal = pasalData?.find(p => p.id === pasalId)
+    if (!pasal) return pasalId
+    const uuNama = uuMap.get(pasal.undang_undang_id) || pasal.undang_undang_id
+    return `${uuNama} ${pasal.nomor}`
+  }
+
+  // Helper to get hint about what was changed
+  const getChangeHint = (log: AuditLog): string => {
+    const data = (log.new_data || log.old_data) as Record<string, unknown> | null
+    if (!data || typeof data !== 'object') return '-'
+
+    if (log.table_name === 'pasal') {
+      const nomor = (data.nomor as string) || ''
+      const judul = (data.judul as string) || ''
+      const undangUndangId = data.undang_undang_id as string
+      const undangUndangNama = undangUndangId ? uuMap.get(undangUndangId) || undangUndangId : ''
+      return `Pasal ${nomor}${judul ? ` - ${judul}` : ''}${undangUndangNama ? ` (${undangUndangNama})` : ''}`
+    }
+
+    if (log.table_name === 'undang_undang') {
+      const kode = (data.kode as string) || ''
+      const nama = (data.nama as string) || ''
+      return `${kode}${nama ? ` - ${nama}` : ''}`
+    }
+
+    if (log.table_name === 'pasal_links') {
+      const sourceId = data.source_pasal_id as string
+      const targetId = data.target_pasal_id as string
+      const sourceStr = sourceId ? getPasalString(sourceId) : sourceId
+      const targetStr = targetId ? getPasalString(targetId) : targetId
+      return `Link Pasal (${sourceStr} -> ${targetStr})`
+    }
+
+    return '-'
+  }
+
+  // Define table columns for audit logs
+  const auditLogColumns: Column<AuditLog>[] = [
+    {
+      key: 'created_at',
+      title: 'Waktu',
+      width: 160,
+      render: (value) => (
+        <Text size="sm">
+          {new Date(value as string).toLocaleString('id-ID', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </Text>
+      ),
+    },
+    {
+      key: 'admin_email',
+      title: 'Admin',
+      width: 200,
+      render: (value) => <Text size="sm">{value || '-'}</Text>,
+    },
+    {
+      key: 'action',
+      title: 'Aksi',
+      width: 100,
+      render: (value) => {
+        const getActionColor = (action: string) => {
+          switch (action) {
+            case 'CREATE':
+              return 'green'
+            case 'UPDATE':
+              return 'blue'
+            case 'DELETE':
+              return 'red'
+            default:
+              return 'gray'
+          }
+        }
+        return (
+          <Badge color={getActionColor(value as string)} variant="light">
+            {value}
+          </Badge>
+        )
+      },
+    },
+    {
+      key: 'table_name',
+      title: 'Tabel',
+      width: 120,
+      render: (value) => <Badge variant="outline">{value}</Badge>,
+    },
+    {
+      key: 'change_hint',
+      title: 'Keterangan',
+      render: (_, record) => (
+        <Text size="sm" lineClamp={1}>
+          {getChangeHint(record)}
+        </Text>
+      ),
+    },
+  ]
+
   const handleViewDetail = (log: AuditLog) => {
     setSelectedLog(log)
     openDetail()
-  }
-
-  const totalPages = Math.ceil((logsData?.count || 0) / PAGE_SIZE)
-
-  const getActionColor = (action: string) => {
-    switch (action) {
-      case 'CREATE':
-        return 'green'
-      case 'UPDATE':
-        return 'blue'
-      case 'DELETE':
-        return 'red'
-      default:
-        return 'gray'
-    }
   }
 
   const formatDate = (dateString: string) => {
@@ -168,8 +268,19 @@ export function AuditLogPage() {
   return (
     <Stack gap="lg">
       <div>
-        <Title order={2}>Audit Log</Title>
-        <Text c="dimmed">Riwayat perubahan data oleh admin</Text>
+        <Group justify="space-between" align="center">
+          <div>
+            <Title order={2}>Audit Log</Title>
+            <Text c="dimmed">Riwayat perubahan data oleh admin</Text>
+          </div>
+          <Button
+            leftSection={<IconRefresh size={16} />}
+            variant="light"
+            onClick={handleRefresh}
+          >
+            Refresh
+          </Button>
+        </Group>
       </div>
 
       {/* Filters */}
@@ -204,6 +315,7 @@ export function AuditLogPage() {
             clearable
           />
           <DatePickerInput
+            weekendDays={[0]}
             type="range"
             placeholder="Filter Tanggal"
             value={dateRange}
@@ -215,68 +327,21 @@ export function AuditLogPage() {
 
       {/* Table */}
       <Card shadow="sm" padding="md" radius="md" withBorder>
-        {isLoading ? (
-          <Stack gap="sm">
-            {[...Array(10)].map((_, i) => (
-              <Skeleton key={i} height={40} />
-            ))}
-          </Stack>
-        ) : (
-          <>
-            <Table striped highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Waktu</Table.Th>
-                  <Table.Th>Admin</Table.Th>
-                  <Table.Th>Aksi</Table.Th>
-                  <Table.Th>Tabel</Table.Th>
-                  <Table.Th>Keterangan</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {logsData?.data?.map((log) => (
-                  <Table.Tr
-                    key={log.id}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => handleViewDetail(log)}
-                  >
-                    <Table.Td>
-                      <Text size="sm">{formatDate(log.created_at)}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{log.admin_email || '-'}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge color={getActionColor(log.action)} variant="light">
-                        {log.action}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge variant="outline">{log.table_name}</Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm" lineClamp={1}>
-                        {getChangeHint(log)}
-                      </Text>
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-
-            {logsData?.data?.length === 0 && (
-              <Text c="dimmed" ta="center" py="xl">
-                Tidak ada data audit log
-              </Text>
-            )}
-
-            {totalPages > 1 && (
-              <Group justify="center" mt="md">
-                <Pagination value={page} onChange={setPage} total={totalPages} />
-              </Group>
-            )}
-          </>
-        )}
+        <DataTable
+          columns={auditLogColumns}
+          data={logsData?.data || []}
+          loading={isLoading}
+          current={page}
+          pageSize={pageSize}
+          total={logsData?.count || 0}
+          onPageChange={setPage}
+          onPageSizeChange={(newPageSize) => {
+            setPageSize(newPageSize)
+            setPage(1) // Reset to first page when changing page size
+          }}
+          onRowClick={handleViewDetail}
+          emptyText="Tidak ada data audit log"
+        />
       </Card>
 
       {/* Detail Modal */}

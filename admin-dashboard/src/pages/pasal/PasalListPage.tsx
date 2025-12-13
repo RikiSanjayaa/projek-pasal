@@ -9,14 +9,10 @@ import {
   Button,
   TextInput,
   Select,
-  Table,
   Badge,
   ActionIcon,
-  Pagination,
-  Skeleton,
   Modal,
   Tooltip,
-  Checkbox,
   Divider,
   Loader,
   Collapse,
@@ -35,6 +31,7 @@ import {
   IconChevronUp,
 } from '@tabler/icons-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { DataTable, type Column } from '@/components/DataTable'
 import { supabase } from '@/lib/supabase'
 import type { PasalWithUndangUndang } from '@/lib/database.types'
 
@@ -58,6 +55,64 @@ const PAGE_SIZE_OPTIONS = [
   { value: '15', label: '15 per halaman' },
   { value: '20', label: '20 per halaman' },
   { value: '30', label: '30 per halaman' },
+]
+
+// Define table columns
+const pasalColumns: Column<PasalWithUndangUndang>[] = [
+  {
+    key: 'undang_undang',
+    title: 'Undang-Undang',
+    width: 120,
+    render: (_, record) => (
+      <Badge color="blue" variant="light">
+        {record.undang_undang?.kode}
+      </Badge>
+    ),
+  },
+  {
+    key: 'nomor',
+    title: 'Nomor',
+    width: 100,
+    render: (value) => (
+      <Text fw={500}>Pasal {value}</Text>
+    ),
+  },
+  {
+    key: 'judul',
+    title: 'Judul',
+    render: (value) => (
+      <Text size="sm" lineClamp={1}>
+        {value || '-'}
+      </Text>
+    ),
+  },
+  {
+    key: 'isi',
+    title: 'Isi',
+    render: (value) => (
+      <Text size="sm" c="dimmed" lineClamp={2} style={{ maxWidth: 300 }}>
+        {value}
+      </Text>
+    ),
+  },
+  {
+    key: 'keywords',
+    title: 'Keywords',
+    render: (value) => (
+      <Group gap={4}>
+        {value?.slice(0, 2).map((kw: string, idx: number) => (
+          <Badge key={idx} size="xs" variant="outline">
+            {kw}
+          </Badge>
+        ))}
+        {(value?.length || 0) > 2 && (
+          <Badge size="xs" variant="outline" color="gray">
+            +{(value?.length || 0) - 2}
+          </Badge>
+        )}
+      </Group>
+    ),
+  },
 ]
 
 // Component to show linked pasal detail when expanded
@@ -360,28 +415,10 @@ export function PasalListPage() {
     }
   }
 
-  const toggleSelectAll = () => {
-    if (selectedIds.length === pasalData?.data?.length) {
-      setSelectedIds([])
-    } else {
-      setSelectedIds(pasalData?.data?.map((p) => p.id) || [])
-    }
-  }
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    )
-  }
-
-  const totalPages = Math.ceil((pasalData?.count || 0) / pageSize)
-
-  const handlePageSizeChange = (value: string | null) => {
-    if (value) {
-      setPageSize(Number(value))
-      setPage(1) // Reset to first page when changing page size
-      setSelectedIds([]) // Clear selection when changing page size
-    }
+  const handlePageSizeChange = (value: number) => {
+    setPageSize(value)
+    setPage(1) // Reset to first page when changing page size
+    setSelectedIds([]) // Clear selection when changing page size
   }
 
   return (
@@ -444,137 +481,44 @@ export function PasalListPage() {
 
       {/* Table */}
       <Card shadow="sm" padding="md" radius="md" withBorder>
-        {isLoading ? (
-          <Stack gap="sm">
-            {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} height={50} />
-            ))}
-          </Stack>
-        ) : (
-          <>
-            <Table striped highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th w={40}>
-                    <Checkbox
-                      checked={selectedIds.length === pasalData?.data?.length && pasalData?.data?.length > 0}
-                      indeterminate={selectedIds.length > 0 && selectedIds.length < (pasalData?.data?.length || 0)}
-                      onChange={toggleSelectAll}
-                    />
-                  </Table.Th>
-                  <Table.Th>Undang-Undang</Table.Th>
-                  <Table.Th>Nomor</Table.Th>
-                  <Table.Th>Judul</Table.Th>
-                  <Table.Th>Isi</Table.Th>
-                  <Table.Th>Keywords</Table.Th>
-                  <Table.Th w={80}>Aksi</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {pasalData?.data?.map((pasal) => (
-                  <Table.Tr
-                    key={pasal.id}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => handleView(pasal)}
-                    bg={selectedIds.includes(pasal.id) ? 'var(--mantine-color-blue-light)' : undefined}
-                  >
-                    <Table.Td onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={selectedIds.includes(pasal.id)}
-                        onChange={() => toggleSelect(pasal.id)}
-                      />
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge color="blue" variant="light">
-                        {pasal.undang_undang?.kode}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text fw={500}>Pasal {pasal.nomor}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm" lineClamp={1}>
-                        {pasal.judul || '-'}
-                      </Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm" c="dimmed" lineClamp={2} style={{ maxWidth: 300 }}>
-                        {pasal.isi}
-                      </Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Group gap={4}>
-                        {pasal.keywords?.slice(0, 2).map((kw, idx) => (
-                          <Badge key={idx} size="xs" variant="outline">
-                            {kw}
-                          </Badge>
-                        ))}
-                        {(pasal.keywords?.length || 0) > 2 && (
-                          <Badge size="xs" variant="outline" color="gray">
-                            +{(pasal.keywords?.length || 0) - 2}
-                          </Badge>
-                        )}
-                      </Group>
-                    </Table.Td>
-                    <Table.Td onClick={(e) => e.stopPropagation()}>
-                      <Group gap={4}>
-                        <Tooltip label="Edit">
-                          <ActionIcon
-                            variant="subtle"
-                            color="blue"
-                            onClick={() => navigate(`/pasal/${pasal.id}/edit`)}
-                          >
-                            <IconEdit size={16} />
-                          </ActionIcon>
-                        </Tooltip>
-                        <Tooltip label="Hapus">
-                          <ActionIcon
-                            variant="subtle"
-                            color="red"
-                            onClick={() => handleDelete(pasal)}
-                          >
-                            <IconTrash size={16} />
-                          </ActionIcon>
-                        </Tooltip>
-                      </Group>
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-
-            {pasalData?.data?.length === 0 && (
-              <Text c="dimmed" ta="center" py="xl">
-                Tidak ada data pasal
-              </Text>
-            )}
-
-            <Group justify="space-between" mt="md">
-              <Group gap="xs">
-                <Text size="sm" c="dimmed">
-                  Total: {pasalData?.count || 0} pasal
-                </Text>
-              </Group>
-              <Group gap="md">
-                {totalPages > 1 && (
-                  <Pagination
-                    value={page}
-                    onChange={setPage}
-                    total={totalPages}
-                  />
-                )}
-                <Select
-                  comboboxProps={{ withinPortal: true }}
-                  data={PAGE_SIZE_OPTIONS}
-                  value={String(pageSize)}
-                  onChange={handlePageSizeChange}
-                  w={150}
-                  size="sm"
-                />
-              </Group>
+        <DataTable
+          columns={pasalColumns}
+          data={pasalData?.data || []}
+          loading={isLoading}
+          current={page}
+          pageSize={pageSize}
+          total={pasalData?.count || 0}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+          onPageChange={setPage}
+          onPageSizeChange={handlePageSizeChange}
+          selectable
+          selectedIds={selectedIds}
+          onSelect={setSelectedIds}
+          onRowClick={handleView}
+          rowActions={(pasal) => (
+            <Group gap={4}>
+              <Tooltip label="Edit">
+                <ActionIcon
+                  variant="subtle"
+                  color="blue"
+                  onClick={() => navigate(`/pasal/${pasal.id}/edit`)}
+                >
+                  <IconEdit size={16} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Hapus">
+                <ActionIcon
+                  variant="subtle"
+                  color="red"
+                  onClick={() => handleDelete(pasal)}
+                >
+                  <IconTrash size={16} />
+                </ActionIcon>
+              </Tooltip>
             </Group>
-          </>
-        )}
+          )}
+          emptyText="Tidak ada data pasal"
+        />
       </Card>
 
       {/* Delete Confirmation Modal */}

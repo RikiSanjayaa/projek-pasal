@@ -97,12 +97,32 @@ export function DashboardPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('undang_undang')
-        .select('*, pasal(count)')
+        .select('*')
         .eq('is_active', true)
         .order('kode')
 
       if (error) throw error
       return data
+    },
+  })
+
+  const { data: pasalCounts, isLoading: loadingPasalCounts } = useQuery({
+    queryKey: ['pasal', 'counts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pasal')
+        .select('undang_undang_id')
+        .eq('is_active', true)
+        .is('deleted_at', null)
+
+      if (error) throw error
+
+      // Count pasal per undang_undang_id
+      const counts: Record<string, number> = {}
+      data.forEach((pasal: any) => {
+        counts[pasal.undang_undang_id] = (counts[pasal.undang_undang_id] || 0) + 1
+      })
+      return counts
     },
   })
 
@@ -149,7 +169,7 @@ export function DashboardPage() {
         <Title order={4} mb="md">
           Ringkasan Undang-Undang
         </Title>
-        {loadingUUList ? (
+        {loadingUUList || loadingPasalCounts ? (
           <Stack gap="sm">
             <Skeleton height={40} />
             <Skeleton height={40} />
@@ -167,7 +187,7 @@ export function DashboardPage() {
                   {uu.nama}
                 </Text>
                 <Text size="xs" c="dimmed" mt={4}>
-                  {uu.pasal?.[0]?.count || 0} pasal
+                  {pasalCounts?.[uu.id] || 0} pasal
                 </Text>
               </Card>
             ))}
