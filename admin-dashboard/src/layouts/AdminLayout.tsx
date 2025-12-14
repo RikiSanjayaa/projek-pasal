@@ -1,3 +1,4 @@
+import React from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   AppShell,
@@ -12,8 +13,10 @@ import {
   Avatar,
   Divider,
   Box,
+  Transition,
+  Drawer,
 } from '@mantine/core'
-import { useDisclosure } from '@mantine/hooks'
+import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import {
   IconHome,
   IconScale,
@@ -24,6 +27,8 @@ import {
   IconMoon,
   IconLogout,
   IconUser,
+  IconChevronLeft,
+  IconChevronRight,
 } from '@tabler/icons-react'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -36,11 +41,20 @@ const navItems = [
 ]
 
 export function AdminLayout() {
-  const [opened, { toggle }] = useDisclosure()
+  const [opened, { toggle, close }] = useDisclosure()
+  const [sidebarCollapsed, { toggle: toggleSidebar }] = useDisclosure(false)
   const { colorScheme, toggleColorScheme } = useMantineColorScheme()
   const { adminUser, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const isMobile = useMediaQuery('(max-width: 768px)')
+
+  // Close drawer when switching to desktop
+  React.useEffect(() => {
+    if (!isMobile && opened) {
+      close()
+    }
+  }, [isMobile, opened, close])
 
   const handleLogout = async () => {
     await signOut()
@@ -51,9 +65,9 @@ export function AdminLayout() {
     <AppShell
       header={{ height: 60 }}
       navbar={{
-        width: 280,
+        width: sidebarCollapsed ? 70 : 280,
         breakpoint: 'sm',
-        collapsed: { mobile: !opened },
+        collapsed: { mobile: true },
       }}
       padding="md"
     >
@@ -61,6 +75,15 @@ export function AdminLayout() {
         <Group h="100%" px="md" justify="space-between">
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+            <ActionIcon
+              variant="subtle"
+              size="lg"
+              onClick={toggleSidebar}
+              visibleFrom="sm"
+              aria-label="Toggle sidebar"
+            >
+              {sidebarCollapsed ? <IconChevronRight size={18} /> : <IconChevronLeft size={18} />}
+            </ActionIcon>
             <Title order={3} c="blue">
               CariPasal Admin
             </Title>
@@ -109,29 +132,136 @@ export function AdminLayout() {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="md">
-        <Text size="xs" fw={500} c="dimmed" mb="sm">
-          MENU
-        </Text>
-        {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            label={item.label}
-            leftSection={<item.icon size={18} />}
-            active={location.pathname === item.path}
-            onClick={() => {
-              navigate(item.path)
-              toggle()
-            }}
-            mb={4}
-            style={{ borderRadius: 8 }}
-          />
-        ))}
+      <AppShell.Navbar p={sidebarCollapsed ? "xs" : "md"}>
+        <Group justify="space-between" mb="sm" wrap="nowrap">
+          {!sidebarCollapsed && (
+            <Text size="xs" fw={500} c="dimmed">
+              MENU
+            </Text>
+          )}
+        </Group>
+
+        <Box style={{ position: 'relative', minHeight: '200px' }}>
+          <Transition
+            mounted={!sidebarCollapsed}
+            transition="fade"
+            duration={300}
+            timingFunction="ease-in-out"
+          >
+            {(styles) => (
+              <Box style={{ ...styles, position: 'absolute', width: '100%' }}>
+                {navItems.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    label={item.label}
+                    leftSection={<item.icon size={18} />}
+                    active={location.pathname === item.path}
+                    onClick={() => {
+                      navigate(item.path)
+                      toggle()
+                    }}
+                    mb={4}
+                    style={{ borderRadius: 8 }}
+                  />
+                ))}
+              </Box>
+            )}
+          </Transition>
+
+          <Transition
+            mounted={sidebarCollapsed}
+            transition="fade"
+            duration={300}
+            timingFunction="ease-in-out"
+          >
+            {(styles) => (
+              <Box style={{ ...styles, position: 'absolute', width: '100%' }}>
+                {navItems.map((item) => {
+                  const isActive = location.pathname === item.path
+                  const isDark = colorScheme === 'dark'
+
+                  return (
+                    <Box
+                      key={item.path}
+                      component="a"
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        navigate(item.path)
+                        toggle()
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '12px 12px',
+                        minHeight: '48px',
+                        borderRadius: '8px',
+                        marginBottom: '4px',
+                        textDecoration: 'none',
+                        color: isActive
+                          ? (isDark ? '#6BBAF9' : '#6BBAF9') // blue-6 for both themes
+                          : (isDark ? '#a6a7ab' : '#495057'), // gray-6 for dark, gray-7 for light
+                        backgroundColor: isActive
+                          ? (isDark ? 'rgba(34, 139, 230, 0.1)' : 'rgba(34, 139, 230, 0.1)') // subtle blue background
+                          : 'transparent',
+                        cursor: 'pointer',
+                        transition: 'all 0.1s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.backgroundColor = isDark
+                            ? 'rgba(255, 255, 255, 0.05)'
+                            : 'rgba(0, 0, 0, 0.05)'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.backgroundColor = 'transparent'
+                        }
+                      }}
+                      title={item.label}
+                    >
+                      <item.icon size={18} />
+                    </Box>
+                  )
+                })}
+              </Box>
+            )}
+          </Transition>
+        </Box>
       </AppShell.Navbar>
 
       <AppShell.Main>
         <Outlet />
       </AppShell.Main>
+
+      {opened && isMobile && (
+        <Drawer
+          opened={opened}
+          onClose={toggle}
+          size="280px"
+          padding="md"
+          title="Menu"
+        >
+          <Box mt="md">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.path}
+                label={item.label}
+                leftSection={<item.icon size={18} />}
+                active={location.pathname === item.path}
+                onClick={() => {
+                  navigate(item.path)
+                  toggle()
+                }}
+                mb={4}
+                style={{ borderRadius: 8 }}
+              />
+            ))}
+          </Box>
+        </Drawer>
+      )}
     </AppShell>
   )
 }

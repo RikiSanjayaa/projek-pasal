@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Title,
   Text,
@@ -7,15 +8,11 @@ import {
   Group,
   Select,
   TextInput,
-  Modal,
-  ScrollArea,
-  Box,
   Button,
   Badge,
-  Code,
 } from '@mantine/core'
 import { DatePickerInput } from '@mantine/dates'
-import { useDebouncedValue, useDisclosure } from '@mantine/hooks'
+import { useDebouncedValue } from '@mantine/hooks'
 import { IconSearch, IconRefresh } from '@tabler/icons-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { DataTable, type Column } from '@/components/DataTable'
@@ -26,43 +23,6 @@ import type { AuditLog } from '@/lib/database.types'
 
 const PAGE_SIZE = 20
 
-// Helper to compare objects and find differences
-function getDiff(oldData: Record<string, unknown> | null, newData: Record<string, unknown> | null) {
-  const allKeys = new Set([
-    ...Object.keys(oldData || {}),
-    ...Object.keys(newData || {}),
-  ])
-
-  const diff: {
-    key: string
-    oldValue: unknown
-    newValue: unknown
-    type: 'added' | 'removed' | 'changed' | 'unchanged'
-  }[] = []
-
-  // Keys to skip in diff display
-  const skipKeys = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by', 'search_vector', 'undang_undang_id']
-
-  allKeys.forEach((key) => {
-    if (skipKeys.includes(key)) return
-
-    const oldValue = oldData?.[key]
-    const newValue = newData?.[key]
-
-    if (oldValue === undefined && newValue !== undefined) {
-      diff.push({ key, oldValue, newValue, type: 'added' })
-    } else if (oldValue !== undefined && newValue === undefined) {
-      diff.push({ key, oldValue, newValue, type: 'removed' })
-    } else if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
-      diff.push({ key, oldValue, newValue, type: 'changed' })
-    } else {
-      diff.push({ key, oldValue, newValue, type: 'unchanged' })
-    }
-  })
-
-  return diff
-}
-
 export function AuditLogPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
@@ -71,9 +31,8 @@ export function AuditLogPage() {
   const [filterAction, setFilterAction] = useState<string | null>(null)
   const [filterTable, setFilterTable] = useState<string | null>(null)
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null])
-  const [detailModal, { open: openDetail, close: closeDetail }] = useDisclosure(false)
-  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null)
 
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { undangUndangData, pasalData } = useDataMapping()
 
@@ -190,21 +149,6 @@ export function AuditLogPage() {
     },
   ]
 
-  const handleViewDetail = (log: AuditLog) => {
-    setSelectedLog(log)
-    openDetail()
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('id-ID', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-
   return (
     <Stack gap="lg">
       <div>
@@ -279,129 +223,10 @@ export function AuditLogPage() {
             setPageSize(newPageSize)
             setPage(1) // Reset to first page when changing page size
           }}
-          onRowClick={handleViewDetail}
+          onRowClick={(log) => navigate(`/audit-log/${log.id}`)}
           emptyText="Tidak ada data audit log"
         />
       </Card>
-
-      {/* Detail Modal */}
-      <Modal
-        opened={detailModal}
-        onClose={closeDetail}
-        title={`Detail Perubahan - ${selectedLog?.action}`}
-        size="lg"
-      >
-        {selectedLog && (
-          <Stack gap="md">
-            <Group>
-              <Text fw={500}>Admin:</Text>
-              <Text>{selectedLog.admin_email}</Text>
-            </Group>
-            <Group>
-              <Text fw={500}>Waktu:</Text>
-              <Text>{formatDate(selectedLog.created_at)}</Text>
-            </Group>
-            <Group>
-              <Text fw={500}>Tabel:</Text>
-              <Badge variant="outline">{selectedLog.table_name}</Badge>
-            </Group>
-            <Group>
-              <Text fw={500}>Keterangan:</Text>
-              <Box>
-                <AuditLogHint
-                  log={selectedLog}
-                  undangUndangData={undangUndangData}
-                  pasalData={pasalData}
-                  showFull={true}
-                />
-              </Box>
-            </Group>
-            <Group>
-              <Text fw={500}>Record ID:</Text>
-              <Code>{selectedLog.record_id}</Code>
-            </Group>
-
-            {/* Diff View */}
-            <div>
-              <Text fw={500} mb="xs">Perubahan:</Text>
-              <ScrollArea h={300}>
-                <Stack gap="xs">
-                  {getDiff(
-                    selectedLog.old_data as Record<string, unknown> | null,
-                    selectedLog.new_data as Record<string, unknown> | null
-                  ).map(({ key, oldValue, newValue, type }) => (
-                    <Box key={key}>
-                      <Text size="sm" fw={500} c="dimmed" mb={4}>
-                        {key}
-                      </Text>
-                      {type === 'unchanged' ? (
-                        <Code block style={{ whiteSpace: 'pre-wrap' }}>
-                          {typeof newValue === 'object'
-                            ? JSON.stringify(newValue, null, 2)
-                            : String(newValue ?? '')}
-                        </Code>
-                      ) : (
-                        <Stack gap={4}>
-                          {(type === 'removed' || type === 'changed') && oldValue !== undefined && (
-                            <Box
-                              p="xs"
-                              style={{
-                                backgroundColor: 'var(--mantine-color-red-light)',
-                                borderRadius: 'var(--mantine-radius-sm)',
-                                borderLeft: '3px solid var(--mantine-color-red-filled)',
-                              }}
-                            >
-                              <Text size="xs" c="red" fw={500} mb={2}>
-                                - Dihapus
-                              </Text>
-                              <Code
-                                block
-                                style={{
-                                  whiteSpace: 'pre-wrap',
-                                  backgroundColor: 'transparent',
-                                }}
-                              >
-                                {typeof oldValue === 'object'
-                                  ? JSON.stringify(oldValue, null, 2)
-                                  : String(oldValue ?? '')}
-                              </Code>
-                            </Box>
-                          )}
-                          {(type === 'added' || type === 'changed') && newValue !== undefined && (
-                            <Box
-                              p="xs"
-                              style={{
-                                backgroundColor: 'var(--mantine-color-green-light)',
-                                borderRadius: 'var(--mantine-radius-sm)',
-                                borderLeft: '3px solid var(--mantine-color-green-filled)',
-                              }}
-                            >
-                              <Text size="xs" c="green" fw={500} mb={2}>
-                                + Ditambahkan
-                              </Text>
-                              <Code
-                                block
-                                style={{
-                                  whiteSpace: 'pre-wrap',
-                                  backgroundColor: 'transparent',
-                                }}
-                              >
-                                {typeof newValue === 'object'
-                                  ? JSON.stringify(newValue, null, 2)
-                                  : String(newValue ?? '')}
-                              </Code>
-                            </Box>
-                          )}
-                        </Stack>
-                      )}
-                    </Box>
-                  ))}
-                </Stack>
-              </ScrollArea>
-            </div>
-          </Stack>
-        )}
-      </Modal>
     </Stack>
   )
 }

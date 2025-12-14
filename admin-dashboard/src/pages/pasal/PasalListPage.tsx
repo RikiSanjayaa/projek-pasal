@@ -13,10 +13,6 @@ import {
   ActionIcon,
   Modal,
   Tooltip,
-  Divider,
-  Loader,
-  Collapse,
-  Box,
 } from '@mantine/core'
 import { useDebouncedValue, useDisclosure } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
@@ -26,28 +22,11 @@ import {
   IconEdit,
   IconTrash,
   IconTrashFilled,
-  IconLink,
-  IconChevronDown,
-  IconChevronUp,
 } from '@tabler/icons-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DataTable, type Column } from '@/components/DataTable'
 import { supabase } from '@/lib/supabase'
 import type { PasalWithUndangUndang } from '@/lib/database.types'
-
-// Type for pasal link with relations
-interface PasalLinkWithRelations {
-  id: string
-  source_pasal_id: string
-  target_pasal_id: string
-  keterangan: string | null
-  target_pasal: {
-    id: string
-    nomor: string
-    judul: string | null
-    undang_undang: { kode: string }
-  }
-}
 
 const PAGE_SIZE_OPTIONS = [
   { value: '5', label: '5 per halaman' },
@@ -115,130 +94,6 @@ const pasalColumns: Column<PasalWithUndangUndang>[] = [
   },
 ]
 
-// Component to show linked pasal detail when expanded
-function LinkedPasalDetail({ pasalId, excludePasalId }: { pasalId: string; excludePasalId?: string }) {
-  const { data: pasal, isLoading } = useQuery({
-    queryKey: ['pasal', 'detail', pasalId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pasal')
-        .select('*, undang_undang(*)')
-        .eq('id', pasalId)
-        .single()
-
-      if (error) throw error
-      return data as PasalWithUndangUndang
-    },
-    enabled: !!pasalId,
-  })
-
-  // Fetch related links for this pasal (only where this pasal is source, excluding the parent)
-  const { data: relatedLinks } = useQuery({
-    queryKey: ['pasal_links', 'related', pasalId, excludePasalId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pasal_links')
-        .select(`
-          id,
-          source_pasal_id,
-          target_pasal_id,
-          keterangan,
-          target_pasal:pasal!pasal_links_target_pasal_id_fkey(id, nomor, judul, undang_undang(kode))
-        `)
-        .eq('source_pasal_id', pasalId)
-        .eq('is_active', true)
-
-      if (error) throw error
-
-      // Filter out the link to the excluded pasal (to prevent loop)
-      const filtered = (data as unknown as PasalLinkWithRelations[]).filter((link) => {
-        return link.target_pasal_id !== excludePasalId
-      })
-
-      return filtered
-    },
-    enabled: !!pasalId,
-  })
-
-  if (isLoading) {
-    return (
-      <Box mt="sm" p="sm" style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
-        <Loader size="xs" />
-      </Box>
-    )
-  }
-
-  if (!pasal) return null
-
-  return (
-    <Box mt="sm" p="sm" style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
-      <Stack gap="xs">
-        {/* Isi Pasal */}
-        <div>
-          <Text size="xs" c="dimmed" mb={2}>Isi Pasal</Text>
-          <Card withBorder padding="xs" bg="var(--mantine-color-default-hover)">
-            <Text size="xs" style={{ whiteSpace: 'pre-wrap' }} lineClamp={6}>
-              {pasal.isi}
-            </Text>
-          </Card>
-        </div>
-
-        {/* Penjelasan */}
-        {pasal.penjelasan && (
-          <div>
-            <Text size="xs" c="dimmed" mb={2}>Penjelasan</Text>
-            <Card withBorder padding="xs" bg="var(--mantine-color-blue-light)">
-              <Text size="xs" style={{ whiteSpace: 'pre-wrap' }} lineClamp={3}>
-                {pasal.penjelasan}
-              </Text>
-            </Card>
-          </div>
-        )}
-
-        {/* Keywords */}
-        {pasal.keywords && pasal.keywords.length > 0 && (
-          <Group gap={4}>
-            {pasal.keywords.slice(0, 5).map((kw, idx) => (
-              <Badge key={idx} variant="outline" size="xs">
-                {kw}
-              </Badge>
-            ))}
-            {pasal.keywords.length > 5 && (
-              <Badge size="xs" variant="outline" color="gray">
-                +{pasal.keywords.length - 5}
-              </Badge>
-            )}
-          </Group>
-        )}
-
-        {/* Related pasal links (excluding parent) */}
-        {relatedLinks && relatedLinks.length > 0 && (
-          <div>
-            <Text size="xs" c="dimmed" mb={2}>
-              <IconLink size={10} style={{ verticalAlign: 'middle', marginRight: 2 }} />
-              Pasal terkait lainnya
-            </Text>
-            <Group gap={4}>
-              {relatedLinks.map((link) => {
-                return (
-                  <Badge
-                    key={link.id}
-                    size="xs"
-                    variant="light"
-                    color="gray"
-                  >
-                    {link.target_pasal?.undang_undang?.kode} Pasal {link.target_pasal?.nomor}
-                  </Badge>
-                )
-              })}
-            </Group>
-          </div>
-        )}
-      </Stack>
-    </Box>
-  )
-}
-
 export function PasalListPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -250,10 +105,8 @@ export function PasalListPage() {
   const [filterUU, setFilterUU] = useState<string | null>(searchParams.get('uu'))
   const [deleteModal, { open: openDelete, close: closeDelete }] = useDisclosure(false)
   const [bulkDeleteModal, { open: openBulkDelete, close: closeBulkDelete }] = useDisclosure(false)
-  const [viewModal, { open: openView, close: closeView }] = useDisclosure(false)
   const [selectedPasal, setSelectedPasal] = useState<PasalWithUndangUndang | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [expandedLinkId, setExpandedLinkId] = useState<string | null>(null)
 
   // Fetch undang-undang for filter
   const { data: undangUndangList } = useQuery({
@@ -308,30 +161,6 @@ export function PasalListPage() {
       if (error) throw error
       return { data: data as PasalWithUndangUndang[], count: count || 0 }
     },
-  })
-
-  // Fetch pasal links for selected pasal (only where selected pasal is source)
-  const { data: pasalLinks, isLoading: isLoadingLinks } = useQuery({
-    queryKey: ['pasal_links', selectedPasal?.id],
-    queryFn: async () => {
-      if (!selectedPasal?.id) return [] as PasalLinkWithRelations[]
-
-      const { data, error } = await supabase
-        .from('pasal_links')
-        .select(`
-          id,
-          source_pasal_id,
-          target_pasal_id,
-          keterangan,
-          target_pasal:pasal!pasal_links_target_pasal_id_fkey(id, nomor, judul, undang_undang(kode))
-        `)
-        .eq('source_pasal_id', selectedPasal.id)
-        .eq('is_active', true)
-
-      if (error) throw error
-      return data as unknown as PasalLinkWithRelations[]
-    },
-    enabled: !!selectedPasal?.id && viewModal,
   })
 
   // Delete mutation (soft delete with deleted_at timestamp)
@@ -411,11 +240,6 @@ export function PasalListPage() {
   const handleDelete = (pasal: PasalWithUndangUndang) => {
     setSelectedPasal(pasal)
     openDelete()
-  }
-
-  const handleView = (pasal: PasalWithUndangUndang) => {
-    setSelectedPasal(pasal)
-    openView()
   }
 
   const confirmDelete = () => {
@@ -509,7 +333,7 @@ export function PasalListPage() {
           selectable
           selectedIds={selectedIds}
           onSelect={setSelectedIds}
-          onRowClick={handleView}
+          onRowClick={(pasal) => navigate(`/pasal/${pasal.id}`)}
           rowActions={(pasal) => (
             <Group gap={4}>
               <Tooltip label="Edit">
@@ -583,144 +407,6 @@ export function PasalListPage() {
             Hapus {selectedIds.length} Pasal
           </Button>
         </Group>
-      </Modal>
-
-      {/* View Pasal Modal */}
-      <Modal
-        opened={viewModal}
-        onClose={closeView}
-        title={
-          <Group gap="xs">
-            <Badge color="blue" variant="light">
-              {selectedPasal?.undang_undang?.kode}
-            </Badge>
-            <Text fw={600}>Pasal {selectedPasal?.nomor}</Text>
-          </Group>
-        }
-        size="lg"
-        centered
-      >
-        <Stack gap="md">
-          {selectedPasal?.judul && (
-            <div>
-              <Text size="sm" c="dimmed" mb={4}>Judul</Text>
-              <Text fw={500}>{selectedPasal.judul}</Text>
-            </div>
-          )}
-
-          <div>
-            <Text size="sm" c="dimmed" mb={4}>Isi Pasal</Text>
-            <Card withBorder padding="sm" bg="var(--mantine-color-default-hover)">
-              <Text style={{ whiteSpace: 'pre-wrap' }}>{selectedPasal?.isi}</Text>
-            </Card>
-          </div>
-
-          {selectedPasal?.penjelasan && (
-            <div>
-              <Text size="sm" c="dimmed" mb={4}>Penjelasan</Text>
-              <Card withBorder padding="sm" bg="var(--mantine-color-blue-light)">
-                <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{selectedPasal.penjelasan}</Text>
-              </Card>
-            </div>
-          )}
-
-          {selectedPasal?.keywords && selectedPasal.keywords.length > 0 && (
-            <div>
-              <Text size="sm" c="dimmed" mb={4}>Keywords</Text>
-              <Group gap={4}>
-                {selectedPasal.keywords.map((kw, idx) => (
-                  <Badge key={idx} variant="outline" size="sm">
-                    {kw}
-                  </Badge>
-                ))}
-              </Group>
-            </div>
-          )}
-
-          <Divider my="sm" />
-
-          {/* Pasal Terkait Section */}
-          <div>
-            <Group justify="space-between" mb="xs">
-              <Text size="sm" c="dimmed">
-                <IconLink size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                Pasal Terkait
-              </Text>
-            </Group>
-
-            {isLoadingLinks ? (
-              <Group justify="center" py="md">
-                <Loader size="sm" />
-              </Group>
-            ) : pasalLinks && pasalLinks.length > 0 ? (
-              <Stack gap="xs">
-                {pasalLinks.map((link) => {
-                  const targetPasal = link.target_pasal
-                  const isExpanded = expandedLinkId === link.id
-
-                  return (
-                    <Card
-                      key={link.id}
-                      withBorder
-                      padding="xs"
-                      radius="sm"
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <Group
-                        justify="space-between"
-                        onClick={() => setExpandedLinkId(isExpanded ? null : link.id)}
-                      >
-                        <Group gap="xs">
-                          {isExpanded ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />}
-                          <Badge size="xs" color="gray" variant="light">
-                            {targetPasal?.undang_undang?.kode}
-                          </Badge>
-                          <Text size="sm" fw={500}>
-                            Pasal {targetPasal?.nomor}
-                          </Text>
-                          {targetPasal?.judul && (
-                            <Text size="xs" c="dimmed">
-                              - {targetPasal?.judul}
-                            </Text>
-                          )}
-                        </Group>
-                      </Group>
-                      {link.keterangan && (
-                        <Text size="xs" c="dimmed" mt={4}>
-                          {link.keterangan}
-                        </Text>
-                      )}
-
-                      {/* Expanded detail of linked pasal */}
-                      <Collapse in={isExpanded}>
-                        <LinkedPasalDetail
-                          pasalId={targetPasal?.id}
-                          excludePasalId={selectedPasal?.id}
-                        />
-                      </Collapse>
-                    </Card>
-                  )
-                })}
-              </Stack>
-            ) : (
-              <Text size="sm" c="dimmed" ta="center" py="sm">
-                Tidak ada pasal terkait
-              </Text>
-            )}
-          </div>
-
-          <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={closeView}>
-              Tutup
-            </Button>
-            <Button onClick={() => {
-              closeView()
-              navigate(`/pasal/${selectedPasal?.id}/edit`)
-            }}>
-              Edit Pasal
-            </Button>
-          </Group>
-        </Stack>
       </Modal>
     </Stack>
   )
