@@ -33,55 +33,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const initAuth = async () => {
       try {
-        // Add 5 second timeout to getSession
-        const { data: { session }, error } = await withTimeout(
-          supabase.auth.getSession(),
-          5000
-        )
+        // Tidak perlu timeout untuk getSession
+        const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
-          console.error('Session error:', error)
-          // Clear potentially corrupt session
-          await supabase.auth.signOut()
+          console.error('Session error:', error);
         }
 
-        if (!isMounted) return
+        if (!isMounted) return;
 
-        setSession(session)
-        setUser(session?.user ?? null)
+        setSession(session);
+        setUser(session?.user ?? null);
 
         if (session?.user) {
           try {
-            // Fetch admin user data with timeout
-            const result = await withTimeout(
-              Promise.resolve(
-                supabase
-                  .from('admin_users')
-                  .select('*')
-                  .eq('id', session.user.id)
-                  .single()
-              ),
-              5000
-            ) as { data: AdminUser | null }
+            // Tambahkan await sebelum .single() agar withTimeout menerima Promise
+            const adminUserPromise = supabase
+              .from('admin_users')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+            const result = await withTimeout(Promise.resolve(adminUserPromise), 5000) as { data: AdminUser | null };
 
             if (isMounted) {
-              setAdminUser(result.data)
+              setAdminUser(result.data);
             }
           } catch (adminError) {
-            console.error('Error fetching admin user:', adminError)
+            console.error('Error fetching admin user:', adminError);
           }
         }
       } catch (error) {
-        console.error('Auth initialization error:', error)
-        // On timeout or error, clear session and continue
-        try {
-          await supabase.auth.signOut()
-        } catch {
-          // Ignore signOut errors
-        }
+        console.error('Auth initialization error:', error);
       } finally {
         if (isMounted) {
-          setLoading(false)
+          setLoading(false);
         }
       }
     }
@@ -92,34 +77,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!isMounted) return
+      if (!isMounted) return;
 
-      setSession(session)
-      setUser(session?.user ?? null)
+      setSession(session);
+      setUser(session?.user ?? null);
 
       if (session?.user) {
         try {
-          const result = await withTimeout(
-            Promise.resolve(
-              supabase
-                .from('admin_users')
-                .select('*')
-                .eq('id', session.user.id)
-                .single()
-            ),
-            5000
-          ) as { data: AdminUser | null }
+          const adminUserPromise = supabase
+            .from('admin_users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          const result = await withTimeout(Promise.resolve(adminUserPromise), 5000) as { data: AdminUser | null };
 
           if (isMounted) {
-            setAdminUser(result.data)
+            setAdminUser(result.data);
           }
         } catch (error) {
-          console.error('Error fetching admin user on auth change:', error)
+          console.error('Error fetching admin user on auth change:', error);
         }
       } else {
-        setAdminUser(null)
+        setAdminUser(null);
       }
-    })
+    });
 
     return () => {
       isMounted = false
