@@ -17,7 +17,7 @@ export function ManageAdminPage() {
   const [emailError, setEmailError] = React.useState<string | null>(null)
   const [namaInput, setNamaInput] = React.useState<string>('')
 
-  const EDGE_FUNCTION_URL = `${import.meta.env.EDGE_FUNCTION_URL}`
+  const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-admin`
 
   React.useEffect(() => {
     if (!adminUser) return

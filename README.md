@@ -34,7 +34,7 @@ Aplikasi untuk mencari dan mengelola pasal-pasal dari:
 
 ```
 projek-pasal/
-├── supabase/           # Database migrations & config
+├── supabase/           # Database migrations & config edge function
 ├── admin-dashboard/    # React + Mantine admin panel
 ├── mobile-app/         # Flutter mobile application
 └── docs/               # Dokumentasi lengkap
@@ -54,6 +54,8 @@ projek-pasal/
 2. Buat project baru
 3. Copy URL dan key ke environment variables
 4. Jalankan migrations
+5. Jalankan Edge functions yang ada di /supabase/functions/create-admin/index.ts
+6. buat akun super_admin pertama, contoh ada di [Panduan Deployment](docs/DEPLOYMENT.md)
 
 ### Setup Admin Dashboard
 
@@ -78,9 +80,7 @@ flutter run
 
 - [Arsitektur Sistem](docs/ARSITEKTUR.md)
 - [Database Schema](docs/DATABASE.md)
-- [API Reference](docs/API.md)
 - [Panduan Deployment](docs/DEPLOYMENT.md)
-- [Panduan Kontribusi](docs/KONTRIBUSI.md)
 
 ## Roles & Permissions
 

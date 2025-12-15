@@ -57,7 +57,6 @@
 2. Catat:
    - **Project URL**: `https://xxxxx.supabase.co`
    - **anon/public key**: untuk client-side
-   - **service_role key**: JANGAN share, hanya untuk server
 
 ---
 
@@ -85,12 +84,9 @@ Edit `.env`:
 
 ```env
 VITE_SUPABASE_URL=https://xxxxx.supabase.co
-VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY=your-key
+VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY=your-publishable-key
 VITE_APP_NAME=CariPasal Admin
-CREATE_ADMIN_API_URL=http://localhost:3001
 ```
-
-`CREATE_ADMIN_API_URL` adalah base URL yang digunakan frontend untuk memanggil server pembuatan admin (`create-admin-api`). Pada development biasanya `http://localhost:3001`. Jangan masukkan service role key ke file frontend — hanya `create-admin-api` yang menggunakan `SUPABASE_SERVICE_ROLE_KEY` di server-side.
 
 ### 2.4 Run Development Server
 
@@ -100,37 +96,27 @@ npm run dev
 
 Buka http://localhost:5173
 
-### 2.5 create-admin-api (server untuk pembuatan admin)
+### 2.5 Create-admin flow (gunakan Supabase Edge Function)
 
-Proyek ini menyertakan server kecil `create-admin-api/server.js` yang digunakan untuk membuat akun admin di Supabase menggunakan service role key. Karena `service_role` key sangat sensitif, operasi pembuatan user harus dijalankan di server — bukan dari frontend.
+Proyek sebelumnya menggunakan server Express kecil untuk membuat akun admin menggunakan `service_role` key. Sekarang disarankan untuk mengganti server tersebut dengan Supabase Edge Function — ini menghilangkan kebutuhan menjalankan server terpisah dan menyimpan `service_role` sebagai secret di Supabase.
 
-- Letakkan environment variables untuk server terpisah dari variabel frontend. yang diperlukan:
+Langkah singkat:
 
-```bash
-# di folder admin-dashboard/create-admin-api
-cp .env.example .env
-```
+- Implementasikan fungsi di folder `supabase/functions/create-admin` (contoh tersedia di repo).
+- Deploy fungsi melalui Supabase CLI atau Dashboard Edge Functions.
 
-Edit `.env`:
-
-- `SUPABASE_URL` — Supabase project URL (sama dengan VITE_SUPABASE_URL)
-- `SUPABASE_SERVICE_ROLE_KEY` — Service role key (harus dijaga rapat, hanya di server)
-- `PORT` — (opsional) port server, default `3001`
-
-- Cara menjalankan server saat development (dijalankan terpisah dari Vite):
+Setup secrets (CLI):
 
 ```bash
-# di folder admin-dashboard
-npm run dev:admin-api
+supabase secrets set SUPABASE_URL="https://<project>.supabase.co" SERVICE_ROLE="<service-role-key>"
 ```
 
-- `npm run dev:admin-api` menjalankan `create-admin-api/server.js` (menggunakan `nodemon`) dan menyediakan endpoint `POST /api/create-admin`.
-- Jalankan server ini di terminal terpisah bersama `npm run dev` (Vite). Alternatif: gunakan tool seperti `concurrently` atau process manager untuk menjalankan keduanya dalam satu perintah.
+Deploy fungsi (CLI):
 
-Keamanan & deployment
-
-- Jangan deploy `SUPABASE_SERVICE_ROLE_KEY` ke lingkungan yang dapat diakses publik. Untuk deployment produksi, host `create-admin-api` pada server yang Anda kontrol (VPS, Cloud Run, atau serverless dengan secret management) dan pastikan hanya endpoint yang aman dapat diakses.
-- Frontend akan memanggil endpoint ini dengan header `Authorization: Bearer <SUPER_ADMIN_ACCESS_TOKEN>`. Server memverifikasi bahwa pemanggil adalah `super_admin` sebelum membuat akun.
+```bash
+supabase login
+supabase functions deploy create-admin --project-ref <your-project-ref>
+```
 
 ---
 
