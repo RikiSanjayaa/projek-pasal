@@ -40,7 +40,7 @@ INSERT INTO undang_undang (id, kode, nama, nama_lengkap, deskripsi, tahun) VALUE
     'UU ITE',
     'Undang-Undang Informasi dan Transaksi Elektronik',
     'Undang-Undang yang mengatur tentang informasi serta transaksi elektronik, atau teknologi informasi.',
-    2008,
+    2008
 );
 
 -- ============================================================================

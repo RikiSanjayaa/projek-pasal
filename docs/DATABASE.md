@@ -35,6 +35,7 @@
 │                       │ search_vector (TSVECTOR)         │                  │
 │                       │ is_active                        │                  │
 │                       │ created_at                       │                  │
+│                       │ deleted_at                       │                  │
 │                       │ updated_at                       │                  │
 │                       │ created_by (FK→admin_users)      │                  │
 │                       │ updated_by (FK→admin_users)      │                  │
@@ -47,10 +48,12 @@
 │            │      pasal_links        │            │                         │
 │            ├─────────────────────────┤            │                         │
 │            │ id (PK)                 │            │                         │
-│            │ source_pasal_id (FK) ◄───────────────┤                         │
-│            │ target_pasal_id (FK) ◄───────────────┘                         │
+│            │ source_pasal_id (FK)    │            │                         │
+│            │ target_pasal_id (FK)    │◄───────────┘                         │
 │            │ keterangan              │                                      │
+│            │ is_active               │                                      │
 │            │ created_at              │                                      │
+│            │ deleted_at              │                                      │
 │            │ created_by (FK)         │                                      │
 │            └─────────────────────────┘                                      │
 │                                                                             │
@@ -66,8 +69,6 @@
 │  │ record_id                │                                               │
 │  │ old_data (JSONB)         │                                               │
 │  │ new_data (JSONB)         │                                               │
-│  │ ip_address               │                                               │
-│  │ user_agent               │                                               │
 │  │ created_at               │                                               │
 │  └──────────────────────────┘                                               │
 │                                                                             │
@@ -80,17 +81,17 @@
 
 Menyimpan daftar undang-undang (KUHP, KUHPer, KUHAP, UU ITE).
 
-| Column       | Type         | Nullable | Default            | Description                            |
-| ------------ | ------------ | -------- | ------------------ | -------------------------------------- |
-| id           | UUID         | NO       | uuid_generate_v4() | Primary key                            |
-| kode         | VARCHAR(20)  | NO       | -                  | Kode unik: KUHP, KUHPER, KUHAP, UU_ITE |
-| nama         | VARCHAR(255) | NO       | -                  | Nama singkat                           |
-| nama_lengkap | TEXT         | YES      | NULL               | Nama lengkap resmi                     |
-| deskripsi    | TEXT         | YES      | NULL               | Deskripsi singkat                      |
-| tahun        | INTEGER      | YES      | NULL               | Tahun berlaku                          |
-| is_active    | BOOLEAN      | NO       | true               | Status aktif                           |
-| created_at   | TIMESTAMPTZ  | NO       | NOW()              | Waktu dibuat                           |
-| updated_at   | TIMESTAMPTZ  | NO       | NOW()              | Waktu diupdate                         |
+| Column       | Type         | Nullable | Default           | Description                            |
+| ------------ | ------------ | -------- | ----------------- | -------------------------------------- |
+| id           | UUID         | NO       | gen_random_uuid() | Primary key                            |
+| kode         | VARCHAR(20)  | NO       | -                 | Kode unik: KUHP, KUHPER, KUHAP, UU_ITE |
+| nama         | VARCHAR(255) | NO       | -                 | Nama singkat                           |
+| nama_lengkap | TEXT         | YES      | NULL              | Nama lengkap resmi                     |
+| deskripsi    | TEXT         | YES      | NULL              | Deskripsi singkat                      |
+| tahun        | INTEGER      | YES      | NULL              | Tahun berlaku                          |
+| is_active    | BOOLEAN      | NO       | true              | Status aktif                           |
+| created_at   | TIMESTAMPTZ  | NO       | NOW()             | Waktu dibuat                           |
+| updated_at   | TIMESTAMPTZ  | NO       | NOW()             | Waktu diupdate                         |
 
 **Indexes:**
 
@@ -103,22 +104,22 @@ Menyimpan daftar undang-undang (KUHP, KUHPer, KUHAP, UU ITE).
 
 Menyimpan data pasal dari setiap undang-undang.
 
-| Column           | Type         | Nullable | Default            | Description                       |
-| ---------------- | ------------ | -------- | ------------------ | --------------------------------- |
-| id               | UUID         | NO       | uuid_generate_v4() | Primary key                       |
-| undang_undang_id | UUID         | NO       | -                  | FK ke undang_undang               |
-| nomor            | VARCHAR(50)  | NO       | -                  | Nomor pasal: "340", "27 ayat (3)" |
-| judul            | VARCHAR(500) | YES      | NULL               | Judul pasal (opsional)            |
-| isi              | TEXT         | NO       | -                  | Isi lengkap pasal                 |
-| penjelasan       | TEXT         | YES      | NULL               | Penjelasan/tafsir                 |
-| keywords         | TEXT[]       | NO       | '{}'               | Array kata kunci                  |
-| search_vector    | TSVECTOR     | YES      | -                  | Full-text search index            |
-| is_active        | BOOLEAN      | NO       | true               | Status aktif (soft delete)        |
-| deleted_at       | TIMESTAMPTZ  | YES      | NULL               | Waktu soft delete                 |
-| created_at       | TIMESTAMPTZ  | NO       | NOW()              | Waktu dibuat                      |
-| updated_at       | TIMESTAMPTZ  | NO       | NOW()              | Waktu diupdate                    |
-| created_by       | UUID         | YES      | NULL               | FK ke admin_users                 |
-| updated_by       | UUID         | YES      | NULL               | FK ke admin_users                 |
+| Column           | Type         | Nullable | Default           | Description                       |
+| ---------------- | ------------ | -------- | ----------------- | --------------------------------- |
+| id               | UUID         | NO       | gen_random_uuid() | Primary key                       |
+| undang_undang_id | UUID         | NO       | -                 | FK ke undang_undang               |
+| nomor            | VARCHAR(50)  | NO       | -                 | Nomor pasal: "340", "27 ayat (3)" |
+| judul            | VARCHAR(500) | YES      | NULL              | Judul pasal (opsional)            |
+| isi              | TEXT         | NO       | -                 | Isi lengkap pasal                 |
+| penjelasan       | TEXT         | YES      | NULL              | Penjelasan/tafsir                 |
+| keywords         | TEXT[]       | NO       | '{}'              | Array kata kunci                  |
+| search_vector    | TSVECTOR     | YES      | -                 | Full-text search index            |
+| is_active        | BOOLEAN      | NO       | true              | Status aktif (soft delete)        |
+| deleted_at       | TIMESTAMPTZ  | YES      | NULL              | Waktu soft delete                 |
+| created_at       | TIMESTAMPTZ  | NO       | NOW()             | Waktu dibuat                      |
+| updated_at       | TIMESTAMPTZ  | NO       | NOW()             | Waktu diupdate                    |
+| created_by       | UUID         | YES      | NULL              | FK ke admin_users                 |
+| updated_by       | UUID         | YES      | NULL              | FK ke admin_users                 |
 
 **Indexes:**
 
@@ -139,16 +140,16 @@ Menyimpan data pasal dari setiap undang-undang.
 
 Menyimpan relasi/link antar pasal.
 
-| Column          | Type         | Nullable | Default            | Description                              |
-| --------------- | ------------ | -------- | ------------------ | ---------------------------------------- |
-| id              | UUID         | NO       | uuid_generate_v4() | Primary key                              |
-| source_pasal_id | UUID         | NO       | -                  | FK ke pasal (dari)                       |
-| target_pasal_id | UUID         | NO       | -                  | FK ke pasal (ke)                         |
-| keterangan      | VARCHAR(255) | YES      | NULL               | Keterangan link                          |
-| is_active       | BOOLEAN      | NO       | true               | Soft delete flag (cascade dengan pasal)  |
-| deleted_at      | TIMESTAMPTZ  | YES      | NULL               | Waktu soft delete (cascade dengan pasal) |
-| created_at      | TIMESTAMPTZ  | NO       | NOW()              | Waktu dibuat                             |
-| created_by      | UUID         | YES      | NULL               | FK ke admin_users                        |
+| Column          | Type         | Nullable | Default           | Description                              |
+| --------------- | ------------ | -------- | ----------------- | ---------------------------------------- |
+| id              | UUID         | NO       | gen_random_uuid() | Primary key                              |
+| source_pasal_id | UUID         | NO       | -                 | FK ke pasal (dari)                       |
+| target_pasal_id | UUID         | NO       | -                 | FK ke pasal (ke)                         |
+| keterangan      | VARCHAR(255) | YES      | NULL              | Keterangan link                          |
+| is_active       | BOOLEAN      | NO       | true              | Soft delete flag (cascade dengan pasal)  |
+| deleted_at      | TIMESTAMPTZ  | YES      | NULL              | Waktu soft delete (cascade dengan pasal) |
+| created_at      | TIMESTAMPTZ  | NO       | NOW()             | Waktu dibuat                             |
+| created_by      | UUID         | YES      | NULL              | FK ke admin_users                        |
 
 **Constraints:**
 
@@ -177,19 +178,17 @@ Menyimpan data admin (staf/dosen).
 
 Menyimpan log semua perubahan data.
 
-| Column      | Type         | Nullable | Default            | Description                  |
-| ----------- | ------------ | -------- | ------------------ | ---------------------------- |
-| id          | UUID         | NO       | uuid_generate_v4() | Primary key                  |
-| admin_id    | UUID         | YES      | -                  | FK ke admin_users            |
-| admin_email | VARCHAR(255) | YES      | -                  | Email admin (denormalized)   |
-| action      | audit_action | NO       | -                  | 'CREATE', 'UPDATE', 'DELETE' |
-| table_name  | VARCHAR(100) | NO       | -                  | Nama tabel yang diubah       |
-| record_id   | UUID         | NO       | -                  | ID record yang diubah        |
-| old_data    | JSONB        | YES      | NULL               | Data sebelum perubahan       |
-| new_data    | JSONB        | YES      | NULL               | Data setelah perubahan       |
-| ip_address  | INET         | YES      | NULL               | IP address (opsional)        |
-| user_agent  | TEXT         | YES      | NULL               | User agent (opsional)        |
-| created_at  | TIMESTAMPTZ  | NO       | NOW()              | Waktu perubahan              |
+| Column      | Type         | Nullable | Default           | Description                  |
+| ----------- | ------------ | -------- | ----------------- | ---------------------------- |
+| id          | UUID         | NO       | gen_random_uuid() | Primary key                  |
+| admin_id    | UUID         | YES      | -                 | FK ke admin_users            |
+| admin_email | VARCHAR(255) | YES      | -                 | Email admin (denormalized)   |
+| action      | audit_action | NO       | -                 | 'CREATE', 'UPDATE', 'DELETE' |
+| table_name  | VARCHAR(100) | NO       | -                 | Nama tabel yang diubah       |
+| record_id   | UUID         | NO       | -                 | ID record yang diubah        |
+| old_data    | JSONB        | YES      | NULL              | Data sebelum perubahan       |
+| new_data    | JSONB        | YES      | NULL              | Data setelah perubahan       |
+| created_at  | TIMESTAMPTZ  | NO       | NOW()             | Waktu perubahan              |
 
 ---
 

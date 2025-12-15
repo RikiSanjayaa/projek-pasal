@@ -160,8 +160,8 @@ CREATE POLICY "Admin: write pasal"
 - Audit log untuk setiap perubahan (termasuk pasal_links)
 - Soft delete dengan `is_active` dan `deleted_at` untuk restore capability
 - Cascade soft delete untuk pasal_links (otomatis mengikuti pasal)
-- Auto cleanup untuk data yang sudah soft delete > 30 hari
-- Trash management page untuk restore/permanent delete
+- Auto cleanup untuk data pasal yang sudah soft delete > 30 hari
+- Trash management page untuk restore/permanent delete data pasal
 
 ## Scalability Notes
 
@@ -169,20 +169,19 @@ CREATE POLICY "Admin: write pasal"
 
 - Supabase free tier cukup
 - Single region deployment
-- Client-side caching via local SQLite
+- Client-side caching via local SQLite (mobile user)
 
 ### Future Scaling
 
 - Upgrade ke Supabase Pro jika traffic tinggi
 - Implement edge caching (CDN)
-- Consider read replicas untuk search-heavy loads
-- Implement proper pagination di semua list views
 
 ## Folder Structure
 
 ```
 projek-pasal/
 ├── supabase/
+│   ├── functions/      # Edge functions supabase
 │   ├── migrations/     # Database migrations
 │   └── seed.sql        # Dummy data
 ├── admin-dashboard/

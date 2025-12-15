@@ -34,7 +34,7 @@ CREATE TYPE audit_action AS ENUM ('CREATE', 'UPDATE', 'DELETE');
 -- Deskripsi: Menyimpan daftar undang-undang (KUHP, KUHPer, KUHAP, UU ITE)
 -- ----------------------------------------------------------------------------
 CREATE TABLE undang_undang (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     kode VARCHAR(20) UNIQUE NOT NULL,
     nama VARCHAR(255) NOT NULL,
     nama_lengkap TEXT,
@@ -78,7 +78,7 @@ COMMENT ON TABLE admin_users IS 'Daftar admin yang dapat mengelola data pasal';
 -- Deskripsi: Menyimpan data pasal dari setiap undang-undang
 -- ----------------------------------------------------------------------------
 CREATE TABLE pasal (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     undang_undang_id UUID NOT NULL REFERENCES undang_undang(id) ON DELETE CASCADE,
     nomor VARCHAR(50) NOT NULL,
     judul VARCHAR(500),
@@ -114,7 +114,7 @@ COMMENT ON COLUMN pasal.search_vector IS 'Vector untuk full-text search';
 -- Deskripsi: Menyimpan relasi/link antar pasal
 -- ----------------------------------------------------------------------------
 CREATE TABLE pasal_links (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     source_pasal_id UUID NOT NULL REFERENCES pasal(id) ON DELETE CASCADE,
     target_pasal_id UUID NOT NULL REFERENCES pasal(id) ON DELETE CASCADE,
     keterangan VARCHAR(255),
@@ -141,7 +141,7 @@ COMMENT ON COLUMN pasal_links.deleted_at IS 'Timestamp when link was soft delete
 -- Deskripsi: Menyimpan log semua perubahan data oleh admin
 -- ----------------------------------------------------------------------------
 CREATE TABLE audit_logs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     admin_id UUID REFERENCES admin_users(id),
     admin_email VARCHAR(255),
     action audit_action NOT NULL,

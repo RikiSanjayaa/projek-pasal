@@ -169,8 +169,6 @@ export interface Database {
           record_id: string
           old_data: Json | null
           new_data: Json | null
-          ip_address: string | null
-          user_agent: string | null
           created_at: string
         }
         Insert: {
@@ -182,8 +180,6 @@ export interface Database {
           record_id: string
           old_data?: Json | null
           new_data?: Json | null
-          ip_address?: string | null
-          user_agent?: string | null
           created_at?: string
         }
         Update: {
@@ -195,8 +191,6 @@ export interface Database {
           record_id?: string
           old_data?: Json | null
           new_data?: Json | null
-          ip_address?: string | null
-          user_agent?: string | null
           created_at?: string
         }
       }

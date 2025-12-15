@@ -33,7 +33,53 @@
    - `supabase/migrations/005_remove_ip_in_audit.sql` (revisi atribut audit)
    - `supabase/seed.sql` (opsional, untuk data dummy)
 
-### 1.3 Buat Super Admin User Pertama
+#### Opsional: Jalankan Migrations via Supabase CLI
+
+Jika Anda ingin menjalankan migration dan seed menggunakan Supabase CLI (tanpa membuka SQL Editor di Dashboard):
+
+1. Instal atau gunakan CLI via `npx` (tidak wajib install global):
+
+```bash
+# pakai npx, tanpa install
+npx supabase --version
+```
+
+2. Login ke akun Supabase (akan membuka browser untuk otentikasi):
+
+```bash
+npx supabase login
+```
+
+3. Link folder project lokal ke project Supabase Anda (gunakan `project-ref` dari dashboard):
+
+```bash
+# contoh interaktif
+npx supabase link --project-ref <YOUR_PROJECT_REF>
+```
+
+4. Jalankan migrations dari folder `supabase/migrations` ke project yang sudah linked:
+
+```bash
+# akan membaca migration lokal dan menerapkannya ke database linked
+npx supabase db push
+```
+
+Catatan: `db push` akan menerapkan perubahan schema/migration lokal ke project Supabase yang sudah di-link.
+
+````bash
+# menjalankan migration dengan file seed (opsional)
+npx supabase db push --include-seed
+
+5. Verifikasi / cek status atau perbedaan sebelum/ sesudah:
+
+```bash
+# lihat perbedaan lokal vs remote
+npx supabase db diff --linked
+````
+
+Jika ada masalah atau perintah di atas tidak tersedia pada versi CLI Anda, jalankan `npx supabase --help` untuk melihat subcommands yang tersedia dan versi terbaru.
+
+### 1.3 Buat `super_admin` User Pertama
 
 1. Buka **Authentication** > **Users** di Supabase Dashboard
 2. Klik "Add User" > "Create New User"
@@ -98,24 +144,17 @@ Buka http://localhost:5173
 
 ### 2.5 Create-admin flow (gunakan Supabase Edge Function)
 
-Proyek sebelumnya menggunakan server Express kecil untuk membuat akun admin menggunakan `service_role` key. Sekarang disarankan untuk mengganti server tersebut dengan Supabase Edge Function — ini menghilangkan kebutuhan menjalankan server terpisah dan menyimpan `service_role` sebagai secret di Supabase.
+Proyek sebelumnya menggunakan server Express kecil untuk membuat akun admin menggunakan `service_role` key. Sekarang disarankan untuk mengganti server tersebut dengan Supabase Edge Function — ini menghilangkan kebutuhan menjalankan server terpisah.
 
 Langkah singkat:
 
 - Implementasikan fungsi di folder `supabase/functions/create-admin` (contoh tersedia di repo).
 - Deploy fungsi melalui Supabase CLI atau Dashboard Edge Functions.
 
-Setup secrets (CLI):
-
-```bash
-supabase secrets set SUPABASE_URL="https://<project>.supabase.co" SERVICE_ROLE="<service-role-key>"
-```
-
 Deploy fungsi (CLI):
 
 ```bash
-supabase login
-supabase functions deploy create-admin --project-ref <your-project-ref>
+npx supabase functions deploy create-admin
 ```
 
 ---
