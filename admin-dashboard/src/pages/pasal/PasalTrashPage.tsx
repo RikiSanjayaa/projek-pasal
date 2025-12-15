@@ -9,14 +9,10 @@ import {
   Button,
   TextInput,
   Select,
-  Table,
   Badge,
   ActionIcon,
-  Pagination,
-  Skeleton,
   Modal,
   Tooltip,
-  Checkbox,
   Alert,
 } from '@mantine/core'
 import { useDebouncedValue, useDisclosure } from '@mantine/hooks'
@@ -29,6 +25,7 @@ import {
   IconAlertTriangle,
 } from '@tabler/icons-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { DataTable, type Column } from '@/components/DataTable'
 import { supabase } from '@/lib/supabase'
 
 // Type for deleted pasal
@@ -47,6 +44,25 @@ interface DeletedPasal {
 
 const PAGE_SIZE = 10
 
+// Helper functions for date formatting
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleString('id-ID', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+const getDaysAgo = (dateString: string) => {
+  const deleted = new Date(dateString)
+  const now = new Date()
+  const diffTime = Math.abs(now.getTime() - deleted.getTime())
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+  return diffDays
+}
+
 export function PasalTrashPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -63,6 +79,86 @@ export function PasalTrashPage() {
   const [bulkRestoreModal, { open: openBulkRestore, close: closeBulkRestore }] = useDisclosure(false)
   const [bulkDeleteModal, { open: openBulkDelete, close: closeBulkDelete }] = useDisclosure(false)
   const [selectedPasal, setSelectedPasal] = useState<DeletedPasal | null>(null)
+
+  // Define table columns inside component
+  const pasalTrashColumns: Column<DeletedPasal>[] = [
+    {
+      key: 'undang_undang',
+      title: 'Undang-Undang',
+      width: 120,
+      render: (_, record) => (
+        <Badge color="blue" variant="light">
+          {record.undang_undang.kode}
+        </Badge>
+      ),
+    },
+    {
+      key: 'nomor',
+      title: 'Nomor',
+      width: 100,
+      render: (value) => (
+        <Text fw={500}>Pasal {value}</Text>
+      ),
+    },
+    {
+      key: 'judul',
+      title: 'Judul',
+      render: (value) => (
+        <Text size="sm" lineClamp={1}>
+          {value || '-'}
+        </Text>
+      ),
+    },
+    {
+      key: 'isi',
+      title: 'Isi',
+      render: (value) => (
+        <Text size="sm" c="dimmed" lineClamp={2} style={{ maxWidth: 300 }}>
+          {value}
+        </Text>
+      ),
+    },
+    {
+      key: 'keywords',
+      title: 'Keywords',
+      render: (value) => (
+        <Group gap={4}>
+          {value?.slice(0, 2).map((kw: string, idx: number) => (
+            <Badge key={idx} size="xs" variant="outline">
+              {kw}
+            </Badge>
+          ))}
+          {(value?.length || 0) > 2 && (
+            <Badge size="xs" variant="outline" color="gray">
+              +{(value?.length || 0) - 2}
+            </Badge>
+          )}
+        </Group>
+      ),
+    },
+    {
+      key: 'deleted_at',
+      title: 'Dihapus',
+      width: 150,
+      render: (value) => {
+        const daysAgo = getDaysAgo(value)
+        const daysLeft = 30 - daysAgo
+
+        return (
+          <Stack gap={2}>
+            <Text size="xs">{formatDate(value)}</Text>
+            <Badge
+              size="xs"
+              color={daysLeft <= 7 ? 'red' : daysLeft <= 14 ? 'yellow' : 'gray'}
+              variant="light"
+            >
+              {daysLeft > 0 ? `${daysLeft} hari lagi` : 'Segera dihapus'}
+            </Badge>
+          </Stack>
+        )
+      },
+    },
+  ]
 
   // Fetch undang-undang for filter
   const { data: undangUndangList } = useQuery({
@@ -105,8 +201,6 @@ export function PasalTrashPage() {
       return { data: data as unknown as DeletedPasal[], count: count || 0 }
     },
   })
-
-  const totalPages = Math.ceil((pasalData?.count || 0) / PAGE_SIZE)
 
   // Restore mutation
   const restoreMutation = useMutation({
@@ -252,40 +346,6 @@ export function PasalTrashPage() {
     },
   })
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedIds(pasalData?.data?.map((p) => p.id) || [])
-    } else {
-      setSelectedIds([])
-    }
-  }
-
-  const handleSelectOne = (id: string, checked: boolean) => {
-    if (checked) {
-      setSelectedIds([...selectedIds, id])
-    } else {
-      setSelectedIds(selectedIds.filter((i) => i !== id))
-    }
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('id-ID', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-
-  const getDaysAgo = (dateString: string) => {
-    const deleted = new Date(dateString)
-    const now = new Date()
-    const diffTime = Math.abs(now.getTime() - deleted.getTime())
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-    return diffDays
-  }
-
   return (
     <Stack gap="lg">
       <Group>
@@ -367,114 +427,50 @@ export function PasalTrashPage() {
 
       {/* Table */}
       <Card shadow="sm" padding="md" radius="md" withBorder>
-        {isLoading ? (
-          <Stack gap="sm">
-            {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} height={50} />
-            ))}
-          </Stack>
-        ) : (
-          <>
-            <Table striped highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th w={40}>
-                    <Checkbox
-                      checked={selectedIds.length === pasalData?.data?.length && pasalData?.data?.length > 0}
-                      indeterminate={selectedIds.length > 0 && selectedIds.length < (pasalData?.data?.length || 0)}
-                      onChange={(e) => handleSelectAll(e.currentTarget.checked)}
-                    />
-                  </Table.Th>
-                  <Table.Th>Undang-Undang</Table.Th>
-                  <Table.Th>Nomor</Table.Th>
-                  <Table.Th>Judul</Table.Th>
-                  <Table.Th>Dihapus</Table.Th>
-                  <Table.Th w={120}>Aksi</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {pasalData?.data?.map((pasal) => {
-                  const daysAgo = getDaysAgo(pasal.deleted_at)
-                  const daysLeft = 30 - daysAgo
-
-                  return (
-                    <Table.Tr key={pasal.id}>
-                      <Table.Td>
-                        <Checkbox
-                          checked={selectedIds.includes(pasal.id)}
-                          onChange={(e) => handleSelectOne(pasal.id, e.currentTarget.checked)}
-                        />
-                      </Table.Td>
-                      <Table.Td>
-                        <Badge variant="light">{pasal.undang_undang.kode}</Badge>
-                      </Table.Td>
-                      <Table.Td>
-                        <Text fw={500}>Pasal {pasal.nomor}</Text>
-                      </Table.Td>
-                      <Table.Td>
-                        <Text size="sm" lineClamp={1}>
-                          {pasal.judul || '-'}
-                        </Text>
-                      </Table.Td>
-                      <Table.Td>
-                        <Stack gap={2}>
-                          <Text size="xs">{formatDate(pasal.deleted_at)}</Text>
-                          <Badge
-                            size="xs"
-                            color={daysLeft <= 7 ? 'red' : daysLeft <= 14 ? 'yellow' : 'gray'}
-                            variant="light"
-                          >
-                            {daysLeft > 0 ? `${daysLeft} hari lagi` : 'Segera dihapus'}
-                          </Badge>
-                        </Stack>
-                      </Table.Td>
-                      <Table.Td>
-                        <Group gap="xs">
-                          <Tooltip label="Restore">
-                            <ActionIcon
-                              variant="subtle"
-                              color="green"
-                              onClick={() => {
-                                setSelectedPasal(pasal)
-                                openRestore()
-                              }}
-                            >
-                              <IconRestore size={16} />
-                            </ActionIcon>
-                          </Tooltip>
-                          <Tooltip label="Hapus Permanen">
-                            <ActionIcon
-                              variant="subtle"
-                              color="red"
-                              onClick={() => {
-                                setSelectedPasal(pasal)
-                                openDelete()
-                              }}
-                            >
-                              <IconTrash size={16} />
-                            </ActionIcon>
-                          </Tooltip>
-                        </Group>
-                      </Table.Td>
-                    </Table.Tr>
-                  )
-                })}
-              </Table.Tbody>
-            </Table>
-
-            {pasalData?.data?.length === 0 && (
-              <Text c="dimmed" ta="center" py="xl">
-                Tidak ada pasal di sampah
-              </Text>
-            )}
-
-            {totalPages > 1 && (
-              <Group justify="center" mt="md">
-                <Pagination value={page} onChange={setPage} total={totalPages} />
-              </Group>
-            )}
-          </>
-        )}
+        <DataTable
+          columns={pasalTrashColumns}
+          data={pasalData?.data || []}
+          loading={isLoading}
+          current={page}
+          pageSize={PAGE_SIZE}
+          total={pasalData?.count || 0}
+          onPageChange={setPage}
+          onPageSizeChange={() => { }} // Not used in trash page
+          selectable
+          selectedIds={selectedIds}
+          onSelect={setSelectedIds}
+          getRowId={(record) => record.id}
+          onRowClick={(pasal) => navigate(`/pasal/${pasal.id}`)}
+          rowActions={(pasal) => (
+            <Group gap={4}>
+              <Tooltip label="Restore">
+                <ActionIcon
+                  variant="subtle"
+                  color="green"
+                  onClick={() => {
+                    setSelectedPasal(pasal)
+                    openRestore()
+                  }}
+                >
+                  <IconRestore size={16} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Hapus Permanen">
+                <ActionIcon
+                  variant="subtle"
+                  color="red"
+                  onClick={() => {
+                    setSelectedPasal(pasal)
+                    openDelete()
+                  }}
+                >
+                  <IconTrash size={16} />
+                </ActionIcon>
+              </Tooltip>
+            </Group>
+          )}
+          emptyText="Tidak ada pasal di sampah"
+        />
       </Card>
 
       {/* Restore Modal */}

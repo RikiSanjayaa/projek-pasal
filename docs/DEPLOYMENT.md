@@ -30,9 +30,10 @@
    - `supabase/migrations/002_rls_policies.sql` (row level security)
    - `supabase/migrations/003_search_functions.sql` (search functions)
    - `supabase/migrations/004_pasal_links_audit.sql` (audit trigger untuk links)
+   - `supabase/migrations/005_remove_ip_in_audit.sql` (revisi atribut audit)
    - `supabase/seed.sql` (opsional, untuk data dummy)
 
-### 1.3 Buat Admin User Pertama
+### 1.3 Buat Super Admin User Pertama
 
 1. Buka **Authentication** > **Users** di Supabase Dashboard
 2. Klik "Add User" > "Create New User"
@@ -56,7 +57,6 @@
 2. Catat:
    - **Project URL**: `https://xxxxx.supabase.co`
    - **anon/public key**: untuk client-side
-   - **service_role key**: JANGAN share, hanya untuk server
 
 ---
 
@@ -84,7 +84,7 @@ Edit `.env`:
 
 ```env
 VITE_SUPABASE_URL=https://xxxxx.supabase.co
-VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY=your-key
+VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY=your-publishable-key
 VITE_APP_NAME=CariPasal Admin
 ```
 
@@ -95,6 +95,28 @@ npm run dev
 ```
 
 Buka http://localhost:5173
+
+### 2.5 Create-admin flow (gunakan Supabase Edge Function)
+
+Proyek sebelumnya menggunakan server Express kecil untuk membuat akun admin menggunakan `service_role` key. Sekarang disarankan untuk mengganti server tersebut dengan Supabase Edge Function — ini menghilangkan kebutuhan menjalankan server terpisah dan menyimpan `service_role` sebagai secret di Supabase.
+
+Langkah singkat:
+
+- Implementasikan fungsi di folder `supabase/functions/create-admin` (contoh tersedia di repo).
+- Deploy fungsi melalui Supabase CLI atau Dashboard Edge Functions.
+
+Setup secrets (CLI):
+
+```bash
+supabase secrets set SUPABASE_URL="https://<project>.supabase.co" SERVICE_ROLE="<service-role-key>"
+```
+
+Deploy fungsi (CLI):
+
+```bash
+supabase login
+supabase functions deploy create-admin --project-ref <your-project-ref>
+```
 
 ---
 

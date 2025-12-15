@@ -17,6 +17,8 @@ import { UndangUndangListPage } from './pages/undang-undang/UndangUndangListPage
 import { BulkImportPage } from './pages/BulkImportPage'
 import { AuditLogPage } from './pages/AuditLogPage'
 import { AuditLogDetailPage } from './pages/AuditLogDetailPage'
+import { NotFoundPage } from './pages/NotFoundPage'
+import { ManageAdminPage } from './pages/ManageAdminPage'
 
 // Protected Route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -62,10 +64,11 @@ function App() {
         <Route path="bulk-import" element={<BulkImportPage />} />
         <Route path="audit-log" element={<AuditLogPage />} />
         <Route path="audit-log/:id" element={<AuditLogDetailPage />} />
+        <Route path="manage-admin" element={<ManageAdminPage />} />
       </Route>
 
-      {/* Catch all */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* Catch all - 404 */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }
