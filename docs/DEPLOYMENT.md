@@ -30,9 +30,10 @@
    - `supabase/migrations/002_rls_policies.sql` (row level security)
    - `supabase/migrations/003_search_functions.sql` (search functions)
    - `supabase/migrations/004_pasal_links_audit.sql` (audit trigger untuk links)
+   - `supabase/migrations/005_remove_ip_in_audit.sql` (revisi atribut audit)
    - `supabase/seed.sql` (opsional, untuk data dummy)
 
-### 1.3 Buat Admin User Pertama
+### 1.3 Buat Super Admin User Pertama
 
 1. Buka **Authentication** > **Users** di Supabase Dashboard
 2. Klik "Add User" > "Create New User"
@@ -86,7 +87,10 @@ Edit `.env`:
 VITE_SUPABASE_URL=https://xxxxx.supabase.co
 VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY=your-key
 VITE_APP_NAME=CariPasal Admin
+CREATE_ADMIN_API_URL=http://localhost:3001
 ```
+
+`CREATE_ADMIN_API_URL` adalah base URL yang digunakan frontend untuk memanggil server pembuatan admin (`create-admin-api`). Pada development biasanya `http://localhost:3001`. Jangan masukkan service role key ke file frontend — hanya `create-admin-api` yang menggunakan `SUPABASE_SERVICE_ROLE_KEY` di server-side.
 
 ### 2.4 Run Development Server
 
@@ -95,6 +99,38 @@ npm run dev
 ```
 
 Buka http://localhost:5173
+
+### 2.5 create-admin-api (server untuk pembuatan admin)
+
+Proyek ini menyertakan server kecil `create-admin-api/server.js` yang digunakan untuk membuat akun admin di Supabase menggunakan service role key. Karena `service_role` key sangat sensitif, operasi pembuatan user harus dijalankan di server — bukan dari frontend.
+
+- Letakkan environment variables untuk server terpisah dari variabel frontend. yang diperlukan:
+
+```bash
+# di folder admin-dashboard/create-admin-api
+cp .env.example .env
+```
+
+Edit `.env`:
+
+- `SUPABASE_URL` — Supabase project URL (sama dengan VITE_SUPABASE_URL)
+- `SUPABASE_SERVICE_ROLE_KEY` — Service role key (harus dijaga rapat, hanya di server)
+- `PORT` — (opsional) port server, default `3001`
+
+- Cara menjalankan server saat development (dijalankan terpisah dari Vite):
+
+```bash
+# di folder admin-dashboard
+npm run dev:admin-api
+```
+
+- `npm run dev:admin-api` menjalankan `create-admin-api/server.js` (menggunakan `nodemon`) dan menyediakan endpoint `POST /api/create-admin`.
+- Jalankan server ini di terminal terpisah bersama `npm run dev` (Vite). Alternatif: gunakan tool seperti `concurrently` atau process manager untuk menjalankan keduanya dalam satu perintah.
+
+Keamanan & deployment
+
+- Jangan deploy `SUPABASE_SERVICE_ROLE_KEY` ke lingkungan yang dapat diakses publik. Untuk deployment produksi, host `create-admin-api` pada server yang Anda kontrol (VPS, Cloud Run, atau serverless dengan secret management) dan pastikan hanya endpoint yang aman dapat diakses.
+- Frontend akan memanggil endpoint ini dengan header `Authorization: Bearer <SUPER_ADMIN_ACCESS_TOKEN>`. Server memverifikasi bahwa pemanggil adalah `super_admin` sebelum membuat akun.
 
 ---
 
