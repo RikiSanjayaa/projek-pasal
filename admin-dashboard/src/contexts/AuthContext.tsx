@@ -7,8 +7,9 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   adminUser: AdminUser | null
+  serverDown: boolean
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>
+  signIn: (email: string, password: string) => Promise<{ error: Error | null; serverDown?: boolean }>
   signOut: () => Promise<void>
 }
 
@@ -26,6 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null)
+  const [serverDown, setServerDown] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -33,55 +35,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const initAuth = async () => {
       try {
-        // Add 5 second timeout to getSession
-        const { data: { session }, error } = await withTimeout(
-          supabase.auth.getSession(),
-          5000
-        )
+        // Tidak perlu timeout untuk getSession
+        const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
-          console.error('Session error:', error)
-          // Clear potentially corrupt session
-          await supabase.auth.signOut()
+          console.error('Session error:', error);
         }
 
-        if (!isMounted) return
+        if (!isMounted) return;
 
-        setSession(session)
-        setUser(session?.user ?? null)
+        setSession(session);
+        setUser(session?.user ?? null);
+        // selesai memproses session — jangan biarkan UI tetap loading menunggu data profil
+        setLoading(false)
 
         if (session?.user) {
-          try {
-            // Fetch admin user data with timeout
-            const result = await withTimeout(
-              Promise.resolve(
-                supabase
-                  .from('admin_users')
-                  .select('*')
-                  .eq('id', session.user.id)
-                  .single()
-              ),
-              5000
-            ) as { data: AdminUser | null }
+          // Fetch admin_user di background dengan timeout
+          ; (async () => {
+            try {
+              const promise = supabase
+                .from('admin_users')
+                .select('*')
+                .eq('id', session.user.id)
+                .single()
 
-            if (isMounted) {
-              setAdminUser(result.data)
+              const result = await withTimeout(Promise.resolve(promise), 5000) as { data: AdminUser | null, error?: any }
+
+              if (isMounted && result?.data) {
+                setAdminUser(result.data)
+              }
+            } catch (adminError: any) {
+              console.error('Error fetching admin user (background):', adminError)
+              const msg = String(adminError?.message || adminError)
+              if (msg.includes('Failed to fetch') || msg.includes('timeout') || adminError?.status >= 500) {
+                setServerDown(true)
+              }
             }
-          } catch (adminError) {
-            console.error('Error fetching admin user:', adminError)
-          }
+          })()
         }
       } catch (error) {
-        console.error('Auth initialization error:', error)
-        // On timeout or error, clear session and continue
-        try {
-          await supabase.auth.signOut()
-        } catch {
-          // Ignore signOut errors
-        }
+        console.error('Auth initialization error:', error);
       } finally {
         if (isMounted) {
-          setLoading(false)
+          setLoading(false);
         }
       }
     }
@@ -92,34 +88,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!isMounted) return
+      if (!isMounted) return;
 
-      setSession(session)
-      setUser(session?.user ?? null)
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false)
 
       if (session?.user) {
-        try {
-          const result = await withTimeout(
-            Promise.resolve(
-              supabase
-                .from('admin_users')
-                .select('*')
-                .eq('id', session.user.id)
-                .single()
-            ),
-            5000
-          ) as { data: AdminUser | null }
+        ; (async () => {
+          try {
+            const promise = supabase
+              .from('admin_users')
+              .select('*')
+              .eq('id', session.user.id)
+              .single()
 
-          if (isMounted) {
-            setAdminUser(result.data)
+            const result = await withTimeout(Promise.resolve(promise), 5000) as { data: AdminUser | null, error?: any }
+
+            if (isMounted && result?.data) {
+              setAdminUser(result.data)
+            }
+          } catch (error: any) {
+            console.error('Error fetching admin user on auth change (background):', error)
+            const msg = String(error?.message || error)
+            if (msg.includes('Failed to fetch') || msg.includes('timeout') || error?.status >= 500) {
+              setServerDown(true)
+            }
           }
-        } catch (error) {
-          console.error('Error fetching admin user on auth change:', error)
-        }
+        })()
       } else {
         setAdminUser(null)
       }
-    })
+    });
 
     return () => {
       isMounted = false
@@ -128,16 +128,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (error) {
-      return { error }
+      if (error) {
+        const msg = String(error.message || error)
+        const isServerDown = /failed to fetch|timeout|service unavailable|502|503|gateway/i.test(msg) || (error as any)?.status >= 500
+
+        // Jika belum jelas, ping Supabase URL cepat untuk memastikan status server
+        if (!isServerDown) {
+          try {
+            const controller = new AbortController()
+            const timeout = setTimeout(() => controller.abort(), 3000)
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+            await fetch(supabaseUrl!, { method: 'GET', signal: controller.signal })
+            clearTimeout(timeout)
+            // jika berhasil fetch, berarti server reachable -> not a serverDown
+          } catch (pingErr) {
+            // fetch gagal -> server likely down
+            setServerDown(true)
+            return { error, serverDown: true }
+          }
+        } else {
+          setServerDown(true)
+          return { error, serverDown: true }
+        }
+
+        return { error, serverDown: false }
+      }
+
+      return { error: null }
+    } catch (e: any) {
+      // Network / unexpected error
+      console.error('signIn error:', e)
+      setServerDown(true)
+      return { error: e as Error, serverDown: true }
     }
-
-    return { error: null }
   }
 
   const signOut = async () => {
@@ -151,6 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     session,
     adminUser,
+    serverDown,
     loading,
     signIn,
     signOut,

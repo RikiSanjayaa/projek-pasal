@@ -9,9 +9,10 @@ import {
   Badge,
   Grid,
   Loader,
+  Alert,
 } from '@mantine/core'
 import { useQuery } from '@tanstack/react-query'
-import { IconArrowLeft, IconEdit } from '@tabler/icons-react'
+import { IconArrowLeft, IconEdit, IconTrash } from '@tabler/icons-react'
 import { supabase } from '@/lib/supabase'
 import { PasalLinksSidebar } from '@/components/PasalLinksSidebar'
 import type { PasalWithUndangUndang } from '@/lib/database.types'
@@ -39,7 +40,7 @@ export function PasalDetailPage() {
     )
   }
 
-  // Fetch pasal detail
+  // Fetch pasal detail (including deleted ones)
   const { data: pasal, isLoading } = useQuery({
     queryKey: ['pasal', 'detail', id],
     queryFn: async () => {
@@ -47,7 +48,6 @@ export function PasalDetailPage() {
         .from('pasal')
         .select('*, undang_undang(*)')
         .eq('id', id)
-        .eq('is_active', true)
         .single()
 
       if (error) throw error
@@ -95,12 +95,14 @@ export function PasalDetailPage() {
             Kembali
           </Button>
         </Group>
-        <Button
-          leftSection={<IconEdit size={16} />}
-          onClick={() => navigate(`/pasal/${pasal.id}/edit`)}
-        >
-          Edit Pasal
-        </Button>
+        {pasal.is_active === true && (
+          <Button
+            leftSection={<IconEdit size={16} />}
+            onClick={() => navigate(`/pasal/${pasal.id}/edit`)}
+          >
+            Edit Pasal
+          </Button>
+        )}
       </Group>
       <div>
         <Title order={2}>
@@ -113,6 +115,16 @@ export function PasalDetailPage() {
         </Title>
         <Text c="dimmed">Detail pasal</Text>
       </div>
+
+      {pasal.is_active === false && (
+        <Alert icon={<IconTrash size={16} />} color="red" variant="light">
+          <Text fw={500}>Pasal ini telah dihapus</Text>
+          <Text size="sm">
+            Pasal ini sudah tidak aktif dan akan dihapus permanen dalam waktu dekat.
+            Anda masih dapat melihat detailnya, namun tidak dapat mengeditnya.
+          </Text>
+        </Alert>
+      )}
 
       <Grid>
         <Grid.Col span={{ base: 12, md: 8 }}>

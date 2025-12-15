@@ -19,7 +19,7 @@ import { useAuth } from '@/contexts/AuthContext'
 export function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { signIn, user } = useAuth()
+  const { signIn, user, serverDown } = useAuth()
   const navigate = useNavigate()
 
   // Redirect if already logged in
@@ -43,10 +43,14 @@ export function LoginPage() {
     setLoading(true)
     setError(null)
 
-    const { error } = await signIn(values.email, values.password)
+    const { error, serverDown: signInServerDown } = await signIn(values.email, values.password)
 
     if (error) {
-      setError('Email atau password salah. Pastikan Anda terdaftar sebagai admin.')
+      if (signInServerDown || serverDown) {
+        setError('Server sedang bermasalah. Silakan coba lagi nanti.')
+      } else {
+        setError('Email atau password salah. Pastikan Anda terdaftar sebagai admin.')
+      }
       setLoading(false)
       return
     }

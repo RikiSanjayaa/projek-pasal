@@ -29,8 +29,10 @@ import {
   IconUser,
   IconChevronLeft,
   IconChevronRight,
+  IconShieldCheck,
 } from '@tabler/icons-react'
 import { useAuth } from '@/contexts/AuthContext'
+import AdminActiveAlert from '@/components/AdminActiveAlert'
 
 const navItems = [
   { label: 'Dashboard', icon: IconHome, path: '/' },
@@ -164,6 +166,19 @@ export function AdminLayout() {
                     style={{ borderRadius: 8 }}
                   />
                 ))}
+                {adminUser?.role === 'super_admin' && (
+                  <NavLink
+                    label="Manage Admin"
+                    leftSection={<IconShieldCheck size={18} />}
+                    active={location.pathname === '/manage-admin'}
+                    onClick={() => {
+                      navigate('/manage-admin')
+                      toggle()
+                    }}
+                    mb={4}
+                    style={{ borderRadius: 8 }}
+                  />
+                )}
               </Box>
             )}
           </Transition>
@@ -226,6 +241,30 @@ export function AdminLayout() {
                     </Box>
                   )
                 })}
+                {sidebarCollapsed && adminUser?.role === 'super_admin' && (
+                  <Box
+                    component="a"
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      navigate('/manage-admin')
+                      toggle()
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '12px 12px',
+                      minHeight: '48px',
+                      borderRadius: '8px',
+                      marginBottom: '4px',
+                      cursor: 'pointer',
+                    }}
+                    title="Manage Admin"
+                  >
+                    <IconShieldCheck size={18} />
+                  </Box>
+                )}
               </Box>
             )}
           </Transition>
@@ -233,6 +272,7 @@ export function AdminLayout() {
       </AppShell.Navbar>
 
       <AppShell.Main>
+        <AdminActiveAlert />
         <Outlet />
       </AppShell.Main>
 
