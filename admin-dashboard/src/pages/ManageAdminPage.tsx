@@ -17,6 +17,8 @@ export function ManageAdminPage() {
   const [emailError, setEmailError] = React.useState<string | null>(null)
   const [namaInput, setNamaInput] = React.useState<string>('')
 
+  const EDGE_FUNCTION_URL = `${import.meta.env.EDGE_FUNCTION_URL}`
+
   React.useEffect(() => {
     if (!adminUser) return
       ; (async () => {
@@ -34,9 +36,7 @@ export function ManageAdminPage() {
     if (!session?.access_token) return
     setLoading(true)
     try {
-      const serverBase = import.meta.env.CREATE_ADMIN_API_URL ?? 'http://localhost:3001'
-
-      const res = await fetch(`${serverBase}/api/create-admin`, {
+      const res = await fetch(EDGE_FUNCTION_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
