@@ -68,7 +68,8 @@ export function DashboardPage() {
         recentLogsResult,
         totalChangesTodayResult,
         undangUndangListResult,
-        pasalCountsResult
+        pasalCountsResult,
+        adminActiveResult
       ] = await Promise.all([
         // Total pasal count
         supabase
@@ -107,7 +108,13 @@ export function DashboardPage() {
           .from('pasal')
           .select('undang_undang_id')
           .eq('is_active', true)
-          .is('deleted_at', null)
+          .is('deleted_at', null),
+
+        // Active admin users count
+        supabase
+          .from('admin_users')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_active', true),
       ])
 
       // Check for errors
@@ -130,7 +137,8 @@ export function DashboardPage() {
         recentLogs: recentLogsResult.data || [],
         totalChangesToday: totalChangesTodayResult.count || 0,
         undangUndangList: undangUndangListResult.data || [],
-        pasalCounts: counts
+        pasalCounts: counts,
+        adminActiveCount: adminActiveResult.count || 0,
       }
     },
     staleTime: 5 * 1000, // 5 seconds - real-time updates for dashboard
@@ -144,6 +152,7 @@ export function DashboardPage() {
   const totalChangesToday = dashboardData?.totalChangesToday
   const undangUndangList = dashboardData?.undangUndangList
   const pasalCounts = dashboardData?.pasalCounts
+  const adminActiveCount = dashboardData?.adminActiveCount
 
   return (
     <Stack gap="lg">
@@ -177,7 +186,7 @@ export function DashboardPage() {
         />
         <StatsCard
           title="Admin Aktif"
-          value="<10"
+          value={adminActiveCount ?? 0}
           icon={<IconUsers size={24} />}
           color="violet"
         />
