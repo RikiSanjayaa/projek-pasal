@@ -8,6 +8,7 @@ import {
   Select,
   Skeleton,
   Stack,
+  ScrollArea,
 } from '@mantine/core'
 
 export interface Column<T> {
@@ -72,6 +73,13 @@ export function DataTable<T extends Record<string, any>>({
 }: DataTableProps<T>) {
   const totalPages = Math.ceil(total / pageSize)
 
+  // Determine a reasonable minimum table width so columns don't become too narrow on small screens.
+  // Give each column a baseline width and add space for selectable/actions columns when present.
+  const baseColumnWidth = 150
+  const selectableWidth = selectable ? 40 : 0
+  const actionsWidth = rowActions ? 80 : 0
+  const minTableWidth = Math.max(700, columns.length * baseColumnWidth + selectableWidth + actionsWidth)
+
   const handleSelectAll = (checked: boolean) => {
     if (!onSelect) return
     if (checked) {
@@ -115,59 +123,63 @@ export function DataTable<T extends Record<string, any>>({
 
   return (
     <>
-      <Table striped highlightOnHover>
-        <Table.Thead>
-          <Table.Tr>
-            {selectable && (
-              <Table.Th w={40}>
-                <Checkbox
-                  checked={selectedIds.length === data.length && data.length > 0}
-                  indeterminate={selectedIds.length > 0 && selectedIds.length < data.length}
-                  onChange={(e) => handleSelectAll(e.currentTarget.checked)}
-                />
-              </Table.Th>
-            )}
-            {columns.map((column) => (
-              <Table.Th key={column.key} w={column.width}>
-                {column.title}
-              </Table.Th>
-            ))}
-            {rowActions && <Table.Th w={80}>Aksi</Table.Th>}
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {data.map((record, index) => {
-            const id = getRowId(record)
-            return (
-              <Table.Tr
-                key={id}
-                style={{ cursor: onRowClick ? 'pointer' : 'default' }}
-                onClick={() => onRowClick?.(record)}
-                bg={selectedIds.includes(id) ? 'var(--mantine-color-blue-light)' : undefined}
-              >
+      <ScrollArea style={{ width: '100%' }} type="always" scrollbarSize={6} offsetScrollbars>
+        <div style={{ minWidth: minTableWidth }}>
+          <Table striped highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
                 {selectable && (
-                  <Table.Td onClick={(e) => e.stopPropagation()}>
+                  <Table.Th w={40}>
                     <Checkbox
-                      checked={selectedIds.includes(id)}
-                      onChange={(e) => handleSelect(id, e.currentTarget.checked)}
+                      checked={selectedIds.length === data.length && data.length > 0}
+                      indeterminate={selectedIds.length > 0 && selectedIds.length < data.length}
+                      onChange={(e) => handleSelectAll(e.currentTarget.checked)}
                     />
-                  </Table.Td>
+                  </Table.Th>
                 )}
                 {columns.map((column) => (
-                  <Table.Td key={column.key}>
-                    {renderCell(column, record, index)}
-                  </Table.Td>
+                  <Table.Th key={column.key} w={column.width}>
+                    {column.title}
+                  </Table.Th>
                 ))}
-                {rowActions && (
-                  <Table.Td onClick={(e) => e.stopPropagation()}>
-                    {rowActions(record)}
-                  </Table.Td>
-                )}
+                {rowActions && <Table.Th w={80}>Aksi</Table.Th>}
               </Table.Tr>
-            )
-          })}
-        </Table.Tbody>
-      </Table>
+            </Table.Thead>
+            <Table.Tbody>
+              {data.map((record, index) => {
+                const id = getRowId(record)
+                return (
+                  <Table.Tr
+                    key={id}
+                    style={{ cursor: onRowClick ? 'pointer' : 'default' }}
+                    onClick={() => onRowClick?.(record)}
+                    bg={selectedIds.includes(id) ? 'var(--mantine-color-blue-light)' : undefined}
+                  >
+                    {selectable && (
+                      <Table.Td onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.includes(id)}
+                          onChange={(e) => handleSelect(id, e.currentTarget.checked)}
+                        />
+                      </Table.Td>
+                    )}
+                    {columns.map((column) => (
+                      <Table.Td key={column.key}>
+                        {renderCell(column, record, index)}
+                      </Table.Td>
+                    ))}
+                    {rowActions && (
+                      <Table.Td onClick={(e) => e.stopPropagation()}>
+                        {rowActions(record)}
+                      </Table.Td>
+                    )}
+                  </Table.Tr>
+                )
+              })}
+            </Table.Tbody>
+          </Table>
+        </div>
+      </ScrollArea>
 
       {data.length === 0 && (
         <Text c="dimmed" ta="center" py="xl">

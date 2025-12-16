@@ -53,7 +53,7 @@ export function AuditLogPage() {
         .range((page - 1) * pageSize, page * pageSize - 1)
 
       if (debouncedSearch) {
-        query = query.or(`admin_email.ilike.%${debouncedSearch}%,record_id.eq.${debouncedSearch}`)
+        query = query.or(`admin_email.ilike.%${debouncedSearch}%`)
       }
 
       if (filterAction) {

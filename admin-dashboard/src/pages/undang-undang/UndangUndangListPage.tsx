@@ -16,6 +16,7 @@ import {
   Modal,
   Switch,
   Skeleton,
+  ScrollArea,
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
@@ -31,6 +32,11 @@ export function UndangUndangListPage() {
   const [createModal, { open: openCreate, close: closeCreate }] = useDisclosure(false)
   const [editModal, { open: openEdit, close: closeEdit }] = useDisclosure(false)
   const [selectedUU, setSelectedUU] = useState<UndangUndang | null>(null)
+
+  const baseColumnWidth = 150
+  const selectableWidth = 40
+  const actionsWidth = 80
+  const minTableWidth = Math.max(700, 5 * baseColumnWidth + selectableWidth + actionsWidth)
 
   // Fetch undang-undang
   const { data: undangUndangList, isLoading } = useQuery({
@@ -165,62 +171,66 @@ export function UndangUndangListPage() {
             ))}
           </Stack>
         ) : (
-          <Table striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Kode</Table.Th>
-                <Table.Th>Nama</Table.Th>
-                <Table.Th>Deskripsi</Table.Th>
-                <Table.Th>Tahun</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th w={100}>Aksi</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {undangUndangList?.map((uu) => (
-                <Table.Tr
-                  key={uu.id}
-                  style={{
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => navigate(`/pasal?uu=${uu.id}`)}
-                >
-                  <Table.Td>
-                    <Badge color="blue" variant="filled">
-                      {uu.kode}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text fw={500}>{uu.nama}</Text>
-                    <Text size="xs" c="dimmed" lineClamp={1}>
-                      {uu.nama_lengkap}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>{uu.deskripsi || '-'}</Table.Td>
-                  <Table.Td>{uu.tahun || '-'}</Table.Td>
-                  <Table.Td>
-                    <Badge color={uu.is_active ? 'green' : 'red'} variant="light">
-                      {uu.is_active ? 'Aktif' : 'Nonaktif'}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap="xs">
-                      <ActionIcon
-                        variant="subtle"
-                        color="blue"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleEdit(uu)
-                        }}
-                      >
-                        <IconEdit size={16} />
-                      </ActionIcon>
-                    </Group>
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
+          <ScrollArea style={{ width: '100%' }} type="always" scrollbarSize={6} offsetScrollbars>
+            <div style={{ minWidth: minTableWidth }}>
+              <Table striped highlightOnHover>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Kode</Table.Th>
+                    <Table.Th>Nama</Table.Th>
+                    <Table.Th>Deskripsi</Table.Th>
+                    <Table.Th>Tahun</Table.Th>
+                    <Table.Th>Status</Table.Th>
+                    <Table.Th w={100}>Aksi</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {undangUndangList?.map((uu) => (
+                    <Table.Tr
+                      key={uu.id}
+                      style={{
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => navigate(`/pasal?uu=${uu.id}`)}
+                    >
+                      <Table.Td>
+                        <Badge color="blue" variant="filled">
+                          {uu.kode}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text fw={500}>{uu.nama}</Text>
+                        <Text size="xs" c="dimmed" lineClamp={1}>
+                          {uu.nama_lengkap}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>{uu.deskripsi || '-'}</Table.Td>
+                      <Table.Td>{uu.tahun || '-'}</Table.Td>
+                      <Table.Td>
+                        <Badge color={uu.is_active ? 'green' : 'red'} variant="light">
+                          {uu.is_active ? 'Aktif' : 'Nonaktif'}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Group gap="xs">
+                          <ActionIcon
+                            variant="subtle"
+                            color="blue"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEdit(uu)
+                            }}
+                          >
+                            <IconEdit size={16} />
+                          </ActionIcon>
+                        </Group>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </div>
+          </ScrollArea>
         )}
       </Card>
 

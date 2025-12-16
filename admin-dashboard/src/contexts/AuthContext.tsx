@@ -87,7 +87,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // If GoTrue emits PASSWORD_RECOVERY when user clicks recovery link,
+      // redirect to the reset UI so the app can prompt for new password.
+      if (event === 'PASSWORD_RECOVERY') {
+        try {
+          // Mark that this session was created via a recovery flow so the UI
+          // can distinguish it from a normal logged-in session.
+          try {
+            sessionStorage.setItem('recovery_session', Date.now().toString())
+          } catch (e) {
+            /* ignore sessionStorage errors */
+          }
+
+          window.location.href = `${window.location.origin}/reset-password`
+          // return early — the redirect will reload the app and the session should be detected from URL
+          return
+        } catch (e) {
+          console.error('Failed to redirect on PASSWORD_RECOVERY', e)
+        }
+      }
       if (!isMounted) return;
 
       setSession(session);
@@ -138,21 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const msg = String(error.message || error)
         const isServerDown = /failed to fetch|timeout|service unavailable|502|503|gateway/i.test(msg) || (error as any)?.status >= 500
 
-        // Jika belum jelas, ping Supabase URL cepat untuk memastikan status server
-        if (!isServerDown) {
-          try {
-            const controller = new AbortController()
-            const timeout = setTimeout(() => controller.abort(), 3000)
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-            await fetch(supabaseUrl!, { method: 'GET', signal: controller.signal })
-            clearTimeout(timeout)
-            // jika berhasil fetch, berarti server reachable -> not a serverDown
-          } catch (pingErr) {
-            // fetch gagal -> server likely down
-            setServerDown(true)
-            return { error, serverDown: true }
-          }
-        } else {
+        if (isServerDown) {
           setServerDown(true)
           return { error, serverDown: true }
         }
