@@ -1,5 +1,6 @@
 import React from 'react'
 import { Button, Card, Group, Modal, Text, Title, Stack, CopyButton, ActionIcon, Badge, TextInput, Alert, Menu, Table } from '@mantine/core'
+import { showNotification } from '@mantine/notifications'
 import { IconCopy, IconEdit } from '@tabler/icons-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
@@ -16,6 +17,10 @@ export function ManageAdminPage() {
   const [emailInput, setEmailInput] = React.useState<string>('')
   const [emailError, setEmailError] = React.useState<string | null>(null)
   const [namaInput, setNamaInput] = React.useState<string>('')
+  const [toggleModalOpen, setToggleModalOpen] = React.useState(false)
+  const [toggleTarget, setToggleTarget] = React.useState<{ id: string; email: string; targetActive: boolean } | null>(null)
+  const [resetConfirmOpen, setResetConfirmOpen] = React.useState(false)
+  const [resetTarget, setResetTarget] = React.useState<{ id: string; email: string } | null>(null)
 
   const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-admin`
 
@@ -30,6 +35,40 @@ export function ManageAdminPage() {
         }
       })()
   }, [adminUser])
+
+  // toggle admin active state
+  const toggleActiveAdmin = async (adminId: string, targetActive: boolean) => {
+    if (!adminUser) {
+      showNotification({ title: 'Not authenticated', message: 'User not authenticated', color: 'red' })
+      return
+    }
+
+    // prevent user from deactivating themselves
+    if (adminUser.id === adminId && targetActive === false) {
+      showNotification({ title: 'Peringatan', message: 'Anda tidak dapat menonaktifkan akun Anda sendiri', color: 'yellow' })
+      return
+    }
+
+    setLoading(true)
+    try {
+      const { error } = await supabase
+        .from('admin_users')
+        .update({ is_active: targetActive } as never)
+        .eq('id', adminId)
+
+      if (error) throw error
+
+      // update local state
+      setAdmins((prev) => prev.map((a) => (a.id === adminId ? { ...a, is_active: targetActive } : a)))
+      setToggleModalOpen(false)
+      setToggleTarget(null)
+    } catch (err: any) {
+      console.error('Failed to toggle admin active state', err)
+      showNotification({ title: 'Error', message: String(err?.message || err), color: 'red' })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // perform actual create request (called after confirmation)
   const performCreateAdmin = async (body: { email: string; nama?: string }) => {
@@ -73,7 +112,7 @@ export function ManageAdminPage() {
       setEmailError(null)
     } catch (err: any) {
       console.error(err)
-      alert(String(err?.message || err))
+      showNotification({ title: 'Error', message: String(err?.message || err), color: 'red' })
     } finally {
       setLoading(false)
     }
@@ -81,7 +120,7 @@ export function ManageAdminPage() {
 
   const handleCreateClick = () => {
     if (!emailInput.trim()) {
-      alert('Email is required')
+      showNotification({ title: 'Validasi', message: 'Email is required', color: 'yellow' })
       return
     }
     setPendingBody({ email: emailInput.trim(), nama: namaInput.trim() || undefined })
@@ -197,14 +236,36 @@ export function ManageAdminPage() {
                           </ActionIcon>
                         </Menu.Target>
                         <Menu.Dropdown>
-                          <Menu.Item color="yellow">
-                            {/* TODO: implement Request Reset Password to their email */}
+                          <Menu.Item
+                            color="yellow"
+                            onClick={() => {
+                              setResetTarget({ id: record.id, email: record.email })
+                              setResetConfirmOpen(true)
+                            }}
+                          >
                             Kirim email Reset Password
                           </Menu.Item>
-                          <Menu.Item color="red">
-                            {/* TODO: implement deactivate admin */}
-                            Nonaktifkan
-                          </Menu.Item>
+                          {record.is_active ? (
+                            <Menu.Item
+                              color="red"
+                              onClick={() => {
+                                setToggleTarget({ id: record.id, email: record.email, targetActive: false })
+                                setToggleModalOpen(true)
+                              }}
+                            >
+                              Nonaktifkan Admin
+                            </Menu.Item>
+                          ) : (
+                            <Menu.Item
+                              color="green"
+                              onClick={() => {
+                                setToggleTarget({ id: record.id, email: record.email, targetActive: true })
+                                setToggleModalOpen(true)
+                              }}
+                            >
+                              Aktifkan Admin
+                            </Menu.Item>
+                          )}
                         </Menu.Dropdown>
                       </Menu>
                     </Table.Td>
@@ -270,6 +331,63 @@ export function ManageAdminPage() {
               await performCreateAdmin(pendingBody)
               setPendingBody(null)
             }}>Ya, buat</Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={toggleModalOpen}
+        onClose={() => {
+          setToggleModalOpen(false)
+          setToggleTarget(null)
+        }}
+        title={toggleTarget?.targetActive ? 'Konfirmasi Aktifkan Admin' : 'Konfirmasi Nonaktifkan Admin'}
+      >
+        <Stack>
+          <Text>
+            {toggleTarget?.targetActive
+              ? `Anda akan mengaktifkan kembali admin ${toggleTarget?.email}.`
+              : `Anda akan menonaktifkan admin ${toggleTarget?.email}.`}
+          </Text>
+          <Group>
+            <Button variant="default" onClick={() => { setToggleModalOpen(false); setToggleTarget(null) }}>Batal</Button>
+            <Button
+              color={toggleTarget?.targetActive ? 'green' : 'red'}
+              loading={loading}
+              onClick={async () => {
+                if (!toggleTarget) return
+                setToggleModalOpen(false)
+                await toggleActiveAdmin(toggleTarget.id, toggleTarget.targetActive)
+              }}
+            >
+              {toggleTarget?.targetActive ? 'Aktifkan' : 'Nonaktifkan'}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal opened={resetConfirmOpen} onClose={() => { setResetConfirmOpen(false); setResetTarget(null) }} title="Kirim Reset Password">
+        <Stack>
+          <Text>Anda akan mengirim email reset password ke <b>{resetTarget?.email}</b>. Lanjutkan?</Text>
+          <Group>
+            <Button variant="default" onClick={() => { setResetConfirmOpen(false); setResetTarget(null) }}>Batal</Button>
+            <Button color="yellow" loading={loading} onClick={async () => {
+              if (!resetTarget) return
+              setResetConfirmOpen(false)
+              setLoading(true)
+              try {
+                // reuse shared helper
+                const { requestPasswordRecovery } = await import('@/lib/auth')
+                await requestPasswordRecovery(resetTarget.email)
+                showNotification({ title: 'Terkirim', message: 'Email reset password terkirim.', color: 'green' })
+              } catch (err: any) {
+                console.error('Failed to request password reset for admin', err)
+                showNotification({ title: 'Error', message: String(err?.message || err), color: 'red' })
+              } finally {
+                setLoading(false)
+                setResetTarget(null)
+              }
+            }}>Kirim</Button>
           </Group>
         </Stack>
       </Modal>

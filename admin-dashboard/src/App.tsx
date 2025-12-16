@@ -7,6 +7,7 @@ import { AdminLayout } from './layouts/AdminLayout'
 
 // Pages
 import { LoginPage } from './pages/LoginPage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { PasalListPage } from './pages/pasal/PasalListPage'
 import { PasalCreatePage } from './pages/pasal/PasalCreatePage'
@@ -44,6 +45,7 @@ function App() {
     <Routes>
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* Protected Routes */}
       <Route

@@ -16,6 +16,7 @@ import {
   Transition,
   Drawer,
 } from '@mantine/core'
+import { showNotification } from '@mantine/notifications'
 import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import {
   IconHome,
@@ -27,11 +28,13 @@ import {
   IconMoon,
   IconLogout,
   IconUser,
+  IconKey,
   IconChevronLeft,
   IconChevronRight,
   IconShieldCheck,
 } from '@tabler/icons-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { requestPasswordRecovery } from '@/lib/auth'
 import AdminActiveAlert from '@/components/AdminActiveAlert'
 
 const navItems = [
@@ -61,6 +64,21 @@ export function AdminLayout() {
   const handleLogout = async () => {
     await signOut()
     navigate('/login')
+  }
+
+  const handleRequestPasswordReset = async () => {
+    const email = adminUser?.email
+    if (!email) {
+      showNotification({ title: 'Email tidak tersedia', message: 'Email tidak tersedia', color: 'yellow' })
+      return
+    }
+    try {
+      await requestPasswordRecovery(email)
+      showNotification({ title: 'Terkirim', message: 'Permintaan reset password terkirim. Periksa email untuk instruksi.', color: 'green' })
+    } catch (err: any) {
+      console.error('Failed to request password reset', err)
+      showNotification({ title: 'Error', message: String(err?.message || err), color: 'red' })
+    }
   }
 
   return (
@@ -101,7 +119,7 @@ export function AdminLayout() {
               {colorScheme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
             </ActionIcon>
 
-            <Menu shadow="md" width={200}>
+            <Menu shadow="md">
               <Menu.Target>
                 <Box style={{ cursor: 'pointer' }}>
                   <Group gap="xs">
@@ -117,8 +135,20 @@ export function AdminLayout() {
 
               <Menu.Dropdown>
                 <Menu.Label>Akun</Menu.Label>
-                <Menu.Item leftSection={<IconUser size={14} />}>
+                <Menu.Item
+                  leftSection={<IconUser size={14} />}
+                  // keep it non-interactive / not hoverable while preserving text color
+                  disabled
+                  style={{
+                    cursor: 'default',
+                    '&[dataDisabled]': { opacity: 1 },
+                    '&:hover': { backgroundColor: 'transparent' },
+                  }}
+                >
                   {adminUser?.email}
+                </Menu.Item>
+                <Menu.Item leftSection={<IconKey size={14} />} onClick={handleRequestPasswordReset}>
+                  Reset Password
                 </Menu.Item>
                 <Divider />
                 <Menu.Item
@@ -241,30 +271,56 @@ export function AdminLayout() {
                     </Box>
                   )
                 })}
-                {sidebarCollapsed && adminUser?.role === 'super_admin' && (
-                  <Box
-                    component="a"
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      navigate('/manage-admin')
-                      toggle()
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '12px 12px',
-                      minHeight: '48px',
-                      borderRadius: '8px',
-                      marginBottom: '4px',
-                      cursor: 'pointer',
-                    }}
-                    title="Manage Admin"
-                  >
-                    <IconShieldCheck size={18} />
-                  </Box>
-                )}
+                {sidebarCollapsed && adminUser?.role === 'super_admin' && (() => {
+                  const isActive = location.pathname === '/manage-admin'
+                  const isDark = colorScheme === 'dark'
+
+                  return (
+                    <Box
+                      key="/manage-admin"
+                      component="a"
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        navigate('/manage-admin')
+                        toggle()
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '12px 12px',
+                        minHeight: '48px',
+                        borderRadius: '8px',
+                        marginBottom: '4px',
+                        textDecoration: 'none',
+                        color: isActive
+                          ? (isDark ? '#6BBAF9' : '#6BBAF9') // blue-6 for both themes
+                          : (isDark ? '#a6a7ab' : '#495057'), // gray-6 for dark, gray-7 for light
+                        backgroundColor: isActive
+                          ? (isDark ? 'rgba(34, 139, 230, 0.1)' : 'rgba(34, 139, 230, 0.1)') // subtle blue background
+                          : 'transparent',
+                        cursor: 'pointer',
+                        transition: 'all 0.1s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.backgroundColor = isDark
+                            ? 'rgba(255, 255, 255, 0.05)'
+                            : 'rgba(0, 0, 0, 0.05)'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.backgroundColor = 'transparent'
+                        }
+                      }}
+                      title="Manage Admin"
+                    >
+                      <IconShieldCheck size={18} />
+                    </Box>
+                  )
+                })()}
               </Box>
             )}
           </Transition>
@@ -299,6 +355,19 @@ export function AdminLayout() {
                 style={{ borderRadius: 8 }}
               />
             ))}
+            {adminUser?.role === 'super_admin' && (
+              <NavLink
+                label="Manage Admin"
+                leftSection={<IconShieldCheck size={18} />}
+                active={location.pathname === '/manage-admin'}
+                onClick={() => {
+                  navigate('/manage-admin')
+                  toggle()
+                }}
+                mb={4}
+                style={{ borderRadius: 8 }}
+              />
+            )}
           </Box>
         </Drawer>
       )}

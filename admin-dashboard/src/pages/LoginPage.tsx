@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   TextInput,
@@ -22,11 +22,10 @@ export function LoginPage() {
   const { signIn, user, serverDown } = useAuth()
   const navigate = useNavigate()
 
-  // Redirect if already logged in
-  if (user) {
-    navigate('/')
-    return null
-  }
+  // Redirect if already logged in (do imperative navigation inside effect)
+  useEffect(() => {
+    if (user) navigate('/')
+  }, [user, navigate])
 
   type LoginFormValues = {
     email: string
