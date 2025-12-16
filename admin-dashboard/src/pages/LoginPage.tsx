@@ -28,7 +28,12 @@ export function LoginPage() {
     return null
   }
 
-  const form = useForm({
+  type LoginFormValues = {
+    email: string
+    password: string
+  }
+
+  const form = useForm<LoginFormValues>({
     initialValues: {
       email: '',
       password: '',
