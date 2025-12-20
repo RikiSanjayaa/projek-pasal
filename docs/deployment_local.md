@@ -13,44 +13,55 @@ Dokumen ini adalah **versi LOCAL (self-hosted)** dari file deployment sebelumnya
 
 ---
 
-## 1. Setup Supabase Lokal (Docker)
+## 1. Setup Supabase Lokal (Docker). referensi: [self-hosting supabase docker](https://supabase.com/docs/guides/self-hosting/docker)
 
-### 1.1 Persiapan Direktori Proyek
+### 1.0 System Requirements
 
-Unduh konfigurasi Docker Supabase resmi atau gunakan repository proyek Anda yang sudah menyertakan folder `docker` dan `supabase`:
+| Resource |   Minimum | Recommended |
+| -------- | --------: | ----------: |
+| RAM      |      4 GB |       8 GB+ |
+| CPU      |   2 cores |    4 cores+ |
+| Disk     | 50 GB SSD |  80 GB+ SSD |
+
+### 1.1 Instalasi dan cara start
 
 ```bash
-# Opsi 1: Clone Supabase resmi (pertama kali)
-git clone --depth 1 https://github.com/supabase/supabase.git
-cd supabase/docker
+# Get the code
+git clone --depth 1 https://github.com/supabase/supabase
 
-# Opsi 2: Gunakan repository proyek sendiri
-git clone <URL_REPOSITORY_ANDA> caripasal
-cd caripasal/docker
+# Make your new supabase project directory
+mkdir supabase-project
+
+# Tree should look like this
+# .
+# ├── supabase
+# └── supabase-project
+
+# Copy the compose files over to your project
+cp -rf supabase/docker/* supabase-project
+
+# Copy the fake env vars
+cp supabase/docker/.env.example supabase-project/.env
+
+# Switch to your project directory
+cd supabase-project
+
+# Pull the latest images
+docker compose pull
+
 ```
 
 ---
 
 ### 1.2 Konfigurasi Variabel Lingkungan
 
-Salin template environment:
-
-```bash
-cp .env.example .env
-```
-
-Edit file `.env`:
+Edit file `.env` (NOTE: gunakan secret generator dari [self-hosting supabase docker](https://supabase.com/docs/guides/self-hosting/docker) untuk mengganti key `JWT_SECRET`, `ANON_KEY`, dan `SERVICE_ROLE_KEY`):
 
 ```env
 POSTGRES_PASSWORD=postgresku
-JWT_SECRET=super-secret-jwt
 SITE_URL=http://localhost:3000
 API_EXTERNAL_URL=http://localhost:8000
 ```
-
-Catatan:
-- `SITE_URL` dan `API_EXTERNAL_URL` **wajib localhost** untuk mode lokal
-- Tidak perlu domain atau SSL
 
 ---
 
@@ -69,6 +80,7 @@ docker ps
 ```
 
 Service yang harus aktif:
+
 - supabase-db
 - supabase-auth
 - supabase-rest
@@ -88,13 +100,9 @@ Setelah container aktif, jalankan migrasi database secara berurutan:
 
 ```bash
 docker exec -i supabase-db psql -U supabase_admin -d postgres < ../supabase/migrations/001_initial_schema.sql
-
 docker exec -i supabase-db psql -U supabase_admin -d postgres < ../supabase/migrations/002_rls_policies.sql
-
 docker exec -i supabase-db psql -U supabase_admin -d postgres < ../supabase/migrations/003_search_functions.sql
-
 docker exec -i supabase-db psql -U supabase_admin -d postgres < ../supabase/migrations/004_pasal_links_audit.sql
-
 docker exec -i supabase-db psql -U supabase_admin -d postgres < ../supabase/migrations/005_remove_ip_in_audit.sql
 ```
 
@@ -127,17 +135,6 @@ VALUES (
   'super_admin'
 );
 ```
-
----
-
-### 1.6 API Keys Lokal
-
-Buka **Settings → API** di Supabase Studio:
-
-Gunakan:
-- **Project URL** → `http://localhost:8000`
-- **anon key** → untuk frontend
-- **service_role key** → hanya untuk server / edge function
 
 ---
 
@@ -191,14 +188,13 @@ http://localhost:5173
 
 ### 2.5 Create Admin (Edge Function Lokal)
 
-Jika menggunakan Supabase Edge Function lokal:
+copy isi folder yang ada pada repo: `supabase/functions/` ke directory docker `docker/volumes/functions`.
+
+contoh: jika repo yang di clone berada di `~/projek-pasal/supabase/` dan supabase docker berada di `~/supabase/docker/`
 
 ```bash
-npx supabase start
-npx supabase functions deploy create-admin
+cp -r ~/projek-pasal/supabase/functions/create-admin ~/supabase/docker/volumes/functions/
 ```
-
-Atau jalankan langsung via SQL Editor jika masih tahap development.
 
 ---
 
@@ -210,32 +206,17 @@ Atau jalankan langsung via SQL Editor jika masih tahap development.
 npm run dev
 ```
 
-### Opsi B: Build + Nginx Lokal
+### Opsi B: Build dengan Docker
 
 ```bash
-npm run build
-```
-
-Upload folder `dist` ke server lokal lalu konfigurasi Nginx:
-
-```nginx
-server {
-    listen 80;
-    server_name localhost;
-
-    root /var/www/caripasal-admin;
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-}
+docker compose up -d
 ```
 
 ---
 
 ## 4. Setup Mobile App
 
-_(Sama seperti versi cloud, hanya URL Supabase diganti lokal)_
+_(Sama seperti versi cloud, hanya URL Supabase diganti)_
 
 ### 4.1 Konfigurasi
 
@@ -252,11 +233,7 @@ class Env {
 
 ## Catatan Penting
 
-- Mode **LOCAL hanya untuk development & kampus**
 - Jangan expose `service_role key`
 - Backup volume Docker sebelum reset
 
 ---
-
-✅ **File ini siap dipakai sebagai pengganti DEPLOYMENT.md untuk mode lokal tanpa mengubah struktur proyek.**
-
