@@ -15,6 +15,8 @@ import {
   Box,
   Transition,
   Drawer,
+  Modal,
+  Button,
 } from '@mantine/core'
 import { showNotification } from '@mantine/notifications'
 import { useDisclosure, useMediaQuery } from '@mantine/hooks'
@@ -48,6 +50,7 @@ const navItems = [
 export function AdminLayout() {
   const [opened, { toggle, close }] = useDisclosure()
   const [sidebarCollapsed, { toggle: toggleSidebar }] = useDisclosure(false)
+  const [resetModalOpened, { open: openResetModal, close: closeResetModal }] = useDisclosure(false)
   const { colorScheme, toggleColorScheme } = useMantineColorScheme()
   const { adminUser, signOut } = useAuth()
   const navigate = useNavigate()
@@ -75,10 +78,15 @@ export function AdminLayout() {
     try {
       await requestPasswordRecovery(email)
       showNotification({ title: 'Terkirim', message: 'Permintaan reset password terkirim. Periksa email untuk instruksi.', color: 'green' })
+      closeResetModal()
     } catch (err: any) {
       console.error('Failed to request password reset', err)
       showNotification({ title: 'Error', message: String(err?.message || err), color: 'red' })
     }
+  }
+
+  const openResetPasswordModal = () => {
+    openResetModal()
   }
 
   return (
@@ -147,7 +155,7 @@ export function AdminLayout() {
                 >
                   {adminUser?.email}
                 </Menu.Item>
-                <Menu.Item leftSection={<IconKey size={14} />} onClick={handleRequestPasswordReset}>
+                <Menu.Item leftSection={<IconKey size={14} />} onClick={openResetPasswordModal}>
                   Reset Password
                 </Menu.Item>
                 <Divider />
@@ -371,6 +379,32 @@ export function AdminLayout() {
           </Box>
         </Drawer>
       )}
+
+      <Modal
+        opened={resetModalOpened}
+        onClose={closeResetModal}
+        title="Konfirmasi Reset Password"
+        centered
+      >
+        <Text>
+          Apakah Anda yakin ingin mereset password? Link reset password akan dikirim ke email{' '}
+          <Text span fw={500}>
+            {adminUser?.email}
+          </Text>
+          .
+        </Text>
+        <Text size="sm" c="dimmed" mt="sm">
+          Pastikan email tersebut dapat diakses untuk menerima instruksi reset password.
+        </Text>
+        <Group justify="flex-end" mt="xl">
+          <Button variant="default" onClick={closeResetModal}>
+            Batal
+          </Button>
+          <Button color="blue" onClick={handleRequestPasswordReset}>
+            Kirim Link Reset
+          </Button>
+        </Group>
+      </Modal>
     </AppShell>
   )
 }

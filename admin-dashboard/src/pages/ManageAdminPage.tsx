@@ -8,10 +8,12 @@ import { supabase } from '@/lib/supabase'
 
 export function ManageAdminPage() {
   const { adminUser, session } = useAuth()
-  const [loading, setLoading] = React.useState(false)
+  const [createLoading, setCreateLoading] = React.useState(false)
+  const [toggleLoading, setToggleLoading] = React.useState(false)
+  const [resetLoading, setResetLoading] = React.useState(false)
   const [modalOpen, setModalOpen] = React.useState(false)
   const [confirmOpen, setConfirmOpen] = React.useState(false)
-  const [pendingBody, setPendingBody] = React.useState<{ email: string; nama?: string } | null>(null)
+  const [pendingBody, setPendingBody] = React.useState<{ email: string; nama: string } | null>(null)
   const [creds, setCreds] = React.useState<{ email: string; password: string } | null>(null)
   const [admins, setAdmins] = React.useState<Array<{ id: string; email: string; nama: string; role: string; is_active: boolean }>>([])
   const [emailInput, setEmailInput] = React.useState<string>('')
@@ -49,7 +51,7 @@ export function ManageAdminPage() {
       return
     }
 
-    setLoading(true)
+    setToggleLoading(true)
     try {
       const { error } = await supabase
         .from('admin_users')
@@ -66,14 +68,14 @@ export function ManageAdminPage() {
       console.error('Failed to toggle admin active state', err)
       showNotification({ title: 'Error', message: String(err?.message || err), color: 'red' })
     } finally {
-      setLoading(false)
+      setToggleLoading(false)
     }
   }
 
   // perform actual create request (called after confirmation)
-  const performCreateAdmin = async (body: { email: string; nama?: string }) => {
+  const performCreateAdmin = async (body: { email: string; nama: string }) => {
     if (!session?.access_token) return
-    setLoading(true)
+    setCreateLoading(true)
     try {
       const res = await fetch(EDGE_FUNCTION_URL, {
         method: 'POST',
@@ -114,7 +116,7 @@ export function ManageAdminPage() {
       console.error(err)
       showNotification({ title: 'Error', message: String(err?.message || err), color: 'red' })
     } finally {
-      setLoading(false)
+      setCreateLoading(false)
     }
   }
 
@@ -123,7 +125,11 @@ export function ManageAdminPage() {
       showNotification({ title: 'Validasi', message: 'Email is required', color: 'yellow' })
       return
     }
-    setPendingBody({ email: emailInput.trim(), nama: namaInput.trim() || undefined })
+    if (!namaInput.trim()) {
+      showNotification({ title: 'Validasi', message: 'Username is required', color: 'yellow' })
+      return
+    }
+    setPendingBody({ email: emailInput.trim(), nama: namaInput.trim() })
     setConfirmOpen(true)
   }
 
@@ -160,8 +166,8 @@ export function ManageAdminPage() {
                 error={emailError}
                 style={{ flex: 1 }}
               />
-              <TextInput placeholder="Username (optional)" value={namaInput} onChange={(e) => setNamaInput(e.currentTarget.value)} style={{ width: 220 }} />
-              <Button color="blue" onClick={handleCreateClick} loading={loading} disabled={!emailInput.trim() || !!emailError}>
+              <TextInput placeholder="Username (required)" value={namaInput} onChange={(e) => setNamaInput(e.currentTarget.value)} style={{ width: 220 }} required />
+              <Button color="blue" onClick={handleCreateClick} loading={createLoading} disabled={!emailInput.trim() || !namaInput.trim() || !!emailError}>
                 Tambah Admin
               </Button>
             </Group>
@@ -318,7 +324,7 @@ export function ManageAdminPage() {
 
       <Modal opened={confirmOpen} onClose={() => setConfirmOpen(false)} title="Konfirmasi pembuatan admin">
         <Stack>
-          <Text>Anda akan membuat admin baru dengan email <b>{pendingBody?.email}</b>.</Text>
+          <Text>Anda akan membuat admin baru dengan email <b>{pendingBody?.email}</b> dan username <b>{pendingBody?.nama}</b>.</Text>
           <Text size="sm">Keterangan: kredensial sementara akan ditampilkan sekali setelah pembuatan.</Text>
           <Text size="sm" style={{ marginTop: 6, fontWeight: 600 }}>Pemberitahuan — Apa yang dapat dan tidak dapat dilakukan admin baru:</Text>
           <Text size="sm">• Dapat: masuk menggunakan email dan password sementara; mengelola konten sesuai izin role; memperbarui profil sendiri.</Text>
@@ -353,7 +359,7 @@ export function ManageAdminPage() {
             <Button variant="default" onClick={() => { setToggleModalOpen(false); setToggleTarget(null) }}>Batal</Button>
             <Button
               color={toggleTarget?.targetActive ? 'green' : 'red'}
-              loading={loading}
+              loading={toggleLoading}
               onClick={async () => {
                 if (!toggleTarget) return
                 setToggleModalOpen(false)
@@ -371,10 +377,10 @@ export function ManageAdminPage() {
           <Text>Anda akan mengirim email reset password ke <b>{resetTarget?.email}</b>. Lanjutkan?</Text>
           <Group>
             <Button variant="default" onClick={() => { setResetConfirmOpen(false); setResetTarget(null) }}>Batal</Button>
-            <Button color="yellow" loading={loading} onClick={async () => {
+            <Button color="yellow" loading={resetLoading} onClick={async () => {
               if (!resetTarget) return
               setResetConfirmOpen(false)
-              setLoading(true)
+              setResetLoading(true)
               try {
                 // reuse shared helper
                 const { requestPasswordRecovery } = await import('@/lib/auth')
@@ -384,7 +390,7 @@ export function ManageAdminPage() {
                 console.error('Failed to request password reset for admin', err)
                 showNotification({ title: 'Error', message: String(err?.message || err), color: 'red' })
               } finally {
-                setLoading(false)
+                setResetLoading(false)
                 setResetTarget(null)
               }
             }}>Kirim</Button>
