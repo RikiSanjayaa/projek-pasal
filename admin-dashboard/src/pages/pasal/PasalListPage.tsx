@@ -13,6 +13,7 @@ import {
   ActionIcon,
   Modal,
   Tooltip,
+  MultiSelect,
 } from '@mantine/core'
 import { useDebouncedValue, useDisclosure } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
@@ -103,6 +104,7 @@ export function PasalListPage() {
   const [search, setSearch] = useState('')
   const [debouncedSearch] = useDebouncedValue(search, 300)
   const [filterUU, setFilterUU] = useState<string | null>(searchParams.get('uu'))
+  const [selectedKeywords, setSelectedKeywords] = useState<string[]>([])
   const [deleteModal, { open: openDelete, close: closeDelete }] = useDisclosure(false)
   const [bulkDeleteModal, { open: openBulkDelete, close: closeBulkDelete }] = useDisclosure(false)
   const [selectedPasal, setSelectedPasal] = useState<PasalWithUndangUndang | null>(null)
@@ -123,6 +125,22 @@ export function PasalListPage() {
     },
   })
 
+  // Fetch keywords for filter
+  const { data: keywordsList } = useQuery({
+    queryKey: ['keywords', 'list'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pasal')
+        .select('keywords')
+        .eq('is_active', true)
+
+      if (error) throw error
+
+      const allKeywords = (data as { keywords: string[] | null }[]).flatMap(p => p.keywords || []).filter(Boolean)
+      return [...new Set(allKeywords)].sort()
+    },
+  })
+
   // Update URL params when filterUU changes
   useEffect(() => {
     const params = new URLSearchParams(searchParams)
@@ -137,9 +155,14 @@ export function PasalListPage() {
     }
   }, [filterUU, navigate, searchParams])
 
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1)
+  }, [debouncedSearch, filterUU, selectedKeywords])
+
   // Fetch pasal with pagination
   const { data: pasalData, isLoading } = useQuery({
-    queryKey: ['pasal', 'list', page, pageSize, debouncedSearch, filterUU],
+    queryKey: ['pasal', 'list', page, pageSize, debouncedSearch, filterUU, selectedKeywords],
     queryFn: async () => {
       let query = supabase
         .from('pasal')
@@ -154,6 +177,10 @@ export function PasalListPage() {
 
       if (filterUU) {
         query = query.eq('undang_undang_id', filterUU)
+      }
+
+      if (selectedKeywords.length > 0) {
+        query = query.overlaps('keywords', selectedKeywords)
       }
 
       const { data, error, count } = await query
@@ -294,28 +321,40 @@ export function PasalListPage() {
 
       {/* Filters */}
       <Card shadow="sm" padding="md" radius="md" withBorder>
-        <Group>
-          <TextInput
-            placeholder="Cari nomor, judul, atau isi pasal..."
-            leftSection={<IconSearch size={16} />}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ flex: 1 }}
-          />
-          <Select
-            placeholder="Filter Undang-Undang"
-            data={
-              undangUndangList?.map((uu) => ({
-                value: uu.id,
-                label: `${uu.kode} - ${uu.nama}`,
-              })) || []
-            }
-            value={filterUU}
-            onChange={setFilterUU}
-            clearable
-            w={250}
-          />
-        </Group>
+        <Stack gap="md">
+          <Group wrap="wrap" align="flex-start">
+            <TextInput
+              placeholder="Cari nomor, judul, atau isi pasal..."
+              leftSection={<IconSearch size={16} />}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              w={{ base: '100%', sm: 'auto' }}
+              style={{ flex: 1 }}
+            />
+            <MultiSelect
+              placeholder="Filter Keywords"
+              data={keywordsList || []}
+              value={selectedKeywords}
+              onChange={setSelectedKeywords}
+              clearable
+              searchable
+              w={{ base: '100%', sm: 250 }}
+            />
+            <Select
+              placeholder="Filter Undang-Undang"
+              data={
+                undangUndangList?.map((uu) => ({
+                  value: uu.id,
+                  label: `${uu.kode} - ${uu.nama}`,
+                })) || []
+              }
+              value={filterUU}
+              onChange={setFilterUU}
+              clearable
+              w={{ base: '100%', sm: 250 }}
+            />
+          </Group>
+        </Stack>
       </Card>
 
       {/* Table */}

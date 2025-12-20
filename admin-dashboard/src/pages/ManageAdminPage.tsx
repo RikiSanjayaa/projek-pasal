@@ -4,6 +4,7 @@ import { showNotification } from '@mantine/notifications'
 import { IconCopy, IconEdit } from '@tabler/icons-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
+import { requestPasswordRecovery } from '@/lib/auth'
 
 
 export function ManageAdminPage() {
@@ -383,7 +384,6 @@ export function ManageAdminPage() {
               setResetLoading(true)
               try {
                 // reuse shared helper
-                const { requestPasswordRecovery } = await import('@/lib/auth')
                 await requestPasswordRecovery(resetTarget.email)
                 showNotification({ title: 'Terkirim', message: 'Email reset password terkirim.', color: 'green' })
               } catch (err: any) {
