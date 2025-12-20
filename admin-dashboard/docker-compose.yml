@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  web-admin:
+    container_name: web-admin-container
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # PENTING: Mengirim value dari file .env ke Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY}
+        VITE_APP_NAME: ${VITE_APP_NAME}
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    # Membaca file .env
+    env_file:
+      - .env
