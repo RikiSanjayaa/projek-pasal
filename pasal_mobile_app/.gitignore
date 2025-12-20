@@ -1,0 +1,72 @@
+# =========================
+# 1. FLUTTER & DART (CORE)
+# =========================
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+coverage/
+lib/generated_plugin_registrant.dart
+
+# =========================
+# 2. ANDROID (MOBILE)
+# =========================
+android/gradle/
+android/gradlew
+android/gradlew.bat
+android/local.properties
+android/app/build.gradle.d
+android/.gradle
+android/captures/
+android/gradle/wrapper/gradle-wrapper.properties
+android/**/generated/
+android/**/gradle/
+android/app/build/
+android/app/.cxx/
+
+# =========================
+# 3. iOS (MOBILE)
+# =========================
+ios/*.mode1v3
+ios/*.mode2v3
+ios/*.moved-aside
+ios/*.pbxuser
+ios/*.perspectivev3
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/app.flx
+ios/Flutter/app.zip
+ios/Flutter/fonts/
+ios/Flutter/assets/
+ios/ServiceDefinitions.json
+ios/Runner/GeneratedPluginRegistrant.*
+ios/.generated/
+ios/Pods/
+ios/.symlinks/
+
+# =========================
+# 4. ENVIRONMENT & IDE
+# =========================
+# Rahasia (Jangan di-upload)
+lib/core/config/env.dart
+.env
+
+# IDE Settings (VS Code / Android Studio)
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+
+# =========================
+# 5. IGNORE PLATFORM LAIN
+# (Karena Mobile Only)
+# =========================
+/windows/
+/linux/
+/macos/
+/web/
