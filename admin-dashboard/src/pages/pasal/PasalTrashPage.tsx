@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Title,
   Text,
@@ -66,9 +66,10 @@ const getDaysAgo = (dateString: string) => {
 export function PasalTrashPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [searchParams] = useSearchParams()
 
   const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(searchParams.get('search') || '')
   const [debouncedSearch] = useDebouncedValue(search, 300)
   const [filterUU, setFilterUU] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])

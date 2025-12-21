@@ -18,8 +18,9 @@ import {
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
-import { AuditLogHint } from '@/components/AuditLogHint'
-import { useDataMapping } from '@/contexts/DataMappingContext'
+import { AuditTimelineChart } from '@/components/charts/AuditTimelineChart'
+import { AdminActivityMetrics } from '@/components/charts/AdminActivityMetrics'
+import { AktivitasPasalWidget } from '@/components/charts/AktivitasPasalWidget'
 
 interface StatsCardProps {
   title: string
@@ -55,7 +56,6 @@ function StatsCard({ title, value, icon, color, loading }: StatsCardProps) {
 
 export function DashboardPage() {
   const navigate = useNavigate()
-  const { undangUndangData, pasalData } = useDataMapping()
 
   // Fetch all dashboard data in one query for better performance
   const { data: dashboardData, isLoading: loadingDashboard } = useQuery({
@@ -69,7 +69,12 @@ export function DashboardPage() {
         totalChangesTodayResult,
         undangUndangListResult,
         pasalCountsResult,
-        adminActiveResult
+        adminActiveResult,
+        allPasalResult,
+        allLinksResult,
+        auditLogsForAnalyticsResult,
+        trashedPasalResult,
+        recentAuditLogsResult,
       ] = await Promise.all([
         // Total pasal count
         supabase
@@ -83,7 +88,7 @@ export function DashboardPage() {
           .select('*', { count: 'exact', head: true })
           .eq('is_active', true),
 
-        // Recent audit logs (limited to 10 for display)
+        // Recent audit logs (limited to 10 for display in old section)
         supabase
           .from('audit_logs')
           .select('*')
@@ -115,6 +120,42 @@ export function DashboardPage() {
           .from('admin_users')
           .select('*', { count: 'exact', head: true })
           .eq('is_active', true),
+
+        // All pasal for analytics (not just count)
+        supabase
+          .from('pasal')
+          .select('id, nomor, judul, isi, penjelasan, keywords, created_at, updated_at, undang_undang_id')
+          .eq('is_active', true)
+          .is('deleted_at', null),
+
+        // All pasal links for analytics
+        supabase
+          .from('pasal_links')
+          .select('*')
+          .eq('is_active', true),
+
+        // Audit logs for analytics (last 90 days)
+        supabase
+          .from('audit_logs')
+          .select('*')
+          .gte('created_at', new Date(new Date().setDate(new Date().getDate() - 90)).toISOString())
+          .order('created_at', { ascending: false }),
+
+        // Trashed pasal (soft-deleted)
+        supabase
+          .from('pasal')
+          .select('id, nomor, judul, deleted_at')
+          .eq('is_active', false)
+          .not('deleted_at', 'is', null)
+          .order('deleted_at', { ascending: false })
+          .limit(10),
+
+        // Recent audit logs for temporal insights tab
+        supabase
+          .from('audit_logs')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(10),
       ])
 
       // Check for errors
@@ -124,6 +165,11 @@ export function DashboardPage() {
       if (totalChangesTodayResult.error) throw totalChangesTodayResult.error
       if (undangUndangListResult.error) throw undangUndangListResult.error
       if (pasalCountsResult.error) throw pasalCountsResult.error
+      if (allPasalResult.error) throw allPasalResult.error
+      if (allLinksResult.error) throw allLinksResult.error
+      if (auditLogsForAnalyticsResult.error) throw auditLogsForAnalyticsResult.error
+      if (trashedPasalResult.error) throw trashedPasalResult.error
+      if (recentAuditLogsResult.error) throw recentAuditLogsResult.error
 
       // Count pasal per undang_undang_id
       const counts: Record<string, number> = {}
@@ -139,20 +185,25 @@ export function DashboardPage() {
         undangUndangList: undangUndangListResult.data || [],
         pasalCounts: counts,
         adminActiveCount: adminActiveResult.count || 0,
+        allPasal: allPasalResult.data || [],
+        allLinks: allLinksResult.data || [],
+        auditLogsAnalytics: auditLogsForAnalyticsResult.data || [],
+        trashedPasal: trashedPasalResult.data || [],
+        recentAuditLogs: recentAuditLogsResult.data || [],
       }
     },
-    staleTime: 5 * 1000, // 5 seconds - real-time updates for dashboard
-    refetchInterval: 10 * 1000, // Auto-refresh every 10 seconds
+    staleTime: 30 * 1000, // 30 seconds - reduced for better real-time feel
+    refetchInterval: 60 * 1000, // Auto-refresh every 60 seconds
   })
 
   // Extract data from the combined query
   const pasalCount = dashboardData?.pasalCount
   const uuCount = dashboardData?.uuCount
-  const recentLogs = dashboardData?.recentLogs
   const totalChangesToday = dashboardData?.totalChangesToday
   const undangUndangList = dashboardData?.undangUndangList
   const pasalCounts = dashboardData?.pasalCounts
   const adminActiveCount = dashboardData?.adminActiveCount
+  const auditLogsAnalytics = dashboardData?.auditLogsAnalytics || []
 
   return (
     <Stack gap="lg">
@@ -244,62 +295,22 @@ export function DashboardPage() {
         )}
       </Card>
 
-      {/* Recent Activity */}
-      <Card shadow="sm" padding="lg" radius="md" withBorder>
-        <Title order={4} mb="md">
-          Aktivitas Terbaru
-        </Title>
-        {loadingDashboard ? (
-          <Stack gap="sm">
-            <Skeleton height={30} />
-            <Skeleton height={30} />
-            <Skeleton height={30} />
-          </Stack>
-        ) : recentLogs && recentLogs.length > 0 ? (
-          <Stack gap="xs">
-            {recentLogs.map((log: any) => (
-              <Group key={log.id} justify="space-between" py="xs">
-                <Group gap="sm">
-                  <Badge
-                    color={
-                      log.action === 'CREATE'
-                        ? 'green'
-                        : log.action === 'UPDATE'
-                          ? 'blue'
-                          : 'red'
-                    }
-                    variant="light"
-                    size="sm"
-                  >
-                    {log.action}
-                  </Badge>
-                  <Text size="sm">
-                    {log.admin_email}
-                  </Text>
-                  <Badge
-                    variant="outline"
-                  >
-                    {log.table_name.replace('_', ' ')}
-                  </Badge>
-                  <AuditLogHint
-                    log={log}
-                    undangUndangData={undangUndangData}
-                    pasalData={pasalData}
-                    maxLength={80}
-                  />
-                </Group>
-                <Text size="xs" c="dimmed">
-                  {new Date(log.created_at).toLocaleString('id-ID')}
-                </Text>
-              </Group>
-            ))}
-          </Stack>
-        ) : (
-          <Text c="dimmed" size="sm">
-            Belum ada aktivitas
-          </Text>
-        )}
-      </Card>
+      {/* Analytics Section */}
+      <Stack gap="lg">
+        {/* Activity Timeline */}
+        <AuditTimelineChart logs={auditLogsAnalytics} loading={loadingDashboard} />
+        {/* Admin Activity Metrics */}
+        <AdminActivityMetrics logs={auditLogsAnalytics} loading={loadingDashboard} />
+        {/* Temporal Insights */}
+        <AktivitasPasalWidget
+          pasal={dashboardData?.allPasal}
+          recentLogs={dashboardData?.recentAuditLogs}
+          trashedPasal={dashboardData?.trashedPasal}
+          undangUndang={dashboardData?.undangUndangList}
+          links={dashboardData?.allLinks}
+          loading={loadingDashboard}
+        />
+      </Stack>
     </Stack>
   )
 }

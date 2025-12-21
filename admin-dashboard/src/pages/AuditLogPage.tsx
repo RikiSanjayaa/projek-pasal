@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Title,
   Text,
@@ -24,6 +24,7 @@ import type { AuditLog } from '@/lib/database.types'
 const PAGE_SIZE = 20
 
 export function AuditLogPage() {
+  const [searchParams] = useSearchParams()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const [search, setSearch] = useState('')
@@ -35,6 +36,18 @@ export function AuditLogPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { undangUndangData, pasalData } = useDataMapping()
+
+  // Initialize date range from URL params on mount
+  useEffect(() => {
+    const startDateParam = searchParams.get('startDate')
+    const endDateParam = searchParams.get('endDate')
+
+    if (startDateParam || endDateParam) {
+      const start = startDateParam ? new Date(startDateParam) : null
+      const end = endDateParam ? new Date(endDateParam) : null
+      setDateRange([start, end])
+    }
+  }, [searchParams])
 
   const handleRefresh = () => {
     // Invalidate all audit-related queries
