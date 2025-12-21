@@ -20,7 +20,7 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _checkDataAndNavigate() async {
     await Future.delayed(const Duration(seconds: 2));
 
-    final allPasal = DataService.getAllPasal();
+    final allPasal = await DataService.getAllPasal();
 
     if (mounted) {
       if (allPasal.isEmpty) {
@@ -57,7 +57,7 @@ class _SplashScreenState extends State<SplashScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 120, 
+              width: 120,
               height: 120,
               decoration: BoxDecoration(
                 image: const DecorationImage(
@@ -66,7 +66,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.3),
+                    color: Colors.grey.withValues(alpha: 0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -81,7 +81,7 @@ class _SplashScreenState extends State<SplashScreen> {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Colors.blue, 
+                color: Colors.blue,
                 letterSpacing: 1.2,
               ),
             ),
