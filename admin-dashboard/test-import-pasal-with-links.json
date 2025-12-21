@@ -1,0 +1,75 @@
+[
+  {
+    "nomor": "1",
+    "judul": "Pengertian Tindak Pidana",
+    "isi": "Tindak pidana adalah perbuatan yang oleh suatu peraturan perundang-undangan dinyatakan sebagai perbuatan yang dapat dihukum. Tindak pidana terdiri atas beberapa unsur pokok yang harus dipenuhi untuk dapat dinyatakan sebagai tindak pidana.",
+    "penjelasan": "Pasal ini menjelaskan definisi dasar tindak pidana dalam hukum pidana Indonesia. Suatu perbuatan baru dapat dikatakan sebagai tindak pidana apabila telah diatur dalam peraturan perundang-undangan.",
+    "keywords": ["tindak pidana", "perbuatan", "hukum pidana", "definisi", "unsur"],
+    "links": [
+      {
+        "targetUU": "KUHP",
+        "targetNomor": "351",
+        "keterangan": "Contoh: Penganiayaan sebagai bentuk tindak pidana"
+      },
+      {
+        "targetUU": "KUHP",
+        "targetNomor": "285",
+        "keterangan": "Contoh: Pemerkosaan sebagai tindak pidana terhadap kesusilaan"
+      }
+    ]
+  },
+  {
+    "nomor": "2",
+    "judul": "Penyidikan",
+    "isi": "Penyidikan adalah serangkaian tindakan penyidik dalam hal dan menurut cara yang diatur dalam undang-undang ini untuk mencari serta mengumpulkan bukti yang dengan bukti itu membuat terang tentang tindak pidana yang terjadi dan guna menemukan tersangkanya.",
+    "penjelasan": "Pasal ini mengatur tentang proses penyidikan dalam hukum acara pidana. Penyidikan dilakukan untuk mengumpulkan bukti dan menemukan tersangka dari suatu tindak pidana yang dilaporkan.",
+    "keywords": ["penyidikan", "bukti", "penyidik", "tersangka", "tindak pidana", "acara pidana"],
+    "links": [
+      {
+        "targetUU": "KUHP",
+        "targetNomor": "480",
+        "keterangan": "Tindak pidana penadahan yang sering ditemukan dalam penyidikan"
+      }
+    ]
+  },
+  {
+    "nomor": "22",
+    "judul": "Kewajiban Pelapor",
+    "isi": "Setiap orang yang mengetahui telah terjadi suatu tindak pidana berhak untuk melaporkannya kepada pejabat penyidik. Laporan dapat disampaikan secara lisan maupun tertulis kepada kepolisian, kejaksaan, atau pejabat yang diberikan wewenang khusus.",
+    "penjelasan": "Pasal ini menekankan hak setiap warga negara untuk melaporkan tindak pidana. Laporan harus segera disampaikan kepada pejabat yang berwenang agar dapat dilakukan penyidikan.",
+    "keywords": ["laporan", "pelapor", "tindak pidana", "penyidik", "kepolisian", "kejaksaan"],
+    "links": [
+      {
+        "targetUU": "KUHP",
+        "targetNomor": "351",
+        "keterangan": "Contoh kasus penganiayaan yang dapat dilaporkan"
+      }
+    ]
+  },
+  {
+    "nomor": "75",
+    "judul": "Penggeledahan",
+    "isi": "Penggeledahan dapat dilakukan untuk mencari benda-benda yang ada hubungannya dengan tindak pidana yang sedang disidik. Penggeledahan dilakukan dengan surat perintah dari penyidik atau hakim dengan memperhatikan hak-hak tersangka.",
+    "penjelasan": "Pasal ini mengatur tentang prosedur penggeledahan dalam penyidikan tindak pidana. Penggeledahan harus dilakukan sesuai dengan prosedur hukum yang berlaku dan menghormati hak asasi manusia.",
+    "keywords": ["penggeledahan", "pencarian", "benda bukti", "penyidik", "hakim", "prosedur hukum"],
+    "links": [
+      {
+        "targetUU": "KUHP",
+        "targetNomor": "480",
+        "keterangan": "Penggeledahan untuk menemukan barang hasil kejahatan"
+      },
+      {
+        "targetUU": "KUHP",
+        "targetNomor": "285",
+        "keterangan": "Penggeledahan dalam kasus pemerkosaan untuk mengumpulkan barang bukti"
+      }
+    ]
+  },
+  {
+    "nomor": "134",
+    "judul": "Penahanan",
+    "isi": "Penyidik dapat melakukan penahanan terhadap tersangka dalam hal-hal khusus yang diatur dalam pasal ini. Penahanan dilakukan untuk kepentingan penyidikan dan mencegah tersangka melarikan diri atau menghilangkan barang bukti.",
+    "penjelasan": "Pasal ini mengatur tentang syarat dan prosedur penahanan dalam penyidikan. Penahanan hanya dapat dilakukan atas dasar alasan yang kuat dan dengan memperhatikan hak-hak tersangka.",
+    "keywords": ["penahanan", "tersangka", "penyidikan", "custodia", "keadilan", "hak tersangka"]
+  }
+]
