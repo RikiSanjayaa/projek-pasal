@@ -225,7 +225,7 @@ class Env {
 - Jangan expose `service_role key`
 - Backup volume Docker sebelum reset
 - Gunakan perintah ini jika gagal login paedahal anonkeynya sudah benar
-docker compose build --no-cache web-admin
-docker compose up -d web-admin
+- docker compose build --no-cache web-admin
+- docker compose up -d web-admin
 
 ---
