@@ -3,11 +3,10 @@ import '../../models/undang_undang_model.dart';
 import '../../models/pasal_model.dart';
 import '../../core/services/data_service.dart';
 import '../utils/image_helper.dart';
-import 'read_pasal_screen.dart';
+import '../widgets/pasal_card.dart'; 
 
 class DetailUUScreen extends StatefulWidget {
   final UndangUndangModel undangUndang;
-
   const DetailUUScreen({super.key, required this.undangUndang});
 
   @override
@@ -50,47 +49,32 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = ImageHelper.getBookColor(widget.undangUndang.kode);
-
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
+        title: Text(widget.undangUndang.kode, style: const TextStyle(fontWeight: FontWeight.bold)),
+        centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
+          icon: const Icon(Icons.arrow_back_ios_new),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          widget.undangUndang.kode,
-          style: const TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 15,
-                  ),
-                  color: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                  color: isDark ? Colors.grey[900] : Colors.white,
                   child: Row(
                     children: [
                       Container(
-                        width: 50,
-                        height: 70,
+                        width: 50, height: 70,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(6),
                           image: DecorationImage(
-                            image: AssetImage(
-                              ImageHelper.getCover(widget.undangUndang.kode),
-                            ),
+                            image: AssetImage(ImageHelper.getCover(widget.undangUndang.kode)),
                             fit: BoxFit.cover,
                           ),
                         ),
@@ -100,29 +84,9 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              widget.undangUndang.nama,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              "Tahun ${widget.undangUndang.tahun}",
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            Text(
-                              "${_allPasal.length} Pasal",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: primaryColor,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            Text(widget.undangUndang.nama, style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black)),
+                            Text("Tahun ${widget.undangUndang.tahun}", style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                            Text("${_allPasal.length} Pasal", style: const TextStyle(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ),
@@ -136,113 +100,25 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
                     controller: _searchController,
                     onChanged: _filterLocalPasal,
                     decoration: InputDecoration(
-                      hintText: "Cari kata kunci dalam buku ini...",
-                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      hintText: "Cari dalam buku ini...",
+                      prefixIcon: const Icon(Icons.search),
                       filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
+                      fillColor: isDark ? Colors.grey[800] : Colors.white,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                     ),
                   ),
                 ),
 
                 Expanded(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: _filteredPasal.length,
-                    separatorBuilder: (c, i) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
-                      final pasal = _filteredPasal[index];
-                      final int nomorUrut = index + 1;
-
-                      final String displayNomor =
-                          pasal.nomor.toLowerCase().startsWith('pasal')
-                          ? pasal.nomor
-                          : "Pasal ${pasal.nomor}";
-
-                      return InkWell(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ReadPasalScreen(
-                                pasal: pasal,
-                                searchQuery: _searchController.text,
-                                contextList: _filteredPasal,
-                              ),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.03),
-                                blurRadius: 5,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 36,
-                                height: 36,
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: primaryColor.withValues(alpha: 0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Text(
-                                  "$nomorUrut",
-                                  style: TextStyle(
-                                    color: primaryColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      displayNomor,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      pasal.isi,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: Colors.grey.shade600,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Icon(
-                                Icons.chevron_right,
-                                color: Colors.grey,
-                              ),
-                            ],
-                          ),
-                        ),
+                      return PasalCard(
+                        pasal: _filteredPasal[index],
+                        contextList: _filteredPasal, 
+                        searchQuery: _searchController.text,
+                        showUULabel: false, 
                       );
                     },
                   ),

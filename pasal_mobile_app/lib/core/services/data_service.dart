@@ -290,6 +290,19 @@ class DataService {
       return [];
     }
   }
+  static Future<List<PasalModel>> getLatestUpdates({int limit = 5}) async {
+    try {
+      final all = await getAllPasal();
+      all.sort((a, b) {
+        final tA = a.updatedAt ?? a.createdAt ?? DateTime(2000);
+        final tB = b.updatedAt ?? b.createdAt ?? DateTime(2000);
+        return tB.compareTo(tA);
+      });
+      return all.take(limit).toList();
+    } catch (e) {
+      return [];
+    }
+  }
 
   // Helper method to parse JSON arrays stored as strings
   static List<String> _parseJsonArray(String jsonString) {

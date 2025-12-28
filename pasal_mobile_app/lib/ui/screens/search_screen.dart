@@ -4,6 +4,16 @@ import '../../core/services/data_service.dart';
 class PasalSearchDelegate extends SearchDelegate {
   @override
   String get searchFieldLabel => 'Cari kata kunci...';
+  
+  @override
+  ThemeData appBarTheme(BuildContext context) {
+    final theme = Theme.of(context);
+    return theme.copyWith(
+      inputDecorationTheme: const InputDecorationTheme(
+        border: InputBorder.none,
+      ),
+    );
+  }
 
   @override
   List<Widget>? buildActions(BuildContext context) {
@@ -22,15 +32,19 @@ class PasalSearchDelegate extends SearchDelegate {
   }
 
   @override
-  Widget buildResults(BuildContext context) => _buildSearchResults();
+  Widget buildResults(BuildContext context) => _buildSearchResults(context);
 
   @override
-  Widget buildSuggestions(BuildContext context) => _buildSearchResults();
+  Widget buildSuggestions(BuildContext context) => _buildSearchResults(context);
 
-  Widget _buildSearchResults() {
+  Widget _buildSearchResults(BuildContext context) {
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+
     if (query.isEmpty) {
-      return const Center(
-        child: Text("Ketik kata kunci untuk mencari pasal..."),
+      return Center(
+        child: Text("Ketik kata kunci untuk mencari pasal...", style: TextStyle(color: textColor)),
       );
     }
 
@@ -42,7 +56,7 @@ class PasalSearchDelegate extends SearchDelegate {
         }
 
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Center(child: Text("Tidak ditemukan hasil untuk '$query'"));
+          return Center(child: Text("Tidak ditemukan hasil untuk '$query'", style: TextStyle(color: textColor)));
         }
 
         final results = snapshot.data!;
@@ -56,50 +70,46 @@ class PasalSearchDelegate extends SearchDelegate {
                 final kodeUU = kodeSnapshot.data ?? "UU";
 
                 return Card(
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  color: isDark ? Colors.grey[800] : Colors.white,
                   child: ExpansionTile(
-                    title: Row(
+                    title: Column( 
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          "$kodeUU - ",
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              "$kodeUU - ",
+                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+                            ),
+                            Expanded(
+                              child: _highlightText(pasal.nomor, query, isBold: true, isDark: isDark),
+                            ),
+                          ],
                         ),
-                        Expanded(
-                          child: _highlightText(
-                            pasal.nomor,
-                            query,
-                            isBold: true,
+                        if (pasal.judul != null) 
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: _highlightText(pasal.judul!, query, isBold: true, isDark: isDark),
                           ),
-                        ),
                       ],
                     ),
-                    subtitle: _highlightText(pasal.isi, query),
-
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: _highlightText(pasal.isi, query, isDark: isDark),
+                    ),
                     childrenPadding: const EdgeInsets.all(16),
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _highlightText(pasal.isi, query),
-                          if (pasal.penjelasan != null &&
-                              pasal.penjelasan!.isNotEmpty) ...[
+                          _highlightText(pasal.isi, query, isDark: isDark),
+                          
+                          if (pasal.penjelasan != null && pasal.penjelasan!.isNotEmpty) ...[
                             const Divider(height: 24),
-                            const Text(
-                              "Penjelasan:",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
+                            const Text("Penjelasan:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey)),
                             const SizedBox(height: 4),
-                            _highlightText(pasal.penjelasan!, query),
+                            _highlightText(pasal.penjelasan!, query, isDark: isDark),
                           ],
 
                           if (pasal.keywords.isNotEmpty) ...[
@@ -108,24 +118,11 @@ class PasalSearchDelegate extends SearchDelegate {
                               spacing: 8,
                               runSpacing: 4,
                               children: pasal.keywords.map((k) {
-                                final bool isMatch = k.toLowerCase().contains(
-                                  query.toLowerCase(),
-                                );
+                                final bool isMatch = k.toLowerCase().contains(query.toLowerCase());
                                 return Chip(
-                                  label: _highlightText(
-                                    k.toUpperCase(),
-                                    query,
-                                    isBold: true,
-                                  ),
-                                  backgroundColor: isMatch
-                                      ? Colors.yellow.shade100
-                                      : Colors.grey.shade100,
-                                  side: BorderSide(
-                                    color: isMatch
-                                        ? Colors.orange
-                                        : Colors.grey.shade300,
-                                  ),
-                                  padding: EdgeInsets.zero,
+                                  label: _highlightText(k.toUpperCase(), query, isBold: true, isDark: isDark),
+                                  backgroundColor: isMatch ? (isDark ? Colors.orange.withOpacity(0.3) : Colors.yellow.shade100) : (isDark ? Colors.grey[700] : Colors.grey.shade100),
+                                  side: BorderSide.none,
                                   visualDensity: VisualDensity.compact,
                                 );
                               }).toList(),
@@ -144,8 +141,17 @@ class PasalSearchDelegate extends SearchDelegate {
     );
   }
 
-  Widget _highlightText(String text, String query, {bool isBold = false}) {
-    if (query.isEmpty) return Text(text);
+  Widget _highlightText(String text, String query, {bool isBold = false, required bool isDark}) {
+    if (query.isEmpty) {
+      return Text(
+        text, 
+        style: TextStyle(
+          color: isDark ? Colors.white : Colors.black87, 
+          fontWeight: isBold ? FontWeight.bold : FontWeight.normal
+        )
+      );
+    }
+    
     final List<TextSpan> spans = [];
     final String lowerText = text.toLowerCase();
     final String lowerQuery = query.toLowerCase();
@@ -154,38 +160,20 @@ class PasalSearchDelegate extends SearchDelegate {
     while (true) {
       final int index = lowerText.indexOf(lowerQuery, start);
       if (index == -1) {
-        spans.add(
-          TextSpan(
-            text: text.substring(start),
-            style: TextStyle(
-              color: Colors.black87,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        );
+        spans.add(TextSpan(text: text.substring(start), style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: isBold ? FontWeight.bold : FontWeight.normal)));
         break;
       }
       if (index > start) {
-        spans.add(
-          TextSpan(
-            text: text.substring(start, index),
-            style: TextStyle(
-              color: Colors.black87,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        );
+        spans.add(TextSpan(text: text.substring(start, index), style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: isBold ? FontWeight.bold : FontWeight.normal)));
       }
-      spans.add(
-        TextSpan(
-          text: text.substring(index, index + query.length),
-          style: TextStyle(
-            backgroundColor: Colors.yellow.shade200,
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
+      spans.add(TextSpan(
+        text: text.substring(index, index + query.length),
+        style: TextStyle(
+          backgroundColor: isDark ? Colors.orange.withOpacity(0.5) : Colors.yellow.shade200,
+          color: isDark ? Colors.white : Colors.black,
+          fontWeight: FontWeight.bold,
         ),
-      );
+      ));
       start = index + query.length;
     }
     return RichText(text: TextSpan(children: spans));

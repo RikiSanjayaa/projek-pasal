@@ -3,24 +3,30 @@ import 'package:flutter/material.dart';
 class HighlightText extends StatelessWidget {
   final String text;
   final String query;
-  final TextStyle style;
+  final TextStyle? style;
   final TextAlign textAlign;
+  final int? maxLines;
+  final TextOverflow? overflow;
 
   const HighlightText({
     super.key,
     required this.text,
     required this.query,
-    required this.style,
-    this.textAlign = TextAlign.start, 
+    this.style,
+    this.textAlign = TextAlign.start,
+    this.maxLines,
+    this.overflow,
   });
 
   @override
   Widget build(BuildContext context) {
     if (query.isEmpty) {
       return Text(
-        text, 
-        style: style, 
+        text,
+        style: style,
         textAlign: textAlign,
+        maxLines: maxLines,
+        overflow: overflow,
       );
     }
 
@@ -28,27 +34,41 @@ class HighlightText extends StatelessWidget {
     final String lowerQuery = query.toLowerCase();
     final List<TextSpan> spans = [];
     int start = 0;
-    int indexOfHighlight = lowerText.indexOf(lowerQuery);
 
-    while (indexOfHighlight != -1) {
-      if (indexOfHighlight > start) {
-        spans.add(TextSpan(text: text.substring(start, indexOfHighlight), style: style));
+    while (true) {
+      final int index = lowerText.indexOf(lowerQuery, start);
+      if (index == -1) {
+        spans.add(TextSpan(
+          text: text.substring(start),
+          style: style,
+        ));
+        break;
       }
-      spans.add(TextSpan(
-        text: text.substring(indexOfHighlight, indexOfHighlight + query.length),
-        style: style.copyWith(backgroundColor: Colors.yellow, color: Colors.black),
-      ));
-      start = indexOfHighlight + query.length;
-      indexOfHighlight = lowerText.indexOf(lowerQuery, start);
-    }
 
-    if (start < text.length) {
-      spans.add(TextSpan(text: text.substring(start), style: style));
+      if (index > start) {
+        spans.add(TextSpan(
+          text: text.substring(start, index),
+          style: style,
+        ));
+      }
+
+      spans.add(TextSpan(
+        text: text.substring(index, index + query.length),
+        style: (style ?? const TextStyle()).copyWith(
+          backgroundColor: Colors.yellow.shade200,
+          color: Colors.black,
+          fontWeight: FontWeight.bold,
+        ),
+      ));
+
+      start = index + query.length;
     }
 
     return RichText(
       text: TextSpan(children: spans),
       textAlign: textAlign,
+      maxLines: maxLines,
+      overflow: overflow ?? TextOverflow.clip,
     );
   }
 }
