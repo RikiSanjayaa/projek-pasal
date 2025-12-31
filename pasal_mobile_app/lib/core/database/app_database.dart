@@ -12,7 +12,8 @@ class UndangUndangTable extends Table {
   TextColumn get kode => text()();
   TextColumn get nama => text()();
   TextColumn get namaLengkap => text().nullable()();
-  IntColumn get tahun => integer()();
+  TextColumn get deskripsi => text().nullable()();
+  IntColumn get tahun => integer().withDefault(const Constant(0))();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
 
   @override
@@ -47,7 +48,23 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (Migrator m) async {
+          await m.createAll();
+        },
+        onUpgrade: (Migrator m, int from, int to) async {
+          // Since data is synced from server, we can safely add columns
+          if (from < 2) {
+            // Add deskripsi column to undang_undang table
+            await customStatement(
+              'ALTER TABLE undang_undang_table ADD COLUMN deskripsi TEXT',
+            );
+          }
+        },
+      );
 
   // UndangUndang queries
   Future<List<UndangUndangTableData>> getAllUndangUndang() {

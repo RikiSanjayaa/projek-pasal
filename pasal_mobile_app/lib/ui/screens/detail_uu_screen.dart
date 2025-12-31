@@ -67,29 +67,81 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                   color: isDark ? Colors.grey[900] : Colors.white,
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 50, height: 70,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(6),
-                          image: DecorationImage(
-                            image: AssetImage(ImageHelper.getCover(widget.undangUndang.kode)),
-                            fit: BoxFit.cover,
+                      Row(
+                        children: [
+                          Container(
+                            width: 50, height: 70,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(6),
+                              image: DecorationImage(
+                                image: AssetImage(ImageHelper.getCover(widget.undangUndang.kode)),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 15),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(widget.undangUndang.nama, style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black)),
+                                if (widget.undangUndang.namaLengkap != null && widget.undangUndang.namaLengkap!.isNotEmpty)
+                                  Text(
+                                    widget.undangUndang.namaLengkap!,
+                                    style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                const SizedBox(height: 4),
+                                Text("Tahun ${widget.undangUndang.tahun}", style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                Text("${_allPasal.length} Pasal", style: const TextStyle(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Show description if available
+                      if (widget.undangUndang.deskripsi != null && widget.undangUndang.deskripsi!.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.grey[850] : Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.info_outline, size: 16, color: isDark ? Colors.blue[300] : Colors.blue),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    "Tentang",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.blue[300] : Colors.blue,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                widget.undangUndang.deskripsi!,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? Colors.grey[300] : Colors.grey[700],
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(widget.undangUndang.nama, style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black)),
-                            Text("Tahun ${widget.undangUndang.tahun}", style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                            Text("${_allPasal.length} Pasal", style: const TextStyle(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      ),
+                      ],
                     ],
                   ),
                 ),

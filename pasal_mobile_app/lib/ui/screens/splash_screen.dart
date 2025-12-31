@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/services/data_service.dart';
+import '../../core/services/sync_manager.dart';
 import 'main_navigation.dart';
 import 'onboarding_screen.dart';
 
@@ -18,6 +19,9 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkDataAndNavigate() async {
+    // Initialize sync manager
+    await syncManager.initialize();
+
     await Future.delayed(const Duration(seconds: 2));
 
     final allPasal = await DataService.getAllPasal();
@@ -29,6 +33,9 @@ class _SplashScreenState extends State<SplashScreen> {
           MaterialPageRoute(builder: (context) => const OnboardingScreen()),
         );
       } else {
+        // Check for updates in background (non-blocking)
+        syncManager.checkOnLaunch();
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainNavigation()),
@@ -64,13 +71,6 @@ class _SplashScreenState extends State<SplashScreen> {
                   image: AssetImage('assets/images/logo.png'),
                   fit: BoxFit.contain,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withValues(alpha: 0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
               ),
             ),
 

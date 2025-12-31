@@ -36,7 +36,7 @@ class ReadPasalScreen extends StatelessWidget {
     final subTextColor = isDark ? Colors.grey[400] : Colors.grey[600];
 
     return Scaffold(
-      backgroundColor: bgColor, 
+      backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: bgColor,
         elevation: 0,
@@ -48,10 +48,7 @@ class ReadPasalScreen extends StatelessWidget {
           pasal.nomor.toLowerCase().startsWith("pasal")
               ? pasal.nomor
               : "Pasal ${pasal.nomor}",
-          style: TextStyle(
-            color: textColor,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
@@ -62,7 +59,7 @@ class ReadPasalScreen extends StatelessWidget {
           color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),
@@ -78,7 +75,9 @@ class ReadPasalScreen extends StatelessWidget {
                       backgroundColor: isDark ? Colors.grey[800] : Colors.white,
                       foregroundColor: isDark ? Colors.white : Colors.black,
                       elevation: 0,
-                      side: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey),
+                      side: BorderSide(
+                        color: isDark ? Colors.grey[700]! : Colors.grey,
+                      ),
                     ),
                     icon: const Icon(Icons.arrow_back, size: 16),
                     label: const Text("Sebelumnya"),
@@ -107,11 +106,11 @@ class ReadPasalScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (pasal.judul != null) ...[
-               HighlightText(
+              HighlightText(
                 text: pasal.judul!,
                 query: searchQuery,
                 style: TextStyle(
-                  fontSize: 18, 
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: textColor,
                 ),
@@ -123,11 +122,7 @@ class ReadPasalScreen extends StatelessWidget {
               text: pasal.isi,
               query: searchQuery,
               textAlign: TextAlign.justify,
-              style: TextStyle(
-                fontSize: 16,
-                height: 1.8,
-                color: textColor,
-              ),
+              style: TextStyle(fontSize: 16, height: 1.8, color: textColor),
             ),
 
             const SizedBox(height: 30),
@@ -170,8 +165,16 @@ class ReadPasalScreen extends StatelessWidget {
                 children: pasal.keywords
                     .map(
                       (k) => Chip(
-                        label: Text(k, style: TextStyle(fontSize: 11, color: isDark ? Colors.white : Colors.black)),
-                        backgroundColor: isDark ? Colors.grey[800] : Colors.blue.shade50,
+                        label: Text(
+                          k,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
+                        ),
+                        backgroundColor: isDark
+                            ? Colors.grey[800]
+                            : Colors.blue.shade50,
                         side: BorderSide.none,
                         padding: const EdgeInsets.all(4),
                       ),
@@ -203,15 +206,22 @@ class ReadPasalScreen extends StatelessWidget {
                     final relatedPasal = snapshot.data!;
 
                     return FutureBuilder<String>(
-                      future: DataService.getKodeUU(relatedPasal.undangUndangId),
+                      future: DataService.getKodeUU(
+                        relatedPasal.undangUndangId,
+                      ),
                       builder: (context, kodeSnapshot) {
                         final kodeUU = kodeSnapshot.data ?? "UU";
                         return Card(
                           elevation: 0,
-                          color: isDark ? Colors.orange.withOpacity(0.1) : Colors.orange.shade50,
+                          color: isDark
+                              ? Colors.orange.withValues(alpha: 0.1)
+                              : Colors.orange.shade50,
                           margin: const EdgeInsets.only(bottom: 8),
                           child: ListTile(
-                            leading: const Icon(Icons.link, color: Colors.orange),
+                            leading: const Icon(
+                              Icons.link,
+                              color: Colors.orange,
+                            ),
                             title: Text(
                               "Pasal ${relatedPasal.nomor}",
                               style: TextStyle(
@@ -220,13 +230,24 @@ class ReadPasalScreen extends StatelessWidget {
                                 color: textColor,
                               ),
                             ),
-                            subtitle: Text(kodeUU, style: TextStyle(fontSize: 10, color: subTextColor)),
-                            trailing: Icon(Icons.chevron_right, size: 16, color: subTextColor),
+                            subtitle: Text(
+                              kodeUU,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: subTextColor,
+                              ),
+                            ),
+                            trailing: Icon(
+                              Icons.chevron_right,
+                              size: 16,
+                              color: subTextColor,
+                            ),
                             onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => ReadPasalScreen(pasal: relatedPasal),
+                                  builder: (_) =>
+                                      ReadPasalScreen(pasal: relatedPasal),
                                 ),
                               );
                             },
@@ -248,7 +269,8 @@ class ReadPasalScreen extends StatelessWidget {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => ReadPasalScreen(pasal: target, contextList: contextList),
+        builder: (_) =>
+            ReadPasalScreen(pasal: target, contextList: contextList),
       ),
     );
   }

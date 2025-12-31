@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import '../../models/pasal_model.dart';
 import '../../models/undang_undang_model.dart';
 import '../../core/services/data_service.dart';
+import '../../core/services/sync_manager.dart';
 import '../../core/config/theme_controller.dart';
 import '../widgets/pasal_card.dart';
 import '../widgets/main_layout.dart';
+import '../widgets/update_banner.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,27 +20,25 @@ class _HomeScreenState extends State<HomeScreen> {
   List<PasalModel> _filteredData = [];
   List<PasalModel> _paginatedData = [];
   List<UndangUndangModel> _listUU = [];
-  
-  List<String> _allAvailableKeywords = []; 
-  
+
+  List<String> _allAvailableKeywords = [];
+
   String _selectedFilterUUId = 'ALL';
-  List<String> _selectedKeywords = []; 
-  
+  List<String> _selectedKeywords = [];
+
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
-  final TextEditingController _autocompleteController = TextEditingController(); 
-  final FocusNode _autocompleteFocusNode = FocusNode(); 
+  final TextEditingController _autocompleteController = TextEditingController();
+  final FocusNode _autocompleteFocusNode = FocusNode();
 
   int _currentPage = 1;
   final int _itemsPerPage = 10;
   int _totalPages = 1;
-  bool _isSyncing = false;
 
   @override
   void initState() {
     super.initState();
     _initData();
-    _checkUpdateLoop();
   }
 
   @override
@@ -47,48 +47,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _autocompleteController.dispose();
     _autocompleteFocusNode.dispose();
     super.dispose();
-  }
-
-  void _checkUpdateLoop() async {
-    bool hasUpdate = await DataService.checkForUpdates();
-    if (mounted && hasUpdate) {
-      _showUpdateDialog();
-    }
-  }
-
-  void _showUpdateDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.rocket_launch, size: 40, color: Colors.blue),
-                const SizedBox(height: 20),
-                Text("Update Tersedia", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black)),
-                const SizedBox(height: 10),
-                Text("Database pasal terbaru siap diunduh.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _manualSync();
-                  },
-                  child: const Text("Update Sekarang"),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
   }
 
   void _initData() async {
@@ -109,45 +67,29 @@ class _HomeScreenState extends State<HomeScreen> {
         keywordSet.add(k.trim());
       }
     }
-    _allAvailableKeywords = keywordSet.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    _allAvailableKeywords = keywordSet.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
     _applyFilterAndSearch();
   }
 
-  Future<void> _manualSync() async {
-    setState(() => _isSyncing = true);
-    bool success = await DataService.syncData();
-    if (mounted) {
-      setState(() => _isSyncing = false);
-      if (success) _initData();
-      
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.white),
-              const SizedBox(width: 10),
-              Text(success ? "Data berhasil diperbarui!" : "Gagal terhubung ke server."),
-            ],
-          ),
-          backgroundColor: success ? Colors.green : Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+  Future<void> _handleSyncComplete() async {
+    // Reload data after sync completes
+    _initData();
   }
 
   void _addKeyword(String val) {
     if (val.trim().isEmpty) return;
-    
-    List<String> tags = val.split(','); 
+
+    List<String> tags = val.split(',');
 
     setState(() {
       for (var tag in tags) {
         final cleanTag = tag.trim();
-        final isExist = _selectedKeywords.any((k) => k.toLowerCase() == cleanTag.toLowerCase());
-        
+        final isExist = _selectedKeywords.any(
+          (k) => k.toLowerCase() == cleanTag.toLowerCase(),
+        );
+
         if (cleanTag.isNotEmpty && !isExist) {
           _selectedKeywords.add(cleanTag);
         }
@@ -167,13 +109,17 @@ class _HomeScreenState extends State<HomeScreen> {
     List<PasalModel> source = _allPasalCache;
 
     if (_selectedFilterUUId != 'ALL') {
-      source = source.where((p) => p.undangUndangId == _selectedFilterUUId).toList();
+      source = source
+          .where((p) => p.undangUndangId == _selectedFilterUUId)
+          .toList();
     }
 
     if (_selectedKeywords.isNotEmpty) {
       source = source.where((p) {
-        return _selectedKeywords.every((selectedK) => 
-          p.keywords.any((pasalK) => pasalK.toLowerCase() == selectedK.toLowerCase())
+        return _selectedKeywords.every(
+          (selectedK) => p.keywords.any(
+            (pasalK) => pasalK.toLowerCase() == selectedK.toLowerCase(),
+          ),
         );
       }).toList();
     }
@@ -210,11 +156,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return MainLayout(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Update banner - shows when updates are available
+          UpdateBanner(onSyncComplete: _handleSyncComplete),
+          
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 5),
             child: Row(
@@ -223,7 +172,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Jelajahi Pasal", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                    const Text(
+                      "Jelajahi Pasal",
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    // Last sync info
+                    if (syncManager.lastSyncTime != null)
+                      Text(
+                        "Diperbarui: ${syncManager.lastSyncText}",
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? Colors.grey[500] : Colors.grey[600],
+                        ),
+                      ),
                   ],
                 ),
                 Row(
@@ -232,10 +196,35 @@ class _HomeScreenState extends State<HomeScreen> {
                       icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
                       onPressed: themeController.toggle,
                     ),
-                    if (_isSyncing)
-                      const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    else
-                      IconButton(onPressed: _showUpdateDialog, icon: const Icon(Icons.sync, color: Colors.blue)),
+                    // Sync status indicator and manual sync button
+                    ValueListenableBuilder<SyncState>(
+                      valueListenable: syncManager.state,
+                      builder: (context, state, child) {
+                        if (state == SyncState.syncing || state == SyncState.checking) {
+                          return const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          );
+                        }
+                        return IconButton(
+                          onPressed: () async {
+                            final hasUpdate = await syncManager.forceCheckUpdates();
+                            if (mounted && !hasUpdate) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Data sudah up-to-date"),
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.sync, color: Colors.blue),
+                          tooltip: "Periksa update",
+                        );
+                      },
+                    ),
                   ],
                 ),
               ],
@@ -255,7 +244,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: isDark ? Colors.grey[800] : Colors.white,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
                 contentPadding: EdgeInsets.zero,
               ),
             ),
@@ -267,48 +259,56 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 RawAutocomplete<String>(
-                  textEditingController: _autocompleteController, 
-                  focusNode: _autocompleteFocusNode, 
-                  
+                  textEditingController: _autocompleteController,
+                  focusNode: _autocompleteFocusNode,
+
                   optionsBuilder: (TextEditingValue textEditingValue) {
                     if (textEditingValue.text.isEmpty) {
                       return const Iterable<String>.empty();
                     }
                     return _allAvailableKeywords.where((String option) {
-                      return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+                      return option.toLowerCase().contains(
+                        textEditingValue.text.toLowerCase(),
+                      );
                     });
                   },
                   onSelected: (String selection) {
                     _addKeyword(selection);
                     _autocompleteController.clear();
                   },
-                  fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
-                    return TextField(
-                      controller: textController,
-                      focusNode: focusNode,
-                      onSubmitted: (String value) {
-                        _addKeyword(value);
-                        textController.clear();
+                  fieldViewBuilder:
+                      (context, textController, focusNode, onFieldSubmitted) {
+                        return TextField(
+                          controller: textController,
+                          focusNode: focusNode,
+                          onSubmitted: (String value) {
+                            _addKeyword(value);
+                            textController.clear();
+                          },
+                          decoration: InputDecoration(
+                            hintText: "Filter berdasarkan kata kunci/keywords",
+                            hintStyle: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.tag,
+                              size: 16,
+                              color: Colors.grey,
+                            ),
+                            filled: true,
+                            fillColor: isDark
+                                ? Colors.grey[900]
+                                : Colors.grey[200],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          style: const TextStyle(fontSize: 13),
+                        );
                       },
-                      decoration: InputDecoration(
-                        hintText: "Filter topik pasal",
-                        hintStyle: TextStyle(fontSize: 12, color: Colors.grey),
-                        prefixIcon: const Icon(Icons.tag, size: 16, color: Colors.grey),
-                        filled: true,
-                        fillColor: isDark ? Colors.grey[900] : Colors.grey[200],
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                        contentPadding: EdgeInsets.zero,
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.add, size: 20),
-                          onPressed: () {
-                             _addKeyword(textController.text);
-                             textController.clear();
-                          } 
-                        ),
-                      ),
-                      style: const TextStyle(fontSize: 13),
-                    );
-                  },
                   optionsViewBuilder: (context, onSelected, options) {
                     return Align(
                       alignment: Alignment.topLeft,
@@ -317,7 +317,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
                         borderRadius: BorderRadius.circular(8),
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 200, maxWidth: 300),
+                          constraints: const BoxConstraints(
+                            maxHeight: 200,
+                            maxWidth: 300,
+                          ),
                           child: ListView.builder(
                             padding: EdgeInsets.zero,
                             shrinkWrap: true,
@@ -330,12 +333,22 @@ class _HomeScreenState extends State<HomeScreen> {
                                   padding: const EdgeInsets.all(12.0),
                                   child: Row(
                                     children: [
-                                      Icon(Icons.history, size: 16, color: isDark ? Colors.grey : Colors.grey[400]),
+                                      Icon(
+                                        Icons.history,
+                                        size: 16,
+                                        color: isDark
+                                            ? Colors.grey
+                                            : Colors.grey[400],
+                                      ),
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: Text(
-                                          option, 
-                                          style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                                          option,
+                                          style: TextStyle(
+                                            color: isDark
+                                                ? Colors.white
+                                                : Colors.black87,
+                                          ),
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
@@ -356,14 +369,28 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: const EdgeInsets.only(top: 8),
                     child: Wrap(
                       spacing: 8,
-                      children: _selectedKeywords.map((k) => Chip(
-                        label: Text(k, style: const TextStyle(fontSize: 11, color: Colors.white)),
-                        backgroundColor: Colors.blue,
-                        deleteIcon: const Icon(Icons.close, size: 14, color: Colors.white),
-                        onDeleted: () => _removeKeyword(k),
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                      )).toList(),
+                      children: _selectedKeywords
+                          .map(
+                            (k) => Chip(
+                              label: Text(
+                                k,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              backgroundColor: Colors.blue,
+                              deleteIcon: const Icon(
+                                Icons.close,
+                                size: 14,
+                                color: Colors.white,
+                              ),
+                              onDeleted: () => _removeKeyword(k),
+                              padding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          )
+                          .toList(),
                     ),
                   ),
               ],
@@ -376,21 +403,31 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               children: [
                 _buildFilterChip("Semua", 'ALL', isDark),
-                ..._listUU.map((uu) => _buildFilterChip(uu.kode, uu.id, isDark)).toList(),
+                ..._listUU
+                    .map((uu) => _buildFilterChip(uu.kode, uu.id, isDark))
+                    .toList(),
               ],
             ),
           ),
-          
+
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  (_searchQuery.isNotEmpty || _selectedKeywords.isNotEmpty) ? "Pasal yang sesuai" : "Pasal Terbaru",
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  (_searchQuery.isNotEmpty || _selectedKeywords.isNotEmpty)
+                      ? "Pasal yang sesuai"
+                      : "Pasal Terbaru",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
-                Text("Total: ${_filteredData.length}", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                Text(
+                  "Total: ${_filteredData.length}",
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
               ],
             ),
           ),
@@ -405,10 +442,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     itemBuilder: (context, index) {
                       if (index == _paginatedData.length) {
                         return _totalPages > 1
-                            ? Padding(padding: const EdgeInsets.symmetric(vertical: 20), child: _buildPaginationFooter(isDark))
+                            ? Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 20,
+                                ),
+                                child: _buildPaginationFooter(isDark),
+                              )
                             : const SizedBox(height: 20);
                       }
-                      
+
                       return PasalCard(
                         pasal: _paginatedData[index],
                         contextList: _filteredData,
@@ -427,9 +469,25 @@ class _HomeScreenState extends State<HomeScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        IconButton(icon: Icon(Icons.chevron_left), onPressed: _currentPage > 1 ? () => setState(() { _currentPage--; _updatePagination(); }) : null),
+        IconButton(
+          icon: Icon(Icons.chevron_left),
+          onPressed: _currentPage > 1
+              ? () => setState(() {
+                  _currentPage--;
+                  _updatePagination();
+                })
+              : null,
+        ),
         Text("$_currentPage / $_totalPages"),
-        IconButton(icon: Icon(Icons.chevron_right), onPressed: _currentPage < _totalPages ? () => setState(() { _currentPage++; _updatePagination(); }) : null),
+        IconButton(
+          icon: Icon(Icons.chevron_right),
+          onPressed: _currentPage < _totalPages
+              ? () => setState(() {
+                  _currentPage++;
+                  _updatePagination();
+                })
+              : null,
+        ),
       ],
     );
   }
@@ -448,7 +506,11 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: isDark ? Colors.grey[800] : Colors.white,
         selectedColor: Colors.blue,
         checkmarkColor: Colors.white,
-        labelStyle: TextStyle(color: isSelected ? Colors.white : (isDark ? Colors.grey[300] : Colors.black)),
+        labelStyle: TextStyle(
+          color: isSelected
+              ? Colors.white
+              : (isDark ? Colors.grey[300] : Colors.black),
+        ),
       ),
     );
   }

@@ -7,6 +7,8 @@ class UndangUndangModel {
 
   final String? namaLengkap;
 
+  final String? deskripsi;
+
   final int tahun;
 
   final bool isActive;
@@ -16,6 +18,7 @@ class UndangUndangModel {
     required this.kode,
     required this.nama,
     this.namaLengkap,
+    this.deskripsi,
     required this.tahun,
     required this.isActive,
   });
@@ -26,7 +29,9 @@ class UndangUndangModel {
       kode: json['kode'] as String,
       nama: json['nama'] as String,
       namaLengkap: json['nama_lengkap'] as String?,
-      tahun: json['tahun'] as int,
+      deskripsi: json['deskripsi'] as String?,
+      // Handle null tahun with default value of 0
+      tahun: (json['tahun'] as int?) ?? 0,
       isActive: json['is_active'] ?? true,
     );
   }

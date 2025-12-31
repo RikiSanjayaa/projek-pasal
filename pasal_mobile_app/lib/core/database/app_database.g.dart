@@ -30,11 +30,19 @@ class $UndangUndangTableTable extends UndangUndangTable
   late final GeneratedColumn<String> namaLengkap = GeneratedColumn<String>(
       'nama_lengkap', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _deskripsiMeta =
+      const VerificationMeta('deskripsi');
+  @override
+  late final GeneratedColumn<String> deskripsi = GeneratedColumn<String>(
+      'deskripsi', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _tahunMeta = const VerificationMeta('tahun');
   @override
   late final GeneratedColumn<int> tahun = GeneratedColumn<int>(
       'tahun', aliasedName, false,
-      type: DriftSqlType.int, requiredDuringInsert: true);
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
   static const VerificationMeta _isActiveMeta =
       const VerificationMeta('isActive');
   @override
@@ -47,7 +55,7 @@ class $UndangUndangTableTable extends UndangUndangTable
       defaultValue: const Constant(true));
   @override
   List<GeneratedColumn> get $columns =>
-      [id, kode, nama, namaLengkap, tahun, isActive];
+      [id, kode, nama, namaLengkap, deskripsi, tahun, isActive];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -82,11 +90,13 @@ class $UndangUndangTableTable extends UndangUndangTable
           namaLengkap.isAcceptableOrUnknown(
               data['nama_lengkap']!, _namaLengkapMeta));
     }
+    if (data.containsKey('deskripsi')) {
+      context.handle(_deskripsiMeta,
+          deskripsi.isAcceptableOrUnknown(data['deskripsi']!, _deskripsiMeta));
+    }
     if (data.containsKey('tahun')) {
       context.handle(
           _tahunMeta, tahun.isAcceptableOrUnknown(data['tahun']!, _tahunMeta));
-    } else if (isInserting) {
-      context.missing(_tahunMeta);
     }
     if (data.containsKey('is_active')) {
       context.handle(_isActiveMeta,
@@ -109,6 +119,8 @@ class $UndangUndangTableTable extends UndangUndangTable
           .read(DriftSqlType.string, data['${effectivePrefix}nama'])!,
       namaLengkap: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}nama_lengkap']),
+      deskripsi: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}deskripsi']),
       tahun: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}tahun'])!,
       isActive: attachedDatabase.typeMapping
@@ -128,6 +140,7 @@ class UndangUndangTableData extends DataClass
   final String kode;
   final String nama;
   final String? namaLengkap;
+  final String? deskripsi;
   final int tahun;
   final bool isActive;
   const UndangUndangTableData(
@@ -135,6 +148,7 @@ class UndangUndangTableData extends DataClass
       required this.kode,
       required this.nama,
       this.namaLengkap,
+      this.deskripsi,
       required this.tahun,
       required this.isActive});
   @override
@@ -145,6 +159,9 @@ class UndangUndangTableData extends DataClass
     map['nama'] = Variable<String>(nama);
     if (!nullToAbsent || namaLengkap != null) {
       map['nama_lengkap'] = Variable<String>(namaLengkap);
+    }
+    if (!nullToAbsent || deskripsi != null) {
+      map['deskripsi'] = Variable<String>(deskripsi);
     }
     map['tahun'] = Variable<int>(tahun);
     map['is_active'] = Variable<bool>(isActive);
@@ -159,6 +176,9 @@ class UndangUndangTableData extends DataClass
       namaLengkap: namaLengkap == null && nullToAbsent
           ? const Value.absent()
           : Value(namaLengkap),
+      deskripsi: deskripsi == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deskripsi),
       tahun: Value(tahun),
       isActive: Value(isActive),
     );
@@ -172,6 +192,7 @@ class UndangUndangTableData extends DataClass
       kode: serializer.fromJson<String>(json['kode']),
       nama: serializer.fromJson<String>(json['nama']),
       namaLengkap: serializer.fromJson<String?>(json['namaLengkap']),
+      deskripsi: serializer.fromJson<String?>(json['deskripsi']),
       tahun: serializer.fromJson<int>(json['tahun']),
       isActive: serializer.fromJson<bool>(json['isActive']),
     );
@@ -184,6 +205,7 @@ class UndangUndangTableData extends DataClass
       'kode': serializer.toJson<String>(kode),
       'nama': serializer.toJson<String>(nama),
       'namaLengkap': serializer.toJson<String?>(namaLengkap),
+      'deskripsi': serializer.toJson<String?>(deskripsi),
       'tahun': serializer.toJson<int>(tahun),
       'isActive': serializer.toJson<bool>(isActive),
     };
@@ -194,6 +216,7 @@ class UndangUndangTableData extends DataClass
           String? kode,
           String? nama,
           Value<String?> namaLengkap = const Value.absent(),
+          Value<String?> deskripsi = const Value.absent(),
           int? tahun,
           bool? isActive}) =>
       UndangUndangTableData(
@@ -201,6 +224,7 @@ class UndangUndangTableData extends DataClass
         kode: kode ?? this.kode,
         nama: nama ?? this.nama,
         namaLengkap: namaLengkap.present ? namaLengkap.value : this.namaLengkap,
+        deskripsi: deskripsi.present ? deskripsi.value : this.deskripsi,
         tahun: tahun ?? this.tahun,
         isActive: isActive ?? this.isActive,
       );
@@ -211,6 +235,7 @@ class UndangUndangTableData extends DataClass
       nama: data.nama.present ? data.nama.value : this.nama,
       namaLengkap:
           data.namaLengkap.present ? data.namaLengkap.value : this.namaLengkap,
+      deskripsi: data.deskripsi.present ? data.deskripsi.value : this.deskripsi,
       tahun: data.tahun.present ? data.tahun.value : this.tahun,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
     );
@@ -223,6 +248,7 @@ class UndangUndangTableData extends DataClass
           ..write('kode: $kode, ')
           ..write('nama: $nama, ')
           ..write('namaLengkap: $namaLengkap, ')
+          ..write('deskripsi: $deskripsi, ')
           ..write('tahun: $tahun, ')
           ..write('isActive: $isActive')
           ..write(')'))
@@ -230,7 +256,8 @@ class UndangUndangTableData extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(id, kode, nama, namaLengkap, tahun, isActive);
+  int get hashCode =>
+      Object.hash(id, kode, nama, namaLengkap, deskripsi, tahun, isActive);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -239,6 +266,7 @@ class UndangUndangTableData extends DataClass
           other.kode == this.kode &&
           other.nama == this.nama &&
           other.namaLengkap == this.namaLengkap &&
+          other.deskripsi == this.deskripsi &&
           other.tahun == this.tahun &&
           other.isActive == this.isActive);
 }
@@ -249,6 +277,7 @@ class UndangUndangTableCompanion
   final Value<String> kode;
   final Value<String> nama;
   final Value<String?> namaLengkap;
+  final Value<String?> deskripsi;
   final Value<int> tahun;
   final Value<bool> isActive;
   final Value<int> rowid;
@@ -257,6 +286,7 @@ class UndangUndangTableCompanion
     this.kode = const Value.absent(),
     this.nama = const Value.absent(),
     this.namaLengkap = const Value.absent(),
+    this.deskripsi = const Value.absent(),
     this.tahun = const Value.absent(),
     this.isActive = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -266,18 +296,19 @@ class UndangUndangTableCompanion
     required String kode,
     required String nama,
     this.namaLengkap = const Value.absent(),
-    required int tahun,
+    this.deskripsi = const Value.absent(),
+    this.tahun = const Value.absent(),
     this.isActive = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         kode = Value(kode),
-        nama = Value(nama),
-        tahun = Value(tahun);
+        nama = Value(nama);
   static Insertable<UndangUndangTableData> custom({
     Expression<String>? id,
     Expression<String>? kode,
     Expression<String>? nama,
     Expression<String>? namaLengkap,
+    Expression<String>? deskripsi,
     Expression<int>? tahun,
     Expression<bool>? isActive,
     Expression<int>? rowid,
@@ -287,6 +318,7 @@ class UndangUndangTableCompanion
       if (kode != null) 'kode': kode,
       if (nama != null) 'nama': nama,
       if (namaLengkap != null) 'nama_lengkap': namaLengkap,
+      if (deskripsi != null) 'deskripsi': deskripsi,
       if (tahun != null) 'tahun': tahun,
       if (isActive != null) 'is_active': isActive,
       if (rowid != null) 'rowid': rowid,
@@ -298,6 +330,7 @@ class UndangUndangTableCompanion
       Value<String>? kode,
       Value<String>? nama,
       Value<String?>? namaLengkap,
+      Value<String?>? deskripsi,
       Value<int>? tahun,
       Value<bool>? isActive,
       Value<int>? rowid}) {
@@ -306,6 +339,7 @@ class UndangUndangTableCompanion
       kode: kode ?? this.kode,
       nama: nama ?? this.nama,
       namaLengkap: namaLengkap ?? this.namaLengkap,
+      deskripsi: deskripsi ?? this.deskripsi,
       tahun: tahun ?? this.tahun,
       isActive: isActive ?? this.isActive,
       rowid: rowid ?? this.rowid,
@@ -327,6 +361,9 @@ class UndangUndangTableCompanion
     if (namaLengkap.present) {
       map['nama_lengkap'] = Variable<String>(namaLengkap.value);
     }
+    if (deskripsi.present) {
+      map['deskripsi'] = Variable<String>(deskripsi.value);
+    }
     if (tahun.present) {
       map['tahun'] = Variable<int>(tahun.value);
     }
@@ -346,6 +383,7 @@ class UndangUndangTableCompanion
           ..write('kode: $kode, ')
           ..write('nama: $nama, ')
           ..write('namaLengkap: $namaLengkap, ')
+          ..write('deskripsi: $deskripsi, ')
           ..write('tahun: $tahun, ')
           ..write('isActive: $isActive, ')
           ..write('rowid: $rowid')
@@ -891,7 +929,8 @@ typedef $$UndangUndangTableTableCreateCompanionBuilder
   required String kode,
   required String nama,
   Value<String?> namaLengkap,
-  required int tahun,
+  Value<String?> deskripsi,
+  Value<int> tahun,
   Value<bool> isActive,
   Value<int> rowid,
 });
@@ -901,6 +940,7 @@ typedef $$UndangUndangTableTableUpdateCompanionBuilder
   Value<String> kode,
   Value<String> nama,
   Value<String?> namaLengkap,
+  Value<String?> deskripsi,
   Value<int> tahun,
   Value<bool> isActive,
   Value<int> rowid,
@@ -926,6 +966,9 @@ class $$UndangUndangTableTableFilterComposer
 
   ColumnFilters<String> get namaLengkap => $composableBuilder(
       column: $table.namaLengkap, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get deskripsi => $composableBuilder(
+      column: $table.deskripsi, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get tahun => $composableBuilder(
       column: $table.tahun, builder: (column) => ColumnFilters(column));
@@ -955,6 +998,9 @@ class $$UndangUndangTableTableOrderingComposer
   ColumnOrderings<String> get namaLengkap => $composableBuilder(
       column: $table.namaLengkap, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get deskripsi => $composableBuilder(
+      column: $table.deskripsi, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<int> get tahun => $composableBuilder(
       column: $table.tahun, builder: (column) => ColumnOrderings(column));
 
@@ -982,6 +1028,9 @@ class $$UndangUndangTableTableAnnotationComposer
 
   GeneratedColumn<String> get namaLengkap => $composableBuilder(
       column: $table.namaLengkap, builder: (column) => column);
+
+  GeneratedColumn<String> get deskripsi =>
+      $composableBuilder(column: $table.deskripsi, builder: (column) => column);
 
   GeneratedColumn<int> get tahun =>
       $composableBuilder(column: $table.tahun, builder: (column) => column);
@@ -1023,6 +1072,7 @@ class $$UndangUndangTableTableTableManager extends RootTableManager<
             Value<String> kode = const Value.absent(),
             Value<String> nama = const Value.absent(),
             Value<String?> namaLengkap = const Value.absent(),
+            Value<String?> deskripsi = const Value.absent(),
             Value<int> tahun = const Value.absent(),
             Value<bool> isActive = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -1032,6 +1082,7 @@ class $$UndangUndangTableTableTableManager extends RootTableManager<
             kode: kode,
             nama: nama,
             namaLengkap: namaLengkap,
+            deskripsi: deskripsi,
             tahun: tahun,
             isActive: isActive,
             rowid: rowid,
@@ -1041,7 +1092,8 @@ class $$UndangUndangTableTableTableManager extends RootTableManager<
             required String kode,
             required String nama,
             Value<String?> namaLengkap = const Value.absent(),
-            required int tahun,
+            Value<String?> deskripsi = const Value.absent(),
+            Value<int> tahun = const Value.absent(),
             Value<bool> isActive = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -1050,6 +1102,7 @@ class $$UndangUndangTableTableTableManager extends RootTableManager<
             kode: kode,
             nama: nama,
             namaLengkap: namaLengkap,
+            deskripsi: deskripsi,
             tahun: tahun,
             isActive: isActive,
             rowid: rowid,

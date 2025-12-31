@@ -62,6 +62,63 @@ class DataService {
     }
   }
 
+  /// Smart sync: Only syncs if there are updates available
+  /// Returns: SyncResult with status, message, and error details if failed
+  static Future<SyncResult> smartSync() async {
+    try {
+      final hasUpdates = await checkForUpdates();
+
+      if (!hasUpdates) {
+        print("Data sudah up-to-date, tidak perlu sync.");
+        return SyncResult(
+          success: true,
+          message: "Data sudah up-to-date",
+          synced: false,
+        );
+      }
+
+      print("Ada update baru, memulai sync...");
+      final syncSuccess = await syncData();
+
+      return SyncResult(
+        success: syncSuccess,
+        message: syncSuccess ? "Sync berhasil" : "Sync gagal",
+        synced: true,
+      );
+    } catch (e) {
+      print("Smart sync error: $e");
+      final syncError = classifyError(e);
+      return SyncResult(
+        success: false,
+        message: syncError.userMessage,
+        synced: false,
+        error: syncError,
+      );
+    }
+  }
+
+  /// Full sync with detailed error handling
+  /// Returns: SyncResult with status, message, and error details if failed
+  static Future<SyncResult> syncDataWithResult() async {
+    try {
+      final success = await syncData();
+      return SyncResult(
+        success: success,
+        message: success ? "Sync berhasil" : "Sync gagal",
+        synced: success,
+      );
+    } catch (e) {
+      print("Sync error: $e");
+      final syncError = classifyError(e);
+      return SyncResult(
+        success: false,
+        message: syncError.userMessage,
+        synced: false,
+        error: syncError,
+      );
+    }
+  }
+
   static Future<bool> syncData() async {
     try {
       print("Mulai download data UU...");
@@ -74,6 +131,11 @@ class DataService {
 
       print("Ditemukan ${responseUU.length} UU di Server.");
 
+      // Fetch all pasal_links from Supabase (only active ones)
+      print("Mulai download pasal_links...");
+      final Map<String, List<String>> linksMap = await _fetchPasalLinks();
+      print("Ditemukan ${linksMap.length} pasal dengan links.");
+
       // Clear and insert UU data
       await _database.clearAllUndangUndang();
 
@@ -85,12 +147,13 @@ class DataService {
             kode: Value(uu.kode),
             nama: Value(uu.nama),
             namaLengkap: Value(uu.namaLengkap),
+            deskripsi: Value(uu.deskripsi),
             tahun: Value(uu.tahun),
             isActive: Value(uu.isActive),
           ),
         );
 
-        await _syncPasalForUU(uu.id, uu.kode);
+        await _syncPasalForUU(uu.id, uu.kode, linksMap);
       }
       return true;
     } catch (e) {
@@ -99,7 +162,36 @@ class DataService {
     }
   }
 
-  static Future<void> _syncPasalForUU(String uuId, String kodeUU) async {
+  /// Fetches all active pasal_links and builds a map of source_pasal_id -> [target_pasal_ids]
+  static Future<Map<String, List<String>>> _fetchPasalLinks() async {
+    try {
+      final List<dynamic> responseLinks = await supabase
+          .from('pasal_links')
+          .select('source_pasal_id, target_pasal_id')
+          .eq('is_active', true);
+
+      final Map<String, List<String>> linksMap = {};
+      for (var link in responseLinks) {
+        final sourceId = link['source_pasal_id'] as String;
+        final targetId = link['target_pasal_id'] as String;
+
+        if (!linksMap.containsKey(sourceId)) {
+          linksMap[sourceId] = [];
+        }
+        linksMap[sourceId]!.add(targetId);
+      }
+      return linksMap;
+    } catch (e) {
+      print("Error fetching pasal_links: $e");
+      return {};
+    }
+  }
+
+  static Future<void> _syncPasalForUU(
+    String uuId,
+    String kodeUU,
+    Map<String, List<String>> linksMap,
+  ) async {
     try {
       final List<dynamic> responsePasal = await supabase
           .from('pasal')
@@ -113,6 +205,10 @@ class DataService {
 
       for (var item in responsePasal) {
         final pasal = PasalModel.fromJson(item);
+
+        // Get related pasal IDs from the links map
+        final relatedIds = linksMap[pasal.id] ?? [];
+
         pasalCompanions.add(
           PasalTableCompanion(
             id: Value(pasal.id),
@@ -122,7 +218,7 @@ class DataService {
             penjelasan: Value(pasal.penjelasan),
             judul: Value(pasal.judul),
             keywords: Value(jsonEncode(pasal.keywords)),
-            relatedIds: Value(jsonEncode(pasal.relatedIds)),
+            relatedIds: Value(jsonEncode(relatedIds)),
             createdAt: Value(pasal.createdAt),
             updatedAt: Value(pasal.updatedAt),
           ),
@@ -147,6 +243,7 @@ class DataService {
               kode: row.kode,
               nama: row.nama,
               namaLengkap: row.namaLengkap,
+              deskripsi: row.deskripsi,
               tahun: row.tahun,
               isActive: row.isActive,
             ),
@@ -290,6 +387,7 @@ class DataService {
       return [];
     }
   }
+
   static Future<List<PasalModel>> getLatestUpdates({int limit = 5}) async {
     try {
       final all = await getAllPasal();
@@ -317,4 +415,97 @@ class DataService {
       return [];
     }
   }
+}
+
+/// Result class for sync operations
+class SyncResult {
+  final bool success;
+  final String message;
+  final bool synced;
+  final SyncError? error;
+
+  SyncResult({
+    required this.success,
+    required this.message,
+    required this.synced,
+    this.error,
+  });
+
+  @override
+  String toString() =>
+      'SyncResult(success: $success, message: $message, synced: $synced)';
+}
+
+/// Error types for better error handling
+enum SyncErrorType { network, server, database, unknown }
+
+/// Detailed error information for sync failures
+class SyncError {
+  final SyncErrorType type;
+  final String message;
+  final String? details;
+
+  SyncError({required this.type, required this.message, this.details});
+
+  /// Returns a user-friendly error message based on error type
+  String get userMessage {
+    switch (type) {
+      case SyncErrorType.network:
+        return 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+      case SyncErrorType.server:
+        return 'Server sedang mengalami gangguan. Coba lagi nanti.';
+      case SyncErrorType.database:
+        return 'Gagal menyimpan data ke penyimpanan lokal.';
+      case SyncErrorType.unknown:
+        return 'Terjadi kesalahan yang tidak diketahui.';
+    }
+  }
+
+  @override
+  String toString() => 'SyncError(type: $type, message: $message)';
+}
+
+/// Helper to determine error type from exception
+SyncError classifyError(dynamic e) {
+  final errorString = e.toString().toLowerCase();
+
+  if (errorString.contains('socket') ||
+      errorString.contains('connection') ||
+      errorString.contains('network') ||
+      errorString.contains('timeout') ||
+      errorString.contains('host')) {
+    return SyncError(
+      type: SyncErrorType.network,
+      message: 'Network error',
+      details: e.toString(),
+    );
+  }
+
+  if (errorString.contains('postgresql') ||
+      errorString.contains('supabase') ||
+      errorString.contains('500') ||
+      errorString.contains('502') ||
+      errorString.contains('503')) {
+    return SyncError(
+      type: SyncErrorType.server,
+      message: 'Server error',
+      details: e.toString(),
+    );
+  }
+
+  if (errorString.contains('drift') ||
+      errorString.contains('sqlite') ||
+      errorString.contains('database')) {
+    return SyncError(
+      type: SyncErrorType.database,
+      message: 'Database error',
+      details: e.toString(),
+    );
+  }
+
+  return SyncError(
+    type: SyncErrorType.unknown,
+    message: 'Unknown error',
+    details: e.toString(),
+  );
 }

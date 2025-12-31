@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/services/data_service.dart';
+import '../../core/services/sync_manager.dart';
 import 'main_navigation.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -35,19 +35,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> _startDownload() async {
     setState(() => _isDownloading = true);
     
-    bool success = await DataService.syncData();
+    // Use SyncManager to save the sync timestamp
+    final result = await syncManager.performSync();
     
     if (!mounted) return;
     setState(() => _isDownloading = false);
 
-    if (success) {
+    if (result.success) {
       Navigator.pushReplacement(
         context, 
         MaterialPageRoute(builder: (context) => const MainNavigation())
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Gagal mengunduh. Periksa internet Anda."), backgroundColor: Colors.red)
+        SnackBar(
+          content: Text(result.message),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
