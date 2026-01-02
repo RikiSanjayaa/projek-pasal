@@ -44,31 +44,34 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
 
-  // Future<void> _startSyncProcess() async {
-
-  //   await DataService.syncData();
-  //   if (mounted) {
-  //     Navigator.pushReplacement(
-  //       context,
-  //       MaterialPageRoute(builder: (context) => const MainNavigation()),
-  //     );
-  //   }
-  // }
-
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Logo container with glow effect
             Container(
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                image: const DecorationImage(
-                  image: AssetImage('assets/images/logo.png'),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withValues(alpha: isDark ? 0.3 : 0.2),
+                    blurRadius: 30,
+                    spreadRadius: 5,
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Image.asset(
+                  'assets/images/logo.png',
                   fit: BoxFit.contain,
                 ),
               ),
@@ -76,23 +79,45 @@ class _SplashScreenState extends State<SplashScreen> {
 
             const SizedBox(height: 24),
 
-            const Text(
+            Text(
               "CariPasal",
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: Colors.blue,
+                color: isDark ? Colors.white : Colors.blue,
                 letterSpacing: 1.2,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            Text(
+              "Pencarian Pasal Hukum Indonesia",
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.grey[500] : Colors.grey[600],
               ),
             ),
 
             const SizedBox(height: 48),
 
-            const CircularProgressIndicator(),
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  isDark ? Colors.blue[300]! : Colors.blue,
+                ),
+              ),
+            ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               "Menyiapkan data hukum...",
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.grey[500] : Colors.grey[600],
+              ),
             ),
           ],
         ),

@@ -116,6 +116,7 @@ class _KeywordBottomSheetState extends State<KeywordBottomSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: TextField(
               controller: _searchController,
+              keyboardAppearance: isDark ? Brightness.dark : Brightness.light,
               onChanged: (val) => setState(() => _searchQuery = val),
               decoration: InputDecoration(
                 hintText: 'Cari keyword...',

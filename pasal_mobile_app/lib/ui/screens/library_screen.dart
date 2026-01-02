@@ -15,6 +15,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   List<UndangUndangModel> _allUU = [];
   List<UndangUndangModel> _filteredUU = [];
   Map<String, int> _pasalCounts = {}; // UU ID -> pasal count
+  final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
   int _totalPasal = 0;
 
@@ -22,6 +23,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _loadData() async {
@@ -47,6 +54,32 @@ class _LibraryScreenState extends State<LibraryScreen> {
     }
   }
 
+  // 8 preset colors for UU types (expandable for future)
+  static const List<Color> _presetColors = [
+    Color(0xFFDC2626), // Red - KUHP
+    Color(0xFF2563EB), // Blue - KUHAP
+    Color(0xFF059669), // Emerald - ITE
+    Color(0xFFD97706), // Amber - KUHPER
+    Color(0xFF7C3AED), // Violet - Reserved
+    Color(0xFFDB2777), // Pink - Reserved
+    Color(0xFF0891B2), // Cyan - Reserved
+    Color(0xFF4F46E5), // Indigo - Reserved
+  ];
+
+  // Extra colors for random assignment (beyond 8 preset)
+  static const List<Color> _extraColors = [
+    Color(0xFF059669), // Teal
+    Color(0xFFCA8A04), // Yellow
+    Color(0xFF9333EA), // Purple
+    Color(0xFFE11D48), // Rose
+    Color(0xFF0D9488), // Teal
+    Color(0xFFEA580C), // Orange
+  ];
+
+  // Cache for dynamically assigned colors
+  final Map<String, Color> _dynamicColorCache = {};
+  int _nextColorIndex = 4; // Start after known UU colors
+
   // Get icon for each UU type
   IconData _getUUIcon(String kode) {
     final code = kode.toUpperCase().trim();
@@ -59,16 +92,57 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return Icons.menu_book_rounded;
   }
 
-  // Get color for each UU type
+  // Get color for each UU type - with dynamic assignment for new UU
   Color _getUUColor(String kode) {
     final code = kode.toUpperCase().trim();
-    if (code == 'KUHP') return const Color(0xFFDC2626); // Red
-    if (code.contains('KUHAP')) return const Color(0xFF2563EB); // Blue
-    if (code.contains('ITE')) return const Color(0xFF059669); // Emerald
+
+    // Check known UU types first (order matters!)
+    // KUHPER/PERDATA must be checked BEFORE KUHP (since KUHPER contains KUHP)
     if (code.contains('KUHPER') || code.contains('PERDATA')) {
-      return const Color(0xFFD97706); // Amber
+      return _presetColors[3]; // Amber
     }
-    return const Color(0xFF6B7280); // Gray
+    if (code.contains('KUHAP')) {
+      return _presetColors[1]; // Blue
+    }
+    if (code == 'KUHP' || code.startsWith('KUHP ')) {
+      return _presetColors[0]; // Red - exact match to avoid matching KUHPER
+    }
+    if (code.contains('ITE')) {
+      return _presetColors[2]; // Emerald
+    }
+
+    // Check if already assigned dynamically
+    if (_dynamicColorCache.containsKey(code)) {
+      return _dynamicColorCache[code]!;
+    }
+
+    // Assign new color dynamically
+    Color newColor;
+    if (_nextColorIndex < _presetColors.length) {
+      // Use remaining preset colors
+      newColor = _presetColors[_nextColorIndex];
+      _nextColorIndex++;
+    } else {
+      // Use extra colors pool, or generate from hash
+      final extraIndex =
+          (_nextColorIndex - _presetColors.length) % _extraColors.length;
+      if (extraIndex < _extraColors.length) {
+        newColor = _extraColors[extraIndex];
+      } else {
+        // Generate deterministic color from hash
+        final hash = code.hashCode;
+        newColor = Color.fromARGB(
+          255,
+          (hash & 0xFF0000) >> 16,
+          (hash & 0x00FF00) >> 8,
+          hash & 0x0000FF,
+        ).withValues(alpha: 1.0);
+      }
+      _nextColorIndex++;
+    }
+
+    _dynamicColorCache[code] = newColor;
+    return newColor;
   }
 
   // Get gradient for card

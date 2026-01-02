@@ -47,10 +47,24 @@ class MyApp extends StatelessWidget {
           theme: ThemeData(
             brightness: Brightness.light,
             scaffoldBackgroundColor: const Color(0xFFF5F7FA),
+            primaryColor: Colors.blue,
+            colorScheme: ColorScheme.light(
+              primary: Colors.blue,
+              secondary: Colors.blue,
+              surface: Colors.white,
+            ),
             appBarTheme: const AppBarTheme(
               backgroundColor: Color(0xFFF5F7FA),
               foregroundColor: Colors.black,
               elevation: 0,
+            ),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
             ),
           ),
           // Tema Gelap
@@ -58,10 +72,25 @@ class MyApp extends StatelessWidget {
             brightness: Brightness.dark,
             scaffoldBackgroundColor: const Color(0xFF121212),
             cardColor: const Color(0xFF1E1E1E),
+            primaryColor: Colors.blue,
+            colorScheme: ColorScheme.dark(
+              primary: Colors.blue,
+              secondary: Colors.blue,
+              surface: const Color(0xFF1E1E1E),
+            ),
             appBarTheme: const AppBarTheme(
               backgroundColor: Color(0xFF121212),
               foregroundColor: Colors.white,
               elevation: 0,
+            ),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: const Color(0xFF2C2C2C),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              hintStyle: TextStyle(color: Colors.grey[500]),
             ),
           ),
           home: const SplashScreen(),

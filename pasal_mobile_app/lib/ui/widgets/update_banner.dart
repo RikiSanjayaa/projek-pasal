@@ -4,14 +4,15 @@ import '../../core/services/sync_manager.dart';
 /// Banner widget that shows when updates are available
 class UpdateBanner extends StatefulWidget {
   final VoidCallback? onSyncComplete;
-  
+
   const UpdateBanner({super.key, this.onSyncComplete});
 
   @override
   State<UpdateBanner> createState() => _UpdateBannerState();
 }
 
-class _UpdateBannerState extends State<UpdateBanner> with SingleTickerProviderStateMixin {
+class _UpdateBannerState extends State<UpdateBanner>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
@@ -35,7 +36,7 @@ class _UpdateBannerState extends State<UpdateBanner> with SingleTickerProviderSt
 
   void _handleSync() async {
     final result = await syncManager.performSync();
-    
+
     if (mounted) {
       if (result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -75,7 +76,7 @@ class _UpdateBannerState extends State<UpdateBanner> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return ValueListenableBuilder<bool>(
       valueListenable: syncManager.updateAvailable,
       builder: (context, updateAvailable, child) {
@@ -103,9 +104,9 @@ class _UpdateBannerState extends State<UpdateBanner> with SingleTickerProviderSt
                   margin: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: isDark 
-                        ? [Colors.blue.shade900, Colors.blue.shade800]
-                        : [Colors.blue.shade500, Colors.blue.shade600],
+                      colors: isDark
+                          ? [Colors.blue.shade900, Colors.blue.shade900]
+                          : [Colors.blue.shade500, Colors.blue.shade600],
                     ),
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
@@ -124,7 +125,7 @@ class _UpdateBannerState extends State<UpdateBanner> with SingleTickerProviderSt
                         valueListenable: syncManager.state,
                         builder: (context, syncState, child) {
                           final isSyncing = syncState == SyncState.syncing;
-                          
+
                           return Row(
                             children: [
                               Container(
@@ -134,19 +135,22 @@ class _UpdateBannerState extends State<UpdateBanner> with SingleTickerProviderSt
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: isSyncing
-                                  ? const SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ? const SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.system_update,
+                                        color: Colors.white,
+                                        size: 24,
                                       ),
-                                    )
-                                  : const Icon(
-                                      Icons.system_update,
-                                      color: Colors.white,
-                                      size: 24,
-                                    ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -155,7 +159,9 @@ class _UpdateBannerState extends State<UpdateBanner> with SingleTickerProviderSt
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                      isSyncing ? "Memperbarui data..." : "Update Tersedia",
+                                      isSyncing
+                                          ? "Memperbarui data..."
+                                          : "Update Tersedia",
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
@@ -164,9 +170,9 @@ class _UpdateBannerState extends State<UpdateBanner> with SingleTickerProviderSt
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      isSyncing 
-                                        ? "Mohon tunggu sebentar"
-                                        : "Data terakhir: ${syncManager.lastSyncText}",
+                                      isSyncing
+                                          ? "Mohon tunggu sebentar"
+                                          : "Data terakhir: ${syncManager.lastSyncText}",
                                       style: TextStyle(
                                         color: Colors.white.withAlpha(204),
                                         fontSize: 12,
@@ -179,8 +185,12 @@ class _UpdateBannerState extends State<UpdateBanner> with SingleTickerProviderSt
                                 TextButton(
                                   onPressed: () => syncManager.dismissUpdate(),
                                   style: TextButton.styleFrom(
-                                    foregroundColor: Colors.white.withAlpha(179),
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    foregroundColor: Colors.white.withAlpha(
+                                      179,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
                                   ),
                                   child: const Text("Nanti"),
                                 ),
@@ -191,14 +201,19 @@ class _UpdateBannerState extends State<UpdateBanner> with SingleTickerProviderSt
                                     backgroundColor: Colors.white,
                                     foregroundColor: Colors.blue.shade700,
                                     elevation: 0,
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                   ),
                                   child: const Text(
                                     "Update",
-                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -258,7 +273,11 @@ class SyncStatusIndicator extends StatelessWidget {
                 if (hasUpdate) {
                   return const Tooltip(
                     message: "Update tersedia",
-                    child: Icon(Icons.system_update, color: Colors.blue, size: 20),
+                    child: Icon(
+                      Icons.system_update,
+                      color: Colors.blue,
+                      size: 20,
+                    ),
                   );
                 }
                 return const SizedBox.shrink();

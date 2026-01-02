@@ -338,6 +338,25 @@ class DataService {
     }
   }
 
+  static Future<UndangUndangModel?> getUUById(String uuId) async {
+    try {
+      final row = await _database.getUndangUndangById(uuId);
+      if (row == null) return null;
+      return UndangUndangModel(
+        id: row.id,
+        kode: row.kode,
+        nama: row.nama,
+        namaLengkap: row.namaLengkap,
+        deskripsi: row.deskripsi,
+        tahun: row.tahun,
+        isActive: row.isActive,
+      );
+    } catch (e) {
+      print("Error getting UU by id: $e");
+      return null;
+    }
+  }
+
   static Future<List<PasalModel>> getPasalByUU(String uuId) async {
     try {
       final data = await _database.getPasalByUndangUndang(uuId);

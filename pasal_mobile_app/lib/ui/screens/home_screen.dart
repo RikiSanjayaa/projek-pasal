@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import '../../models/pasal_model.dart';
 import '../../models/undang_undang_model.dart';
 import '../../core/services/data_service.dart';
-import '../../core/services/sync_manager.dart';
-import '../../core/config/theme_controller.dart';
 import '../widgets/pasal_card.dart';
 import '../widgets/main_layout.dart';
 import '../widgets/update_banner.dart';
@@ -32,6 +30,9 @@ class _HomeScreenState extends State<HomeScreen> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
+
+  // Collapsible filter state
+  bool _filtersExpanded = true;
 
   // How many keyword chips to show before [+N]
   static const int _visibleKeywordChipsCount = 3;
@@ -144,11 +145,26 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery.toLowerCase();
+      final q = _searchQuery.toLowerCase().trim();
+
+      // Handle "pasal X" search pattern - extract just the number/identifier
+      String nomorQuery = q;
+      if (q.startsWith('pasal ')) {
+        nomorQuery = q.substring(6).trim(); // Remove "pasal " prefix
+      }
+
       source = source.where((p) {
-        return p.nomor.toLowerCase().contains(q) ||
-            p.isi.toLowerCase().contains(q) ||
-            (p.judul != null && p.judul!.toLowerCase().contains(q));
+        // Match nomor: "pasal 1" should find nomor "1", "1A", etc.
+        final nomorMatch =
+            p.nomor.toLowerCase().contains(nomorQuery) ||
+            'pasal ${p.nomor}'.toLowerCase().contains(q);
+
+        // Match content and title
+        final contentMatch = p.isi.toLowerCase().contains(q);
+        final titleMatch =
+            p.judul != null && p.judul!.toLowerCase().contains(q);
+
+        return nomorMatch || contentMatch || titleMatch;
       }).toList();
     }
 
@@ -384,6 +400,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: TextField(
                   controller: _searchController,
                   focusNode: _searchFocusNode,
+                  keyboardAppearance: isDark
+                      ? Brightness.dark
+                      : Brightness.light,
                   onChanged: (val) {
                     _searchQuery = val;
                     _applyFilterAndSearch();
@@ -479,152 +498,22 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Builds the header section with title, sync status, and theme toggle
+  /// Builds the header section with title and stats
   Widget _buildHeader(bool isDark) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Jelajahi Pasal",
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        height: 1.2,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Row(
-                children: [
-                  // Theme toggle
-                  _buildHeaderIconButton(
-                    icon: isDark
-                        ? Icons.light_mode_rounded
-                        : Icons.dark_mode_rounded,
-                    onTap: themeController.toggle,
-                    isDark: isDark,
-                  ),
-                  const SizedBox(width: 8),
-                  // Sync button
-                  ValueListenableBuilder<SyncState>(
-                    valueListenable: syncManager.state,
-                    builder: (context, state, child) {
-                      if (state == SyncState.syncing ||
-                          state == SyncState.checking) {
-                        return Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: isDark ? Colors.grey[800] : Colors.grey[100],
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Center(
-                            child: SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          ),
-                        );
-                      }
-                      return _buildHeaderIconButton(
-                        icon: Icons.sync_rounded,
-                        onTap: () async {
-                          final hasUpdate = await syncManager
-                              .forceCheckUpdates();
-                          if (mounted && !hasUpdate) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Row(
-                                  children: [
-                                    Icon(
-                                      Icons.check_circle,
-                                      color: Colors.white,
-                                      size: 18,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text("Data sudah up-to-date"),
-                                  ],
-                                ),
-                                behavior: SnackBarBehavior.floating,
-                                backgroundColor: Colors.green,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                margin: const EdgeInsets.all(16),
-                                duration: const Duration(seconds: 2),
-                              ),
-                            );
-                          }
-                        },
-                        isDark: isDark,
-                        color: Colors.blue,
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          // Sync status
-          if (syncManager.lastSyncTime != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.access_time,
-                    size: 12,
-                    color: isDark ? Colors.grey[600] : Colors.grey[500],
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    "Diperbarui ${syncManager.lastSyncText}",
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? Colors.grey[600] : Colors.grey[500],
-                    ),
-                  ),
-                ],
-              ),
+          const Text(
+            "Jelajahi Pasal",
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              height: 1.2,
             ),
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderIconButton({
-    required IconData icon,
-    required VoidCallback onTap,
-    required bool isDark,
-    Color? color,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: isDark ? Colors.grey[800] : Colors.grey[100],
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: color ?? (isDark ? Colors.grey[400] : Colors.grey[600]),
-        ),
       ),
     );
   }
@@ -767,54 +656,136 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Builds the filter sections (Keywords + UU)
+  /// Builds the collapsible filter sections (Keywords + UU)
   Widget _buildFilterSections(bool isDark) {
-    return Container(
-      margin: const EdgeInsets.only(top: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Keywords section
-          _buildKeywordChipsRow(isDark),
+    final hasAnyFilters =
+        _allAvailableKeywords.isNotEmpty || _listUU.isNotEmpty;
 
-          const SizedBox(height: 4),
+    if (!hasAnyFilters) return const SizedBox.shrink();
 
-          // UU section with label
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Collapsible header
+        GestureDetector(
+          onTap: () => setState(() => _filtersExpanded = !_filtersExpanded),
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey[850] : Colors.grey[100],
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: Row(
               children: [
                 Icon(
-                  Icons.menu_book_outlined,
-                  size: 14,
-                  color: isDark ? Colors.grey[500] : Colors.grey[600],
+                  Icons.tune_rounded,
+                  size: 16,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  'Undang-Undang',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: isDark ? Colors.grey[500] : Colors.grey[600],
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Filter',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? Colors.grey[300] : Colors.grey[700],
+                    ),
+                  ),
+                ),
+                // Show count of active filters
+                if (_selectedKeywords.isNotEmpty ||
+                    _selectedFilterUUId != 'ALL')
+                  Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.blue,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${_selectedKeywords.length + (_selectedFilterUUId != 'ALL' ? 1 : 0)}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                AnimatedRotation(
+                  turns: _filtersExpanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 20,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
                   ),
                 ),
               ],
             ),
           ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-            child: Row(
+        ),
+
+        // Collapsible content
+        AnimatedCrossFade(
+          firstChild: Container(
+            margin: const EdgeInsets.only(top: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildUUChip("Semua", 'ALL', isDark),
-                ..._listUU
-                    .map((uu) => _buildUUChip(uu.kode, uu.id, isDark))
-                    .toList(),
+                // Keywords section
+                _buildKeywordChipsRow(isDark),
+
+                const SizedBox(height: 4),
+
+                // UU section with label
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.menu_book_outlined,
+                        size: 14,
+                        color: isDark ? Colors.grey[500] : Colors.grey[600],
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Undang-Undang',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? Colors.grey[500] : Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                  child: Row(
+                    children: [
+                      _buildUUChip("Semua", 'ALL', isDark),
+                      ..._listUU
+                          .map((uu) => _buildUUChip(uu.kode, uu.id, isDark))
+                          .toList(),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
-        ],
-      ),
+          secondChild: const SizedBox(height: 8),
+          crossFadeState: _filtersExpanded
+              ? CrossFadeState.showFirst
+              : CrossFadeState.showSecond,
+          duration: const Duration(milliseconds: 200),
+        ),
+      ],
     );
   }
 
