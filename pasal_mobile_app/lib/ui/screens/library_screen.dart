@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/services/data_service.dart';
 import '../../models/undang_undang_model.dart';
-import '../utils/image_helper.dart';
 import 'detail_uu_screen.dart';
 import '../widgets/main_layout.dart';
 
@@ -15,40 +14,76 @@ class LibraryScreen extends StatefulWidget {
 class _LibraryScreenState extends State<LibraryScreen> {
   List<UndangUndangModel> _allUU = [];
   List<UndangUndangModel> _filteredUU = [];
-  final TextEditingController _searchController = TextEditingController();
+  Map<String, int> _pasalCounts = {}; // UU ID -> pasal count
   bool _isLoading = true;
+  int _totalPasal = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadUU();
+    _loadData();
   }
 
-  void _loadUU() async {
+  void _loadData() async {
     await Future.delayed(const Duration(milliseconds: 100));
 
-    final data = await DataService.getAllUU();
+    final uuData = await DataService.getAllUU();
+    final pasalData = await DataService.getAllPasal();
+
+    // Count pasal per UU
+    final Map<String, int> counts = {};
+    for (var pasal in pasalData) {
+      counts[pasal.undangUndangId] = (counts[pasal.undangUndangId] ?? 0) + 1;
+    }
 
     if (mounted) {
       setState(() {
-        _allUU = data;
+        _allUU = uuData;
         _filteredUU = _allUU;
+        _pasalCounts = counts;
+        _totalPasal = pasalData.length;
         _isLoading = false;
       });
     }
   }
 
-  void _filterBooks(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        _filteredUU = _allUU;
-      } else {
-        _filteredUU = _allUU.where((uu) {
-          return uu.kode.toLowerCase().contains(query.toLowerCase()) ||
-              uu.nama.toLowerCase().contains(query.toLowerCase());
-        }).toList();
-      }
-    });
+  // Get icon for each UU type
+  IconData _getUUIcon(String kode) {
+    final code = kode.toUpperCase().trim();
+    if (code == 'KUHP') return Icons.gavel_rounded;
+    if (code.contains('KUHAP')) return Icons.policy_rounded;
+    if (code.contains('ITE')) return Icons.computer_rounded;
+    if (code.contains('KUHPER') || code.contains('PERDATA')) {
+      return Icons.people_rounded;
+    }
+    return Icons.menu_book_rounded;
+  }
+
+  // Get color for each UU type
+  Color _getUUColor(String kode) {
+    final code = kode.toUpperCase().trim();
+    if (code == 'KUHP') return const Color(0xFFDC2626); // Red
+    if (code.contains('KUHAP')) return const Color(0xFF2563EB); // Blue
+    if (code.contains('ITE')) return const Color(0xFF059669); // Emerald
+    if (code.contains('KUHPER') || code.contains('PERDATA')) {
+      return const Color(0xFFD97706); // Amber
+    }
+    return const Color(0xFF6B7280); // Gray
+  }
+
+  // Get gradient for card
+  List<Color> _getCardGradient(String kode, bool isDark) {
+    final baseColor = _getUUColor(kode);
+    if (isDark) {
+      return [
+        baseColor.withValues(alpha: 0.1),
+        baseColor.withValues(alpha: 0.1),
+      ];
+    }
+    return [
+      baseColor.withValues(alpha: 0.1),
+      baseColor.withValues(alpha: 0.05),
+    ];
   }
 
   @override
@@ -57,167 +92,326 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
     return MainLayout(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header section
           Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.library_books, color: Colors.blue),
-                const SizedBox(width: 10),
-                Text(
+                const Text(
                   "Pustaka Hukum",
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Koleksi peraturan perundang-undangan Indonesia",
                   style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black,
+                    fontSize: 14,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
                   ),
                 ),
               ],
             ),
           ),
 
+          // Stats row
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark ? Colors.grey[800] : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: TextField(
-                controller: _searchController,
-                onChanged: _filterBooks,
-                decoration: const InputDecoration(
-                  hintText: "Cari kitab undang-undang...",
-                  prefixIcon: Icon(Icons.search, color: Colors.grey),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            child: Row(
+              children: [
+                _buildStatCard(
+                  icon: Icons.auto_stories_rounded,
+                  value: '${_allUU.length}',
+                  label: 'Kitab',
+                  color: Colors.blue,
+                  isDark: isDark,
                 ),
-              ),
+                const SizedBox(width: 12),
+                _buildStatCard(
+                  icon: Icons.article_rounded,
+                  value: '$_totalPasal',
+                  label: 'Pasal',
+                  color: Colors.green,
+                  isDark: isDark,
+                ),
+              ],
             ),
           ),
 
+          // Section header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Semua Undang-Undang",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.grey[400] : Colors.grey[700],
+                  ),
+                ),
+                Text(
+                  "${_filteredUU.length} tersedia",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.grey[500] : Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // UU List
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredUU.isEmpty
-                ? Center(
-                    child: Text(
-                      "Buku tidak ditemukan",
-                      style: TextStyle(color: Colors.grey.shade500),
-                    ),
-                  )
-                : GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.7,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                        ),
+                ? _buildEmptyState(isDark)
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
                     itemCount: _filteredUU.length,
                     itemBuilder: (context, index) {
                       final uu = _filteredUU[index];
-                      final coverColor = ImageHelper.getBookColor(uu.kode);
-                      final coverImage = ImageHelper.getCover(uu.kode);
-
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  DetailUUScreen(undangUndang: uu),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: isDark ? Colors.grey[850] : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.08),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Expanded(
-                                flex: 3,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: coverColor.withValues(alpha: 0.1),
-                                    borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(12),
-                                    ),
-                                    image: DecorationImage(
-                                      image: AssetImage(coverImage),
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                flex: 2,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(10),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        uu.kode,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                          color: coverColor,
-                                        ),
-                                      ),
-                                      Text(
-                                        uu.nama,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: isDark
-                                              ? Colors.grey[400]
-                                              : Colors.grey.shade600,
-                                          height: 1.2,
-                                        ),
-                                      ),
-                                      Text(
-                                        "${uu.tahun}",
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.grey.shade400,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
+                      return _buildUUCard(uu, isDark);
                     },
                   ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required IconData icon,
+    required String value,
+    required String label,
+    required Color color,
+    required bool isDark,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: isDark ? 0.15 : 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 18, color: color),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.grey[800],
+                  ),
+                ),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUUCard(UndangUndangModel uu, bool isDark) {
+    final color = _getUUColor(uu.kode);
+    final icon = _getUUIcon(uu.kode);
+    final pasalCount = _pasalCounts[uu.id] ?? 0;
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DetailUUScreen(undangUndang: uu),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: _getCardGradient(uu.kode, isDark),
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withValues(alpha: isDark ? 0.3 : 0.2),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Icon container
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: color.withValues(alpha: 0.3)),
+                ),
+                child: Icon(icon, color: color, size: 28),
+              ),
+              const SizedBox(width: 16),
+
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Code badge + Year
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            uu.kode,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Tahun ${uu.tahun}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? Colors.grey[500] : Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+
+                    // Name
+                    Text(
+                      uu.nama,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? Colors.white : Colors.grey[800],
+                        height: 1.3,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Stats row
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.article_outlined,
+                          size: 14,
+                          color: isDark ? Colors.grey[500] : Colors.grey[500],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$pasalCount Pasal',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          ),
+                        ),
+                        if (uu.deskripsi != null &&
+                            uu.deskripsi!.isNotEmpty) ...[
+                          const SizedBox(width: 12),
+                          Icon(
+                            Icons.info_outline,
+                            size: 14,
+                            color: isDark ? Colors.grey[500] : Colors.grey[500],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Ada deskripsi',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? Colors.grey[400]
+                                  : Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Arrow
+              Icon(
+                Icons.chevron_right_rounded,
+                color: isDark ? Colors.grey[600] : Colors.grey[400],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(bool isDark) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off_rounded,
+            size: 64,
+            color: isDark ? Colors.grey[700] : Colors.grey[300],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            "Tidak ada hasil",
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.grey[500] : Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "Coba kata kunci lain",
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? Colors.grey[600] : Colors.grey[500],
+            ),
           ),
         ],
       ),

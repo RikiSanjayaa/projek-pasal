@@ -37,7 +37,7 @@ class PasalCard extends StatelessWidget {
         final baseColor = ImageHelper.getBookColor(kodeUU);
 
         final cardBgColor = isDark
-            ? const Color(0xFF1E1E1E)
+            ? baseColor.withValues(alpha: 0.15)
             : baseColor.withValues(alpha: 0.05);
 
         final labelBgColor = isDark
@@ -54,7 +54,7 @@ class PasalCard extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side: isDark
-                ? BorderSide.none
+                ? BorderSide(color: baseColor.withValues(alpha: 0.3))
                 : BorderSide(color: baseColor.withValues(alpha: 0.2)),
           ),
           child: InkWell(
