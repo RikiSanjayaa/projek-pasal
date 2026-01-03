@@ -15,43 +15,53 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentPage = 0;
   bool _isDownloading = false;
 
-  final List<Map<String, String>> _pages = [
+  final List<Map<String, dynamic>> _pages = [
     {
       "title": "Selamat Datang",
-      "desc": "Aplikasi Kitab Undang-Undang Hukum (KUHP, ITE, dll) dalam genggaman Anda.",
-      "icon": "assets/images/logo.png" 
+      "desc":
+          "Aplikasi Kitab Undang-Undang Hukum (KUHP, ITE, dll) dalam genggaman Anda.",
+      "icon": Icons.menu_book_rounded,
+      "color": Colors.blue,
     },
     {
       "title": "Pencarian Cepat",
-      "desc": "Cari pasal berdasarkan nomor atau kata kunci dengan fitur highlight pintar.",
-      "icon": "assets/images/logo.png"
+      "desc":
+          "Cari pasal berdasarkan nomor atau kata kunci dengan fitur highlight pintar.",
+      "icon": Icons.search_rounded,
+      "color": Colors.green,
     },
     {
       "title": "Siapkan Data Offline",
-      "desc": "Unduh data sekarang agar aplikasi bisa digunakan tanpa internet.",
-      "icon": "assets/images/logo.png"
+      "desc":
+          "Unduh data sekarang agar aplikasi bisa digunakan tanpa internet.",
+      "icon": Icons.cloud_download_rounded,
+      "color": Colors.orange,
     },
   ];
 
   Future<void> _startDownload() async {
     setState(() => _isDownloading = true);
-    
+
     final result = await syncManager.performSync();
-    
+
     if (!mounted) return;
 
     if (result.success) {
-      // Show completion info before navigating
       final dbSize = await getDatabaseSizeFormatted();
       if (!mounted) return;
-      
+
       _showCompletionDialog(dbSize);
     } else if (syncManager.progress.value?.phase == SyncPhase.cancelled) {
       setState(() => _isDownloading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Unduhan dibatalkan"),
+        SnackBar(
+          content: const Text("Unduhan dibatalkan"),
           backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          margin: const EdgeInsets.all(16),
         ),
       );
     } else {
@@ -60,44 +70,73 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         SnackBar(
           content: Text(result.message),
           backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          margin: const EdgeInsets.all(16),
         ),
       );
     }
   }
 
   void _showCompletionDialog(String dbSize) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final progress = syncManager.progress.value;
-    
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.green.shade50,
+                color: Colors.green.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.check_circle, color: Colors.green.shade600, size: 28),
+              child: const Icon(
+                Icons.check_circle,
+                color: Colors.green,
+                size: 28,
+              ),
             ),
             const SizedBox(width: 12),
-            const Text("Unduhan Selesai!"),
+            Text(
+              "Unduhan Selesai!",
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.grey[800],
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildInfoRow(Icons.article, "${progress?.totalPasal ?? 0} pasal"),
-            const SizedBox(height: 8),
-            _buildInfoRow(Icons.folder, "${progress?.totalUU ?? 0} undang-undang"),
-            const SizedBox(height: 8),
-            _buildInfoRow(Icons.cloud_download, progress?.downloadedBytesFormatted ?? "0 B"),
-            const SizedBox(height: 8),
-            _buildInfoRow(Icons.storage, "Database: $dbSize"),
+            _buildInfoRow(
+              Icons.article,
+              "${progress?.totalPasal ?? 0} pasal",
+              isDark,
+            ),
+            const SizedBox(height: 10),
+            _buildInfoRow(
+              Icons.folder,
+              "${progress?.totalUU ?? 0} undang-undang",
+              isDark,
+            ),
+            const SizedBox(height: 10),
+            _buildInfoRow(
+              Icons.cloud_download,
+              progress?.downloadedBytesFormatted ?? "0 B",
+              isDark,
+            ),
+            const SizedBox(height: 10),
+            _buildInfoRow(Icons.storage, "Database: $dbSize", isDark),
           ],
         ),
         actions: [
@@ -108,16 +147,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 Navigator.pop(context);
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => const MainNavigation()),
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(),
+                  ),
                 );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
               ),
-              child: const Text("Mulai Menggunakan Aplikasi"),
+              child: const Text(
+                "Mulai Menggunakan Aplikasi",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ],
@@ -125,27 +172,56 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: Colors.grey.shade600),
-        const SizedBox(width: 12),
-        Text(text, style: const TextStyle(fontSize: 14)),
-      ],
+  Widget _buildInfoRow(IconData icon, String text, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey[800] : Colors.grey[100],
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: Colors.blue),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.grey[300] : Colors.grey[700],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   void _confirmCancel() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Batalkan Unduhan?"),
-        content: const Text(
+        backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          "Batalkan Unduhan?",
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.grey[900],
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
           "Unduhan akan dihentikan dan Anda perlu mengulang dari awal. Yakin ingin membatalkan?",
+          style: TextStyle(color: isDark ? Colors.grey[300] : Colors.grey[700]),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: isDark ? Colors.grey[400] : Colors.grey[600],
+            ),
             child: const Text("Lanjutkan Unduhan"),
           ),
           TextButton(
@@ -163,52 +239,83 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FA);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: bgColor,
       body: SafeArea(
         child: Column(
           children: [
             Expanded(
-              child: _isDownloading 
-                  ? _buildDownloadingView()
-                  : _buildOnboardingPages(),
+              child: _isDownloading
+                  ? _buildDownloadingView(isDark)
+                  : _buildOnboardingPages(isDark),
             ),
-            if (!_isDownloading) _buildBottomSection(),
+            if (!_isDownloading) _buildBottomSection(isDark),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildOnboardingPages() {
+  Widget _buildOnboardingPages(bool isDark) {
     return PageView.builder(
       controller: _pageController,
       onPageChanged: (idx) => setState(() => _currentPage = idx),
       itemCount: _pages.length,
       itemBuilder: (context, index) {
+        final page = _pages[index];
+        final color = page['color'] as Color;
+
         return Padding(
           padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // Icon container with gradient
               Container(
-                height: 200, width: 200,
+                height: 160,
+                width: 160,
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  shape: BoxShape.circle
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      color.withValues(alpha: isDark ? 0.3 : 0.15),
+                      color.withValues(alpha: isDark ? 0.15 : 0.05),
+                    ],
+                  ),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: color.withValues(alpha: 0.3),
+                    width: 2,
+                  ),
                 ),
-                child: Icon(Icons.menu_book_rounded, size: 80, color: Colors.blue),
+                child: Icon(page['icon'] as IconData, size: 70, color: color),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 48),
+
+              // Title
               Text(
-                _pages[index]['title']!,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                page['title']!,
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.grey[800],
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
+
+              // Description
               Text(
-                _pages[index]['desc']!,
-                style: const TextStyle(fontSize: 16, color: Colors.grey),
+                page['desc']!,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  height: 1.5,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -218,59 +325,94 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildDownloadingView() {
+  Widget _buildDownloadingView(bool isDark) {
     return ValueListenableBuilder<SyncProgress?>(
       valueListenable: syncManager.progress,
       builder: (context, progress, child) {
+        final isComplete = progress?.phase == SyncPhase.complete;
+        final isError = progress?.phase == SyncPhase.error;
+
         return Padding(
           padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Icon with pulse animation
+              // Icon with status
               Container(
-                height: 120, width: 120,
+                height: 120,
+                width: 120,
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: isError
+                        ? [
+                            Colors.red.withValues(alpha: isDark ? 0.3 : 0.15),
+                            Colors.red.withValues(alpha: isDark ? 0.15 : 0.05),
+                          ]
+                        : [
+                            Colors.blue.withValues(alpha: isDark ? 0.3 : 0.15),
+                            Colors.blue.withValues(alpha: isDark ? 0.15 : 0.05),
+                          ],
+                  ),
                   shape: BoxShape.circle,
+                  border: Border.all(
+                    color: (isError ? Colors.red : Colors.blue).withValues(
+                      alpha: 0.3,
+                    ),
+                    width: 2,
+                  ),
                 ),
                 child: Icon(
                   _getPhaseIcon(progress?.phase),
-                  size: 56,
-                  color: Colors.blue,
+                  size: 50,
+                  color: isError ? Colors.red : Colors.blue,
                 ),
               ),
               const SizedBox(height: 40),
-              
+
               // Title
               Text(
-                progress?.phase == SyncPhase.complete 
-                    ? "Unduhan Selesai!"
-                    : "Mengunduh Database Hukum",
-                style: const TextStyle(
-                  fontSize: 22,
+                isComplete ? "Unduhan Selesai!" : "Mengunduh Database Hukum",
+                style: TextStyle(
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.grey[800],
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
-              
+              const SizedBox(height: 32),
+
               // Progress bar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: progress?.progress ?? 0,
-                  minHeight: 12,
-                  backgroundColor: Colors.grey.shade200,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    progress?.phase == SyncPhase.error 
-                        ? Colors.red 
-                        : Colors.blue,
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.withValues(
+                        alpha: isComplete ? 0.3 : 0.1,
+                      ),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: LinearProgressIndicator(
+                    value: progress?.progress ?? 0,
+                    minHeight: 12,
+                    backgroundColor: isDark
+                        ? Colors.grey[800]
+                        : Colors.grey[200],
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      isError ? Colors.red : Colors.blue,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: 12),
-              
+
               // Progress percentage and time estimate
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -280,7 +422,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade700,
+                      color: Colors.blue,
                     ),
                   ),
                   if (progress?.estimatedRemainingFormatted != null)
@@ -288,53 +430,75 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       progress!.estimatedRemainingFormatted!,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey.shade600,
+                        color: isDark ? Colors.grey[500] : Colors.grey[600],
                       ),
                     ),
                 ],
               ),
               const SizedBox(height: 24),
-              
-              // Current operation with UU progress
+
+              // Current operation container
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
+                  color: isDark ? Colors.grey[850] : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+                  ),
                 ),
                 child: Column(
                   children: [
                     Row(
                       children: [
                         SizedBox(
-                          width: 20, height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            value: progress?.phase == SyncPhase.complete ? 1 : null,
-                          ),
+                          width: 20,
+                          height: 20,
+                          child: isComplete
+                              ? Icon(
+                                  Icons.check_circle,
+                                  size: 20,
+                                  color: Colors.green,
+                                )
+                              : CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation(
+                                    isDark ? Colors.blue[300] : Colors.blue,
+                                  ),
+                                ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             progress?.currentOperation ?? "Mempersiapkan...",
-                            style: const TextStyle(fontSize: 14),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isDark
+                                  ? Colors.grey[300]
+                                  : Colors.grey[700],
+                            ),
                           ),
                         ),
                       ],
                     ),
                     if (progress?.uuProgressText != null) ...[
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
                       Row(
                         children: [
                           const SizedBox(width: 32),
-                          Icon(Icons.book, size: 16, color: Colors.grey.shade600),
+                          Icon(
+                            Icons.book,
+                            size: 16,
+                            color: isDark ? Colors.grey[500] : Colors.grey[500],
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             progress!.uuProgressText!,
                             style: TextStyle(
                               fontSize: 13,
-                              color: Colors.grey.shade600,
+                              color: isDark
+                                  ? Colors.grey[500]
+                                  : Colors.grey[600],
                             ),
                           ),
                         ],
@@ -343,27 +507,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-              
-              // Download stats
+              const SizedBox(height: 20),
+
+              // Download stats chips
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _buildStatChip(
                     Icons.cloud_download,
                     progress?.downloadedBytesFormatted ?? "0 B",
+                    isDark,
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   _buildStatChip(
                     Icons.article,
-                    "${progress?.downloadedPasal ?? 0}/${progress?.totalPasal ?? '?'} pasal",
+                    "${progress?.downloadedPasal ?? 0}/${progress?.totalPasal ?? '?'}",
+                    isDark,
                   ),
                 ],
               ),
               const SizedBox(height: 32),
-              
+
               // Cancel button
-              if (progress?.phase != SyncPhase.complete && 
+              if (progress?.phase != SyncPhase.complete &&
                   progress?.phase != SyncPhase.cancelled)
                 TextButton.icon(
                   onPressed: _confirmCancel,
@@ -371,6 +537,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   label: const Text("Batalkan Unduhan"),
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.red.shade400,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                   ),
                 ),
             ],
@@ -380,24 +550,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildStatChip(IconData icon, String text) {
+  Widget _buildStatChip(IconData icon, String text, bool isDark) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
+        color: isDark
+            ? Colors.blue.withValues(alpha: 0.2)
+            : Colors.blue.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: Colors.blue.shade700),
+          Icon(icon, size: 16, color: Colors.blue),
           const SizedBox(width: 6),
           Text(
             text,
             style: TextStyle(
               fontSize: 12,
-              color: Colors.blue.shade700,
-              fontWeight: FontWeight.w500,
+              color: isDark ? Colors.blue[300] : Colors.blue[700],
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -426,35 +599,53 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  Widget _buildBottomSection() {
-    return Padding(
+  Widget _buildBottomSection(bool isDark) {
+    return Container(
       padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
       child: Column(
         children: [
+          // Page indicators
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(_pages.length, (index) => AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              height: 8,
-              width: _currentPage == index ? 24 : 8,
-              decoration: BoxDecoration(
-                color: _currentPage == index ? Colors.blue : Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(4),
+            children: List.generate(
+              _pages.length,
+              (index) => AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                height: 8,
+                width: _currentPage == index ? 28 : 8,
+                decoration: BoxDecoration(
+                  color: _currentPage == index
+                      ? Colors.blue
+                      : (isDark ? Colors.grey[700] : Colors.grey[300]),
+                  borderRadius: BorderRadius.circular(4),
+                ),
               ),
-            )),
+            ),
           ),
-          const SizedBox(height: 32),
-          
+          const SizedBox(height: 28),
+
+          // Action button
           SizedBox(
             width: double.infinity,
-            height: 50,
+            height: 54,
             child: ElevatedButton(
               onPressed: () {
                 if (_currentPage < _pages.length - 1) {
                   _pageController.nextPage(
-                    duration: const Duration(milliseconds: 300), 
-                    curve: Curves.ease,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOutCubic,
                   );
                 } else {
                   _startDownload();
@@ -462,17 +653,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: Text(
-                _currentPage < _pages.length - 1 ? "Lanjut" : "Mulai & Unduh",
-                style: const TextStyle(
-                  color: Colors.white, 
-                  fontSize: 16, 
-                  fontWeight: FontWeight.bold,
-                ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _currentPage < _pages.length - 1
+                        ? "Lanjut"
+                        : "Mulai & Unduh",
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    _currentPage < _pages.length - 1
+                        ? Icons.arrow_forward_rounded
+                        : Icons.download_rounded,
+                    size: 20,
+                  ),
+                ],
               ),
             ),
           ),

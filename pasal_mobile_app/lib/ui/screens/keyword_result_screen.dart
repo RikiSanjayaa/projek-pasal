@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/services/data_service.dart';
+import '../widgets/settings_drawer.dart';
 
 class KeywordResultScreen extends StatelessWidget {
   final String keyword;
@@ -8,13 +9,28 @@ class KeywordResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
+      endDrawer: const SettingsDrawer(),
       appBar: AppBar(
         title: Text(keyword),
         elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
+        foregroundColor: isDark ? Colors.white : Colors.black,
+        actions: [
+          Builder(
+            builder: (ctx) => IconButton(
+              onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+              icon: Icon(
+                Icons.menu,
+                color: isDark ? Colors.grey[300] : Colors.grey[700],
+              ),
+              tooltip: 'Pengaturan',
+            ),
+          ),
+        ],
       ),
       body: FutureBuilder<List>(
         future: DataService.getPasalByKeyword(keyword),
@@ -24,7 +40,14 @@ class KeywordResultScreen extends StatelessWidget {
           }
 
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text("Tidak ada pasal dengan tag '$keyword'"));
+            return Center(
+              child: Text(
+                "Tidak ada pasal dengan tag '$keyword'",
+                style: TextStyle(
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                ),
+              ),
+            );
           }
 
           final results = snapshot.data!;
@@ -42,19 +65,30 @@ class KeywordResultScreen extends StatelessWidget {
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     elevation: 0,
+                    color: isDark ? Colors.grey[850] : Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: Colors.grey.shade200),
+                      side: BorderSide(
+                        color: isDark
+                            ? Colors.grey[800]!
+                            : Colors.grey.shade200,
+                      ),
                     ),
                     child: ExpansionTile(
                       title: Text(
                         "$kodeUU - ${pasal.nomor}",
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
                       ),
                       subtitle: Text(
                         pasal.isi,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        ),
                       ),
                       children: [
                         Padding(
@@ -62,7 +96,10 @@ class KeywordResultScreen extends StatelessWidget {
                           child: Text(
                             pasal.isi,
                             textAlign: TextAlign.justify,
-                            style: const TextStyle(height: 1.5),
+                            style: TextStyle(
+                              height: 1.5,
+                              color: isDark ? Colors.grey[300] : Colors.black87,
+                            ),
                           ),
                         ),
                         if (pasal.keywords.isNotEmpty)
@@ -85,11 +122,15 @@ class KeywordResultScreen extends StatelessWidget {
                                   ),
                                   backgroundColor: isActive
                                       ? Colors.blue
-                                      : Colors.white,
+                                      : (isDark
+                                            ? Colors.grey[800]
+                                            : Colors.white),
                                   side: BorderSide(
                                     color: isActive
                                         ? Colors.transparent
-                                        : Colors.blue.shade100,
+                                        : (isDark
+                                              ? Colors.blue.shade700
+                                              : Colors.blue.shade100),
                                   ),
                                   visualDensity: VisualDensity.compact,
                                 );

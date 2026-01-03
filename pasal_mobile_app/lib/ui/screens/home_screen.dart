@@ -43,6 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final LayerLink _searchLayerLink = LayerLink();
   OverlayEntry? _overlayEntry;
+  final ScrollController _listScrollController = ScrollController();
 
   @override
   void initState() {
@@ -56,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _searchController.dispose();
     _searchFocusNode.removeListener(_onSearchFocusChange);
     _searchFocusNode.dispose();
+    _listScrollController.dispose();
     _removeOverlay();
     super.dispose();
   }
@@ -468,6 +470,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: _paginatedData.isEmpty
                   ? const Center(child: Text("Data tidak ditemukan."))
                   : ListView.builder(
+                      controller: _listScrollController,
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       itemCount: _paginatedData.length + 1,
                       itemBuilder: (context, index) {
@@ -497,12 +500,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Builds the header section with title and stats
+  /// Builds the header section with title and hamburger menu
   Widget _buildHeader(bool isDark) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Text(
             "Jelajahi Pasal",
@@ -511,6 +514,15 @@ class _HomeScreenState extends State<HomeScreen> {
               fontWeight: FontWeight.bold,
               height: 1.2,
             ),
+          ),
+          // Hamburger menu button
+          IconButton(
+            onPressed: () => Scaffold.of(context).openEndDrawer(),
+            icon: Icon(
+              Icons.menu,
+              color: isDark ? Colors.grey[300] : Colors.grey[700],
+            ),
+            tooltip: 'Pengaturan',
           ),
         ],
       ),
@@ -1032,20 +1044,28 @@ class _HomeScreenState extends State<HomeScreen> {
         IconButton(
           icon: const Icon(Icons.chevron_left),
           onPressed: _currentPage > 1
-              ? () => setState(() {
-                  _currentPage--;
-                  _updatePagination();
-                })
+              ? () {
+                  setState(() {
+                    _currentPage--;
+                    _updatePagination();
+                  });
+                  // Scroll to top after page change
+                  _listScrollController.jumpTo(0);
+                }
               : null,
         ),
         Text("$_currentPage / $_totalPages"),
         IconButton(
           icon: const Icon(Icons.chevron_right),
           onPressed: _currentPage < _totalPages
-              ? () => setState(() {
-                  _currentPage++;
-                  _updatePagination();
-                })
+              ? () {
+                  setState(() {
+                    _currentPage++;
+                    _updatePagination();
+                  });
+                  // Scroll to top after page change
+                  _listScrollController.jumpTo(0);
+                }
               : null,
         ),
       ],
