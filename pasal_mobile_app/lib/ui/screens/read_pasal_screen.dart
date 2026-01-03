@@ -3,6 +3,8 @@ import '../../models/pasal_model.dart';
 import '../../core/services/data_service.dart';
 import '../utils/highlight_text.dart';
 import '../widgets/settings_drawer.dart';
+import '../widgets/law_content_formatter.dart';
+import '../utils/uu_color_helper.dart';
 
 class ReadPasalScreen extends StatefulWidget {
   final PasalModel pasal;
@@ -25,18 +27,6 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
   late PasalModel _currentPasal;
   final ScrollController _scrollController = ScrollController();
 
-  // Color presets (same as library_screen)
-  static const List<Color> _presetColors = [
-    Color(0xFFDC2626), // Red - KUHP
-    Color(0xFF2563EB), // Blue - KUHAP
-    Color(0xFF059669), // Emerald - ITE
-    Color(0xFFD97706), // Amber - KUHPER
-    Color(0xFF7C3AED), // Violet
-    Color(0xFFDB2777), // Pink
-    Color(0xFF0891B2), // Cyan
-    Color(0xFF4F46E5), // Indigo
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -57,25 +47,6 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
         _kodeUU = kode;
       });
     }
-  }
-
-  Color _getUUColor(String? kode) {
-    if (kode == null) return _presetColors[0];
-    final code = kode.toUpperCase().trim();
-    if (code.contains('KUHPER') || code.contains('PERDATA')) {
-      return _presetColors[3];
-    }
-    if (code.contains('KUHAP')) {
-      return _presetColors[1];
-    }
-    if (code == 'KUHP' || code.startsWith('KUHP ')) {
-      return _presetColors[0];
-    }
-    if (code.contains('ITE')) {
-      return _presetColors[2];
-    }
-    final hash = code.hashCode.abs();
-    return _presetColors[hash % _presetColors.length];
   }
 
   IconData _getUUIcon(String? kode) {
@@ -111,7 +82,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
     final bgColor = isDark ? const Color(0xFF121212) : Colors.white;
     final textColor = isDark ? Colors.white : Colors.black87;
     final subTextColor = isDark ? Colors.grey[400] : Colors.grey[600];
-    final uuColor = _getUUColor(_kodeUU);
+    final uuColor = UUColorHelper.getColor(_kodeUU);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -220,58 +191,80 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Pasal header - moved from AppBar
+            // Pasal header
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
               decoration: BoxDecoration(
-                color: isDark ? Colors.grey[900] : Colors.grey[50],
+                color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                 border: Border(
                   bottom: BorderSide(
                     color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
                   ),
                 ),
               ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Vertical Divider Accent
+                    Container(
+                      width: 4,
+                      decoration: BoxDecoration(
+                        color: uuColor,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                    decoration: BoxDecoration(
-                      color: uuColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(_getUUIcon(_kodeUU), size: 14, color: uuColor),
-                        const SizedBox(width: 6),
-                        Text(
-                          _kodeUU ?? 'UU',
-                          style: TextStyle(
-                            color: uuColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                    const SizedBox(width: 16),
+                    // Text Content
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _currentPasal.nomor.toLowerCase().startsWith(
+                                  "pasal",
+                                )
+                                ? _currentPasal.nomor
+                                : "Pasal ${_currentPasal.nomor}",
+                            style: TextStyle(
+                              color: isDark
+                                  ? const Color(0xFFE2E8F0)
+                                  : const Color(0xFF1E293B),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 24,
+                              height: 1.2,
+                              fontFamily: 'Serif',
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              // Optional small icon
+                              Icon(
+                                _getUUIcon(_kodeUU),
+                                size: 16,
+                                color: uuColor,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  (_kodeUU ?? 'UU').toUpperCase(),
+                                  style: TextStyle(
+                                    color: uuColor,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _currentPasal.nomor.toLowerCase().startsWith("pasal")
-                        ? _currentPasal.nomor
-                        : "Pasal ${_currentPasal.nomor}",
-                    style: TextStyle(
-                      color: textColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 22,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 
@@ -279,6 +272,8 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start, // Ensure left alignment
                 children: [
                   // Pasal title/judul
                   if (_currentPasal.judul != null) ...[
@@ -352,15 +347,12 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                         ),
                         const SizedBox(height: 16),
                         // Content
-                        HighlightText(
-                          text: _currentPasal.isi,
-                          query: widget.searchQuery,
-                          textAlign: TextAlign.justify,
-                          style: TextStyle(
-                            fontSize: 15,
-                            height: 1.7,
-                            color: textColor,
-                          ),
+                        LawContentFormatter(
+                          content: _currentPasal.isi,
+                          searchQuery: widget.searchQuery,
+                          fontSize: 15,
+                          height: 1.7,
+                          color: textColor,
                         ),
                       ],
                     ),
@@ -517,7 +509,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                             ),
                             builder: (context, kodeSnapshot) {
                               final kodeUU = kodeSnapshot.data ?? "UU";
-                              final relColor = _getUUColor(kodeUU);
+                              final relColor = UUColorHelper.getColor(kodeUU);
 
                               return GestureDetector(
                                 onTap: () {
