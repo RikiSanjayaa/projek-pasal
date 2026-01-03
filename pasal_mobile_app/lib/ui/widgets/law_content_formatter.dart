@@ -25,10 +25,10 @@ class LawContentFormatter extends StatelessWidget {
     final normalizedContent = content.replaceAll('\r\n', '\n');
 
     // Regex to identify list markers that start a new point.
-    // Matches markers like "(1)", "1.", "a.", "(a)"
+    // Matches markers like "(1)", "1.", "a.", "(a)", "(2a)", "2a."
     // Considers markers at Start of String (with optional space) OR after Punctuation/Newline.
     final RegExp pattern = RegExp(
-      r'(?:^|[\.\:;!?\n])\s*((\(\d+\))|(\d+\.)|(\([a-z]\))|([a-z]\.))\s+',
+      r'(?:^|[\.\:;!?\n])\s*((\(\d+[a-z]?\))|(\d+[a-z]?\.)|(\([a-z]\))|([a-z]\.))\s+',
       caseSensitive: false,
     );
 
@@ -88,8 +88,8 @@ class LawContentFormatter extends StatelessWidget {
 
       // Calculate indent level based on marker type
       int indentLevel = 0;
-      if (RegExp(r'^\(?\d+\)?\.?$').hasMatch(markerStr)) {
-        // (1), 1.
+      if (RegExp(r'^\(?\d+[a-z]?\)?\.?$').hasMatch(markerStr)) {
+        // (1), 1., (2a), 2a.
         indentLevel = 0;
       } else if (RegExp(r'^\(?[a-z]\)?\.?$').hasMatch(markerStr)) {
         // (a), a.
@@ -130,7 +130,7 @@ class LawContentFormatter extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 32, // Accommodate wider numbers like (12)
+            width: 40, // Accommodate wider numbers like (12a)
             child: Text(
               marker,
               style: TextStyle(
