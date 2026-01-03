@@ -17,20 +17,6 @@ void main() async {
   runApp(const MyApp());
 }
 
-// class MyApp extends StatelessWidget {
-//   const MyApp({super.key});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       title: 'CariPasal',
-//       debugShowCheckedModeBanner: false,
-//       theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
-//       home: const SplashScreen(),
-//     );
-//   }
-// }
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -57,6 +43,7 @@ class MyApp extends StatelessWidget {
               backgroundColor: Color(0xFFF5F7FA),
               foregroundColor: Colors.black,
               elevation: 0,
+              scrolledUnderElevation: 0, // Fix M3 color change on scroll
             ),
             inputDecorationTheme: InputDecorationTheme(
               filled: true,
@@ -82,6 +69,7 @@ class MyApp extends StatelessWidget {
               backgroundColor: Color(0xFF121212),
               foregroundColor: Colors.white,
               elevation: 0,
+              scrolledUnderElevation: 0, // Fix M3 color change on scroll
             ),
             inputDecorationTheme: InputDecorationTheme(
               filled: true,
