@@ -130,7 +130,7 @@ class LawContentFormatter extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 40, // Accommodate wider numbers like (12a)
+            width: 26, // Compact width (was 40), fits "1." or "(a)" well
             child: Text(
               marker,
               style: TextStyle(
