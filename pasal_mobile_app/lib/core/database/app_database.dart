@@ -15,6 +15,7 @@ class UndangUndangTable extends Table {
   TextColumn get deskripsi => text().nullable()();
   IntColumn get tahun => integer().withDefault(const Constant(0))();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get updatedAt => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -31,6 +32,7 @@ class PasalTable extends Table {
       text().withDefault(const Constant('[]'))(); // JSON array as string
   TextColumn get relatedIds =>
       text().withDefault(const Constant('[]'))(); // JSON array as string
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   DateTimeColumn get createdAt => dateTime().nullable()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
 
@@ -48,7 +50,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -61,6 +63,16 @@ class AppDatabase extends _$AppDatabase {
             // Add deskripsi column to undang_undang table
             await customStatement(
               'ALTER TABLE undang_undang_table ADD COLUMN deskripsi TEXT',
+            );
+          }
+          if (from < 3) {
+            // Add is_active column to pasal table for soft delete tracking
+            await customStatement(
+              'ALTER TABLE pasal_table ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1',
+            );
+            // Add updated_at column to undang_undang table for incremental sync
+            await customStatement(
+              'ALTER TABLE undang_undang_table ADD COLUMN updated_at INTEGER',
             );
           }
         },
@@ -127,6 +139,109 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> clearAllUndangUndang() {
     return delete(undangUndangTable).go();
+  }
+
+  // Upsert methods for incremental sync
+  Future<void> upsertPasal(PasalTableCompanion data) {
+    return into(pasalTable).insert(
+      data,
+      onConflict: DoUpdate(
+        (old) => data,
+        target: [pasalTable.id],
+      ),
+    );
+  }
+
+  Future<void> upsertAllPasal(List<PasalTableCompanion> data) {
+    return batch((batch) {
+      for (final item in data) {
+        batch.insert(
+          pasalTable,
+          item,
+          onConflict: DoUpdate(
+            (old) => item,
+            target: [pasalTable.id],
+          ),
+        );
+      }
+    });
+  }
+
+  Future<void> upsertUndangUndang(UndangUndangTableCompanion data) {
+    return into(undangUndangTable).insert(
+      data,
+      onConflict: DoUpdate(
+        (old) => data,
+        target: [undangUndangTable.id],
+      ),
+    );
+  }
+
+  Future<void> upsertAllUndangUndang(List<UndangUndangTableCompanion> data) {
+    return batch((batch) {
+      for (final item in data) {
+        batch.insert(
+          undangUndangTable,
+          item,
+          onConflict: DoUpdate(
+            (old) => item,
+            target: [undangUndangTable.id],
+          ),
+        );
+      }
+    });
+  }
+
+  // Delete pasal by ID (for handling server-side hard deletes)
+  Future<int> deletePasalById(String id) {
+    return (delete(pasalTable)..where((tbl) => tbl.id.equals(id))).go();
+  }
+
+  // Get only active pasal
+  Future<List<PasalTableData>> getActivePasal() {
+    return (select(pasalTable)..where((tbl) => tbl.isActive.equals(true)))
+        .get();
+  }
+
+  // Get active pasal by UU
+  Future<List<PasalTableData>> getActivePasalByUndangUndang(
+      String undangUndangId) {
+    return (select(pasalTable)
+          ..where((tbl) =>
+              tbl.undangUndangId.equals(undangUndangId) &
+              tbl.isActive.equals(true)))
+        .get();
+  }
+
+  // Search only active pasal
+  Future<List<PasalTableData>> searchActivePasal(String query) {
+    return (select(pasalTable)
+          ..where(
+            (tbl) =>
+                (tbl.isi.like('%$query%') | tbl.nomor.like('%$query%')) &
+                tbl.isActive.equals(true),
+          ))
+        .get();
+  }
+
+  // Get latest updated_at timestamp from local database
+  Future<DateTime?> getLatestPasalTimestamp() async {
+    final query = selectOnly(pasalTable)
+      ..addColumns([pasalTable.updatedAt])
+      ..orderBy([OrderingTerm.desc(pasalTable.updatedAt)])
+      ..limit(1);
+    final result = await query.getSingleOrNull();
+    return result?.read(pasalTable.updatedAt);
+  }
+
+  // Get latest updated_at timestamp from undang_undang
+  Future<DateTime?> getLatestUndangUndangTimestamp() async {
+    final query = selectOnly(undangUndangTable)
+      ..addColumns([undangUndangTable.updatedAt])
+      ..orderBy([OrderingTerm.desc(undangUndangTable.updatedAt)])
+      ..limit(1);
+    final result = await query.getSingleOrNull();
+    return result?.read(undangUndangTable.updatedAt);
   }
 }
 

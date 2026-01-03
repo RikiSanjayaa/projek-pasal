@@ -53,9 +53,15 @@ class $UndangUndangTableTable extends UndangUndangTable
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('CHECK ("is_active" IN (0, 1))'),
       defaultValue: const Constant(true));
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns =>
-      [id, kode, nama, namaLengkap, deskripsi, tahun, isActive];
+      [id, kode, nama, namaLengkap, deskripsi, tahun, isActive, updatedAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -102,6 +108,10 @@ class $UndangUndangTableTable extends UndangUndangTable
       context.handle(_isActiveMeta,
           isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta));
     }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
     return context;
   }
 
@@ -125,6 +135,8 @@ class $UndangUndangTableTable extends UndangUndangTable
           .read(DriftSqlType.int, data['${effectivePrefix}tahun'])!,
       isActive: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_active'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at']),
     );
   }
 
@@ -143,6 +155,7 @@ class UndangUndangTableData extends DataClass
   final String? deskripsi;
   final int tahun;
   final bool isActive;
+  final DateTime? updatedAt;
   const UndangUndangTableData(
       {required this.id,
       required this.kode,
@@ -150,7 +163,8 @@ class UndangUndangTableData extends DataClass
       this.namaLengkap,
       this.deskripsi,
       required this.tahun,
-      required this.isActive});
+      required this.isActive,
+      this.updatedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -165,6 +179,9 @@ class UndangUndangTableData extends DataClass
     }
     map['tahun'] = Variable<int>(tahun);
     map['is_active'] = Variable<bool>(isActive);
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
     return map;
   }
 
@@ -181,6 +198,9 @@ class UndangUndangTableData extends DataClass
           : Value(deskripsi),
       tahun: Value(tahun),
       isActive: Value(isActive),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
     );
   }
 
@@ -195,6 +215,7 @@ class UndangUndangTableData extends DataClass
       deskripsi: serializer.fromJson<String?>(json['deskripsi']),
       tahun: serializer.fromJson<int>(json['tahun']),
       isActive: serializer.fromJson<bool>(json['isActive']),
+      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
     );
   }
   @override
@@ -208,6 +229,7 @@ class UndangUndangTableData extends DataClass
       'deskripsi': serializer.toJson<String?>(deskripsi),
       'tahun': serializer.toJson<int>(tahun),
       'isActive': serializer.toJson<bool>(isActive),
+      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
     };
   }
 
@@ -218,7 +240,8 @@ class UndangUndangTableData extends DataClass
           Value<String?> namaLengkap = const Value.absent(),
           Value<String?> deskripsi = const Value.absent(),
           int? tahun,
-          bool? isActive}) =>
+          bool? isActive,
+          Value<DateTime?> updatedAt = const Value.absent()}) =>
       UndangUndangTableData(
         id: id ?? this.id,
         kode: kode ?? this.kode,
@@ -227,6 +250,7 @@ class UndangUndangTableData extends DataClass
         deskripsi: deskripsi.present ? deskripsi.value : this.deskripsi,
         tahun: tahun ?? this.tahun,
         isActive: isActive ?? this.isActive,
+        updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
       );
   UndangUndangTableData copyWithCompanion(UndangUndangTableCompanion data) {
     return UndangUndangTableData(
@@ -238,6 +262,7 @@ class UndangUndangTableData extends DataClass
       deskripsi: data.deskripsi.present ? data.deskripsi.value : this.deskripsi,
       tahun: data.tahun.present ? data.tahun.value : this.tahun,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
 
@@ -250,14 +275,15 @@ class UndangUndangTableData extends DataClass
           ..write('namaLengkap: $namaLengkap, ')
           ..write('deskripsi: $deskripsi, ')
           ..write('tahun: $tahun, ')
-          ..write('isActive: $isActive')
+          ..write('isActive: $isActive, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, kode, nama, namaLengkap, deskripsi, tahun, isActive);
+  int get hashCode => Object.hash(
+      id, kode, nama, namaLengkap, deskripsi, tahun, isActive, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -268,7 +294,8 @@ class UndangUndangTableData extends DataClass
           other.namaLengkap == this.namaLengkap &&
           other.deskripsi == this.deskripsi &&
           other.tahun == this.tahun &&
-          other.isActive == this.isActive);
+          other.isActive == this.isActive &&
+          other.updatedAt == this.updatedAt);
 }
 
 class UndangUndangTableCompanion
@@ -280,6 +307,7 @@ class UndangUndangTableCompanion
   final Value<String?> deskripsi;
   final Value<int> tahun;
   final Value<bool> isActive;
+  final Value<DateTime?> updatedAt;
   final Value<int> rowid;
   const UndangUndangTableCompanion({
     this.id = const Value.absent(),
@@ -289,6 +317,7 @@ class UndangUndangTableCompanion
     this.deskripsi = const Value.absent(),
     this.tahun = const Value.absent(),
     this.isActive = const Value.absent(),
+    this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   UndangUndangTableCompanion.insert({
@@ -299,6 +328,7 @@ class UndangUndangTableCompanion
     this.deskripsi = const Value.absent(),
     this.tahun = const Value.absent(),
     this.isActive = const Value.absent(),
+    this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         kode = Value(kode),
@@ -311,6 +341,7 @@ class UndangUndangTableCompanion
     Expression<String>? deskripsi,
     Expression<int>? tahun,
     Expression<bool>? isActive,
+    Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -321,6 +352,7 @@ class UndangUndangTableCompanion
       if (deskripsi != null) 'deskripsi': deskripsi,
       if (tahun != null) 'tahun': tahun,
       if (isActive != null) 'is_active': isActive,
+      if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -333,6 +365,7 @@ class UndangUndangTableCompanion
       Value<String?>? deskripsi,
       Value<int>? tahun,
       Value<bool>? isActive,
+      Value<DateTime?>? updatedAt,
       Value<int>? rowid}) {
     return UndangUndangTableCompanion(
       id: id ?? this.id,
@@ -342,6 +375,7 @@ class UndangUndangTableCompanion
       deskripsi: deskripsi ?? this.deskripsi,
       tahun: tahun ?? this.tahun,
       isActive: isActive ?? this.isActive,
+      updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -370,6 +404,9 @@ class UndangUndangTableCompanion
     if (isActive.present) {
       map['is_active'] = Variable<bool>(isActive.value);
     }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -386,6 +423,7 @@ class UndangUndangTableCompanion
           ..write('deskripsi: $deskripsi, ')
           ..write('tahun: $tahun, ')
           ..write('isActive: $isActive, ')
+          ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -446,6 +484,16 @@ class $PasalTableTable extends PasalTable
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('[]'));
+  static const VerificationMeta _isActiveMeta =
+      const VerificationMeta('isActive');
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+      'is_active', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_active" IN (0, 1))'),
+      defaultValue: const Constant(true));
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -468,6 +516,7 @@ class $PasalTableTable extends PasalTable
         judul,
         keywords,
         relatedIds,
+        isActive,
         createdAt,
         updatedAt
       ];
@@ -526,6 +575,10 @@ class $PasalTableTable extends PasalTable
           relatedIds.isAcceptableOrUnknown(
               data['related_ids']!, _relatedIdsMeta));
     }
+    if (data.containsKey('is_active')) {
+      context.handle(_isActiveMeta,
+          isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -563,6 +616,8 @@ class $PasalTableTable extends PasalTable
           .read(DriftSqlType.string, data['${effectivePrefix}keywords'])!,
       relatedIds: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}related_ids'])!,
+      isActive: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_active'])!,
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at']),
       updatedAt: attachedDatabase.typeMapping
@@ -585,6 +640,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
   final String? judul;
   final String keywords;
   final String relatedIds;
+  final bool isActive;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   const PasalTableData(
@@ -596,6 +652,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
       this.judul,
       required this.keywords,
       required this.relatedIds,
+      required this.isActive,
       this.createdAt,
       this.updatedAt});
   @override
@@ -613,6 +670,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
     }
     map['keywords'] = Variable<String>(keywords);
     map['related_ids'] = Variable<String>(relatedIds);
+    map['is_active'] = Variable<bool>(isActive);
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<DateTime>(createdAt);
     }
@@ -635,6 +693,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
           judul == null && nullToAbsent ? const Value.absent() : Value(judul),
       keywords: Value(keywords),
       relatedIds: Value(relatedIds),
+      isActive: Value(isActive),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -656,6 +715,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
       judul: serializer.fromJson<String?>(json['judul']),
       keywords: serializer.fromJson<String>(json['keywords']),
       relatedIds: serializer.fromJson<String>(json['relatedIds']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
       createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
     );
@@ -672,6 +732,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
       'judul': serializer.toJson<String?>(judul),
       'keywords': serializer.toJson<String>(keywords),
       'relatedIds': serializer.toJson<String>(relatedIds),
+      'isActive': serializer.toJson<bool>(isActive),
       'createdAt': serializer.toJson<DateTime?>(createdAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
     };
@@ -686,6 +747,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
           Value<String?> judul = const Value.absent(),
           String? keywords,
           String? relatedIds,
+          bool? isActive,
           Value<DateTime?> createdAt = const Value.absent(),
           Value<DateTime?> updatedAt = const Value.absent()}) =>
       PasalTableData(
@@ -697,6 +759,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
         judul: judul.present ? judul.value : this.judul,
         keywords: keywords ?? this.keywords,
         relatedIds: relatedIds ?? this.relatedIds,
+        isActive: isActive ?? this.isActive,
         createdAt: createdAt.present ? createdAt.value : this.createdAt,
         updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
       );
@@ -714,6 +777,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
       keywords: data.keywords.present ? data.keywords.value : this.keywords,
       relatedIds:
           data.relatedIds.present ? data.relatedIds.value : this.relatedIds,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -730,6 +794,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
           ..write('judul: $judul, ')
           ..write('keywords: $keywords, ')
           ..write('relatedIds: $relatedIds, ')
+          ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -738,7 +803,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
 
   @override
   int get hashCode => Object.hash(id, undangUndangId, nomor, isi, penjelasan,
-      judul, keywords, relatedIds, createdAt, updatedAt);
+      judul, keywords, relatedIds, isActive, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -751,6 +816,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
           other.judul == this.judul &&
           other.keywords == this.keywords &&
           other.relatedIds == this.relatedIds &&
+          other.isActive == this.isActive &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -764,6 +830,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
   final Value<String?> judul;
   final Value<String> keywords;
   final Value<String> relatedIds;
+  final Value<bool> isActive;
   final Value<DateTime?> createdAt;
   final Value<DateTime?> updatedAt;
   final Value<int> rowid;
@@ -776,6 +843,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     this.judul = const Value.absent(),
     this.keywords = const Value.absent(),
     this.relatedIds = const Value.absent(),
+    this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -789,6 +857,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     this.judul = const Value.absent(),
     this.keywords = const Value.absent(),
     this.relatedIds = const Value.absent(),
+    this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -805,6 +874,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     Expression<String>? judul,
     Expression<String>? keywords,
     Expression<String>? relatedIds,
+    Expression<bool>? isActive,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -818,6 +888,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
       if (judul != null) 'judul': judul,
       if (keywords != null) 'keywords': keywords,
       if (relatedIds != null) 'related_ids': relatedIds,
+      if (isActive != null) 'is_active': isActive,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -833,6 +904,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
       Value<String?>? judul,
       Value<String>? keywords,
       Value<String>? relatedIds,
+      Value<bool>? isActive,
       Value<DateTime?>? createdAt,
       Value<DateTime?>? updatedAt,
       Value<int>? rowid}) {
@@ -845,6 +917,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
       judul: judul ?? this.judul,
       keywords: keywords ?? this.keywords,
       relatedIds: relatedIds ?? this.relatedIds,
+      isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -878,6 +951,9 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     if (relatedIds.present) {
       map['related_ids'] = Variable<String>(relatedIds.value);
     }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -901,6 +977,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
           ..write('judul: $judul, ')
           ..write('keywords: $keywords, ')
           ..write('relatedIds: $relatedIds, ')
+          ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -932,6 +1009,7 @@ typedef $$UndangUndangTableTableCreateCompanionBuilder
   Value<String?> deskripsi,
   Value<int> tahun,
   Value<bool> isActive,
+  Value<DateTime?> updatedAt,
   Value<int> rowid,
 });
 typedef $$UndangUndangTableTableUpdateCompanionBuilder
@@ -943,6 +1021,7 @@ typedef $$UndangUndangTableTableUpdateCompanionBuilder
   Value<String?> deskripsi,
   Value<int> tahun,
   Value<bool> isActive,
+  Value<DateTime?> updatedAt,
   Value<int> rowid,
 });
 
@@ -975,6 +1054,9 @@ class $$UndangUndangTableTableFilterComposer
 
   ColumnFilters<bool> get isActive => $composableBuilder(
       column: $table.isActive, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
 }
 
 class $$UndangUndangTableTableOrderingComposer
@@ -1006,6 +1088,9 @@ class $$UndangUndangTableTableOrderingComposer
 
   ColumnOrderings<bool> get isActive => $composableBuilder(
       column: $table.isActive, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
 }
 
 class $$UndangUndangTableTableAnnotationComposer
@@ -1037,6 +1122,9 @@ class $$UndangUndangTableTableAnnotationComposer
 
   GeneratedColumn<bool> get isActive =>
       $composableBuilder(column: $table.isActive, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
 
 class $$UndangUndangTableTableTableManager extends RootTableManager<
@@ -1075,6 +1163,7 @@ class $$UndangUndangTableTableTableManager extends RootTableManager<
             Value<String?> deskripsi = const Value.absent(),
             Value<int> tahun = const Value.absent(),
             Value<bool> isActive = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               UndangUndangTableCompanion(
@@ -1085,6 +1174,7 @@ class $$UndangUndangTableTableTableManager extends RootTableManager<
             deskripsi: deskripsi,
             tahun: tahun,
             isActive: isActive,
+            updatedAt: updatedAt,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -1095,6 +1185,7 @@ class $$UndangUndangTableTableTableManager extends RootTableManager<
             Value<String?> deskripsi = const Value.absent(),
             Value<int> tahun = const Value.absent(),
             Value<bool> isActive = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               UndangUndangTableCompanion.insert(
@@ -1105,6 +1196,7 @@ class $$UndangUndangTableTableTableManager extends RootTableManager<
             deskripsi: deskripsi,
             tahun: tahun,
             isActive: isActive,
+            updatedAt: updatedAt,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -1139,6 +1231,7 @@ typedef $$PasalTableTableCreateCompanionBuilder = PasalTableCompanion Function({
   Value<String?> judul,
   Value<String> keywords,
   Value<String> relatedIds,
+  Value<bool> isActive,
   Value<DateTime?> createdAt,
   Value<DateTime?> updatedAt,
   Value<int> rowid,
@@ -1152,6 +1245,7 @@ typedef $$PasalTableTableUpdateCompanionBuilder = PasalTableCompanion Function({
   Value<String?> judul,
   Value<String> keywords,
   Value<String> relatedIds,
+  Value<bool> isActive,
   Value<DateTime?> createdAt,
   Value<DateTime?> updatedAt,
   Value<int> rowid,
@@ -1190,6 +1284,9 @@ class $$PasalTableTableFilterComposer
 
   ColumnFilters<String> get relatedIds => $composableBuilder(
       column: $table.relatedIds, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+      column: $table.isActive, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -1232,6 +1329,9 @@ class $$PasalTableTableOrderingComposer
   ColumnOrderings<String> get relatedIds => $composableBuilder(
       column: $table.relatedIds, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+      column: $table.isActive, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
@@ -1271,6 +1371,9 @@ class $$PasalTableTableAnnotationComposer
 
   GeneratedColumn<String> get relatedIds => $composableBuilder(
       column: $table.relatedIds, builder: (column) => column);
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -1313,6 +1416,7 @@ class $$PasalTableTableTableManager extends RootTableManager<
             Value<String?> judul = const Value.absent(),
             Value<String> keywords = const Value.absent(),
             Value<String> relatedIds = const Value.absent(),
+            Value<bool> isActive = const Value.absent(),
             Value<DateTime?> createdAt = const Value.absent(),
             Value<DateTime?> updatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -1326,6 +1430,7 @@ class $$PasalTableTableTableManager extends RootTableManager<
             judul: judul,
             keywords: keywords,
             relatedIds: relatedIds,
+            isActive: isActive,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,
@@ -1339,6 +1444,7 @@ class $$PasalTableTableTableManager extends RootTableManager<
             Value<String?> judul = const Value.absent(),
             Value<String> keywords = const Value.absent(),
             Value<String> relatedIds = const Value.absent(),
+            Value<bool> isActive = const Value.absent(),
             Value<DateTime?> createdAt = const Value.absent(),
             Value<DateTime?> updatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -1352,6 +1458,7 @@ class $$PasalTableTableTableManager extends RootTableManager<
             judul: judul,
             keywords: keywords,
             relatedIds: relatedIds,
+            isActive: isActive,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,

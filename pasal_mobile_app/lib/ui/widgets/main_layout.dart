@@ -22,7 +22,8 @@ class MainLayout extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeController,
       builder: (context, mode, _) {
-        final isDark = mode == ThemeMode.dark;
+        // Use Theme.of(context).brightness to properly handle system theme
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         
         return Scaffold(
           backgroundColor: backgroundColor ?? (isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FA)),

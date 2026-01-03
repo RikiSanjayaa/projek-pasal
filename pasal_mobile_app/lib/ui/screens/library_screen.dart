@@ -198,7 +198,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 _buildStatCard(
                   icon: Icons.auto_stories_rounded,
                   value: '${_allUU.length}',
-                  label: 'Kitab',
+                  label: 'Sumber',
                   color: Colors.blue,
                   isDark: isDark,
                 ),
