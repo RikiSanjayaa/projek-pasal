@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/config/theme_controller.dart';
 import '../../core/services/sync_manager.dart';
+import '../../core/services/sync_progress.dart';
 
 /// A reusable end drawer widget for settings that can be used across all screens.
 /// Usage: Add this as the endDrawer of your Scaffold and use a hamburger icon
@@ -13,6 +14,8 @@ class SettingsDrawer extends StatefulWidget {
 }
 
 class _SettingsDrawerState extends State<SettingsDrawer> {
+  bool _successFeedback = false;
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -147,119 +150,233 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    ValueListenableBuilder<SyncState>(
-                      valueListenable: syncManager.state,
-                      builder: (context, state, _) {
-                        final isSyncing =
-                            state == SyncState.syncing ||
-                            state == SyncState.checking;
+                    ValueListenableBuilder<bool>(
+                      valueListenable: syncManager.updateAvailable,
+                      builder: (context, updateAvailable, _) {
+                        return ValueListenableBuilder<SyncState>(
+                          valueListenable: syncManager.state,
+                          builder: (context, state, _) {
+                            return ValueListenableBuilder<SyncProgress?>(
+                              valueListenable: syncManager.progress,
+                              builder: (context, progress, _) {
+                                final isSyncing = state == SyncState.syncing;
+                                final isChecking = state == SyncState.checking;
+                                final isBusy = isSyncing || isChecking;
 
-                        return GestureDetector(
-                          onTap: isSyncing
-                              ? null
-                              : () async {
-                                  final hasUpdate = await syncManager
-                                      .forceCheckUpdates();
-                                  if (mounted && !hasUpdate) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: const Row(
+                                // Determine UI state
+                                final bool showSuccess =
+                                    _successFeedback && !isBusy;
+                                final bool showUpdateAvailable =
+                                    updateAvailable && !isBusy && !showSuccess;
+
+                                return GestureDetector(
+                                  onTap: isBusy
+                                      ? null
+                                      : () async {
+                                          if (showUpdateAvailable) {
+                                            // Perform update if available
+                                            await syncManager.performSync();
+                                          } else {
+                                            // Check for updates
+                                            final hasUpdate = await syncManager
+                                                .forceCheckUpdates();
+                                            if (mounted && !hasUpdate) {
+                                              setState(() {
+                                                _successFeedback = true;
+                                              });
+                                              Future.delayed(
+                                                  const Duration(seconds: 3),
+                                                  () {
+                                                if (mounted) {
+                                                  setState(() {
+                                                    _successFeedback = false;
+                                                  });
+                                                }
+                                              });
+                                            }
+                                          }
+                                        },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? Colors.grey[850]
+                                          : Colors.grey[100],
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: showUpdateAvailable
+                                          ? Border.all(
+                                              color: Colors.blue.withAlpha(100))
+                                          : null,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
                                           children: [
-                                            Icon(
-                                              Icons.check_circle,
-                                              color: Colors.white,
-                                              size: 18,
+                                            Container(
+                                              padding: const EdgeInsets.all(10),
+                                              decoration: BoxDecoration(
+                                                color: showSuccess
+                                                    ? Colors.green
+                                                        .withValues(alpha: 0.1)
+                                                    : Colors.blue
+                                                        .withValues(alpha: 0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                              child: isBusy
+                                                  ? const SizedBox(
+                                                      width: 20,
+                                                      height: 20,
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                      ),
+                                                    )
+                                                  : Icon(
+                                                      showSuccess
+                                                          ? Icons.check_circle
+                                                          : (showUpdateAvailable
+                                                              ? Icons
+                                                                  .system_update
+                                                              : Icons
+                                                                  .sync_rounded),
+                                                      color: showSuccess
+                                                          ? Colors.green
+                                                          : Colors.blue,
+                                                      size: 20,
+                                                    ),
                                             ),
-                                            SizedBox(width: 8),
-                                            Text("Data sudah up-to-date"),
+                                            const SizedBox(width: 16),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    showSuccess
+                                                        ? 'Data Sudah Terbaru'
+                                                        : (isChecking
+                                                            ? 'Memeriksa...'
+                                                            : (isSyncing
+                                                                ? 'Sinkronisasi...'
+                                                                : (showUpdateAvailable
+                                                                    ? 'Update Tersedia'
+                                                                    : 'Periksa Update'))),
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight: FontWeight
+                                                          .w600,
+                                                      color: showSuccess
+                                                          ? Colors.green
+                                                          : (isDark
+                                                              ? Colors.white
+                                                              : Colors
+                                                                  .grey[800]),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    isSyncing
+                                                        ? (progress?.currentOperation ??
+                                                            'Memproses...')
+                                                        : (syncManager.lastSyncTime !=
+                                                                null
+                                                            ? 'Terakhir: ${syncManager.lastSyncText}'
+                                                            : 'Belum pernah sync'),
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: isDark
+                                                          ? Colors.grey[500]
+                                                          : Colors.grey[600],
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow
+                                                        .ellipsis,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            if (isSyncing)
+                                              IconButton(
+                                                icon: Icon(
+                                                  Icons.close_rounded,
+                                                  color: isDark
+                                                      ? Colors.grey[500]
+                                                      : Colors.grey[400],
+                                                  size: 20,
+                                                ),
+                                                onPressed: () => syncManager
+                                                    .cancelSync(),
+                                                tooltip: 'Batalkan',
+                                                padding: EdgeInsets.zero,
+                                                constraints:
+                                                    const BoxConstraints(),
+                                              )
+                                            else if (!isChecking &&
+                                                !showSuccess)
+                                              Icon(
+                                                Icons.chevron_right,
+                                                color: isDark
+                                                    ? Colors.grey[600]
+                                                    : Colors.grey[400],
+                                              ),
                                           ],
                                         ),
-                                        behavior: SnackBarBehavior.floating,
-                                        backgroundColor: Colors.green,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
+                                        if (isSyncing && progress != null) ...[
+                                          const SizedBox(height: 12),
+                                          ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                            child: LinearProgressIndicator(
+                                              value: progress.progress,
+                                              minHeight: 6,
+                                              backgroundColor: isDark
+                                                  ? Colors.grey[700]
+                                                  : Colors.grey[300],
+                                              valueColor:
+                                                  const AlwaysStoppedAnimation<
+                                                      Color>(Colors.blue),
+                                            ),
                                           ),
-                                        ),
-                                        margin: const EdgeInsets.all(16),
-                                        duration: const Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
-                                },
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? Colors.grey[850]
-                                  : Colors.grey[100],
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: isSyncing
-                                      ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment
+                                                    .spaceBetween,
+                                            children: [
+                                              Text(
+                                                "${progress.progressPercent}%",
+                                                style: TextStyle(
+                                                  color: Colors.blue,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              if (progress
+                                                      .estimatedRemainingFormatted !=
+                                                  null)
+                                                Text(
+                                                  progress
+                                                      .estimatedRemainingFormatted!,
+                                                  style: TextStyle(
+                                                    color: isDark
+                                                        ? Colors.grey[500]
+                                                        : Colors.grey[600],
+                                                    fontSize: 11,
+                                                  ),
+                                                ),
+                                            ],
                                           ),
-                                        )
-                                      : const Icon(
-                                          Icons.sync_rounded,
-                                          color: Colors.blue,
-                                          size: 20,
-                                        ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        isSyncing
-                                            ? 'Menyinkronkan...'
-                                            : 'Periksa Update',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: isDark
-                                              ? Colors.white
-                                              : Colors.grey[800],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        syncManager.lastSyncTime != null
-                                            ? 'Terakhir: ${syncManager.lastSyncText}'
-                                            : 'Belum pernah sync',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: isDark
-                                              ? Colors.grey[500]
-                                              : Colors.grey[600],
-                                        ),
-                                      ),
-                                    ],
+                                        ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                if (!isSyncing)
-                                  Icon(
-                                    Icons.chevron_right,
-                                    color: isDark
-                                        ? Colors.grey[600]
-                                        : Colors.grey[400],
-                                  ),
-                              ],
-                            ),
-                          ),
+                                );
+                              },
+                            );
+                          },
                         );
                       },
                     ),
