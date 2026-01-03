@@ -1,8 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'data_service.dart';
+import 'sync_progress.dart';
 
-/// Manages automatic sync timing and state
+/// Manages automatic sync timing, state, and progress
 class SyncManager {
   static final SyncManager _instance = SyncManager._internal();
   factory SyncManager() => _instance;
@@ -19,6 +20,9 @@ class SyncManager {
   
   /// Notifier for update availability
   final ValueNotifier<bool> updateAvailable = ValueNotifier(false);
+  
+  /// Notifier for detailed sync progress
+  final ValueNotifier<SyncProgress?> progress = ValueNotifier(null);
 
   /// Last sync timestamp
   DateTime? _lastSyncTime;
@@ -116,12 +120,10 @@ class SyncManager {
   }
 
   /// Check for updates on app launch
-  /// Returns true if updates are available and sync is due
   Future<bool> checkOnLaunch() async {
     state.value = SyncState.checking;
     
     try {
-      // First check if sync is due based on time
       final syncDue = await isSyncDue();
       
       if (!syncDue) {
@@ -130,7 +132,6 @@ class SyncManager {
         return false;
       }
 
-      // Check server for actual updates
       final hasUpdates = await DataService.checkForUpdates();
       updateAvailable.value = hasUpdates;
       state.value = SyncState.idle;
@@ -143,20 +144,25 @@ class SyncManager {
     }
   }
 
-  /// Perform sync and update timestamp
+  /// Perform sync with detailed progress tracking
   /// Uses incremental sync if we have a previous sync timestamp
   Future<SyncResult> performSync() async {
     state.value = SyncState.syncing;
+    progress.value = SyncProgress.initial(isIncremental: _lastSyncTime != null);
     
     try {
-      // Use incremental sync if we have a previous sync time
-      final result = await DataService.syncDataWithResult(
+      final result = await DataService.syncDataWithProgress(
         lastSyncTime: _lastSyncTime,
+        onProgress: (p) {
+          progress.value = p;
+        },
       );
       
       if (result.success) {
         await _saveLastSyncTime();
         updateAvailable.value = false;
+        state.value = SyncState.idle;
+      } else if (progress.value?.phase == SyncPhase.cancelled) {
         state.value = SyncState.idle;
       } else {
         state.value = SyncState.error;
@@ -166,6 +172,12 @@ class SyncManager {
     } catch (e) {
       print("Error performing sync: $e");
       state.value = SyncState.error;
+      progress.value = SyncProgress(
+        phase: SyncPhase.error,
+        currentOperation: classifyError(e).userMessage,
+        startTime: DateTime.now(),
+        errorMessage: e.toString(),
+      );
       return SyncResult(
         success: false,
         message: classifyError(e).userMessage,
@@ -173,6 +185,11 @@ class SyncManager {
         error: classifyError(e),
       );
     }
+  }
+
+  /// Cancel ongoing sync
+  void cancelSync() {
+    DataService.cancelSync();
   }
 
   /// Dismiss update notification
@@ -194,6 +211,11 @@ class SyncManager {
       state.value = SyncState.error;
       return false;
     }
+  }
+
+  /// Clear progress after sync completes or is dismissed
+  void clearProgress() {
+    progress.value = null;
   }
 }
 
