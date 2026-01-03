@@ -3,7 +3,7 @@ import '../utils/highlight_text.dart';
 
 class LawContentFormatter extends StatelessWidget {
   final String content;
-  final String searchQuery; // Added
+  final String searchQuery;
   final double fontSize;
   final Color? color;
   final double height;
@@ -11,7 +11,7 @@ class LawContentFormatter extends StatelessWidget {
   const LawContentFormatter({
     super.key,
     required this.content,
-    this.searchQuery = '', // Added
+    this.searchQuery = '',
     this.fontSize = 14.0,
     this.color,
     this.height = 1.5,
@@ -24,9 +24,7 @@ class LawContentFormatter extends StatelessWidget {
     // Normalize newlines
     final normalizedContent = content.replaceAll('\r\n', '\n');
 
-    // Regex to identify list markers that start a new point.
-    // Matches markers like "(1)", "1.", "a.", "(a)", "(2a)", "2a."
-    // Considers markers at Start of String (with optional space) OR after Punctuation/Newline.
+    // Regex matches markers like: (1), 1., a., (a), (2a), 2a.
     final RegExp pattern = RegExp(
       r'(?:^|[\.\:;!?\n])\s*((\(\d+[a-z]?\))|(\d+[a-z]?\.)|(\([a-z]\))|([a-z]\.))\s+',
       caseSensitive: false,
@@ -45,14 +43,13 @@ class LawContentFormatter extends StatelessWidget {
       );
     }
 
-    // 1. Handle Intro text (before the first list item)
+    // Handle Intro text
     final firstMatch = matches.first;
     final fullFirstMatchStr = normalizedContent.substring(
       firstMatch.start,
       firstMatch.end,
     );
     final firstMarkerStr = firstMatch.group(1)!;
-    // Calculate the absolute start index of the actual marker within the content
     final firstMarkerAbsoluteStart =
         firstMatch.start + fullFirstMatchStr.indexOf(firstMarkerStr);
 
@@ -61,16 +58,13 @@ class LawContentFormatter extends StatelessWidget {
       children.add(_buildParagraph(introText.trim(), 0));
     }
 
-    // 2. Loop through all matches to extract markers and their bodies
+    // Loop through all matches
     for (int i = 0; i < matches.length; i++) {
       final match = matches.elementAt(i);
 
-      final markerStr = match.group(1)!; // The actual marker, e.g., "(1)"
-
-      // The body starts immediately after the current match's full extent (which includes trailing whitespace)
+      final markerStr = match.group(1)!;
       final bodyStart = match.end;
 
-      // Determine where the body ends: either at the start of the next marker, or end of content
       int bodyEnd = normalizedContent.length;
 
       if (i + 1 < matches.length) {
@@ -80,7 +74,6 @@ class LawContentFormatter extends StatelessWidget {
           nextMatch.end,
         );
         final nextMarkerStr = nextMatch.group(1)!;
-        // The body ends right before the next marker's actual start
         bodyEnd = nextMatch.start + nextFullMatchStr.indexOf(nextMarkerStr);
       }
 
@@ -117,7 +110,6 @@ class LawContentFormatter extends StatelessWidget {
   }
 
   Widget _buildListItem(String marker, String text, int indentLevel) {
-    // Base padding for list items
     const double baseLeftPadding = 0.0;
     const double indentWidth = 24.0;
 
@@ -130,7 +122,7 @@ class LawContentFormatter extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 26, // Compact width (was 40), fits "1." or "(a)" well
+            width: 26,
             child: Text(
               marker,
               style: TextStyle(
