@@ -29,13 +29,11 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   void _showSettingsSheet() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => _SettingsBottomSheet(isDark: isDark),
+      builder: (context) => const _SettingsBottomSheet(),
     );
   }
 
@@ -239,9 +237,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
 /// Settings Bottom Sheet
 class _SettingsBottomSheet extends StatefulWidget {
-  final bool isDark;
-
-  const _SettingsBottomSheet({required this.isDark});
+  const _SettingsBottomSheet();
 
   @override
   State<_SettingsBottomSheet> createState() => _SettingsBottomSheetState();
@@ -250,7 +246,8 @@ class _SettingsBottomSheet extends StatefulWidget {
 class _SettingsBottomSheetState extends State<_SettingsBottomSheet> {
   @override
   Widget build(BuildContext context) {
-    final isDark = widget.isDark;
+    // Use Theme.of(context) instead of cached widget.isDark to respond to theme changes
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       decoration: BoxDecoration(
@@ -294,8 +291,6 @@ class _SettingsBottomSheetState extends State<_SettingsBottomSheet> {
                 ],
               ),
             ),
-
-            const Divider(),
 
             // Theme selector
             Padding(
@@ -350,8 +345,6 @@ class _SettingsBottomSheetState extends State<_SettingsBottomSheet> {
                 ],
               ),
             ),
-
-            const Divider(),
 
             // Sync section
             Padding(

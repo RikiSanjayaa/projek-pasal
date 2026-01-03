@@ -32,7 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final FocusNode _searchFocusNode = FocusNode();
 
   // Collapsible filter state
-  bool _filtersExpanded = true;
+  bool _filtersExpanded = false;
 
   // How many keyword chips to show before [+N]
   static const int _visibleKeywordChipsCount = 3;
@@ -317,7 +317,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // Hint to search in content
                   if (_searchQuery.isNotEmpty) ...[
-                    const Divider(height: 1),
                     InkWell(
                       onTap: () {
                         _searchFocusNode.unfocus();
@@ -656,171 +655,218 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Builds the collapsible filter sections (Keywords + UU)
+  /// Builds a refined, unified, and compact filter section
   Widget _buildFilterSections(bool isDark) {
     final hasAnyFilters =
         _allAvailableKeywords.isNotEmpty || _listUU.isNotEmpty;
 
     if (!hasAnyFilters) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Collapsible header
-        GestureDetector(
-          onTap: () => setState(() => _filtersExpanded = !_filtersExpanded),
-          child: Container(
-            margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: isDark ? Colors.grey[850] : Colors.grey[100],
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.tune_rounded,
-                  size: 16,
-                  color: isDark ? Colors.grey[400] : Colors.grey[600],
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Filter',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: isDark ? Colors.grey[300] : Colors.grey[700],
-                    ),
+    final blueColor = Colors.blue;
+    final expandedBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final collapsedBg = isDark ? Colors.grey[850] : Colors.white;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header / Toggle
+          InkWell(
+            onTap: () => setState(() => _filtersExpanded = !_filtersExpanded),
+            borderRadius: _filtersExpanded
+                ? const BorderRadius.vertical(top: Radius.circular(12))
+                : BorderRadius.circular(12),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: _filtersExpanded ? expandedBg : collapsedBg,
+                borderRadius: _filtersExpanded
+                    ? const BorderRadius.vertical(top: Radius.circular(12))
+                    : BorderRadius.circular(12),
+                border: _filtersExpanded
+                    ? Border(
+                        bottom: BorderSide(
+                          color: blueColor.withValues(alpha: 0.8),
+                        ),
+                      )
+                    : null,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.tune_rounded,
+                    size: 16,
+                    color: _filtersExpanded
+                        ? blueColor
+                        : (isDark ? Colors.grey[400] : Colors.grey[600]),
                   ),
-                ),
-                // Show count of active filters
-                if (_selectedKeywords.isNotEmpty ||
-                    _selectedFilterUUId != 'ALL')
-                  Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                  const SizedBox(width: 10),
+                  Expanded(
                     child: Text(
-                      '${_selectedKeywords.length + (_selectedFilterUUId != 'ALL' ? 1 : 0)}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                      'Filter',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _filtersExpanded
+                            ? blueColor
+                            : (isDark ? Colors.grey[200] : Colors.grey[700]),
                       ),
                     ),
                   ),
-                AnimatedRotation(
-                  turns: _filtersExpanded ? 0.5 : 0,
-                  duration: const Duration(milliseconds: 200),
-                  child: Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    size: 20,
-                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  if (_selectedKeywords.isNotEmpty ||
+                      _selectedFilterUUId != 'ALL')
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: blueColor,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${_selectedKeywords.length + (_selectedFilterUUId != 'ALL' ? 1 : 0)}',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  AnimatedRotation(
+                    turns: _filtersExpanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 300),
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 18,
+                      color: _filtersExpanded
+                          ? blueColor
+                          : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
 
-        // Collapsible content
-        AnimatedCrossFade(
-          firstChild: Container(
-            margin: const EdgeInsets.only(top: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Keywords section
-                _buildKeywordChipsRow(isDark),
-
-                const SizedBox(height: 4),
-
-                // UU section with label
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-                  child: Row(
+          // Content body
+          ClipRect(
+            child: AnimatedAlign(
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeInOutQuart,
+              alignment: Alignment.topCenter,
+              heightFactor: _filtersExpanded ? 1.0 : 0.0,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 300),
+                opacity: _filtersExpanded ? 1.0 : 0.0,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                  decoration: BoxDecoration(
+                    color: expandedBg,
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(12),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.menu_book_outlined,
-                        size: 14,
-                        color: isDark ? Colors.grey[500] : Colors.grey[600],
+                      const SizedBox(height: 12),
+                      // Keywords section
+                      _buildKeywordChipsRow(isDark),
+
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 10),
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Undang-Undang',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: isDark ? Colors.grey[500] : Colors.grey[600],
+
+                      // UU section
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.menu_book_outlined,
+                              size: 13,
+                              color: blueColor,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Undang-Undang',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: isDark
+                                    ? Colors.grey[400]
+                                    : Colors.grey[700],
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _buildUUChip("Semua", 'ALL', isDark),
+                            ..._listUU
+                                .map(
+                                  (uu) => _buildUUChip(uu.kode, uu.id, isDark),
+                                )
+                                .toList(),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                  child: Row(
-                    children: [
-                      _buildUUChip("Semua", 'ALL', isDark),
-                      ..._listUU
-                          .map((uu) => _buildUUChip(uu.kode, uu.id, isDark))
-                          .toList(),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-          secondChild: const SizedBox(height: 8),
-          crossFadeState: _filtersExpanded
-              ? CrossFadeState.showFirst
-              : CrossFadeState.showSecond,
-          duration: const Duration(milliseconds: 200),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildUUChip(String label, String id, bool isDark) {
     final bool isSelected = _selectedFilterUUId == id;
+    final blueColor = Colors.blue;
+
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: GestureDetector(
+      child: InkWell(
         onTap: () {
           setState(() {
             _selectedFilterUUId = id;
             _applyFilterAndSearch();
           });
         },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        borderRadius: BorderRadius.circular(20),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             color: isSelected
-                ? Colors.blue
-                : (isDark ? Colors.grey[800] : Colors.white),
-            borderRadius: BorderRadius.circular(16),
+                ? blueColor
+                : (isDark ? Colors.grey[850] : Colors.grey[50]),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isSelected
-                  ? Colors.blue
-                  : (isDark ? Colors.grey[700]! : Colors.grey[300]!),
+                  ? blueColor
+                  : (isDark ? Colors.grey[700]! : Colors.grey[200]!),
+              width: 1,
             ),
           ),
           child: Text(
             label,
             style: TextStyle(
               fontSize: 12,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               color: isSelected
                   ? Colors.white
-                  : (isDark ? Colors.grey[300] : Colors.grey[700]),
+                  : (isDark ? Colors.grey[300] : Colors.grey[600]),
             ),
           ),
         ),
@@ -844,26 +890,25 @@ class _HomeScreenState extends State<HomeScreen> {
       return const SizedBox.shrink();
     }
 
+    final blueColor = Colors.blue;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Label row
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 6),
+          padding: const EdgeInsets.only(bottom: 12),
           child: Row(
             children: [
-              Icon(
-                Icons.local_offer_outlined,
-                size: 14,
-                color: isDark ? Colors.grey[500] : Colors.grey[600],
-              ),
-              const SizedBox(width: 6),
+              Icon(Icons.local_offer_outlined, size: 14, color: blueColor),
+              const SizedBox(width: 8),
               Text(
                 'Keywords',
                 style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.grey[500] : Colors.grey[600],
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.grey[300] : Colors.grey[800],
+                  letterSpacing: 0.3,
                 ),
               ),
             ],
@@ -872,32 +917,57 @@ class _HomeScreenState extends State<HomeScreen> {
         // Chips row
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
           child: Row(
             children: [
+              // Search button
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: InkWell(
+                  onTap: () => _showKeywordBottomSheet(autoFocus: true),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey[850] : Colors.grey[100],
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isDark ? Colors.grey[700]! : Colors.grey[200]!,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.search_rounded,
+                      size: 18,
+                      color: blueColor,
+                    ),
+                  ),
+                ),
+              ),
+
               // Keyword chips
               ...displayKeywords.map(
                 (keyword) => Padding(
                   padding: const EdgeInsets.only(right: 8),
-                  child: GestureDetector(
+                  child: InkWell(
                     onTap: () => _toggleKeyword(keyword),
+                    borderRadius: BorderRadius.circular(20),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
+                        horizontal: 14,
+                        vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.grey[800] : Colors.grey[200],
-                        borderRadius: BorderRadius.circular(16),
+                        color: isDark ? Colors.grey[850] : Colors.grey[100],
+                        borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                          color: isDark ? Colors.grey[700]! : Colors.grey[200]!,
                         ),
                       ),
                       child: Text(
                         keyword,
                         style: TextStyle(
                           fontSize: 12,
-                          color: isDark ? Colors.grey[300] : Colors.grey[700],
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? Colors.grey[300] : Colors.grey[600],
                         ),
                       ),
                     ),
@@ -907,26 +977,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
               // [+N] button to open bottom sheet
               if (remainingCount > 0)
-                GestureDetector(
+                InkWell(
                   onTap: () => _showKeywordBottomSheet(),
+                  borderRadius: BorderRadius.circular(20),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
+                      horizontal: 14,
+                      vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(16),
+                      color: blueColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: Colors.blue.withValues(alpha: 0.3),
+                        color: blueColor.withValues(alpha: 0.3),
                       ),
                     ),
                     child: Text(
                       '+$remainingCount',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Colors.blue,
-                        fontWeight: FontWeight.w600,
+                        color: blueColor,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
@@ -938,17 +1009,18 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showKeywordBottomSheet() {
+  void _showKeywordBottomSheet({bool autoFocus = false}) {
     KeywordBottomSheet.show(
       context: context,
       allKeywords: _allAvailableKeywords,
       selectedKeywords: _selectedKeywords,
       popularKeywords: _popularKeywords,
+      autoFocus: autoFocus,
       onKeywordToggle: (keyword) {
         _toggleKeyword(keyword);
         // Force rebuild of bottom sheet
         Navigator.of(context).pop();
-        _showKeywordBottomSheet();
+        _showKeywordBottomSheet(autoFocus: autoFocus);
       },
     );
   }

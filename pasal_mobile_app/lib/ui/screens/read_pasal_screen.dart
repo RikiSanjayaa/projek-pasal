@@ -154,54 +154,49 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
             children: [
               // Previous button
               Expanded(
-                child: prevPasal != null
-                    ? OutlinedButton.icon(
-                        onPressed: () => _navigate(context, prevPasal!),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: isDark
-                              ? Colors.grey[300]
-                              : Colors.grey[700],
-                          side: BorderSide(
-                            color: isDark
-                                ? Colors.grey[700]!
-                                : Colors.grey[300]!,
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        icon: const Icon(Icons.chevron_left, size: 18),
-                        label: const Text(
-                          'Sebelumnya',
-                          style: TextStyle(fontSize: 13),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
+                child: OutlinedButton.icon(
+                  onPressed: prevPasal != null
+                      ? () => _navigate(context, prevPasal!)
+                      : null,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: isDark ? Colors.grey[300] : Colors.grey[700],
+                    side: BorderSide(
+                      color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  icon: const Icon(Icons.chevron_left, size: 18),
+                  label: const Text(
+                    'Sebelumnya',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                ),
               ),
-              if (prevPasal != null && nextPasal != null)
-                const SizedBox(width: 12),
+              const SizedBox(width: 12),
               // Next button
               Expanded(
-                child: nextPasal != null
-                    ? FilledButton.icon(
-                        onPressed: () => _navigate(context, nextPasal!),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: uuColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          elevation: 0,
-                        ),
-                        icon: const Text(
-                          'Selanjutnya',
-                          style: TextStyle(fontSize: 13),
-                        ),
-                        label: const Icon(Icons.chevron_right, size: 18),
-                      )
-                    : const SizedBox.shrink(),
+                child: FilledButton.icon(
+                  onPressed: nextPasal != null
+                      ? () => _navigate(context, nextPasal!)
+                      : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: uuColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 0,
+                  ),
+                  icon: const Text(
+                    'Selanjutnya',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  label: const Icon(Icons.chevron_right, size: 18),
+                ),
               ),
             ],
           ),
@@ -554,13 +549,25 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
   void _navigate(BuildContext context, PasalModel target) {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(
-        builder: (_) => ReadPasalScreen(
-          pasal: target,
-          contextList: widget.contextList,
-          searchQuery: widget.searchQuery,
-        ),
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            ReadPasalScreen(
+              pasal: target,
+              contextList: widget.contextList,
+              searchQuery: widget.searchQuery,
+            ),
+        transitionDuration: Duration(seconds: 0),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return child;
+        },
       ),
+      // MaterialPageRoute(
+      //   builder: (_) => ReadPasalScreen(
+      //     pasal: target,
+      //     contextList: widget.contextList,
+      //     searchQuery: widget.searchQuery,
+      //   ),
+      // ),
     );
   }
 }

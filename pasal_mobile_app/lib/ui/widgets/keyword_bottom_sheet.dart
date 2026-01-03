@@ -6,6 +6,7 @@ class KeywordBottomSheet extends StatefulWidget {
   final List<String> selectedKeywords;
   final List<String> popularKeywords;
   final Function(String) onKeywordToggle;
+  final bool autoFocus;
 
   const KeywordBottomSheet({
     super.key,
@@ -13,6 +14,7 @@ class KeywordBottomSheet extends StatefulWidget {
     required this.selectedKeywords,
     required this.popularKeywords,
     required this.onKeywordToggle,
+    this.autoFocus = false,
   });
 
   /// Show the bottom sheet and return when closed
@@ -22,6 +24,7 @@ class KeywordBottomSheet extends StatefulWidget {
     required List<String> selectedKeywords,
     required List<String> popularKeywords,
     required Function(String) onKeywordToggle,
+    bool autoFocus = false,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -32,6 +35,7 @@ class KeywordBottomSheet extends StatefulWidget {
         selectedKeywords: selectedKeywords,
         popularKeywords: popularKeywords,
         onKeywordToggle: onKeywordToggle,
+        autoFocus: autoFocus,
       ),
     );
   }
@@ -116,6 +120,7 @@ class _KeywordBottomSheetState extends State<KeywordBottomSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: TextField(
               controller: _searchController,
+              autofocus: widget.autoFocus,
               keyboardAppearance: isDark ? Brightness.dark : Brightness.light,
               onChanged: (val) => setState(() => _searchQuery = val),
               decoration: InputDecoration(
