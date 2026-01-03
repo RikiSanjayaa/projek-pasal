@@ -104,16 +104,30 @@ class _UpdateBannerState extends State<UpdateBanner>
   }
 
   void _confirmCancel() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Batalkan Sinkronisasi?"),
-        content: const Text(
+        backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          "Batalkan Sinkronisasi?",
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.grey[900],
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
           "Sinkronisasi akan dihentikan. Anda dapat mencoba lagi nanti.",
+          style: TextStyle(color: isDark ? Colors.grey[300] : Colors.grey[700]),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: isDark ? Colors.grey[400] : Colors.grey[600],
+            ),
             child: const Text("Lanjutkan"),
           ),
           TextButton(
@@ -139,8 +153,9 @@ class _UpdateBannerState extends State<UpdateBanner>
         return ValueListenableBuilder<SyncState>(
           valueListenable: syncManager.state,
           builder: (context, syncState, child) {
-            final shouldShow = updateAvailable || syncState == SyncState.syncing;
-            
+            final shouldShow =
+                updateAvailable || syncState == SyncState.syncing;
+
             if (shouldShow) {
               _animationController.forward();
             } else {

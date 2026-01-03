@@ -3,6 +3,7 @@ import '../../models/undang_undang_model.dart';
 import '../../models/pasal_model.dart';
 import '../../core/services/data_service.dart';
 import '../widgets/pasal_card.dart';
+import '../widgets/settings_drawer.dart';
 
 class DetailUUScreen extends StatefulWidget {
   final UndangUndangModel undangUndang;
@@ -95,6 +96,7 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
     final icon = _getUUIcon(widget.undangUndang.kode);
 
     return Scaffold(
+      endDrawer: const SettingsDrawer(),
       appBar: AppBar(
         title: Text(
           widget.undangUndang.kode,
@@ -105,6 +107,18 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
           icon: const Icon(Icons.arrow_back_ios_new),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          Builder(
+            builder: (context) => IconButton(
+              onPressed: () => Scaffold.of(context).openEndDrawer(),
+              icon: Icon(
+                Icons.menu,
+                color: isDark ? Colors.grey[300] : Colors.grey[700],
+              ),
+              tooltip: 'Pengaturan',
+            ),
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -305,7 +319,7 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
                             )
                           : null,
                       filled: true,
-                      fillColor: isDark ? Colors.grey[850] : Colors.grey[100],
+                      fillColor: isDark ? Colors.grey[850] : Colors.white,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,

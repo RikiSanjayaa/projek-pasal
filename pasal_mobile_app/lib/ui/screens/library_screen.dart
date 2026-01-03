@@ -174,9 +174,28 @@ class _LibraryScreenState extends State<LibraryScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Pustaka Hukum",
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        "Pustaka Hukum",
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    // Hamburger menu button
+                    IconButton(
+                      onPressed: () => Scaffold.of(context).openEndDrawer(),
+                      icon: Icon(
+                        Icons.menu,
+                        color: isDark ? Colors.grey[300] : Colors.grey[700],
+                      ),
+                      tooltip: 'Pengaturan',
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(

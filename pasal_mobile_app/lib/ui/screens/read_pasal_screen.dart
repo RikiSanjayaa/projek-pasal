@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/pasal_model.dart';
 import '../../core/services/data_service.dart';
 import '../utils/highlight_text.dart';
+import '../widgets/settings_drawer.dart';
 
 class ReadPasalScreen extends StatefulWidget {
   final PasalModel pasal;
@@ -21,6 +22,8 @@ class ReadPasalScreen extends StatefulWidget {
 
 class _ReadPasalScreenState extends State<ReadPasalScreen> {
   String? _kodeUU;
+  late PasalModel _currentPasal;
+  final ScrollController _scrollController = ScrollController();
 
   // Color presets (same as library_screen)
   static const List<Color> _presetColors = [
@@ -37,11 +40,18 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
   @override
   void initState() {
     super.initState();
+    _currentPasal = widget.pasal;
     _loadUUInfo();
   }
 
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadUUInfo() async {
-    final kode = await DataService.getKodeUU(widget.pasal.undangUndangId);
+    final kode = await DataService.getKodeUU(_currentPasal.undangUndangId);
     if (mounted) {
       setState(() {
         _kodeUU = kode;
@@ -87,7 +97,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
 
     if (widget.contextList != null && widget.contextList!.isNotEmpty) {
       final index = widget.contextList!.indexWhere(
-        (p) => p.id == widget.pasal.id,
+        (p) => p.id == _currentPasal.id,
       );
       if (index != -1) {
         if (index > 0) prevPasal = widget.contextList![index - 1];
@@ -105,6 +115,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
 
     return Scaffold(
       backgroundColor: bgColor,
+      endDrawer: const SettingsDrawer(),
       appBar: AppBar(
         backgroundColor: bgColor,
         elevation: 0,
@@ -112,30 +123,29 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
           icon: Icon(Icons.arrow_back_ios_new, color: textColor, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Column(
-          children: [
-            Text(
-              widget.pasal.nomor.toLowerCase().startsWith("pasal")
-                  ? widget.pasal.nomor
-                  : "Pasal ${widget.pasal.nomor}",
-              style: TextStyle(
-                color: textColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-            if (_kodeUU != null)
-              Text(
-                _kodeUU!,
-                style: TextStyle(
-                  color: uuColor,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-          ],
+        title: Text(
+          'Baca Pasal',
+          style: TextStyle(
+            color: textColor,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
         ),
         centerTitle: true,
+        actions: [
+          Builder(
+            builder: (ctx) => IconButton(
+              icon: Icon(
+                Icons.menu,
+                color: isDark ? Colors.grey[300] : Colors.grey[700],
+                size: 24,
+              ),
+              onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+              tooltip: 'Pengaturan',
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
 
       // Simplified bottom navigation
@@ -159,7 +169,9 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                       ? () => _navigate(context, prevPasal!)
                       : null,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: isDark ? Colors.grey[300] : Colors.grey[700],
+                    foregroundColor: isDark
+                        ? Colors.grey[300]
+                        : Colors.grey[700],
                     side: BorderSide(
                       color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
                     ),
@@ -204,16 +216,72 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
       ),
 
       body: SingleChildScrollView(
+        controller: _scrollController,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Pasal header - moved from AppBar
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey[900] : Colors.grey[50],
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+                  ),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: uuColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(_getUUIcon(_kodeUU), size: 14, color: uuColor),
+                        const SizedBox(width: 6),
+                        Text(
+                          _kodeUU ?? 'UU',
+                          style: TextStyle(
+                            color: uuColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _currentPasal.nomor.toLowerCase().startsWith("pasal")
+                        ? _currentPasal.nomor
+                        : "Pasal ${_currentPasal.nomor}",
+                    style: TextStyle(
+                      color: textColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+
             // Main content
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
                   // Pasal title/judul
-                  if (widget.pasal.judul != null) ...[
+                  if (_currentPasal.judul != null) ...[
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
@@ -226,7 +294,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                       ),
                       child: HighlightText(
                         textAlign: TextAlign.center,
-                        text: widget.pasal.judul!,
+                        text: _currentPasal.judul!,
                         query: widget.searchQuery,
                         style: TextStyle(
                           fontSize: 17,
@@ -285,7 +353,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                         const SizedBox(height: 16),
                         // Content
                         HighlightText(
-                          text: widget.pasal.isi,
+                          text: _currentPasal.isi,
                           query: widget.searchQuery,
                           textAlign: TextAlign.justify,
                           style: TextStyle(
@@ -299,8 +367,8 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                   ),
 
                   // Penjelasan section
-                  if (widget.pasal.penjelasan != null &&
-                      widget.pasal.penjelasan!.length > 3) ...[
+                  if (_currentPasal.penjelasan != null &&
+                      _currentPasal.penjelasan!.length > 3) ...[
                     const SizedBox(height: 20),
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -337,7 +405,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                           ),
                           const SizedBox(height: 12),
                           HighlightText(
-                            text: widget.pasal.penjelasan!,
+                            text: _currentPasal.penjelasan!,
                             query: widget.searchQuery,
                             textAlign: TextAlign.justify,
                             style: TextStyle(
@@ -352,7 +420,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                   ],
 
                   // Keywords section - compact chips
-                  if (widget.pasal.keywords.isNotEmpty) ...[
+                  if (_currentPasal.keywords.isNotEmpty) ...[
                     const SizedBox(height: 24),
                     Row(
                       children: [
@@ -378,7 +446,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                       alignment: WrapAlignment.start,
                       spacing: 6,
                       runSpacing: 6,
-                      children: widget.pasal.keywords
+                      children: _currentPasal.keywords
                           .map(
                             (k) => Container(
                               padding: const EdgeInsets.symmetric(
@@ -412,7 +480,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                   ],
 
                   // Related pasal section
-                  if (widget.pasal.relatedIds.isNotEmpty) ...[
+                  if (_currentPasal.relatedIds.isNotEmpty) ...[
                     const SizedBox(height: 24),
                     Row(
                       children: [
@@ -434,7 +502,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                       ],
                     ),
                     const SizedBox(height: 10),
-                    ...widget.pasal.relatedIds.map((relId) {
+                    ..._currentPasal.relatedIds.map((relId) {
                       return FutureBuilder<PasalModel?>(
                         future: DataService.getPasalById(relId),
                         builder: (context, snapshot) {
@@ -547,27 +615,13 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
   }
 
   void _navigate(BuildContext context, PasalModel target) {
-    Navigator.pushReplacement(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            ReadPasalScreen(
-              pasal: target,
-              contextList: widget.contextList,
-              searchQuery: widget.searchQuery,
-            ),
-        transitionDuration: Duration(seconds: 0),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return child;
-        },
-      ),
-      // MaterialPageRoute(
-      //   builder: (_) => ReadPasalScreen(
-      //     pasal: target,
-      //     contextList: widget.contextList,
-      //     searchQuery: widget.searchQuery,
-      //   ),
-      // ),
-    );
+    // Update state directly without navigation animation
+    setState(() {
+      _currentPasal = target;
+      _kodeUU = null; // Reset to trigger reload
+    });
+    _loadUUInfo();
+    // Scroll to top instantly
+    _scrollController.jumpTo(0);
   }
 }

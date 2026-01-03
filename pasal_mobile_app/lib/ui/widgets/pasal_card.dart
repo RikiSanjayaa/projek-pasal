@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../models/pasal_model.dart';
 import '../../core/services/data_service.dart';
 import '../utils/highlight_text.dart';
-import '../utils/image_helper.dart';
 import '../screens/read_pasal_screen.dart';
 
 class PasalCard extends StatelessWidget {
@@ -19,6 +18,37 @@ class PasalCard extends StatelessWidget {
     this.showUULabel = true,
   });
 
+  // Color presets (same as library_screen)
+  static const List<Color> _presetColors = [
+    Color(0xFFDC2626), // Red - KUHP
+    Color(0xFF2563EB), // Blue - KUHAP
+    Color(0xFF059669), // Emerald - ITE
+    Color(0xFFD97706), // Amber - KUHPER
+    Color(0xFF7C3AED), // Violet
+    Color(0xFFDB2777), // Pink
+    Color(0xFF0891B2), // Cyan
+    Color(0xFF4F46E5), // Indigo
+  ];
+
+  Color _getUUColor(String kode) {
+    final code = kode.toUpperCase().trim();
+    if (code.contains('KUHPER') || code.contains('PERDATA')) {
+      return _presetColors[3]; // Amber
+    }
+    if (code.contains('KUHAP')) {
+      return _presetColors[1]; // Blue
+    }
+    if (code == 'KUHP' || code.startsWith('KUHP ')) {
+      return _presetColors[0]; // Red
+    }
+    if (code.contains('ITE')) {
+      return _presetColors[2]; // Emerald
+    }
+    // Generate from hash for unknown
+    final hash = code.hashCode.abs();
+    return _presetColors[hash % _presetColors.length];
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -34,7 +64,7 @@ class PasalCard extends StatelessWidget {
       builder: (context, snapshot) {
         final kodeUU = snapshot.data ?? "UU";
 
-        final baseColor = ImageHelper.getBookColor(kodeUU);
+        final baseColor = _getUUColor(kodeUU);
 
         final cardBgColor = isDark
             ? Colors.white.withValues(alpha: 0.1)

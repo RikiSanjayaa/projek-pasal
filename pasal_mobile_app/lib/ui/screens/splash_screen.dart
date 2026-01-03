@@ -58,22 +58,17 @@ class _SplashScreenState extends State<SplashScreen> {
             Container(
               width: 120,
               height: 120,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blue.withValues(alpha: isDark ? 0.3 : 0.2),
-                    blurRadius: 30,
-                    spreadRadius: 5,
-                  ),
-                ],
-              ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(24),
-                child: Image.asset(
-                  'assets/images/logo.png',
-                  fit: BoxFit.contain,
-                ),
+                child: isDark
+                    ? Image.asset(
+                        'assets/images/logo-dark.png',
+                        fit: BoxFit.contain,
+                      )
+                    : Image.asset(
+                        'assets/images/logo.png',
+                        fit: BoxFit.contain,
+                      ),
               ),
             ),
 
