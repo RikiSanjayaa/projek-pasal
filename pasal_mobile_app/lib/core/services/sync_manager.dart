@@ -144,11 +144,15 @@ class SyncManager {
   }
 
   /// Perform sync and update timestamp
+  /// Uses incremental sync if we have a previous sync timestamp
   Future<SyncResult> performSync() async {
     state.value = SyncState.syncing;
     
     try {
-      final result = await DataService.syncDataWithResult();
+      // Use incremental sync if we have a previous sync time
+      final result = await DataService.syncDataWithResult(
+        lastSyncTime: _lastSyncTime,
+      );
       
       if (result.success) {
         await _saveLastSyncTime();

@@ -13,6 +13,8 @@ class UndangUndangModel {
 
   final bool isActive;
 
+  final DateTime? updatedAt;
+
   UndangUndangModel({
     required this.id,
     required this.kode,
@@ -21,6 +23,7 @@ class UndangUndangModel {
     this.deskripsi,
     required this.tahun,
     required this.isActive,
+    this.updatedAt,
   });
 
   factory UndangUndangModel.fromJson(Map<String, dynamic> json) {
@@ -33,6 +36,9 @@ class UndangUndangModel {
       // Handle null tahun with default value of 0
       tahun: (json['tahun'] as int?) ?? 0,
       isActive: json['is_active'] ?? true,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : null,
     );
   }
 }

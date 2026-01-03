@@ -7,6 +7,7 @@ class PasalModel {
   final String? judul;
   final List<String> keywords;
   final List<String> relatedIds;
+  final bool isActive;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -19,6 +20,7 @@ class PasalModel {
     this.judul,
     this.keywords = const [],
     this.relatedIds = const [],
+    this.isActive = true,
     this.createdAt,
     this.updatedAt,
   });
@@ -37,6 +39,7 @@ class PasalModel {
       relatedIds: json['related_ids'] != null
           ? List<String>.from(json['related_ids'])
           : [],
+      isActive: json['is_active'] ?? true,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
