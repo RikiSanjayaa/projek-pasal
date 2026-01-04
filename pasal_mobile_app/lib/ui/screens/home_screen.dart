@@ -675,8 +675,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!hasAnyFilters) return const SizedBox.shrink();
 
     final blueColor = Colors.blue;
-    final expandedBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final collapsedBg = isDark ? Colors.grey[850] : Colors.white;
+    final bgColor = isDark ? Colors.grey[850] : Colors.white;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -693,7 +692,7 @@ class _HomeScreenState extends State<HomeScreen> {
               duration: const Duration(milliseconds: 300),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: _filtersExpanded ? expandedBg : collapsedBg,
+                color: bgColor,
                 borderRadius: _filtersExpanded
                     ? const BorderRadius.vertical(top: Radius.circular(12))
                     : BorderRadius.circular(12),
@@ -777,7 +776,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
                   decoration: BoxDecoration(
-                    color: expandedBg,
+                    color: bgColor,
                     borderRadius: const BorderRadius.vertical(
                       bottom: Radius.circular(12),
                     ),
