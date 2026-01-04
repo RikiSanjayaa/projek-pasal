@@ -111,7 +111,9 @@ class LawContentFormatter extends StatelessWidget {
 
   Widget _buildListItem(String marker, String text, int indentLevel) {
     const double baseLeftPadding = 0.0;
-    const double indentWidth = 24.0;
+    const double indentWidth = 26.0;
+
+    final double markerWidth = marker.length > 2 ? 26.0 : 18.0;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -119,10 +121,11 @@ class LawContentFormatter extends StatelessWidget {
         left: baseLeftPadding + (indentLevel * indentWidth),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
         children: [
           SizedBox(
-            width: 26,
+            width: markerWidth,
             child: Text(
               marker,
               style: TextStyle(
@@ -132,7 +135,6 @@ class LawContentFormatter extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 4),
           Expanded(
             child: HighlightText(
               text: text,
