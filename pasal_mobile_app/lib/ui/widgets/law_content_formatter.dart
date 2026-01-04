@@ -7,6 +7,8 @@ class LawContentFormatter extends StatelessWidget {
   final double fontSize;
   final Color? color;
   final double height;
+  final TextAlign textAlign;
+  final double letterSpacing;
 
   const LawContentFormatter({
     super.key,
@@ -15,6 +17,8 @@ class LawContentFormatter extends StatelessWidget {
     this.fontSize = 14.0,
     this.color,
     this.height = 1.5,
+    this.textAlign = TextAlign.justify,
+    this.letterSpacing = -0.3,
   });
 
   @override
@@ -38,8 +42,13 @@ class LawContentFormatter extends StatelessWidget {
       return HighlightText(
         text: normalizedContent,
         query: searchQuery,
-        style: TextStyle(fontSize: fontSize, color: color, height: height),
-        textAlign: TextAlign.justify,
+        style: TextStyle(
+          fontSize: fontSize,
+          color: color,
+          height: height,
+          letterSpacing: letterSpacing,
+        ),
+        textAlign: textAlign,
       );
     }
 
@@ -104,7 +113,13 @@ class LawContentFormatter extends StatelessWidget {
       child: HighlightText(
         text: text,
         query: searchQuery,
-        style: TextStyle(fontSize: fontSize, color: color, height: height),
+        style: TextStyle(
+          fontSize: fontSize,
+          color: color,
+          height: height,
+          letterSpacing: letterSpacing,
+        ),
+        textAlign: textAlign,
       ),
     );
   }
@@ -113,7 +128,8 @@ class LawContentFormatter extends StatelessWidget {
     const double baseLeftPadding = 0.0;
     const double indentWidth = 26.0;
 
-    final double markerWidth = marker.length > 2 ? 26.0 : 18.0;
+    // Calculate width based on typical char width + buffer to prevent wrapping like "(2a" \n ")"
+    final double markerWidth = (marker.length * 9.0) + 2.0;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -132,6 +148,7 @@ class LawContentFormatter extends StatelessWidget {
                 fontSize: fontSize,
                 color: color,
                 height: height,
+                letterSpacing: letterSpacing,
               ),
             ),
           ),
@@ -143,8 +160,9 @@ class LawContentFormatter extends StatelessWidget {
                 fontSize: fontSize,
                 color: color,
                 height: height,
+                letterSpacing: letterSpacing,
               ),
-              textAlign: TextAlign.justify,
+              textAlign: textAlign,
             ),
           ),
         ],
