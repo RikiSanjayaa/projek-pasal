@@ -36,7 +36,8 @@ Aplikasi untuk mencari dan mengelola pasal-pasal dari:
 projek-pasal/
 ├── supabase/           # Database migrations & config edge function
 ├── admin-dashboard/    # React + Mantine admin panel
-├── mobile-app/         # Flutter mobile application
+├── pasal_mobile_app/   # Flutter mobile application
+├── utils/              # Utility scripts (migrations, etc.)
 └── docs/               # Dokumentasi lengkap
 ```
 
@@ -45,7 +46,7 @@ projek-pasal/
 ### Prerequisites
 
 - Node.js >= 18
-- Flutter >= 3.0
+- Flutter >= 3.8
 - Supabase CLI (opsional untuk local development)
 
 ### Setup Supabase
@@ -70,8 +71,10 @@ npm run dev
 ### Setup Mobile App
 
 ```bash
-cd mobile-app
+cd pasal_mobile_app
 flutter pub get
+# Copy dan edit env config:
+cp lib/core/config/env-example.dart lib/core/config/env.dart
 # Edit lib/core/config/env.dart dengan Supabase credentials
 flutter run
 ```

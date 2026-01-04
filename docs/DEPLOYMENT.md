@@ -206,14 +206,25 @@ npx supabase functions deploy create-admin
 
 ## 4. Setup Mobile App
 
-_(Akan dikembangkan di fase berikutnya)_
-
 ### 4.1 Prerequisites
 
-- Flutter SDK >= 3.0
+- Flutter SDK >= 3.8
 - Android Studio / Xcode
 
-### 4.2 Configure
+### 4.2 Install Dependencies
+
+```bash
+cd pasal_mobile_app
+flutter pub get
+```
+
+### 4.3 Configure
+
+Copy dan edit file konfigurasi:
+
+```bash
+cp lib/core/config/env-example.dart lib/core/config/env.dart
+```
 
 Edit `lib/core/config/env.dart`:
 

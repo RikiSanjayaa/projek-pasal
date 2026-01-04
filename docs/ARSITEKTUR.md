@@ -41,8 +41,6 @@ CariPasal adalah aplikasi pencarian pasal hukum Indonesia yang terdiri dari:
 │  REST API (Auto-generated)                                      │
 │  ─────────────────────────────                                  │
 │  • CRUD endpoints untuk semua tabel                             │
-│  • RPC endpoints untuk fungsi pencarian                         │
-│  • Real-time subscriptions (opsional)                           │
 │                                                                 │
 │  Row Level Security (RLS)                                       │
 │  ───────────────────────────                                    │
@@ -81,7 +79,7 @@ Admin Login → Auth Check → Dashboard → API Call → RLS Check → Database
                          UI Update ← Query Invalidation
 ```
 
-### 3. Offline Sync Flow (masih hanya rencana)
+### 3. Offline Sync Flow
 
 ```
                     ┌─────────────────────────┐
@@ -123,9 +121,9 @@ Admin Login → Auth Check → Dashboard → API Call → RLS Check → Database
 | Layer           | Technology         | Justification                                 |
 | --------------- | ------------------ | --------------------------------------------- |
 | Mobile Frontend | Flutter            | Cross-platform (Android & iOS), sudah dipilih |
-| Mobile State    | Riverpod           | Scalable, testable, reactive                  |
+| Mobile State    | setState + ValueListenable | Simple, built-in, cukup untuk local-first app |
 | Mobile Local DB | Drift (SQLite)     | Type-safe, migration support                  |
-| Mobile HTTP     | Dio                | Interceptors, caching support                 |
+| Mobile HTTP     | supabase_flutter   | Built-in HTTP client, langsung integrate dengan supabase |
 | Admin Frontend  | React + TypeScript | Ecosystem besar, Mantine compatible           |
 | Admin UI        | Mantine v7         | Modern, lengkap, well-documented              |
 | Admin State     | TanStack Query     | Caching, invalidation, optimistic updates     |
@@ -173,8 +171,7 @@ CREATE POLICY "Admin: write pasal"
 
 ### Future Scaling
 
-- Upgrade ke Supabase Pro jika traffic tinggi
-- Implement edge caching (CDN)
+- Upgrade ke Supabase Pro / self host supabase jika traffic tinggi
 
 ## Folder Structure
 
@@ -186,10 +183,16 @@ projek-pasal/
 │   └── seed.sql        # Dummy data
 ├── admin-dashboard/
 │   └── src/
+│       ├── components/ # Reusable UI components
 │       ├── contexts/   # React contexts (Auth)
 │       ├── layouts/    # Layout components
 │       ├── lib/        # Supabase client, types
 │       └── pages/      # Page components
-├── mobile-app/         # Flutter app (akan dibuat)
+├── pasal_mobile_app/   # Flutter app
+│   └── lib/
+│       ├── core/       # Config, database, services
+│       ├── models/     # Data models
+│       └── ui/         # Screens dan widgets
+├── utils/              # Utility scripts (migrations, etc.)
 └── docs/               # Documentation
 ```
