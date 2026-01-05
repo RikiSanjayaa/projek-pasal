@@ -404,7 +404,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     minHeight: 12,
                     backgroundColor: isDark
                         ? Colors.grey[800]
-                        : Colors.grey[200],
+                        : Colors.white, // Clean white for light mode
                     valueColor: AlwaysStoppedAnimation<Color>(
                       isError ? Colors.red : Colors.blue,
                     ),
