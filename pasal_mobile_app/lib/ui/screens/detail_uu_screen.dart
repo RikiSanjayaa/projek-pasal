@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../../models/undang_undang_model.dart';
 import '../../models/pasal_model.dart';
 import '../../core/services/data_service.dart';
+import '../../core/services/sync_manager.dart';
 import '../widgets/pasal_card.dart';
 import '../widgets/settings_drawer.dart';
+import '../utils/uu_color_helper.dart';
 
 class DetailUUScreen extends StatefulWidget {
   final UndangUndangModel undangUndang;
@@ -19,22 +21,24 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
 
-  // Color presets (same as library_screen)
-  static const List<Color> _presetColors = [
-    Color(0xFFDC2626), // Red - KUHP
-    Color(0xFF2563EB), // Blue - KUHAP
-    Color(0xFF059669), // Emerald - ITE
-    Color(0xFFD97706), // Amber - KUHPER
-    Color(0xFF7C3AED), // Violet
-    Color(0xFFDB2777), // Pink
-    Color(0xFF0891B2), // Cyan
-    Color(0xFF4F46E5), // Indigo
-  ];
-
   @override
   void initState() {
     super.initState();
     _loadPasal();
+    syncManager.state.addListener(_handleSyncStateChange);
+  }
+
+  @override
+  void dispose() {
+    syncManager.state.removeListener(_handleSyncStateChange);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _handleSyncStateChange() {
+    if (syncManager.state.value == SyncState.idle) {
+      _loadPasal();
+    }
   }
 
   void _loadPasal() async {
@@ -60,33 +64,11 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
   }
 
   IconData _getUUIcon(String kode) {
-    final code = kode.toUpperCase().trim();
-    if (code == 'KUHP') return Icons.gavel_rounded;
-    if (code.contains('KUHAP')) return Icons.policy_rounded;
-    if (code.contains('ITE')) return Icons.computer_rounded;
-    if (code.contains('KUHPER') || code.contains('PERDATA')) {
-      return Icons.people_rounded;
-    }
-    return Icons.menu_book_rounded;
+    return UUColorHelper.getIcon(kode);
   }
 
   Color _getUUColor(String kode) {
-    final code = kode.toUpperCase().trim();
-    if (code.contains('KUHPER') || code.contains('PERDATA')) {
-      return _presetColors[3]; // Amber
-    }
-    if (code.contains('KUHAP')) {
-      return _presetColors[1]; // Blue
-    }
-    if (code == 'KUHP' || code.startsWith('KUHP ')) {
-      return _presetColors[0]; // Red
-    }
-    if (code.contains('ITE')) {
-      return _presetColors[2]; // Emerald
-    }
-    // Generate from hash for unknown
-    final hash = code.hashCode.abs();
-    return _presetColors[hash % _presetColors.length];
+    return UUColorHelper.getColor(kode);
   }
 
   @override

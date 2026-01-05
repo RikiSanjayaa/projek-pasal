@@ -115,7 +115,7 @@ export function PasalEditPage() {
         message: 'Pasal berhasil diperbarui',
         color: 'green',
       })
-      navigate('/pasal')
+      navigate(-1)
     },
     onError: (error: Error) => {
       notifications.show({
@@ -136,7 +136,7 @@ export function PasalEditPage() {
         <Button
           variant="subtle"
           leftSection={<IconArrowLeft size={18} />}
-          onClick={() => navigate('/pasal')}
+          onClick={() => navigate(-1)}
         >
           Kembali
         </Button>
@@ -203,7 +203,7 @@ export function PasalEditPage() {
                 />
 
                 <Group justify="flex-end" mt="md">
-                  <Button variant="default" onClick={() => navigate('/pasal')}>
+                  <Button variant="default" onClick={() => navigate(-1)}>
                     Batal
                   </Button>
                   <Button type="submit" loading={updateMutation.isPending}>

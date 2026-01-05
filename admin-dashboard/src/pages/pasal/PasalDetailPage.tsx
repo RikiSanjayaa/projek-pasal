@@ -28,7 +28,7 @@ export function PasalDetailPage() {
           <Button
             variant="subtle"
             leftSection={<IconArrowLeft size={18} />}
-            onClick={() => navigate('/pasal')}
+            onClick={() => navigate(-1)}
           >
             Kembali
           </Button>
@@ -71,7 +71,7 @@ export function PasalDetailPage() {
           <Button
             variant="subtle"
             leftSection={<IconArrowLeft size={18} />}
-            onClick={() => navigate('/pasal')}
+            onClick={() => navigate(-1)}
           >
             Kembali
           </Button>
@@ -90,7 +90,7 @@ export function PasalDetailPage() {
           <Button
             variant="subtle"
             leftSection={<IconArrowLeft size={18} />}
-            onClick={() => navigate('/pasal')}
+            onClick={() => navigate(-1)}
           >
             Kembali
           </Button>

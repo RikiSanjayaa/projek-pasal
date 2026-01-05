@@ -4,16 +4,17 @@ import 'package:drift/drift.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/undang_undang_model.dart';
 import '../../models/pasal_model.dart';
+import '../../models/pasal_link_model.dart';
 import '../database/app_database.dart';
 import 'sync_progress.dart';
 
 class DataService {
   static late AppDatabase _database;
   static final SupabaseClient supabase = Supabase.instance.client;
-  
+
   /// Stream controller for sync progress updates
   static StreamController<SyncProgress>? _progressController;
-  
+
   /// Flag to check if sync should be cancelled
   static bool _isCancelled = false;
 
@@ -23,7 +24,8 @@ class DataService {
   }
 
   /// Get the progress stream for UI updates
-  static Stream<SyncProgress>? get progressStream => _progressController?.stream;
+  static Stream<SyncProgress>? get progressStream =>
+      _progressController?.stream;
 
   /// Cancel ongoing sync operation
   static void cancelSync() {
@@ -92,53 +94,58 @@ class DataService {
   }) async {
     _isCancelled = false;
     _progressController = StreamController<SyncProgress>.broadcast();
-    
+
     // Forward stream events to callback
     _progressController!.stream.listen(onProgress);
-    
+
     try {
       final isIncremental = lastSyncTime != null;
       final startTime = DateTime.now();
-      
+
       // Initial progress
       _emitProgress(SyncProgress.initial(isIncremental: isIncremental));
-      
+
       bool success;
       SyncProgress finalProgress;
-      
+
       if (isIncremental) {
-        (success, finalProgress) = await _incrementalSyncWithProgress(lastSyncTime, startTime);
+        (success, finalProgress) = await _incrementalSyncWithProgress(
+          lastSyncTime,
+          startTime,
+        );
       } else {
         (success, finalProgress) = await _fullSyncWithProgress(startTime);
       }
-      
+
       if (_isCancelled) {
-        _emitProgress(finalProgress.copyWith(
-          phase: SyncPhase.cancelled,
-          currentOperation: "Sinkronisasi dibatalkan",
-        ));
+        _emitProgress(
+          finalProgress.copyWith(
+            phase: SyncPhase.cancelled,
+            currentOperation: "Sinkronisasi dibatalkan",
+          ),
+        );
         return SyncResult(
           success: false,
           message: "Sinkronisasi dibatalkan oleh pengguna",
           synced: false,
         );
       }
-      
+
       return SyncResult(
         success: success,
-        message: success 
-            ? finalProgress.completionSummary
-            : "Sync gagal",
+        message: success ? finalProgress.completionSummary : "Sync gagal",
         synced: success,
       );
     } catch (e) {
       final syncError = classifyError(e);
-      _emitProgress(SyncProgress(
-        phase: SyncPhase.error,
-        currentOperation: syncError.userMessage,
-        startTime: DateTime.now(),
-        errorMessage: syncError.userMessage,
-      ));
+      _emitProgress(
+        SyncProgress(
+          phase: SyncPhase.error,
+          currentOperation: syncError.userMessage,
+          startTime: DateTime.now(),
+          errorMessage: syncError.userMessage,
+        ),
+      );
       return SyncResult(
         success: false,
         message: syncError.userMessage,
@@ -158,8 +165,10 @@ class DataService {
       final isIncremental = lastSyncTime != null;
       return SyncResult(
         success: success,
-        message: success 
-            ? (isIncremental ? "Incremental sync berhasil" : "Full sync berhasil")
+        message: success
+            ? (isIncremental
+                  ? "Incremental sync berhasil"
+                  : "Full sync berhasil")
             : "Sync gagal",
         synced: success,
       );
@@ -179,7 +188,10 @@ class DataService {
     try {
       final isIncremental = lastSyncTime != null;
       if (isIncremental) {
-        final (success, _) = await _incrementalSyncWithProgress(lastSyncTime, DateTime.now());
+        final (success, _) = await _incrementalSyncWithProgress(
+          lastSyncTime,
+          DateTime.now(),
+        );
         return success;
       } else {
         final (success, _) = await _fullSyncWithProgress(DateTime.now());
@@ -200,19 +212,23 @@ class DataService {
   static bool _checkCancelled() => _isCancelled;
 
   /// Full sync with progress tracking
-  static Future<(bool, SyncProgress)> _fullSyncWithProgress(DateTime startTime) async {
+  static Future<(bool, SyncProgress)> _fullSyncWithProgress(
+    DateTime startTime,
+  ) async {
     int totalBytes = 0;
     int downloadedPasal = 0;
     int totalPasal = 0;
-    
+
     try {
       // Phase 1: Download UU list
-      _emitProgress(SyncProgress(
-        phase: SyncPhase.downloadingUU,
-        currentOperation: "Mengunduh daftar undang-undang...",
-        startTime: startTime,
-      ));
-      
+      _emitProgress(
+        SyncProgress(
+          phase: SyncPhase.downloadingUU,
+          currentOperation: "Mengunduh daftar undang-undang...",
+          startTime: startTime,
+        ),
+      );
+
       if (_checkCancelled()) return (false, _cancelledProgress(startTime));
 
       final List<dynamic> responseUU = await supabase
@@ -222,17 +238,19 @@ class DataService {
 
       final uuBytes = jsonEncode(responseUU).length;
       totalBytes += uuBytes;
-      
+
       final totalUU = responseUU.length;
 
       // Phase 2: Get total pasal count for progress estimation
-      _emitProgress(SyncProgress(
-        phase: SyncPhase.checking,
-        currentOperation: "Menghitung jumlah pasal...",
-        startTime: startTime,
-        totalUU: totalUU,
-        downloadedBytes: totalBytes,
-      ));
+      _emitProgress(
+        SyncProgress(
+          phase: SyncPhase.checking,
+          currentOperation: "Menghitung jumlah pasal...",
+          startTime: startTime,
+          totalUU: totalUU,
+          downloadedBytes: totalBytes,
+        ),
+      );
 
       // Get pasal counts per UU for accurate progress
       final Map<String, int> pasalCounts = {};
@@ -245,32 +263,61 @@ class DataService {
         pasalCounts[uuId] = (countResponse as List).length;
         totalPasal += pasalCounts[uuId]!;
       }
-      
+
       if (_checkCancelled()) return (false, _cancelledProgress(startTime));
 
       // Phase 3: Download pasal links
-      _emitProgress(SyncProgress(
-        phase: SyncPhase.downloadingLinks,
-        currentOperation: "Mengunduh relasi antar pasal...",
-        startTime: startTime,
-        totalUU: totalUU,
-        totalPasal: totalPasal,
-        downloadedBytes: totalBytes,
-      ));
+      _emitProgress(
+        SyncProgress(
+          phase: SyncPhase.downloadingLinks,
+          currentOperation: "Mengunduh relasi antar pasal...",
+          startTime: startTime,
+          totalUU: totalUU,
+          totalPasal: totalPasal,
+          downloadedBytes: totalBytes,
+        ),
+      );
 
       final linksResponse = await supabase
           .from('pasal_links')
-          .select('source_pasal_id, target_pasal_id')
+          .select(
+            'id, source_pasal_id, target_pasal_id, keterangan, is_active, created_at',
+          )
           .eq('is_active', true);
-      
+
       final linksBytes = jsonEncode(linksResponse).length;
       totalBytes += linksBytes;
 
+      // Build linksMap for backward compatibility with relatedIds field
       final Map<String, List<String>> linksMap = {};
+      final linkCompanions = <PasalLinksTableCompanion>[];
+
       for (var link in linksResponse) {
         final sourceId = link['source_pasal_id'] as String;
         final targetId = link['target_pasal_id'] as String;
         linksMap.putIfAbsent(sourceId, () => []).add(targetId);
+
+        // Build companion for PasalLinksTable
+        linkCompanions.add(
+          PasalLinksTableCompanion(
+            id: Value(link['id'] as String),
+            sourcePasalId: Value(sourceId),
+            targetPasalId: Value(targetId),
+            keterangan: Value(link['keterangan'] as String?),
+            isActive: Value(link['is_active'] as bool? ?? true),
+            createdAt: Value(
+              link['created_at'] != null
+                  ? DateTime.parse(link['created_at'])
+                  : null,
+            ),
+          ),
+        );
+      }
+
+      // Clear and insert all pasal links
+      await _database.clearAllPasalLinks();
+      if (linkCompanions.isNotEmpty) {
+        await _database.insertAllPasalLinks(linkCompanions);
       }
 
       if (_checkCancelled()) return (false, _cancelledProgress(startTime));
@@ -283,20 +330,26 @@ class DataService {
 
         final item = responseUU[i];
         final uu = UndangUndangModel.fromJson(item);
-        
-        _emitProgress(SyncProgress(
-          phase: SyncPhase.downloadingPasal,
-          currentOperation: "Mengunduh ${uu.kode}...",
-          startTime: startTime,
-          isIncremental: false,
-          totalUU: totalUU,
-          currentUUIndex: i + 1,
-          currentUUName: uu.kode,
-          totalPasal: totalPasal,
-          downloadedPasal: downloadedPasal,
-          downloadedBytes: totalBytes,
-          estimatedTotalBytes: _estimateTotalBytes(totalBytes, downloadedPasal, totalPasal),
-        ));
+
+        _emitProgress(
+          SyncProgress(
+            phase: SyncPhase.downloadingPasal,
+            currentOperation: "Mengunduh ${uu.kode}...",
+            startTime: startTime,
+            isIncremental: false,
+            totalUU: totalUU,
+            currentUUIndex: i + 1,
+            currentUUName: uu.kode,
+            totalPasal: totalPasal,
+            downloadedPasal: downloadedPasal,
+            downloadedBytes: totalBytes,
+            estimatedTotalBytes: _estimateTotalBytes(
+              totalBytes,
+              downloadedPasal,
+              totalPasal,
+            ),
+          ),
+        );
 
         // Insert UU
         await _database.insertUndangUndang(
@@ -349,19 +402,25 @@ class DataService {
         }
 
         // Update progress after each UU
-        _emitProgress(SyncProgress(
-          phase: SyncPhase.downloadingPasal,
-          currentOperation: "Menyimpan ${uu.kode}...",
-          startTime: startTime,
-          isIncremental: false,
-          totalUU: totalUU,
-          currentUUIndex: i + 1,
-          currentUUName: uu.kode,
-          totalPasal: totalPasal,
-          downloadedPasal: downloadedPasal,
-          downloadedBytes: totalBytes,
-          estimatedTotalBytes: _estimateTotalBytes(totalBytes, downloadedPasal, totalPasal),
-        ));
+        _emitProgress(
+          SyncProgress(
+            phase: SyncPhase.downloadingPasal,
+            currentOperation: "Menyimpan ${uu.kode}...",
+            startTime: startTime,
+            isIncremental: false,
+            totalUU: totalUU,
+            currentUUIndex: i + 1,
+            currentUUName: uu.kode,
+            totalPasal: totalPasal,
+            downloadedPasal: downloadedPasal,
+            downloadedBytes: totalBytes,
+            estimatedTotalBytes: _estimateTotalBytes(
+              totalBytes,
+              downloadedPasal,
+              totalPasal,
+            ),
+          ),
+        );
       }
 
       // Phase 5: Complete
@@ -377,43 +436,48 @@ class DataService {
         downloadedBytes: totalBytes,
         estimatedTotalBytes: totalBytes,
       );
-      
+
       _emitProgress(finalProgress);
       return (true, finalProgress);
-      
     } catch (e) {
       print("Full Sync Error: $e");
-      return (false, SyncProgress(
-        phase: SyncPhase.error,
-        currentOperation: classifyError(e).userMessage,
-        startTime: startTime,
-        errorMessage: e.toString(),
-      ));
+      return (
+        false,
+        SyncProgress(
+          phase: SyncPhase.error,
+          currentOperation: classifyError(e).userMessage,
+          startTime: startTime,
+          errorMessage: e.toString(),
+        ),
+      );
     }
   }
 
   /// Incremental sync with progress tracking
   static Future<(bool, SyncProgress)> _incrementalSyncWithProgress(
-    DateTime lastSyncTime, 
+    DateTime lastSyncTime,
     DateTime startTime,
   ) async {
     int totalBytes = 0;
     int newRecords = 0;
     int updatedRecords = 0;
     int deletedRecords = 0;
-    
+
     try {
       final sinceTimestamp = lastSyncTime.toUtc().toIso8601String();
-      
+
       // Phase 1: Check for updated UU
-      _emitProgress(SyncProgress(
-        phase: SyncPhase.downloadingUU,
-        currentOperation: "Memeriksa pembaruan undang-undang...",
-        startTime: startTime,
-        isIncremental: true,
-      ));
-      
-      if (_checkCancelled()) return (false, _cancelledProgress(startTime, isIncremental: true));
+      _emitProgress(
+        SyncProgress(
+          phase: SyncPhase.downloadingUU,
+          currentOperation: "Memeriksa pembaruan undang-undang...",
+          startTime: startTime,
+          isIncremental: true,
+        ),
+      );
+
+      if (_checkCancelled())
+        return (false, _cancelledProgress(startTime, isIncremental: true));
 
       final List<dynamic> updatedUU = await supabase
           .from('undang_undang')
@@ -421,7 +485,7 @@ class DataService {
           .gt('updated_at', sinceTimestamp);
 
       totalBytes += jsonEncode(updatedUU).length;
-      
+
       for (var item in updatedUU) {
         final uu = UndangUndangModel.fromJson(item);
         await _database.upsertUndangUndang(
@@ -438,16 +502,19 @@ class DataService {
         );
       }
 
-      if (_checkCancelled()) return (false, _cancelledProgress(startTime, isIncremental: true));
+      if (_checkCancelled())
+        return (false, _cancelledProgress(startTime, isIncremental: true));
 
       // Phase 2: Check for updated pasal
-      _emitProgress(SyncProgress(
-        phase: SyncPhase.downloadingPasal,
-        currentOperation: "Memeriksa pembaruan pasal...",
-        startTime: startTime,
-        isIncremental: true,
-        downloadedBytes: totalBytes,
-      ));
+      _emitProgress(
+        SyncProgress(
+          phase: SyncPhase.downloadingPasal,
+          currentOperation: "Memeriksa pembaruan pasal...",
+          startTime: startTime,
+          isIncremental: true,
+          downloadedBytes: totalBytes,
+        ),
+      );
 
       final List<dynamic> updatedPasal = await supabase
           .from('pasal')
@@ -457,26 +524,32 @@ class DataService {
       totalBytes += jsonEncode(updatedPasal).length;
       final totalUpdates = updatedPasal.length;
 
-      if (_checkCancelled()) return (false, _cancelledProgress(startTime, isIncremental: true));
+      if (_checkCancelled())
+        return (false, _cancelledProgress(startTime, isIncremental: true));
 
       // Phase 3: Fetch links for updated pasal
-      final Set<String> updatedPasalIds = 
-          updatedPasal.map((p) => p['id'] as String).toSet();
-      
+      final Set<String> updatedPasalIds = updatedPasal
+          .map((p) => p['id'] as String)
+          .toSet();
+
       Map<String, List<String>> linksMap = {};
       if (updatedPasalIds.isNotEmpty) {
-        _emitProgress(SyncProgress(
-          phase: SyncPhase.downloadingLinks,
-          currentOperation: "Memperbarui relasi pasal...",
-          startTime: startTime,
-          isIncremental: true,
-          totalPasal: totalUpdates,
-          downloadedBytes: totalBytes,
-        ));
+        _emitProgress(
+          SyncProgress(
+            phase: SyncPhase.downloadingLinks,
+            currentOperation: "Memperbarui relasi pasal...",
+            startTime: startTime,
+            isIncremental: true,
+            totalPasal: totalUpdates,
+            downloadedBytes: totalBytes,
+          ),
+        );
 
         final linksResponse = await supabase
             .from('pasal_links')
-            .select('source_pasal_id, target_pasal_id')
+            .select(
+              'id, source_pasal_id, target_pasal_id, keterangan, is_active, created_at',
+            )
             .eq('is_active', true)
             .inFilter('source_pasal_id', updatedPasalIds.toList());
 
@@ -485,24 +558,45 @@ class DataService {
         for (var link in linksResponse) {
           final sourceId = link['source_pasal_id'] as String;
           final targetId = link['target_pasal_id'] as String;
+
           linksMap.putIfAbsent(sourceId, () => []).add(targetId);
+
+          // Upsert the link in PasalLinksTable
+          await _database.upsertPasalLink(
+            PasalLinksTableCompanion(
+              id: Value(link['id'] as String),
+              sourcePasalId: Value(sourceId),
+              targetPasalId: Value(targetId),
+              keterangan: Value(link['keterangan'] as String?),
+              isActive: Value(link['is_active'] as bool? ?? true),
+              createdAt: Value(
+                link['created_at'] != null
+                    ? DateTime.parse(link['created_at'])
+                    : null,
+              ),
+            ),
+          );
         }
       }
 
-      if (_checkCancelled()) return (false, _cancelledProgress(startTime, isIncremental: true));
+      if (_checkCancelled())
+        return (false, _cancelledProgress(startTime, isIncremental: true));
 
       // Phase 4: Upsert pasal
-      _emitProgress(SyncProgress(
-        phase: SyncPhase.saving,
-        currentOperation: "Menyimpan pembaruan...",
-        startTime: startTime,
-        isIncremental: true,
-        totalPasal: totalUpdates,
-        downloadedBytes: totalBytes,
-      ));
+      _emitProgress(
+        SyncProgress(
+          phase: SyncPhase.saving,
+          currentOperation: "Menyimpan pembaruan...",
+          startTime: startTime,
+          isIncremental: true,
+          totalPasal: totalUpdates,
+          downloadedBytes: totalBytes,
+        ),
+      );
 
       for (int i = 0; i < updatedPasal.length; i++) {
-        if (_checkCancelled()) return (false, _cancelledProgress(startTime, isIncremental: true));
+        if (_checkCancelled())
+          return (false, _cancelledProgress(startTime, isIncremental: true));
 
         final item = updatedPasal[i];
         final pasal = PasalModel.fromJson(item);
@@ -534,18 +628,20 @@ class DataService {
           ),
         );
 
-        _emitProgress(SyncProgress(
-          phase: SyncPhase.saving,
-          currentOperation: "Menyimpan pasal ${i + 1}/$totalUpdates...",
-          startTime: startTime,
-          isIncremental: true,
-          totalPasal: totalUpdates,
-          downloadedPasal: i + 1,
-          downloadedBytes: totalBytes,
-          newRecords: newRecords,
-          updatedRecords: updatedRecords,
-          deletedRecords: deletedRecords,
-        ));
+        _emitProgress(
+          SyncProgress(
+            phase: SyncPhase.saving,
+            currentOperation: "Menyimpan pasal ${i + 1}/$totalUpdates...",
+            startTime: startTime,
+            isIncremental: true,
+            totalPasal: totalUpdates,
+            downloadedPasal: i + 1,
+            downloadedBytes: totalBytes,
+            newRecords: newRecords,
+            updatedRecords: updatedRecords,
+            deletedRecords: deletedRecords,
+          ),
+        );
       }
 
       // Phase 5: Complete
@@ -561,24 +657,29 @@ class DataService {
         updatedRecords: updatedRecords,
         deletedRecords: deletedRecords,
       );
-      
+
       _emitProgress(finalProgress);
       return (true, finalProgress);
-
     } catch (e) {
       print("Incremental Sync Error: $e");
-      return (false, SyncProgress(
-        phase: SyncPhase.error,
-        currentOperation: classifyError(e).userMessage,
-        startTime: startTime,
-        isIncremental: true,
-        errorMessage: e.toString(),
-      ));
+      return (
+        false,
+        SyncProgress(
+          phase: SyncPhase.error,
+          currentOperation: classifyError(e).userMessage,
+          startTime: startTime,
+          isIncremental: true,
+          errorMessage: e.toString(),
+        ),
+      );
     }
   }
 
   /// Create cancelled progress state
-  static SyncProgress _cancelledProgress(DateTime startTime, {bool isIncremental = false}) {
+  static SyncProgress _cancelledProgress(
+    DateTime startTime, {
+    bool isIncremental = false,
+  }) {
     return SyncProgress(
       phase: SyncPhase.cancelled,
       currentOperation: "Dibatalkan",
@@ -588,7 +689,11 @@ class DataService {
   }
 
   /// Estimate total bytes based on current progress
-  static int _estimateTotalBytes(int currentBytes, int downloadedRecords, int totalRecords) {
+  static int _estimateTotalBytes(
+    int currentBytes,
+    int downloadedRecords,
+    int totalRecords,
+  ) {
     if (downloadedRecords == 0 || totalRecords == 0) return currentBytes * 2;
     return (currentBytes * totalRecords / downloadedRecords).round();
   }
@@ -601,16 +706,18 @@ class DataService {
     try {
       final data = await _database.getAllUndangUndang();
       return data
-          .map((row) => UndangUndangModel(
-                id: row.id,
-                kode: row.kode,
-                nama: row.nama,
-                namaLengkap: row.namaLengkap,
-                deskripsi: row.deskripsi,
-                tahun: row.tahun,
-                isActive: row.isActive,
-                updatedAt: row.updatedAt,
-              ))
+          .map(
+            (row) => UndangUndangModel(
+              id: row.id,
+              kode: row.kode,
+              nama: row.nama,
+              namaLengkap: row.namaLengkap,
+              deskripsi: row.deskripsi,
+              tahun: row.tahun,
+              isActive: row.isActive,
+              updatedAt: row.updatedAt,
+            ),
+          )
           .toList();
     } catch (e) {
       print("Error getting all UU: $e");
@@ -622,19 +729,21 @@ class DataService {
     try {
       final data = await _database.getActivePasal();
       return data
-          .map((row) => PasalModel(
-                id: row.id,
-                undangUndangId: row.undangUndangId,
-                nomor: row.nomor,
-                isi: row.isi,
-                penjelasan: row.penjelasan,
-                judul: row.judul,
-                keywords: _parseJsonArray(row.keywords),
-                relatedIds: _parseJsonArray(row.relatedIds),
-                isActive: row.isActive,
-                createdAt: row.createdAt,
-                updatedAt: row.updatedAt,
-              ))
+          .map(
+            (row) => PasalModel(
+              id: row.id,
+              undangUndangId: row.undangUndangId,
+              nomor: row.nomor,
+              isi: row.isi,
+              penjelasan: row.penjelasan,
+              judul: row.judul,
+              keywords: _parseJsonArray(row.keywords),
+              relatedIds: _parseJsonArray(row.relatedIds),
+              isActive: row.isActive,
+              createdAt: row.createdAt,
+              updatedAt: row.updatedAt,
+            ),
+          )
           .toList();
     } catch (e) {
       print("Error getting all pasal: $e");
@@ -647,19 +756,21 @@ class DataService {
     try {
       final data = await _database.searchActivePasal(query);
       return data
-          .map((row) => PasalModel(
-                id: row.id,
-                undangUndangId: row.undangUndangId,
-                nomor: row.nomor,
-                isi: row.isi,
-                penjelasan: row.penjelasan,
-                judul: row.judul,
-                keywords: _parseJsonArray(row.keywords),
-                relatedIds: _parseJsonArray(row.relatedIds),
-                isActive: row.isActive,
-                createdAt: row.createdAt,
-                updatedAt: row.updatedAt,
-              ))
+          .map(
+            (row) => PasalModel(
+              id: row.id,
+              undangUndangId: row.undangUndangId,
+              nomor: row.nomor,
+              isi: row.isi,
+              penjelasan: row.penjelasan,
+              judul: row.judul,
+              keywords: _parseJsonArray(row.keywords),
+              relatedIds: _parseJsonArray(row.relatedIds),
+              isActive: row.isActive,
+              createdAt: row.createdAt,
+              updatedAt: row.updatedAt,
+            ),
+          )
           .toList();
     } catch (e) {
       print("Search error: $e");
@@ -723,19 +834,21 @@ class DataService {
     try {
       final data = await _database.getActivePasalByUndangUndang(uuId);
       return data
-          .map((row) => PasalModel(
-                id: row.id,
-                undangUndangId: row.undangUndangId,
-                nomor: row.nomor,
-                isi: row.isi,
-                penjelasan: row.penjelasan,
-                judul: row.judul,
-                keywords: _parseJsonArray(row.keywords),
-                relatedIds: _parseJsonArray(row.relatedIds),
-                isActive: row.isActive,
-                createdAt: row.createdAt,
-                updatedAt: row.updatedAt,
-              ))
+          .map(
+            (row) => PasalModel(
+              id: row.id,
+              undangUndangId: row.undangUndangId,
+              nomor: row.nomor,
+              isi: row.isi,
+              penjelasan: row.penjelasan,
+              judul: row.judul,
+              keywords: _parseJsonArray(row.keywords),
+              relatedIds: _parseJsonArray(row.relatedIds),
+              isActive: row.isActive,
+              createdAt: row.createdAt,
+              updatedAt: row.updatedAt,
+            ),
+          )
           .toList();
     } catch (e) {
       print("Error getting pasal by UU: $e");
@@ -747,22 +860,49 @@ class DataService {
     try {
       final data = await _database.searchActivePasal(keyword);
       return data
-          .map((row) => PasalModel(
-                id: row.id,
-                undangUndangId: row.undangUndangId,
-                nomor: row.nomor,
-                isi: row.isi,
-                penjelasan: row.penjelasan,
-                judul: row.judul,
-                keywords: _parseJsonArray(row.keywords),
-                relatedIds: _parseJsonArray(row.relatedIds),
-                isActive: row.isActive,
-                createdAt: row.createdAt,
-                updatedAt: row.updatedAt,
-              ))
+          .map(
+            (row) => PasalModel(
+              id: row.id,
+              undangUndangId: row.undangUndangId,
+              nomor: row.nomor,
+              isi: row.isi,
+              penjelasan: row.penjelasan,
+              judul: row.judul,
+              keywords: _parseJsonArray(row.keywords),
+              relatedIds: _parseJsonArray(row.relatedIds),
+              isActive: row.isActive,
+              createdAt: row.createdAt,
+              updatedAt: row.updatedAt,
+            ),
+          )
           .toList();
     } catch (e) {
       print("Error getting pasal by keyword: $e");
+      return [];
+    }
+  }
+
+  /// Get pasal links for a given pasal ID (with keterangan)
+  static Future<List<PasalLinkWithTarget>> getPasalLinks(String pasalId) async {
+    try {
+      final links = await _database.getLinksBySourcePasal(pasalId);
+      final results = <PasalLinkWithTarget>[];
+
+      for (final link in links) {
+        final targetPasal = await getPasalById(link.targetPasalId);
+        if (targetPasal != null) {
+          results.add(
+            PasalLinkWithTarget(
+              targetPasal: targetPasal,
+              keterangan: link.keterangan,
+            ),
+          );
+        }
+      }
+
+      return results;
+    } catch (e) {
+      print("Error getting pasal links: $e");
       return [];
     }
   }

@@ -986,18 +986,387 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
   }
 }
 
+class $PasalLinksTableTable extends PasalLinksTable
+    with TableInfo<$PasalLinksTableTable, PasalLinksTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PasalLinksTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _sourcePasalIdMeta =
+      const VerificationMeta('sourcePasalId');
+  @override
+  late final GeneratedColumn<String> sourcePasalId = GeneratedColumn<String>(
+      'source_pasal_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _targetPasalIdMeta =
+      const VerificationMeta('targetPasalId');
+  @override
+  late final GeneratedColumn<String> targetPasalId = GeneratedColumn<String>(
+      'target_pasal_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _keteranganMeta =
+      const VerificationMeta('keterangan');
+  @override
+  late final GeneratedColumn<String> keterangan = GeneratedColumn<String>(
+      'keterangan', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _isActiveMeta =
+      const VerificationMeta('isActive');
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+      'is_active', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_active" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, sourcePasalId, targetPasalId, keterangan, isActive, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'pasal_links_table';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<PasalLinksTableData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('source_pasal_id')) {
+      context.handle(
+          _sourcePasalIdMeta,
+          sourcePasalId.isAcceptableOrUnknown(
+              data['source_pasal_id']!, _sourcePasalIdMeta));
+    } else if (isInserting) {
+      context.missing(_sourcePasalIdMeta);
+    }
+    if (data.containsKey('target_pasal_id')) {
+      context.handle(
+          _targetPasalIdMeta,
+          targetPasalId.isAcceptableOrUnknown(
+              data['target_pasal_id']!, _targetPasalIdMeta));
+    } else if (isInserting) {
+      context.missing(_targetPasalIdMeta);
+    }
+    if (data.containsKey('keterangan')) {
+      context.handle(
+          _keteranganMeta,
+          keterangan.isAcceptableOrUnknown(
+              data['keterangan']!, _keteranganMeta));
+    }
+    if (data.containsKey('is_active')) {
+      context.handle(_isActiveMeta,
+          isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+        {sourcePasalId, targetPasalId},
+      ];
+  @override
+  PasalLinksTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PasalLinksTableData(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      sourcePasalId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}source_pasal_id'])!,
+      targetPasalId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}target_pasal_id'])!,
+      keterangan: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}keterangan']),
+      isActive: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_active'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at']),
+    );
+  }
+
+  @override
+  $PasalLinksTableTable createAlias(String alias) {
+    return $PasalLinksTableTable(attachedDatabase, alias);
+  }
+}
+
+class PasalLinksTableData extends DataClass
+    implements Insertable<PasalLinksTableData> {
+  final String id;
+  final String sourcePasalId;
+  final String targetPasalId;
+  final String? keterangan;
+  final bool isActive;
+  final DateTime? createdAt;
+  const PasalLinksTableData(
+      {required this.id,
+      required this.sourcePasalId,
+      required this.targetPasalId,
+      this.keterangan,
+      required this.isActive,
+      this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['source_pasal_id'] = Variable<String>(sourcePasalId);
+    map['target_pasal_id'] = Variable<String>(targetPasalId);
+    if (!nullToAbsent || keterangan != null) {
+      map['keterangan'] = Variable<String>(keterangan);
+    }
+    map['is_active'] = Variable<bool>(isActive);
+    if (!nullToAbsent || createdAt != null) {
+      map['created_at'] = Variable<DateTime>(createdAt);
+    }
+    return map;
+  }
+
+  PasalLinksTableCompanion toCompanion(bool nullToAbsent) {
+    return PasalLinksTableCompanion(
+      id: Value(id),
+      sourcePasalId: Value(sourcePasalId),
+      targetPasalId: Value(targetPasalId),
+      keterangan: keterangan == null && nullToAbsent
+          ? const Value.absent()
+          : Value(keterangan),
+      isActive: Value(isActive),
+      createdAt: createdAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdAt),
+    );
+  }
+
+  factory PasalLinksTableData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PasalLinksTableData(
+      id: serializer.fromJson<String>(json['id']),
+      sourcePasalId: serializer.fromJson<String>(json['sourcePasalId']),
+      targetPasalId: serializer.fromJson<String>(json['targetPasalId']),
+      keterangan: serializer.fromJson<String?>(json['keterangan']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
+      createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'sourcePasalId': serializer.toJson<String>(sourcePasalId),
+      'targetPasalId': serializer.toJson<String>(targetPasalId),
+      'keterangan': serializer.toJson<String?>(keterangan),
+      'isActive': serializer.toJson<bool>(isActive),
+      'createdAt': serializer.toJson<DateTime?>(createdAt),
+    };
+  }
+
+  PasalLinksTableData copyWith(
+          {String? id,
+          String? sourcePasalId,
+          String? targetPasalId,
+          Value<String?> keterangan = const Value.absent(),
+          bool? isActive,
+          Value<DateTime?> createdAt = const Value.absent()}) =>
+      PasalLinksTableData(
+        id: id ?? this.id,
+        sourcePasalId: sourcePasalId ?? this.sourcePasalId,
+        targetPasalId: targetPasalId ?? this.targetPasalId,
+        keterangan: keterangan.present ? keterangan.value : this.keterangan,
+        isActive: isActive ?? this.isActive,
+        createdAt: createdAt.present ? createdAt.value : this.createdAt,
+      );
+  PasalLinksTableData copyWithCompanion(PasalLinksTableCompanion data) {
+    return PasalLinksTableData(
+      id: data.id.present ? data.id.value : this.id,
+      sourcePasalId: data.sourcePasalId.present
+          ? data.sourcePasalId.value
+          : this.sourcePasalId,
+      targetPasalId: data.targetPasalId.present
+          ? data.targetPasalId.value
+          : this.targetPasalId,
+      keterangan:
+          data.keterangan.present ? data.keterangan.value : this.keterangan,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PasalLinksTableData(')
+          ..write('id: $id, ')
+          ..write('sourcePasalId: $sourcePasalId, ')
+          ..write('targetPasalId: $targetPasalId, ')
+          ..write('keterangan: $keterangan, ')
+          ..write('isActive: $isActive, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id, sourcePasalId, targetPasalId, keterangan, isActive, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PasalLinksTableData &&
+          other.id == this.id &&
+          other.sourcePasalId == this.sourcePasalId &&
+          other.targetPasalId == this.targetPasalId &&
+          other.keterangan == this.keterangan &&
+          other.isActive == this.isActive &&
+          other.createdAt == this.createdAt);
+}
+
+class PasalLinksTableCompanion extends UpdateCompanion<PasalLinksTableData> {
+  final Value<String> id;
+  final Value<String> sourcePasalId;
+  final Value<String> targetPasalId;
+  final Value<String?> keterangan;
+  final Value<bool> isActive;
+  final Value<DateTime?> createdAt;
+  final Value<int> rowid;
+  const PasalLinksTableCompanion({
+    this.id = const Value.absent(),
+    this.sourcePasalId = const Value.absent(),
+    this.targetPasalId = const Value.absent(),
+    this.keterangan = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PasalLinksTableCompanion.insert({
+    required String id,
+    required String sourcePasalId,
+    required String targetPasalId,
+    this.keterangan = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        sourcePasalId = Value(sourcePasalId),
+        targetPasalId = Value(targetPasalId);
+  static Insertable<PasalLinksTableData> custom({
+    Expression<String>? id,
+    Expression<String>? sourcePasalId,
+    Expression<String>? targetPasalId,
+    Expression<String>? keterangan,
+    Expression<bool>? isActive,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (sourcePasalId != null) 'source_pasal_id': sourcePasalId,
+      if (targetPasalId != null) 'target_pasal_id': targetPasalId,
+      if (keterangan != null) 'keterangan': keterangan,
+      if (isActive != null) 'is_active': isActive,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PasalLinksTableCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? sourcePasalId,
+      Value<String>? targetPasalId,
+      Value<String?>? keterangan,
+      Value<bool>? isActive,
+      Value<DateTime?>? createdAt,
+      Value<int>? rowid}) {
+    return PasalLinksTableCompanion(
+      id: id ?? this.id,
+      sourcePasalId: sourcePasalId ?? this.sourcePasalId,
+      targetPasalId: targetPasalId ?? this.targetPasalId,
+      keterangan: keterangan ?? this.keterangan,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (sourcePasalId.present) {
+      map['source_pasal_id'] = Variable<String>(sourcePasalId.value);
+    }
+    if (targetPasalId.present) {
+      map['target_pasal_id'] = Variable<String>(targetPasalId.value);
+    }
+    if (keterangan.present) {
+      map['keterangan'] = Variable<String>(keterangan.value);
+    }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PasalLinksTableCompanion(')
+          ..write('id: $id, ')
+          ..write('sourcePasalId: $sourcePasalId, ')
+          ..write('targetPasalId: $targetPasalId, ')
+          ..write('keterangan: $keterangan, ')
+          ..write('isActive: $isActive, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $UndangUndangTableTable undangUndangTable =
       $UndangUndangTableTable(this);
   late final $PasalTableTable pasalTable = $PasalTableTable(this);
+  late final $PasalLinksTableTable pasalLinksTable =
+      $PasalLinksTableTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [undangUndangTable, pasalTable];
+      [undangUndangTable, pasalTable, pasalLinksTable];
 }
 
 typedef $$UndangUndangTableTableCreateCompanionBuilder
@@ -1485,6 +1854,197 @@ typedef $$PasalTableTableProcessedTableManager = ProcessedTableManager<
     ),
     PasalTableData,
     PrefetchHooks Function()>;
+typedef $$PasalLinksTableTableCreateCompanionBuilder = PasalLinksTableCompanion
+    Function({
+  required String id,
+  required String sourcePasalId,
+  required String targetPasalId,
+  Value<String?> keterangan,
+  Value<bool> isActive,
+  Value<DateTime?> createdAt,
+  Value<int> rowid,
+});
+typedef $$PasalLinksTableTableUpdateCompanionBuilder = PasalLinksTableCompanion
+    Function({
+  Value<String> id,
+  Value<String> sourcePasalId,
+  Value<String> targetPasalId,
+  Value<String?> keterangan,
+  Value<bool> isActive,
+  Value<DateTime?> createdAt,
+  Value<int> rowid,
+});
+
+class $$PasalLinksTableTableFilterComposer
+    extends Composer<_$AppDatabase, $PasalLinksTableTable> {
+  $$PasalLinksTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get sourcePasalId => $composableBuilder(
+      column: $table.sourcePasalId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get targetPasalId => $composableBuilder(
+      column: $table.targetPasalId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get keterangan => $composableBuilder(
+      column: $table.keterangan, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+      column: $table.isActive, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$PasalLinksTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $PasalLinksTableTable> {
+  $$PasalLinksTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get sourcePasalId => $composableBuilder(
+      column: $table.sourcePasalId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get targetPasalId => $composableBuilder(
+      column: $table.targetPasalId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get keterangan => $composableBuilder(
+      column: $table.keterangan, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+      column: $table.isActive, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$PasalLinksTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PasalLinksTableTable> {
+  $$PasalLinksTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get sourcePasalId => $composableBuilder(
+      column: $table.sourcePasalId, builder: (column) => column);
+
+  GeneratedColumn<String> get targetPasalId => $composableBuilder(
+      column: $table.targetPasalId, builder: (column) => column);
+
+  GeneratedColumn<String> get keterangan => $composableBuilder(
+      column: $table.keterangan, builder: (column) => column);
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$PasalLinksTableTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $PasalLinksTableTable,
+    PasalLinksTableData,
+    $$PasalLinksTableTableFilterComposer,
+    $$PasalLinksTableTableOrderingComposer,
+    $$PasalLinksTableTableAnnotationComposer,
+    $$PasalLinksTableTableCreateCompanionBuilder,
+    $$PasalLinksTableTableUpdateCompanionBuilder,
+    (
+      PasalLinksTableData,
+      BaseReferences<_$AppDatabase, $PasalLinksTableTable, PasalLinksTableData>
+    ),
+    PasalLinksTableData,
+    PrefetchHooks Function()> {
+  $$PasalLinksTableTableTableManager(
+      _$AppDatabase db, $PasalLinksTableTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PasalLinksTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PasalLinksTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PasalLinksTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> sourcePasalId = const Value.absent(),
+            Value<String> targetPasalId = const Value.absent(),
+            Value<String?> keterangan = const Value.absent(),
+            Value<bool> isActive = const Value.absent(),
+            Value<DateTime?> createdAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PasalLinksTableCompanion(
+            id: id,
+            sourcePasalId: sourcePasalId,
+            targetPasalId: targetPasalId,
+            keterangan: keterangan,
+            isActive: isActive,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String sourcePasalId,
+            required String targetPasalId,
+            Value<String?> keterangan = const Value.absent(),
+            Value<bool> isActive = const Value.absent(),
+            Value<DateTime?> createdAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PasalLinksTableCompanion.insert(
+            id: id,
+            sourcePasalId: sourcePasalId,
+            targetPasalId: targetPasalId,
+            keterangan: keterangan,
+            isActive: isActive,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$PasalLinksTableTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $PasalLinksTableTable,
+    PasalLinksTableData,
+    $$PasalLinksTableTableFilterComposer,
+    $$PasalLinksTableTableOrderingComposer,
+    $$PasalLinksTableTableAnnotationComposer,
+    $$PasalLinksTableTableCreateCompanionBuilder,
+    $$PasalLinksTableTableUpdateCompanionBuilder,
+    (
+      PasalLinksTableData,
+      BaseReferences<_$AppDatabase, $PasalLinksTableTable, PasalLinksTableData>
+    ),
+    PasalLinksTableData,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -1493,4 +2053,6 @@ class $AppDatabaseManager {
       $$UndangUndangTableTableTableManager(_db, _db.undangUndangTable);
   $$PasalTableTableTableManager get pasalTable =>
       $$PasalTableTableTableManager(_db, _db.pasalTable);
+  $$PasalLinksTableTableTableManager get pasalLinksTable =>
+      $$PasalLinksTableTableTableManager(_db, _db.pasalLinksTable);
 }

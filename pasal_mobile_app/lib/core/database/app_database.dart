@@ -30,8 +30,9 @@ class PasalTable extends Table {
   TextColumn get judul => text().nullable()();
   TextColumn get keywords =>
       text().withDefault(const Constant('[]'))(); // JSON array as string
-  TextColumn get relatedIds =>
-      text().withDefault(const Constant('[]'))(); // JSON array as string
+  TextColumn get relatedIds => text().withDefault(
+    const Constant('[]'),
+  )(); // JSON array as string (deprecated, use PasalLinksTable)
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   DateTimeColumn get createdAt => dateTime().nullable()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
@@ -45,38 +46,70 @@ class PasalTable extends Table {
   ];
 }
 
-@DriftDatabase(tables: [UndangUndangTable, PasalTable])
+// Table for pasal links (relationships between pasal) with keterangan
+class PasalLinksTable extends Table {
+  TextColumn get id => text()();
+  TextColumn get sourcePasalId => text()();
+  TextColumn get targetPasalId => text()();
+  TextColumn get keterangan => text().nullable()();
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get createdAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {sourcePasalId, targetPasalId},
+  ];
+}
+
+@DriftDatabase(tables: [UndangUndangTable, PasalTable, PasalLinksTable])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (Migrator m) async {
-          await m.createAll();
-        },
-        onUpgrade: (Migrator m, int from, int to) async {
-          // Since data is synced from server, we can safely add columns
-          if (from < 2) {
-            // Add deskripsi column to undang_undang table
-            await customStatement(
-              'ALTER TABLE undang_undang_table ADD COLUMN deskripsi TEXT',
-            );
-          }
-          if (from < 3) {
-            // Add is_active column to pasal table for soft delete tracking
-            await customStatement(
-              'ALTER TABLE pasal_table ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1',
-            );
-            // Add updated_at column to undang_undang table for incremental sync
-            await customStatement(
-              'ALTER TABLE undang_undang_table ADD COLUMN updated_at INTEGER',
-            );
-          }
-        },
-      );
+    onCreate: (Migrator m) async {
+      await m.createAll();
+    },
+    onUpgrade: (Migrator m, int from, int to) async {
+      // Since data is synced from server, we can safely add columns
+      if (from < 2) {
+        // Add deskripsi column to undang_undang table
+        await customStatement(
+          'ALTER TABLE undang_undang_table ADD COLUMN deskripsi TEXT',
+        );
+      }
+      if (from < 3) {
+        // Add is_active column to pasal table for soft delete tracking
+        await customStatement(
+          'ALTER TABLE pasal_table ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1',
+        );
+        // Add updated_at column to undang_undang table for incremental sync
+        await customStatement(
+          'ALTER TABLE undang_undang_table ADD COLUMN updated_at INTEGER',
+        );
+      }
+      if (from < 4) {
+        // Create pasal_links_table for proper relationship storage with keterangan
+        await customStatement('''
+              CREATE TABLE IF NOT EXISTS pasal_links_table (
+                id TEXT NOT NULL PRIMARY KEY,
+                source_pasal_id TEXT NOT NULL,
+                target_pasal_id TEXT NOT NULL,
+                keterangan TEXT,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at INTEGER,
+                UNIQUE(source_pasal_id, target_pasal_id)
+              )
+            ''');
+      }
+    },
+  );
 
   // UndangUndang queries
   Future<List<UndangUndangTableData>> getAllUndangUndang() {
@@ -145,10 +178,7 @@ class AppDatabase extends _$AppDatabase {
   Future<void> upsertPasal(PasalTableCompanion data) {
     return into(pasalTable).insert(
       data,
-      onConflict: DoUpdate(
-        (old) => data,
-        target: [pasalTable.id],
-      ),
+      onConflict: DoUpdate((old) => data, target: [pasalTable.id]),
     );
   }
 
@@ -158,10 +188,7 @@ class AppDatabase extends _$AppDatabase {
         batch.insert(
           pasalTable,
           item,
-          onConflict: DoUpdate(
-            (old) => item,
-            target: [pasalTable.id],
-          ),
+          onConflict: DoUpdate((old) => item, target: [pasalTable.id]),
         );
       }
     });
@@ -170,10 +197,7 @@ class AppDatabase extends _$AppDatabase {
   Future<void> upsertUndangUndang(UndangUndangTableCompanion data) {
     return into(undangUndangTable).insert(
       data,
-      onConflict: DoUpdate(
-        (old) => data,
-        target: [undangUndangTable.id],
-      ),
+      onConflict: DoUpdate((old) => data, target: [undangUndangTable.id]),
     );
   }
 
@@ -183,10 +207,7 @@ class AppDatabase extends _$AppDatabase {
         batch.insert(
           undangUndangTable,
           item,
-          onConflict: DoUpdate(
-            (old) => item,
-            target: [undangUndangTable.id],
-          ),
+          onConflict: DoUpdate((old) => item, target: [undangUndangTable.id]),
         );
       }
     });
@@ -199,28 +220,30 @@ class AppDatabase extends _$AppDatabase {
 
   // Get only active pasal
   Future<List<PasalTableData>> getActivePasal() {
-    return (select(pasalTable)..where((tbl) => tbl.isActive.equals(true)))
-        .get();
+    return (select(
+      pasalTable,
+    )..where((tbl) => tbl.isActive.equals(true))).get();
   }
 
   // Get active pasal by UU
   Future<List<PasalTableData>> getActivePasalByUndangUndang(
-      String undangUndangId) {
-    return (select(pasalTable)
-          ..where((tbl) =>
+    String undangUndangId,
+  ) {
+    return (select(pasalTable)..where(
+          (tbl) =>
               tbl.undangUndangId.equals(undangUndangId) &
-              tbl.isActive.equals(true)))
+              tbl.isActive.equals(true),
+        ))
         .get();
   }
 
   // Search only active pasal
   Future<List<PasalTableData>> searchActivePasal(String query) {
-    return (select(pasalTable)
-          ..where(
-            (tbl) =>
-                (tbl.isi.like('%$query%') | tbl.nomor.like('%$query%')) &
-                tbl.isActive.equals(true),
-          ))
+    return (select(pasalTable)..where(
+          (tbl) =>
+              (tbl.isi.like('%$query%') | tbl.nomor.like('%$query%')) &
+              tbl.isActive.equals(true),
+        ))
         .get();
   }
 
@@ -242,6 +265,47 @@ class AppDatabase extends _$AppDatabase {
       ..limit(1);
     final result = await query.getSingleOrNull();
     return result?.read(undangUndangTable.updatedAt);
+  }
+
+  // ============================================================
+  // Pasal Links queries
+  // ============================================================
+
+  // Get all links for a source pasal
+  Future<List<PasalLinksTableData>> getLinksBySourcePasal(
+    String sourcePasalId,
+  ) {
+    return (select(pasalLinksTable)..where(
+          (tbl) =>
+              tbl.sourcePasalId.equals(sourcePasalId) &
+              tbl.isActive.equals(true),
+        ))
+        .get();
+  }
+
+  // Insert a single pasal link
+  Future<void> insertPasalLink(PasalLinksTableCompanion data) {
+    return into(pasalLinksTable).insert(data, mode: InsertMode.replace);
+  }
+
+  // Insert all pasal links in batch
+  Future<void> insertAllPasalLinks(List<PasalLinksTableCompanion> data) {
+    return batch((batch) {
+      batch.insertAll(pasalLinksTable, data, mode: InsertMode.replace);
+    });
+  }
+
+  // Clear all pasal links
+  Future<void> clearAllPasalLinks() {
+    return delete(pasalLinksTable).go();
+  }
+
+  // Upsert pasal link
+  Future<void> upsertPasalLink(PasalLinksTableCompanion data) {
+    return into(pasalLinksTable).insert(
+      data,
+      onConflict: DoUpdate((old) => data, target: [pasalLinksTable.id]),
+    );
   }
 }
 

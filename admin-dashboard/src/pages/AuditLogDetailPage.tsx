@@ -68,7 +68,7 @@ export function AuditLogDetailPage() {
           <Button
             variant="subtle"
             leftSection={<IconArrowLeft size={18} />}
-            onClick={() => navigate('/audit-log')}
+            onClick={() => navigate(-1)}
           >
             Kembali
           </Button>
@@ -121,7 +121,7 @@ export function AuditLogDetailPage() {
           <Button
             variant="subtle"
             leftSection={<IconArrowLeft size={18} />}
-            onClick={() => navigate('/audit-log')}
+            onClick={() => navigate(-1)}
           >
             Kembali
           </Button>
@@ -140,7 +140,7 @@ export function AuditLogDetailPage() {
           <Button
             variant="subtle"
             leftSection={<IconArrowLeft size={18} />}
-            onClick={() => navigate('/audit-log')}
+            onClick={() => navigate(-1)}
           >
             Kembali
           </Button>
