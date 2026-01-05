@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Title,
@@ -97,13 +97,39 @@ const pasalColumns: Column<PasalWithUndangUndang>[] = [
 
 export function PasalListPage() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const queryClient = useQueryClient()
-  const [page, setPage] = useState(1)
+
+  // Derive page directly from URL - this is the source of truth
+  const page = parseInt(searchParams.get('page') || '1', 10)
+  const setPage = (newPage: number) => {
+    const params = new URLSearchParams(searchParams)
+    if (newPage > 1) {
+      params.set('page', newPage.toString())
+    } else {
+      params.delete('page')
+    }
+    setSearchParams(params)
+  }
+
   const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
   const [debouncedSearch] = useDebouncedValue(search, 300)
-  const [filterUU, setFilterUU] = useState<string | null>(searchParams.get('uu'))
+
+  // Derive filterUU from URL as well
+  const filterUU = searchParams.get('uu')
+  const setFilterUU = (newUU: string | null) => {
+    const params = new URLSearchParams(searchParams)
+    if (newUU) {
+      params.set('uu', newUU)
+    } else {
+      params.delete('uu')
+    }
+    // Reset page when filter changes
+    params.delete('page')
+    setSearchParams(params)
+  }
+
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([])
   const [deleteModal, { open: openDelete, close: closeDelete }] = useDisclosure(false)
   const [bulkDeleteModal, { open: openBulkDelete, close: closeBulkDelete }] = useDisclosure(false)
@@ -141,24 +167,26 @@ export function PasalListPage() {
     },
   })
 
-  // Update URL params when filterUU changes
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams)
-    if (filterUU) {
-      params.set('uu', filterUU)
-    } else {
-      params.delete('uu')
-    }
-    const newSearch = params.toString()
-    if (newSearch !== searchParams.toString()) {
-      navigate({ search: newSearch }, { replace: true })
-    }
-  }, [filterUU, navigate, searchParams])
+  // Track previous values to only reset page on actual changes
+  const prevDebouncedSearch = useRef(debouncedSearch)
+  const prevSelectedKeywordsStr = useRef(JSON.stringify(selectedKeywords))
 
-  // Reset page when filters change
   useEffect(() => {
-    setPage(1)
-  }, [debouncedSearch, filterUU, selectedKeywords])
+    const currentKeywordsStr = JSON.stringify(selectedKeywords)
+    const keywordsChanged = currentKeywordsStr !== prevSelectedKeywordsStr.current
+    const searchChanged = debouncedSearch !== prevDebouncedSearch.current
+
+    if (searchChanged || keywordsChanged) {
+      prevDebouncedSearch.current = debouncedSearch
+      prevSelectedKeywordsStr.current = currentKeywordsStr
+
+      if (page > 1) {
+        const params = new URLSearchParams(searchParams)
+        params.delete('page')
+        setSearchParams(params, { replace: true })
+      }
+    }
+  }, [debouncedSearch, selectedKeywords, page, searchParams, setSearchParams])
 
   // Fetch pasal with pagination
   const { data: pasalData, isLoading } = useQuery({

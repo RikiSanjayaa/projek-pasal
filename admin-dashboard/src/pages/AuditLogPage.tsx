@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Title,
@@ -24,8 +24,23 @@ import type { AuditLog } from '@/lib/database.types'
 const PAGE_SIZE = 20
 
 export function AuditLogPage() {
-  const [searchParams] = useSearchParams()
-  const [page, setPage] = useState(1)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { undangUndangData, pasalData } = useDataMapping()
+
+  // Derive page directly from URL
+  const page = parseInt(searchParams.get('page') || '1', 10)
+  const setPage = (newPage: number) => {
+    const params = new URLSearchParams(searchParams)
+    if (newPage > 1) {
+      params.set('page', newPage.toString())
+    } else {
+      params.delete('page')
+    }
+    setSearchParams(params)
+  }
+
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const [search, setSearch] = useState('')
   const [debouncedSearch] = useDebouncedValue(search, 300)
@@ -33,9 +48,11 @@ export function AuditLogPage() {
   const [filterTable, setFilterTable] = useState<string | null>(null)
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null])
 
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
-  const { undangUndangData, pasalData } = useDataMapping()
+  // Refs for tracking previous filter values
+  const prevDebouncedSearch = useRef(debouncedSearch)
+  const prevFilterAction = useRef(filterAction)
+  const prevFilterTable = useRef(filterTable)
+  const prevDateRangeStr = useRef(JSON.stringify(dateRange))
 
   // Initialize date range from URL params on mount
   useEffect(() => {
@@ -48,6 +65,29 @@ export function AuditLogPage() {
       setDateRange([start, end])
     }
   }, [searchParams])
+
+  // Reset page when filters change
+  useEffect(() => {
+    const currentDateRangeStr = JSON.stringify(dateRange)
+
+    const searchChanged = debouncedSearch !== prevDebouncedSearch.current
+    const actionChanged = filterAction !== prevFilterAction.current
+    const tableChanged = filterTable !== prevFilterTable.current
+    const dateChanged = currentDateRangeStr !== prevDateRangeStr.current
+
+    if (searchChanged || actionChanged || tableChanged || dateChanged) {
+      prevDebouncedSearch.current = debouncedSearch
+      prevFilterAction.current = filterAction
+      prevFilterTable.current = filterTable
+      prevDateRangeStr.current = currentDateRangeStr
+
+      if (page > 1) {
+        const params = new URLSearchParams(searchParams)
+        params.delete('page')
+        setSearchParams(params, { replace: true })
+      }
+    }
+  }, [debouncedSearch, filterAction, filterTable, dateRange, page, searchParams, setSearchParams])
 
   const handleRefresh = () => {
     // Invalidate all audit-related queries
