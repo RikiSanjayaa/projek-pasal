@@ -174,25 +174,30 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                       ? null
                                       : () async {
                                           if (showUpdateAvailable) {
-                                            // Perform update if available
-                                            await syncManager.performSync();
+                                            Navigator.pop(context);
+                                            syncManager.performSync();
                                           } else {
-                                            // Check for updates
                                             final hasUpdate = await syncManager
                                                 .forceCheckUpdates();
-                                            if (mounted && !hasUpdate) {
-                                              setState(() {
-                                                _successFeedback = true;
-                                              });
-                                              Future.delayed(
+                                            if (mounted) {
+                                              if (!hasUpdate) {
+                                                setState(() {
+                                                  _successFeedback = true;
+                                                });
+                                                Future.delayed(
                                                   const Duration(seconds: 3),
                                                   () {
-                                                if (mounted) {
-                                                  setState(() {
-                                                    _successFeedback = false;
-                                                  });
-                                                }
-                                              });
+                                                    if (mounted) {
+                                                      setState(() {
+                                                        _successFeedback =
+                                                            false;
+                                                      });
+                                                    }
+                                                  },
+                                                );
+                                              } else {
+                                                Navigator.pop(context);
+                                              }
                                             }
                                           }
                                         },
@@ -205,7 +210,8 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                       borderRadius: BorderRadius.circular(12),
                                       border: showUpdateAvailable
                                           ? Border.all(
-                                              color: Colors.blue.withAlpha(100))
+                                              color: Colors.blue.withAlpha(100),
+                                            )
                                           : null,
                                     ),
                                     child: Column(
@@ -218,10 +224,12 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                               padding: const EdgeInsets.all(10),
                                               decoration: BoxDecoration(
                                                 color: showSuccess
-                                                    ? Colors.green
-                                                        .withValues(alpha: 0.1)
-                                                    : Colors.blue
-                                                        .withValues(alpha: 0.1),
+                                                    ? Colors.green.withValues(
+                                                        alpha: 0.1,
+                                                      )
+                                                    : Colors.blue.withValues(
+                                                        alpha: 0.1,
+                                                      ),
                                                 borderRadius:
                                                     BorderRadius.circular(10),
                                               ),
@@ -231,17 +239,17 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                                       height: 20,
                                                       child:
                                                           CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                      ),
+                                                            strokeWidth: 2,
+                                                          ),
                                                     )
                                                   : Icon(
                                                       showSuccess
                                                           ? Icons.check_circle
                                                           : (showUpdateAvailable
-                                                              ? Icons
-                                                                  .system_update
-                                                              : Icons
-                                                                  .sync_rounded),
+                                                                ? Icons
+                                                                      .system_update
+                                                                : Icons
+                                                                      .sync_rounded),
                                                       color: showSuccess
                                                           ? Colors.green
                                                           : Colors.blue,
@@ -258,33 +266,34 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                                     showSuccess
                                                         ? 'Data Sudah Terbaru'
                                                         : (isChecking
-                                                            ? 'Memeriksa...'
-                                                            : (isSyncing
-                                                                ? 'Sinkronisasi...'
-                                                                : (showUpdateAvailable
-                                                                    ? 'Update Tersedia'
-                                                                    : 'Periksa Update'))),
+                                                              ? 'Memeriksa...'
+                                                              : (isSyncing
+                                                                    ? 'Sinkronisasi...'
+                                                                    : (showUpdateAvailable
+                                                                          ? 'Update Tersedia'
+                                                                          : 'Periksa Update'))),
                                                     style: TextStyle(
                                                       fontSize: 14,
-                                                      fontWeight: FontWeight
-                                                          .w600,
+                                                      fontWeight:
+                                                          FontWeight.w600,
                                                       color: showSuccess
                                                           ? Colors.green
                                                           : (isDark
-                                                              ? Colors.white
-                                                              : Colors
-                                                                  .grey[800]),
+                                                                ? Colors.white
+                                                                : Colors
+                                                                      .grey[800]),
                                                     ),
                                                   ),
                                                   const SizedBox(height: 2),
                                                   Text(
                                                     isSyncing
-                                                        ? (progress?.currentOperation ??
-                                                            'Memproses...')
+                                                        ? (progress
+                                                                  ?.currentOperation ??
+                                                              'Memproses...')
                                                         : (syncManager.lastSyncTime !=
-                                                                null
-                                                            ? 'Terakhir: ${syncManager.lastSyncText}'
-                                                            : 'Belum pernah sync'),
+                                                                  null
+                                                              ? 'Terakhir: ${syncManager.lastSyncText}'
+                                                              : 'Belum pernah sync'),
                                                     style: TextStyle(
                                                       fontSize: 12,
                                                       color: isDark
@@ -292,8 +301,8 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                                           : Colors.grey[600],
                                                     ),
                                                     maxLines: 1,
-                                                    overflow: TextOverflow
-                                                        .ellipsis,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                   ),
                                                 ],
                                               ),
@@ -307,8 +316,8 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                                       : Colors.grey[400],
                                                   size: 20,
                                                 ),
-                                                onPressed: () => syncManager
-                                                    .cancelSync(),
+                                                onPressed: () =>
+                                                    syncManager.cancelSync(),
                                                 tooltip: 'Batalkan',
                                                 padding: EdgeInsets.zero,
                                                 constraints:
@@ -327,8 +336,9 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                         if (isSyncing && progress != null) ...[
                                           const SizedBox(height: 12),
                                           ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(4),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
                                             child: LinearProgressIndicator(
                                               value: progress.progress,
                                               minHeight: 6,
@@ -337,14 +347,14 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                                   : Colors.grey[300],
                                               valueColor:
                                                   const AlwaysStoppedAnimation<
-                                                      Color>(Colors.blue),
+                                                    Color
+                                                  >(Colors.blue),
                                             ),
                                           ),
                                           const SizedBox(height: 8),
                                           Row(
                                             mainAxisAlignment:
-                                                MainAxisAlignment
-                                                    .spaceBetween,
+                                                MainAxisAlignment.spaceBetween,
                                             children: [
                                               Text(
                                                 "${progress.progressPercent}%",
