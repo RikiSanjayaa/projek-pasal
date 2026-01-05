@@ -164,6 +164,12 @@ export function PasalListPage() {
   const { data: pasalData, isLoading } = useQuery({
     queryKey: ['pasal', 'list', page, pageSize, debouncedSearch, filterUU, selectedKeywords],
     queryFn: async () => {
+      // Handle "pasal" prefix - extract just the number/identifier
+      let searchTerm = debouncedSearch.toLowerCase().trim()
+      if (searchTerm.startsWith('pasal ')) {
+        searchTerm = searchTerm.substring(6).trim()
+      }
+
       let query = supabase
         .from('pasal')
         .select('*, undang_undang!inner(*)', { count: 'exact' })
@@ -171,8 +177,8 @@ export function PasalListPage() {
         .order('nomor')
         .range((page - 1) * pageSize, page * pageSize - 1)
 
-      if (debouncedSearch) {
-        query = query.or(`nomor.ilike.%${debouncedSearch}%,judul.ilike.%${debouncedSearch}%,isi.ilike.%${debouncedSearch}%`)
+      if (searchTerm) {
+        query = query.or(`nomor.ilike.%${searchTerm}%,judul.ilike.%${searchTerm}%,isi.ilike.%${searchTerm}%`)
       }
 
       if (filterUU) {
@@ -186,7 +192,32 @@ export function PasalListPage() {
       const { data, error, count } = await query
 
       if (error) throw error
-      return { data: data as PasalWithUndangUndang[], count: count || 0 }
+
+      // Sort results by numeric relevance when searching by number
+      let sortedData = data as PasalWithUndangUndang[]
+      if (searchTerm && /^\d/.test(searchTerm)) {
+        sortedData = [...sortedData].sort((a, b) => {
+          const aNomor = a.nomor.toLowerCase()
+          const bNomor = b.nomor.toLowerCase()
+
+          // Exact match gets highest priority
+          const aExact = aNomor === searchTerm
+          const bExact = bNomor === searchTerm
+          if (aExact !== bExact) return bExact ? 1 : -1
+
+          // Starts with gets second priority
+          const aStarts = aNomor.startsWith(searchTerm)
+          const bStarts = bNomor.startsWith(searchTerm)
+          if (aStarts !== bStarts) return bStarts ? 1 : -1
+
+          // Within same category, sort numerically
+          const aNum = parseInt(aNomor.replace(/[^0-9]/g, '')) || 999
+          const bNum = parseInt(bNomor.replace(/[^0-9]/g, '')) || 999
+          return aNum - bNum
+        })
+      }
+
+      return { data: sortedData, count: count || 0 }
     },
   })
 

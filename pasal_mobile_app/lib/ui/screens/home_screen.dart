@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/pasal_model.dart';
 import '../../models/undang_undang_model.dart';
 import '../../core/services/data_service.dart';
+import '../../core/utils/search_utils.dart';
 import '../widgets/pasal_card.dart';
 import '../widgets/main_layout.dart';
 import '../widgets/update_banner.dart';
@@ -149,11 +150,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase().trim();
 
-      // Handle "pasal X" search pattern - extract just the number/identifier
-      String nomorQuery = q;
-      if (q.startsWith('pasal ')) {
-        nomorQuery = q.substring(6).trim(); // Remove "pasal " prefix
-      }
+      // Use SearchUtils to handle "pasal X" search pattern
+      final nomorQuery = SearchUtils.extractNomorQuery(q);
 
       source = source.where((p) {
         // Match nomor: "pasal 1" should find nomor "1", "1A", etc.
@@ -168,6 +166,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
         return nomorMatch || contentMatch || titleMatch;
       }).toList();
+
+      // Sort by nomor relevance when searching by number
+      if (SearchUtils.isNomorSearch(q)) {
+        source = SearchUtils.sortByNomorRelevance(
+          source,
+          nomorQuery,
+          (p) => p.nomor,
+        );
+      }
     }
 
     setState(() {

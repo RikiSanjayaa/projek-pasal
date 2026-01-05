@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/pasal_model.dart';
+import '../../models/pasal_link_model.dart';
 import '../../core/services/data_service.dart';
 import '../utils/highlight_text.dart';
 import '../widgets/settings_drawer.dart';
@@ -462,123 +463,145 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                 ),
               ],
 
-              // Related pasal section
-              if (_currentPasal.relatedIds.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.link_rounded,
-                      size: 14,
-                      color: Colors.orange[400],
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'PASAL TERKAIT',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.orange[400],
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                ..._currentPasal.relatedIds.map((relId) {
-                  return FutureBuilder<PasalModel?>(
-                    future: DataService.getPasalById(relId),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData || snapshot.data == null) {
-                        return const SizedBox.shrink();
-                      }
-                      final relatedPasal = snapshot.data!;
+              // Related pasal section - now uses getPasalLinks to include keterangan
+              FutureBuilder<List<PasalLinkWithTarget>>(
+                future: DataService.getPasalLinks(_currentPasal.id),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  final links = snapshot.data!;
 
-                      return FutureBuilder<String>(
-                        future: DataService.getKodeUU(
-                          relatedPasal.undangUndangId,
-                        ),
-                        builder: (context, kodeSnapshot) {
-                          final kodeUU = kodeSnapshot.data ?? "UU";
-                          final relColor = UUColorHelper.getColor(kodeUU);
-
-                          return GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      ReadPasalScreen(pasal: relatedPasal),
-                                ),
-                              );
-                            },
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: isDark
-                                    ? Colors.orange.withValues(alpha: 0.1)
-                                    : Colors.orange.withValues(alpha: 0.05),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: Colors.orange.withValues(alpha: 0.2),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: relColor.withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Icon(
-                                      _getUUIcon(kodeUU),
-                                      size: 16,
-                                      color: relColor,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          "Pasal ${relatedPasal.nomor}",
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 13,
-                                            color: textColor,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          kodeUU,
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: relColor,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Icon(
-                                    Icons.chevron_right_rounded,
-                                    size: 20,
-                                    color: subTextColor,
-                                  ),
-                                ],
-                              ),
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.link_rounded,
+                            size: 14,
+                            color: Colors.orange[400],
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'PASAL TERKAIT',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.orange[400],
+                              letterSpacing: 0.5,
                             ),
-                          );
-                        },
-                      );
-                    },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      ...links.map((link) {
+                        final relatedPasal = link.targetPasal;
+
+                        return FutureBuilder<String>(
+                          future: DataService.getKodeUU(
+                            relatedPasal.undangUndangId,
+                          ),
+                          builder: (context, kodeSnapshot) {
+                            final kodeUU = kodeSnapshot.data ?? "UU";
+                            final relColor = UUColorHelper.getColor(kodeUU);
+
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        ReadPasalScreen(pasal: relatedPasal),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? Colors.orange.withValues(alpha: 0.1)
+                                      : Colors.orange.withValues(alpha: 0.05),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: Colors.orange.withValues(alpha: 0.2),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: relColor.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        _getUUIcon(kodeUU),
+                                        size: 16,
+                                        color: relColor,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                "Pasal ${relatedPasal.nomor}",
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 13,
+                                                  color: textColor,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Text(
+                                                kodeUU,
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: relColor,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          // Display keterangan if available
+                                          if (link.keterangan != null &&
+                                              link.keterangan!.isNotEmpty) ...[
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              link.keterangan!,
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: subTextColor,
+                                                fontStyle: FontStyle.italic,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.chevron_right_rounded,
+                                      size: 20,
+                                      color: subTextColor,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      }),
+                    ],
                   );
-                }),
-              ],
+                },
+              ),
 
               // Bottom spacing for navigation bar
               const SizedBox(height: 20),

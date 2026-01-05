@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/undang_undang_model.dart';
 import '../../models/pasal_model.dart';
+import '../../models/pasal_link_model.dart';
 import '../database/app_database.dart';
 import 'sync_progress.dart';
 
@@ -279,17 +280,44 @@ class DataService {
 
       final linksResponse = await supabase
           .from('pasal_links')
-          .select('source_pasal_id, target_pasal_id')
+          .select(
+            'id, source_pasal_id, target_pasal_id, keterangan, is_active, created_at',
+          )
           .eq('is_active', true);
 
       final linksBytes = jsonEncode(linksResponse).length;
       totalBytes += linksBytes;
 
+      // Build linksMap for backward compatibility with relatedIds field
       final Map<String, List<String>> linksMap = {};
+      final linkCompanions = <PasalLinksTableCompanion>[];
+
       for (var link in linksResponse) {
         final sourceId = link['source_pasal_id'] as String;
         final targetId = link['target_pasal_id'] as String;
         linksMap.putIfAbsent(sourceId, () => []).add(targetId);
+
+        // Build companion for PasalLinksTable
+        linkCompanions.add(
+          PasalLinksTableCompanion(
+            id: Value(link['id'] as String),
+            sourcePasalId: Value(sourceId),
+            targetPasalId: Value(targetId),
+            keterangan: Value(link['keterangan'] as String?),
+            isActive: Value(link['is_active'] as bool? ?? true),
+            createdAt: Value(
+              link['created_at'] != null
+                  ? DateTime.parse(link['created_at'])
+                  : null,
+            ),
+          ),
+        );
+      }
+
+      // Clear and insert all pasal links
+      await _database.clearAllPasalLinks();
+      if (linkCompanions.isNotEmpty) {
+        await _database.insertAllPasalLinks(linkCompanions);
       }
 
       if (_checkCancelled()) return (false, _cancelledProgress(startTime));
@@ -519,7 +547,9 @@ class DataService {
 
         final linksResponse = await supabase
             .from('pasal_links')
-            .select('source_pasal_id, target_pasal_id')
+            .select(
+              'id, source_pasal_id, target_pasal_id, keterangan, is_active, created_at',
+            )
             .eq('is_active', true)
             .inFilter('source_pasal_id', updatedPasalIds.toList());
 
@@ -530,6 +560,22 @@ class DataService {
           final targetId = link['target_pasal_id'] as String;
 
           linksMap.putIfAbsent(sourceId, () => []).add(targetId);
+
+          // Upsert the link in PasalLinksTable
+          await _database.upsertPasalLink(
+            PasalLinksTableCompanion(
+              id: Value(link['id'] as String),
+              sourcePasalId: Value(sourceId),
+              targetPasalId: Value(targetId),
+              keterangan: Value(link['keterangan'] as String?),
+              isActive: Value(link['is_active'] as bool? ?? true),
+              createdAt: Value(
+                link['created_at'] != null
+                    ? DateTime.parse(link['created_at'])
+                    : null,
+              ),
+            ),
+          );
         }
       }
 
@@ -832,6 +878,31 @@ class DataService {
           .toList();
     } catch (e) {
       print("Error getting pasal by keyword: $e");
+      return [];
+    }
+  }
+
+  /// Get pasal links for a given pasal ID (with keterangan)
+  static Future<List<PasalLinkWithTarget>> getPasalLinks(String pasalId) async {
+    try {
+      final links = await _database.getLinksBySourcePasal(pasalId);
+      final results = <PasalLinkWithTarget>[];
+
+      for (final link in links) {
+        final targetPasal = await getPasalById(link.targetPasalId);
+        if (targetPasal != null) {
+          results.add(
+            PasalLinkWithTarget(
+              targetPasal: targetPasal,
+              keterangan: link.keterangan,
+            ),
+          );
+        }
+      }
+
+      return results;
+    } catch (e) {
+      print("Error getting pasal links: $e");
       return [];
     }
   }
