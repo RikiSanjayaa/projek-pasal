@@ -126,10 +126,10 @@ class LawContentFormatter extends StatelessWidget {
 
   Widget _buildListItem(String marker, String text, int indentLevel) {
     const double baseLeftPadding = 0.0;
-    const double indentWidth = 26.0;
+    const double indentWidth = 22.0;
 
     // Calculate width based on typical char width + buffer to prevent wrapping like "(2a" \n ")"
-    final double markerWidth = (marker.length * 9.0) + 2.0;
+    final double markerWidth = (marker.length * 8.0) + 2.0;
 
     return Padding(
       padding: EdgeInsets.only(

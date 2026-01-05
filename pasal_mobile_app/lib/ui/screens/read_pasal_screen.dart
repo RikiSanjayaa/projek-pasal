@@ -50,15 +50,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
   }
 
   IconData _getUUIcon(String? kode) {
-    if (kode == null) return Icons.menu_book_rounded;
-    final code = kode.toUpperCase().trim();
-    if (code == 'KUHP') return Icons.gavel_rounded;
-    if (code.contains('KUHAP')) return Icons.policy_rounded;
-    if (code.contains('ITE')) return Icons.computer_rounded;
-    if (code.contains('KUHPER') || code.contains('PERDATA')) {
-      return Icons.people_rounded;
-    }
-    return Icons.menu_book_rounded;
+    return UUColorHelper.getIcon(kode);
   }
 
   @override
@@ -189,7 +181,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
       body: SingleChildScrollView(
         controller: _scrollController,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -280,7 +272,8 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
 
                     const SizedBox(height: 24),
 
-                    if (_currentPasal.judul != null) ...[
+                    if (_currentPasal.judul != null &&
+                        _currentPasal.judul!.trim().isNotEmpty) ...[
                       // "JUDUL" Label
                       Container(
                         margin: const EdgeInsets.only(bottom: 8),
