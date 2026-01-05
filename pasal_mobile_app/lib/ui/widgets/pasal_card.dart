@@ -104,7 +104,8 @@ class PasalCard extends StatelessWidget {
                     ),
                   ),
 
-                  if (pasal.judul != null)
+                  if (pasal.judul != null &&
+                      pasal.judul!.trim().isNotEmpty) ...[
                     Padding(
                       padding: const EdgeInsets.only(top: 4.0),
                       child: Text(
@@ -116,8 +117,10 @@ class PasalCard extends StatelessWidget {
                         ),
                       ),
                     ),
-
-                  const SizedBox(height: 6),
+                    const SizedBox(height: 6),
+                  ] else ...[
+                    const SizedBox(height: 2),
+                  ],
 
                   HighlightText(
                     text: pasal.isi.replaceAll('\n', ' '),
