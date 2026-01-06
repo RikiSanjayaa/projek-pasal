@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/config/app_colors.dart';
 import '../../core/services/data_service.dart';
 import '../../core/services/sync_manager.dart';
 import 'main_navigation.dart';
@@ -49,7 +50,7 @@ class _SplashScreenState extends State<SplashScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
+      backgroundColor: AppColors.scaffold(isDark),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -79,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen> {
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : Colors.blue,
+                color: isDark ? AppColors.textPrimaryDark : AppColors.primary,
                 letterSpacing: 1.2,
               ),
             ),
@@ -90,7 +91,7 @@ class _SplashScreenState extends State<SplashScreen> {
               "Pencarian Pasal Hukum Indonesia",
               style: TextStyle(
                 fontSize: 12,
-                color: isDark ? Colors.grey[500] : Colors.grey[600],
+                color: AppColors.textSecondary(isDark),
               ),
             ),
 
@@ -101,9 +102,7 @@ class _SplashScreenState extends State<SplashScreen> {
               height: 24,
               child: CircularProgressIndicator(
                 strokeWidth: 2.5,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  isDark ? Colors.blue[300]! : Colors.blue,
-                ),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
               ),
             ),
             const SizedBox(height: 16),
@@ -111,7 +110,7 @@ class _SplashScreenState extends State<SplashScreen> {
               "Menyiapkan data hukum...",
               style: TextStyle(
                 fontSize: 13,
-                color: isDark ? Colors.grey[500] : Colors.grey[600],
+                color: AppColors.textSecondary(isDark),
               ),
             ),
           ],

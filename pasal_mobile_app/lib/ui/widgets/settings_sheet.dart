@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/config/app_colors.dart';
 import '../../core/config/theme_controller.dart';
 import '../../core/services/sync_manager.dart';
 
@@ -18,7 +19,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        color: AppColors.card(isDark),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: SafeArea(
@@ -31,7 +32,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[400],
+                color: AppColors.border(isDark),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -44,7 +45,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                   Icon(
                     Icons.settings_rounded,
                     size: 24,
-                    color: isDark ? Colors.white : Colors.grey[800],
+                    color: AppColors.textPrimary(isDark),
                   ),
                   const SizedBox(width: 12),
                   Text(
@@ -52,7 +53,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.grey[800],
+                      color: AppColors.textPrimary(isDark),
                     ),
                   ),
                 ],
@@ -70,7 +71,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.grey[400] : Colors.grey[700],
+                      color: AppColors.textSecondary(isDark),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -124,7 +125,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.grey[400] : Colors.grey[700],
+                      color: AppColors.textSecondary(isDark),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -144,19 +145,19 @@ class _SettingsSheetState extends State<SettingsSheet> {
                                 if (mounted && !hasUpdate) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: const Row(
+                                      content: Row(
                                         children: [
                                           Icon(
                                             Icons.check_circle,
-                                            color: Colors.white,
+                                            color: AppColors.iconDark,
                                             size: 18,
                                           ),
-                                          SizedBox(width: 8),
-                                          Text("Data sudah up-to-date"),
+                                          const SizedBox(width: 8),
+                                          const Text("Data sudah up-to-date"),
                                         ],
                                       ),
                                       behavior: SnackBarBehavior.floating,
-                                      backgroundColor: Colors.green,
+                                      backgroundColor: AppColors.success,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(10),
                                       ),
@@ -169,7 +170,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: isDark ? Colors.grey[850] : Colors.grey[100],
+                            color: AppColors.inputFill(isDark),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
@@ -177,7 +178,9 @@ class _SettingsSheetState extends State<SettingsSheet> {
                               Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: Colors.blue.withValues(alpha: 0.1),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: isSyncing
@@ -190,7 +193,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                                       )
                                     : const Icon(
                                         Icons.sync_rounded,
-                                        color: Colors.blue,
+                                        color: AppColors.primary,
                                         size: 20,
                                       ),
                               ),
@@ -206,9 +209,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
-                                        color: isDark
-                                            ? Colors.white
-                                            : Colors.grey[800],
+                                        color: AppColors.textPrimary(isDark),
                                       ),
                                     ),
                                     const SizedBox(height: 2),
@@ -218,9 +219,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                                           : 'Belum pernah sync',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: isDark
-                                            ? Colors.grey[500]
-                                            : Colors.grey[600],
+                                        color: AppColors.textSecondary(isDark),
                                       ),
                                     ),
                                   ],
@@ -229,9 +228,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                               if (!isSyncing)
                                 Icon(
                                   Icons.chevron_right,
-                                  color: isDark
-                                      ? Colors.grey[600]
-                                      : Colors.grey[400],
+                                  color: AppColors.icon(isDark),
                                 ),
                             ],
                           ),
@@ -252,7 +249,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                 'CariPasal v1.0.0',
                 style: TextStyle(
                   fontSize: 12,
-                  color: isDark ? Colors.grey[600] : Colors.grey[500],
+                  color: AppColors.textSecondary(isDark),
                 ),
               ),
             ),
@@ -278,11 +275,13 @@ class _SettingsSheetState extends State<SettingsSheet> {
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             color: isSelected
-                ? Colors.blue.withValues(alpha: 0.15)
-                : (isDark ? Colors.grey[850] : Colors.grey[100]),
+                ? AppColors.primary.withValues(alpha: isDark ? 0.1 : 0.05)
+                : AppColors.inputFill(isDark),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected ? Colors.blue : Colors.transparent,
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: isDark ? 0.5 : 0.3)
+                  : Colors.transparent,
               width: 2,
             ),
           ),
@@ -292,8 +291,8 @@ class _SettingsSheetState extends State<SettingsSheet> {
                 icon,
                 size: 24,
                 color: isSelected
-                    ? Colors.blue
-                    : (isDark ? Colors.grey[500] : Colors.grey[600]),
+                    ? AppColors.primary
+                    : AppColors.textSecondary(isDark),
               ),
               const SizedBox(height: 4),
               Text(
@@ -302,8 +301,8 @@ class _SettingsSheetState extends State<SettingsSheet> {
                   fontSize: 12,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   color: isSelected
-                      ? Colors.blue
-                      : (isDark ? Colors.grey[500] : Colors.grey[600]),
+                      ? AppColors.primary
+                      : AppColors.textSecondary(isDark),
                 ),
               ),
             ],

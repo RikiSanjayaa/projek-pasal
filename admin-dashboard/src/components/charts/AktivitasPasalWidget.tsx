@@ -53,10 +53,10 @@ export function AktivitasPasalWidget({ recentLogs = [], trashedPasal = [], links
             Aktivitas Terbaru ({recentLogs.length})
           </Tabs.Tab>
           <Tabs.Tab value="trash" leftSection={<IconAlertTriangle size={14} />}>
-            Recycle Bin Pasal ({trashedPasal.length})
+            Sampah Pasal ({trashedPasal.length})
           </Tabs.Tab>
           <Tabs.Tab value="broken-links" leftSection={<IconLinkOff size={14} />}>
-            link pasal rusak ({orphanedLinks.length})
+            Link Pasal Rusak ({orphanedLinks.length})
           </Tabs.Tab>
         </Tabs.List>
 
@@ -93,7 +93,7 @@ export function AktivitasPasalWidget({ recentLogs = [], trashedPasal = [], links
                         variant="light"
                         size="sm"
                       >
-                        {log.action}
+                        {log.action === 'CREATE' ? 'TAMBAH' : log.action === 'UPDATE' ? 'UBAH' : 'HAPUS'}
                       </Badge>
                       <Text size="sm" fw={500}>
                         {log.admin_email}

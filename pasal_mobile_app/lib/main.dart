@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/config/env.dart';
+import 'core/config/app_colors.dart';
 import 'core/services/data_service.dart';
 import 'ui/screens/splash_screen.dart';
 import 'core/config/theme_controller.dart';
@@ -32,22 +33,22 @@ class MyApp extends StatelessWidget {
           // Tema Terang
           theme: ThemeData(
             brightness: Brightness.light,
-            scaffoldBackgroundColor: const Color(0xFFF5F7FA),
-            primaryColor: Colors.blue,
+            scaffoldBackgroundColor: AppColors.scaffoldLight,
+            primaryColor: AppColors.primary,
             colorScheme: ColorScheme.light(
-              primary: Colors.blue,
-              secondary: Colors.blue,
-              surface: Colors.white,
+              primary: AppColors.primary,
+              secondary: AppColors.secondary,
+              surface: AppColors.cardLight,
             ),
             appBarTheme: const AppBarTheme(
-              backgroundColor: Color(0xFFF5F7FA),
+              backgroundColor: AppColors.appBarLight,
               foregroundColor: Colors.black,
               elevation: 0,
               scrolledUnderElevation: 0, // Fix M3 color change on scroll
             ),
             inputDecorationTheme: InputDecorationTheme(
               filled: true,
-              fillColor: Colors.white,
+              fillColor: AppColors.inputFillLight,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -57,23 +58,23 @@ class MyApp extends StatelessWidget {
           // Tema Gelap
           darkTheme: ThemeData(
             brightness: Brightness.dark,
-            scaffoldBackgroundColor: const Color(0xFF121212),
-            cardColor: const Color(0xFF1E1E1E),
-            primaryColor: Colors.blue,
+            scaffoldBackgroundColor: AppColors.scaffoldDark,
+            cardColor: AppColors.cardDark,
+            primaryColor: AppColors.primary,
             colorScheme: ColorScheme.dark(
-              primary: Colors.blue,
-              secondary: Colors.blue,
-              surface: const Color(0xFF1E1E1E),
+              primary: AppColors.primary,
+              secondary: AppColors.secondary,
+              surface: AppColors.cardDark,
             ),
             appBarTheme: const AppBarTheme(
-              backgroundColor: Color(0xFF121212),
+              backgroundColor: AppColors.appBarDark,
               foregroundColor: Colors.white,
               elevation: 0,
               scrolledUnderElevation: 0, // Fix M3 color change on scroll
             ),
             inputDecorationTheme: InputDecorationTheme(
               filled: true,
-              fillColor: const Color(0xFF2C2C2C),
+              fillColor: AppColors.inputFillDark,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,

@@ -139,7 +139,7 @@ export function PasalDetailPage() {
 
               <div>
                 <Text size="sm" c="dimmed" mb={4}>Isi Pasal</Text>
-                <Card withBorder padding="sm" bg="var(--mantine-color-default-hover)">
+                <Card withBorder padding="sm" bg="var(--mantine-color-default-hover)" shadow="none">
                   <Text style={{ whiteSpace: 'pre-wrap' }}>{pasal.isi}</Text>
                 </Card>
               </div>
@@ -147,7 +147,7 @@ export function PasalDetailPage() {
               {pasal.penjelasan && (
                 <div>
                   <Text size="sm" c="dimmed" mb={4}>Penjelasan</Text>
-                  <Card withBorder padding="sm" bg="var(--mantine-color-blue-light)">
+                  <Card withBorder padding="sm" bg="var(--mantine-color-blue-light)" shadow="none">
                     <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{pasal.penjelasan}</Text>
                   </Card>
                 </div>

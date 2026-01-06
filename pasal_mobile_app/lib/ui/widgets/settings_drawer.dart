@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/config/app_colors.dart';
 import '../../core/config/theme_controller.dart';
 import '../../core/services/sync_manager.dart';
 import '../../core/services/sync_progress.dart';
@@ -23,7 +24,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
 
     return Drawer(
       width: screenWidth * 0.85, // 85% of screen width
-      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+      backgroundColor: AppColors.scaffold(isDark),
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -33,9 +34,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
               decoration: BoxDecoration(
                 border: Border(
-                  bottom: BorderSide(
-                    color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
-                  ),
+                  bottom: BorderSide(color: AppColors.border(isDark)),
                 ),
               ),
               child: Row(
@@ -43,13 +42,13 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
                       Icons.settings_rounded,
                       size: 24,
-                      color: Colors.blue,
+                      color: AppColors.primary,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -77,10 +76,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: Icon(
-                      Icons.close,
-                      color: isDark ? Colors.grey[400] : Colors.grey[600],
-                    ),
+                    icon: Icon(Icons.close, color: AppColors.icon(isDark)),
                   ),
                 ],
               ),
@@ -98,7 +94,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.grey[400] : Colors.grey[700],
+                        color: AppColors.textSecondary(isDark),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -146,7 +142,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.grey[400] : Colors.grey[700],
+                        color: AppColors.textSecondary(isDark),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -205,12 +201,17 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                     padding: const EdgeInsets.all(16),
                                     decoration: BoxDecoration(
                                       color: isDark
-                                          ? Colors.grey[850]
-                                          : Colors.grey[100],
+                                          ? AppColors.primary.withValues(
+                                              alpha: 0.1,
+                                            )
+                                          : AppColors.primary.withValues(
+                                              alpha: 0.05,
+                                            ),
                                       borderRadius: BorderRadius.circular(12),
                                       border: showUpdateAvailable
                                           ? Border.all(
-                                              color: Colors.blue.withAlpha(100),
+                                              color: AppColors.primary
+                                                  .withAlpha(100),
                                             )
                                           : null,
                                     ),
@@ -227,9 +228,10 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                                     ? Colors.green.withValues(
                                                         alpha: 0.1,
                                                       )
-                                                    : Colors.blue.withValues(
-                                                        alpha: 0.1,
-                                                      ),
+                                                    : AppColors.primary
+                                                          .withValues(
+                                                            alpha: 0.1,
+                                                          ),
                                                 borderRadius:
                                                     BorderRadius.circular(10),
                                               ),
@@ -251,8 +253,8 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                                                 : Icons
                                                                       .sync_rounded),
                                                       color: showSuccess
-                                                          ? Colors.green
-                                                          : Colors.blue,
+                                                          ? AppColors.success
+                                                          : AppColors.primary,
                                                       size: 20,
                                                     ),
                                             ),
@@ -277,11 +279,10 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                                       fontWeight:
                                                           FontWeight.w600,
                                                       color: showSuccess
-                                                          ? Colors.green
-                                                          : (isDark
-                                                                ? Colors.white
-                                                                : Colors
-                                                                      .grey[800]),
+                                                          ? AppColors.success
+                                                          : AppColors.textPrimary(
+                                                              isDark,
+                                                            ),
                                                     ),
                                                   ),
                                                   const SizedBox(height: 2),
@@ -348,7 +349,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                               valueColor:
                                                   const AlwaysStoppedAnimation<
                                                     Color
-                                                  >(Colors.blue),
+                                                  >(AppColors.primary),
                                             ),
                                           ),
                                           const SizedBox(height: 8),
@@ -359,7 +360,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                               Text(
                                                 "${progress.progressPercent}%",
                                                 style: TextStyle(
-                                                  color: Colors.blue,
+                                                  color: AppColors.primary,
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.bold,
                                                 ),
@@ -414,11 +415,13 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             color: isSelected
-                ? Colors.blue.withValues(alpha: 0.15)
-                : (isDark ? Colors.grey[850] : Colors.grey[100]),
+                ? AppColors.primary.withValues(alpha: isDark ? 0.1 : 0.05)
+                : AppColors.inputFill(isDark),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected ? Colors.blue : Colors.transparent,
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: isDark ? 0.5 : 0.3)
+                  : Colors.transparent,
               width: 2,
             ),
           ),
@@ -428,7 +431,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                 icon,
                 size: 24,
                 color: isSelected
-                    ? Colors.blue
+                    ? AppColors.primary
                     : (isDark ? Colors.grey[500] : Colors.grey[600]),
               ),
               const SizedBox(height: 4),
@@ -438,8 +441,8 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                   fontSize: 12,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   color: isSelected
-                      ? Colors.blue
-                      : (isDark ? Colors.grey[500] : Colors.grey[600]),
+                      ? AppColors.primary
+                      : AppColors.textSecondary(isDark),
                 ),
               ),
             ],

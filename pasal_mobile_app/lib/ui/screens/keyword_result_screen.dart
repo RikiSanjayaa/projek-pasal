@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/config/app_colors.dart';
 import '../../core/services/data_service.dart';
 import '../widgets/settings_drawer.dart';
 
@@ -12,13 +13,13 @@ class KeywordResultScreen extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
+      backgroundColor: AppColors.scaffold(isDark),
       endDrawer: const SettingsDrawer(),
       appBar: AppBar(
         title: Text(keyword),
         elevation: 0,
-        backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
-        foregroundColor: isDark ? Colors.white : Colors.black,
+        backgroundColor: AppColors.appBar(isDark),
+        foregroundColor: AppColors.textPrimary(isDark),
         actions: [
           Builder(
             builder: (ctx) => IconButton(
@@ -65,21 +66,17 @@ class KeywordResultScreen extends StatelessWidget {
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     elevation: 0,
-                    color: isDark ? Colors.grey[850] : Colors.white,
+                    color: AppColors.card(isDark),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                        color: isDark
-                            ? Colors.grey[800]!
-                            : Colors.grey.shade200,
-                      ),
+                      side: BorderSide(color: AppColors.border(isDark)),
                     ),
                     child: ExpansionTile(
                       title: Text(
                         "$kodeUU - ${pasal.nomor}",
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Colors.black87,
+                          color: AppColors.textPrimary(isDark),
                         ),
                       ),
                       subtitle: Text(
@@ -87,7 +84,7 @@ class KeywordResultScreen extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          color: AppColors.textSecondary(isDark),
                         ),
                       ),
                       children: [
@@ -98,7 +95,7 @@ class KeywordResultScreen extends StatelessWidget {
                             textAlign: TextAlign.justify,
                             style: TextStyle(
                               height: 1.5,
-                              color: isDark ? Colors.grey[300] : Colors.black87,
+                              color: AppColors.textPrimary(isDark),
                             ),
                           ),
                         ),
@@ -117,20 +114,22 @@ class KeywordResultScreen extends StatelessWidget {
                                       fontSize: 10,
                                       color: isActive
                                           ? Colors.white
-                                          : Colors.blue,
+                                          : AppColors.primary,
                                     ),
                                   ),
                                   backgroundColor: isActive
-                                      ? Colors.blue
-                                      : (isDark
-                                            ? Colors.grey[800]
-                                            : Colors.white),
+                                      ? AppColors.primary
+                                      : AppColors.card(isDark),
                                   side: BorderSide(
                                     color: isActive
                                         ? Colors.transparent
                                         : (isDark
-                                              ? Colors.blue.shade700
-                                              : Colors.blue.shade100),
+                                              ? AppColors.primary.withValues(
+                                                  alpha: 0.8,
+                                                )
+                                              : AppColors.primary.withValues(
+                                                  alpha: 0.8,
+                                                )),
                                   ),
                                   visualDensity: VisualDensity.compact,
                                 );

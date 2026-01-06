@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/config/app_colors.dart';
 
 /// Bottom sheet for browsing and searching all available keywords
 class KeywordBottomSheet extends StatefulWidget {
@@ -71,7 +72,7 @@ class _KeywordBottomSheetState extends State<KeywordBottomSheet> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.75,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        color: AppColors.card(isDark),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
@@ -82,7 +83,7 @@ class _KeywordBottomSheetState extends State<KeywordBottomSheet> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey[400],
+              color: AppColors.border(isDark),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -98,7 +99,7 @@ class _KeywordBottomSheetState extends State<KeywordBottomSheet> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black87,
+                    color: AppColors.textPrimary(isDark),
                   ),
                 ),
                 if (widget.selectedKeywords.isNotEmpty)
@@ -125,12 +126,10 @@ class _KeywordBottomSheetState extends State<KeywordBottomSheet> {
               onChanged: (val) => setState(() => _searchQuery = val),
               decoration: InputDecoration(
                 hintText: 'Cari keyword...',
-                hintStyle: TextStyle(
-                  color: isDark ? Colors.grey[500] : Colors.grey[600],
-                ),
+                hintStyle: TextStyle(color: AppColors.textSecondary(isDark)),
                 prefixIcon: Icon(
                   Icons.search,
-                  color: isDark ? Colors.grey[500] : Colors.grey[600],
+                  color: AppColors.textSecondary(isDark),
                 ),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -142,7 +141,7 @@ class _KeywordBottomSheetState extends State<KeywordBottomSheet> {
                       )
                     : null,
                 filled: true,
-                fillColor: isDark ? Colors.grey[850] : Colors.grey[100],
+                fillColor: AppColors.inputFill(isDark),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -177,7 +176,8 @@ class _KeywordBottomSheetState extends State<KeywordBottomSheet> {
                 ],
 
                 // Popular keywords section (only show if not searching)
-                if (_searchQuery.isEmpty && widget.popularKeywords.isNotEmpty) ...[
+                if (_searchQuery.isEmpty &&
+                    widget.popularKeywords.isNotEmpty) ...[
                   _buildSectionHeader('POPULER', isDark),
                   const SizedBox(height: 8),
                   _buildKeywordChips(
@@ -209,9 +209,7 @@ class _KeywordBottomSheetState extends State<KeywordBottomSheet> {
                     padding: const EdgeInsets.all(20),
                     child: Text(
                       'Tidak ada keyword yang cocok',
-                      style: TextStyle(
-                        color: isDark ? Colors.grey[500] : Colors.grey[600],
-                      ),
+                      style: TextStyle(color: AppColors.textSecondary(isDark)),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -229,7 +227,7 @@ class _KeywordBottomSheetState extends State<KeywordBottomSheet> {
       style: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w600,
-        color: isDark ? Colors.grey[500] : Colors.grey[600],
+        color: AppColors.textSecondary(isDark),
         letterSpacing: 0.5,
       ),
     );
@@ -254,24 +252,18 @@ class _KeywordBottomSheetState extends State<KeywordBottomSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: isSelected
-                  ? Colors.blue
-                  : (isDark ? Colors.grey[800] : Colors.grey[200]),
+                  ? AppColors.primary
+                  : AppColors.inputFill(isDark),
               borderRadius: BorderRadius.circular(20),
               border: isSelected
                   ? null
-                  : Border.all(
-                      color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-                    ),
+                  : Border.all(color: AppColors.border(isDark)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (isSelected) ...[
-                  const Icon(
-                    Icons.check,
-                    size: 14,
-                    color: Colors.white,
-                  ),
+                  const Icon(Icons.check, size: 14, color: Colors.white),
                   const SizedBox(width: 4),
                 ],
                 Text(
@@ -280,7 +272,7 @@ class _KeywordBottomSheetState extends State<KeywordBottomSheet> {
                     fontSize: 13,
                     color: isSelected
                         ? Colors.white
-                        : (isDark ? Colors.grey[300] : Colors.grey[800]),
+                        : AppColors.textPrimary(isDark),
                   ),
                 ),
               ],

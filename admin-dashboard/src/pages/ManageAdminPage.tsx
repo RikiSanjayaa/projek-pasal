@@ -146,8 +146,11 @@ export function ManageAdminPage() {
   return (
     <div>
       <Group mb="md" style={{ display: 'block' }}>
-        <Title order={3} mb="md">Manage Admin</Title>
-        <div style={{ width: '100%' }}>
+        <div>
+          <Title order={2}>Manage Admin</Title>
+          <Text c="dimmed">Page khusus super admin</Text>
+        </div>
+        <div style={{ width: '100%', marginTop: '1rem' }}>
           <Alert title="Form membuat admin baru" color="blue" variant="light">
             Form ini akan membuat akun admin baru. Lakukan dengan hati-hati — kredensial sementara hanya akan ditampilkan sekali.
             <div style={{ height: 8 }} />
@@ -236,7 +239,7 @@ export function ManageAdminPage() {
                     <Table.Td><Badge color="blue" variant="filled">{record.role}</Badge></Table.Td>
                     <Table.Td><Badge color={record.is_active ? 'green' : 'gray'} variant="light">{record.is_active ? 'Aktif' : 'Nonaktif'}</Badge></Table.Td>
                     <Table.Td onClick={(e) => e.stopPropagation()}>
-                      <Menu withArrow position="left" shadow="md">
+                      <Menu withArrow position="left" shadow="sm">
                         <Menu.Target>
                           <ActionIcon variant="subtle" color="blue">
                             <IconEdit size={16} />

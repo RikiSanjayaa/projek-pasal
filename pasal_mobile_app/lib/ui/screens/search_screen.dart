@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../core/config/app_colors.dart';
 import '../../core/services/data_service.dart';
+import '../utils/highlight_text.dart';
 
 class PasalSearchDelegate extends SearchDelegate {
   @override
@@ -39,7 +41,7 @@ class PasalSearchDelegate extends SearchDelegate {
 
   Widget _buildSearchResults(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : Colors.black87;
+    final textColor = AppColors.textPrimary(isDark);
 
     if (query.isEmpty) {
       return Center(
@@ -81,7 +83,7 @@ class PasalSearchDelegate extends SearchDelegate {
                     horizontal: 16,
                     vertical: 8,
                   ),
-                  color: isDark ? Colors.grey[800] : Colors.white,
+                  color: AppColors.card(isDark),
                   child: ExpansionTile(
                     title: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,17 +92,19 @@ class PasalSearchDelegate extends SearchDelegate {
                           children: [
                             Text(
                               "$kodeUU - ",
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.blue,
+                                color: AppColors.primary,
                               ),
                             ),
                             Expanded(
-                              child: _highlightText(
-                                pasal.nomor,
-                                query,
-                                isBold: true,
-                                isDark: isDark,
+                              child: HighlightText(
+                                text: pasal.nomor,
+                                query: query,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor,
+                                ),
                               ),
                             ),
                           ],
@@ -108,42 +112,54 @@ class PasalSearchDelegate extends SearchDelegate {
                         if (pasal.judul != null)
                           Padding(
                             padding: const EdgeInsets.only(top: 4.0),
-                            child: _highlightText(
-                              pasal.judul!,
-                              query,
-                              isBold: true,
-                              isDark: isDark,
+                            child: HighlightText(
+                              text: pasal.judul!,
+                              query: query,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: textColor,
+                              ),
                             ),
                           ),
                       ],
                     ),
                     subtitle: Padding(
                       padding: const EdgeInsets.only(top: 8.0),
-                      child: _highlightText(pasal.isi, query, isDark: isDark),
+                      child: HighlightText(
+                        text: pasal.isi,
+                        query: query,
+                        style: TextStyle(color: textColor),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     childrenPadding: const EdgeInsets.all(16),
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _highlightText(pasal.isi, query, isDark: isDark),
+                          HighlightText(
+                            text: pasal.isi,
+                            query: query,
+                            style: TextStyle(color: textColor),
+                          ),
 
                           if (pasal.penjelasan != null &&
                               pasal.penjelasan!.isNotEmpty) ...[
                             const Divider(height: 24),
-                            const Text(
+                            Text(
                               "Penjelasan:",
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
-                                color: Colors.grey,
+                                color: AppColors.textSecondary(isDark),
                               ),
                             ),
                             const SizedBox(height: 4),
-                            _highlightText(
-                              pasal.penjelasan!,
-                              query,
-                              isDark: isDark,
+                            HighlightText(
+                              text: pasal.penjelasan!,
+                              query: query,
+                              style: TextStyle(color: textColor),
                             ),
                           ],
 
@@ -157,21 +173,17 @@ class PasalSearchDelegate extends SearchDelegate {
                                   query.toLowerCase(),
                                 );
                                 return Chip(
-                                  label: _highlightText(
-                                    k.toUpperCase(),
-                                    query,
-                                    isBold: true,
-                                    isDark: isDark,
+                                  label: HighlightText(
+                                    text: k.toUpperCase(),
+                                    query: query,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: textColor,
+                                    ),
                                   ),
                                   backgroundColor: isMatch
-                                      ? (isDark
-                                            ? Colors.orange.withValues(
-                                                alpha: 0.3,
-                                              )
-                                            : Colors.yellow.shade100)
-                                      : (isDark
-                                            ? Colors.grey[700]
-                                            : Colors.grey.shade100),
+                                      ? AppColors.highlight(isDark)
+                                      : AppColors.inputFill(isDark),
                                   side: BorderSide.none,
                                   visualDensity: VisualDensity.compact,
                                 );
@@ -189,68 +201,5 @@ class PasalSearchDelegate extends SearchDelegate {
         );
       },
     );
-  }
-
-  Widget _highlightText(
-    String text,
-    String query, {
-    bool isBold = false,
-    required bool isDark,
-  }) {
-    if (query.isEmpty) {
-      return Text(
-        text,
-        style: TextStyle(
-          color: isDark ? Colors.white : Colors.black87,
-          fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-        ),
-      );
-    }
-
-    final List<TextSpan> spans = [];
-    final String lowerText = text.toLowerCase();
-    final String lowerQuery = query.toLowerCase();
-    int start = 0;
-
-    while (true) {
-      final int index = lowerText.indexOf(lowerQuery, start);
-      if (index == -1) {
-        spans.add(
-          TextSpan(
-            text: text.substring(start),
-            style: TextStyle(
-              color: isDark ? Colors.white : Colors.black87,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        );
-        break;
-      }
-      if (index > start) {
-        spans.add(
-          TextSpan(
-            text: text.substring(start, index),
-            style: TextStyle(
-              color: isDark ? Colors.white : Colors.black87,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        );
-      }
-      spans.add(
-        TextSpan(
-          text: text.substring(index, index + query.length),
-          style: TextStyle(
-            backgroundColor: isDark
-                ? Colors.orange.withValues(alpha: 0.5)
-                : Colors.yellow.shade200,
-            color: isDark ? Colors.white : Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      );
-      start = index + query.length;
-    }
-    return RichText(text: TextSpan(children: spans));
   }
 }

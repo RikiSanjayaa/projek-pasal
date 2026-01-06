@@ -127,14 +127,14 @@ export function AdminLayout() {
               {colorScheme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
             </ActionIcon>
 
-            <Menu shadow="md">
+            <Menu shadow="sm">
               <Menu.Target>
                 <Box style={{ cursor: 'pointer' }}>
                   <Group gap="xs">
                     <Avatar color="blue" radius="xl" size="sm">
                       {adminUser?.nama?.charAt(0).toUpperCase() || 'A'}
                     </Avatar>
-                    <Text size="sm" fw={500} visibleFrom="sm">
+                    <Text size="sm" fw={500} visibleFrom="sm" mr="md">
                       {adminUser?.nama || 'Admin'}
                     </Text>
                   </Group>
@@ -173,14 +173,6 @@ export function AdminLayout() {
       </AppShell.Header>
 
       <AppShell.Navbar p={sidebarCollapsed ? "xs" : "md"}>
-        <Group justify="space-between" mb="sm" wrap="nowrap">
-          {!sidebarCollapsed && (
-            <Text size="xs" fw={500} c="dimmed">
-              MENU
-            </Text>
-          )}
-        </Group>
-
         <Box style={{ position: 'relative', minHeight: '200px' }}>
           <Transition
             mounted={!sidebarCollapsed}

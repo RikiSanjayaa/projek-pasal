@@ -170,7 +170,7 @@ export function AuditLogDetailPage() {
               }
               variant="light"
             >
-              {log.action}
+              {log.action === 'CREATE' ? 'TAMBAH' : log.action === 'UPDATE' ? 'UBAH' : 'HAPUS'}
             </Badge>
           </Group>
           <Group>

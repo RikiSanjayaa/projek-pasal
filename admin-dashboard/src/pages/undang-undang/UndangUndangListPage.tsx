@@ -44,11 +44,29 @@ export function UndangUndangListPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('undang_undang')
-        .select('*')
+        .select(`
+          *,
+          pasal (
+            id,
+            nomor
+          )
+        `)
         .order('kode')
 
       if (error) throw error
-      return data as UndangUndang[]
+      // Manually sorting pasal by nomor numeric if possible, or string
+      const sortedData = data?.map((uu: any) => ({
+        ...uu,
+        pasal: uu.pasal?.sort((a: any, b: any) => {
+          // Try to sort numerically if it looks like a number
+          const numA = parseInt(a.nomor)
+          const numB = parseInt(b.nomor)
+          if (!isNaN(numA) && !isNaN(numB)) return numA - numB
+          return a.nomor.localeCompare(b.nomor, undefined, { numeric: true })
+        })
+      }))
+
+      return sortedData as (UndangUndang & { pasal: { id: string; nomor: string }[] })[]
     },
   })
 
@@ -179,6 +197,7 @@ export function UndangUndangListPage() {
                     <Table.Th>Kode</Table.Th>
                     <Table.Th>Nama</Table.Th>
                     <Table.Th>Deskripsi</Table.Th>
+                    <Table.Th>Total Pasal</Table.Th>
                     <Table.Th>Tahun</Table.Th>
                     <Table.Th>Status</Table.Th>
                     <Table.Th w={100}>Aksi</Table.Th>
@@ -204,7 +223,12 @@ export function UndangUndangListPage() {
                           {uu.nama_lengkap}
                         </Text>
                       </Table.Td>
-                      <Table.Td>{uu.deskripsi || '-'}</Table.Td>
+                      <Table.Td style={{ width: 200 }}><Text lineClamp={2} size="sm">{uu.deskripsi || '-'}</Text></Table.Td>
+                      <Table.Td>
+                        <Badge variant="light" color="gray">
+                          {uu.pasal?.length || 0} Pasal
+                        </Badge>
+                      </Table.Td>
                       <Table.Td>{uu.tahun || '-'}</Table.Td>
                       <Table.Td>
                         <Badge color={uu.is_active ? 'green' : 'red'} variant="light">
