@@ -1,58 +1,24 @@
 import {
   Title,
   Text,
-  SimpleGrid,
-  Card,
+  Grid,
   Group,
-  ThemeIcon,
   Stack,
-  Badge,
-  Skeleton,
+  Button,
 } from '@mantine/core'
 import {
   IconScale,
   IconBook,
   IconHistory,
-  IconUsers,
 } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
-import { AuditTimelineChart } from '@/components/charts/AuditTimelineChart'
-import { AdminActivityMetrics } from '@/components/charts/AdminActivityMetrics'
+import { CombinedAnalyticsChart } from '@/components/charts/CombinedAnalyticsChart'
+import { TopContributors } from '@/components/dashboard/TopContributors'
 import { AktivitasPasalWidget } from '@/components/charts/AktivitasPasalWidget'
+import { subDays } from 'date-fns'
 
-interface StatsCardProps {
-  title: string
-  value: number | string
-  icon: React.ReactNode
-  color: string
-  loading?: boolean
-}
-
-function StatsCard({ title, value, icon, color, loading }: StatsCardProps) {
-  return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder>
-      <Group justify="space-between">
-        <Stack gap={4}>
-          <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-            {title}
-          </Text>
-          {loading ? (
-            <Skeleton height={32} width={60} />
-          ) : (
-            <Text size="xl" fw={700}>
-              {value}
-            </Text>
-          )}
-        </Stack>
-        <ThemeIcon size="xl" radius="md" color={color} variant="light">
-          {icon}
-        </ThemeIcon>
-      </Group>
-    </Card>
-  )
-}
 
 export function DashboardPage() {
   const navigate = useNavigate()
@@ -75,6 +41,7 @@ export function DashboardPage() {
         auditLogsForAnalyticsResult,
         trashedPasalResult,
         recentAuditLogsResult,
+        newPasalThisWeekResult,
       ] = await Promise.all([
         // Total pasal count
         supabase
@@ -156,6 +123,13 @@ export function DashboardPage() {
           .select('*')
           .order('created_at', { ascending: false })
           .limit(10),
+
+        // New Pasal This Week
+        supabase
+          .from('pasal')
+          .select('*', { count: 'exact', head: true })
+          .gte('created_at', subDays(new Date(), 7).toISOString())
+          .eq('is_active', true),
       ])
 
       // Check for errors
@@ -170,6 +144,7 @@ export function DashboardPage() {
       if (auditLogsForAnalyticsResult.error) throw auditLogsForAnalyticsResult.error
       if (trashedPasalResult.error) throw trashedPasalResult.error
       if (recentAuditLogsResult.error) throw recentAuditLogsResult.error
+      if (newPasalThisWeekResult.error) throw newPasalThisWeekResult.error
 
       // Count pasal per undang_undang_id
       const counts: Record<string, number> = {}
@@ -190,127 +165,83 @@ export function DashboardPage() {
         auditLogsAnalytics: auditLogsForAnalyticsResult.data || [],
         trashedPasal: trashedPasalResult.data || [],
         recentAuditLogs: recentAuditLogsResult.data || [],
+        newPasalThisWeek: newPasalThisWeekResult.count || 0,
       }
     },
-    staleTime: 30 * 1000, // 30 seconds - reduced for better real-time feel
-    refetchInterval: 60 * 1000, // Auto-refresh every 60 seconds
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
   })
 
   // Extract data from the combined query
   const pasalCount = dashboardData?.pasalCount
   const uuCount = dashboardData?.uuCount
   const totalChangesToday = dashboardData?.totalChangesToday
-  const undangUndangList = dashboardData?.undangUndangList
-  const pasalCounts = dashboardData?.pasalCounts
-  const adminActiveCount = dashboardData?.adminActiveCount
   const auditLogsAnalytics = dashboardData?.auditLogsAnalytics || []
 
+  // Get recent contributor name
+
   return (
-    <Stack gap="lg">
+    <Stack gap="xl" mb="xl">
       <div>
         <Title order={2}>Dashboard</Title>
-        <Text c="dimmed">Selamat datang di CariPasal Admin Dashboard</Text>
+        <Text c="dimmed">Selamat datang di Dashboard Admin CariPasal</Text>
       </div>
 
-      {/* Stats Cards */}
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
-        <StatsCard
-          title="Total Pasal"
-          value={pasalCount || 0}
-          icon={<IconScale size={24} />}
+      {/* Stats Badges - Compact & Clickable */}
+      <Group gap="md">
+        <Button
+          variant="light"
           color="blue"
-          loading={loadingDashboard}
-        />
-        <StatsCard
-          title="Undang-Undang"
-          value={uuCount || 0}
-          icon={<IconBook size={24} />}
+          size="md"
+          radius="xl"
+          leftSection={<IconScale size={20} />}
+          onClick={() => navigate('/pasal')}
+        >
+          {loadingDashboard ? '...' : `${pasalCount || 0} Pasal`}
+        </Button>
+
+        <Button
+          variant="light"
           color="green"
-          loading={loadingDashboard}
-        />
-        <StatsCard
-          title="Perubahan Hari Ini"
-          value={totalChangesToday || 0}
-          icon={<IconHistory size={24} />}
+          size="md"
+          radius="xl"
+          leftSection={<IconBook size={20} />}
+          onClick={() => navigate('/undang-undang')}
+        >
+          {loadingDashboard ? '...' : `${uuCount || 0} Sumber Undang-Undang`}
+        </Button>
+
+        <Button
+          variant="light"
           color="orange"
-          loading={loadingDashboard}
-        />
-        <StatsCard
-          title="Admin Aktif"
-          value={adminActiveCount ?? 0}
-          icon={<IconUsers size={24} />}
-          color="violet"
-        />
-      </SimpleGrid>
+          size="md"
+          radius="xl"
+          leftSection={<IconHistory size={20} />}
+          onClick={() => navigate('/audit-log')}
+        >
+          {loadingDashboard ? '...' : `${totalChangesToday || 0} Perubahan Hari Ini`}
+        </Button>
+      </Group>
 
-      {/* Undang-Undang Summary */}
-      <Card shadow="sm" padding="lg" radius="md" withBorder>
-        <Title order={4} mb="md">
-          Ringkasan Undang-Undang
-        </Title>
-        {loadingDashboard ? (
-          <Stack gap="sm">
-            <Skeleton height={40} />
-            <Skeleton height={40} />
-            <Skeleton height={40} />
-            <Skeleton height={40} />
-          </Stack>
-        ) : (
-          <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
-            {undangUndangList?.map((uu: any) => (
-              <Card
-                key={uu.id}
-                padding="md"
-                radius="md"
-                withBorder
-                style={{
-                  cursor: 'pointer',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                }}
-                onClick={() => navigate(`/pasal?uu=${uu.id}`)}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = ''
-                }}
-              >
-                <Group justify="space-between" mb={12}>
-                  <Text size="sm" fw={1000}>
-                    {uu.nama}
-                  </Text>
-                  <Badge color="blue" variant="light">
-                    {uu.kode}
-                  </Badge>
-                </Group>
-                <Text size="sm" fw={500}>
-                  {uu.nama_lengkap}
-                </Text>
-                <Text size="xs" c="dimmed" mt={4}>
-                  {pasalCounts?.[uu.id] || 0} pasal
-                </Text>
-              </Card>
-            ))}
-          </SimpleGrid>
-        )}
-      </Card>
+      {/* Main Analytics Section */}
+      <Grid gutter="lg">
+        <Grid.Col span={{ base: 12, lg: 8 }}>
+          <CombinedAnalyticsChart logs={auditLogsAnalytics} loading={loadingDashboard} />
+        </Grid.Col>
+        <Grid.Col span={{ base: 12, lg: 4 }}>
+          <TopContributors logs={auditLogsAnalytics} loading={loadingDashboard} />
+        </Grid.Col>
+      </Grid>
 
-      {/* Analytics Section */}
-      <Stack gap="lg">
-        {/* Activity Timeline */}
-        <AuditTimelineChart logs={auditLogsAnalytics} loading={loadingDashboard} />
-        {/* Admin Activity Metrics */}
-        <AdminActivityMetrics logs={auditLogsAnalytics} loading={loadingDashboard} />
-        {/* Temporal Insights */}
-        <AktivitasPasalWidget
-          pasal={dashboardData?.allPasal}
-          recentLogs={dashboardData?.recentAuditLogs}
-          trashedPasal={dashboardData?.trashedPasal}
-          undangUndang={dashboardData?.undangUndangList}
-          links={dashboardData?.allLinks}
-          loading={loadingDashboard}
-        />
-      </Stack>
+      {/* Detailed Insights & Activity */}
+      <AktivitasPasalWidget
+        pasal={dashboardData?.allPasal}
+        recentLogs={dashboardData?.recentAuditLogs}
+        trashedPasal={dashboardData?.trashedPasal}
+        undangUndang={dashboardData?.undangUndangList}
+        links={dashboardData?.allLinks}
+        loading={loadingDashboard}
+      />
     </Stack>
   )
 }

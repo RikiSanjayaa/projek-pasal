@@ -173,14 +173,6 @@ export function AdminLayout() {
       </AppShell.Header>
 
       <AppShell.Navbar p={sidebarCollapsed ? "xs" : "md"}>
-        <Group justify="space-between" mb="sm" wrap="nowrap">
-          {!sidebarCollapsed && (
-            <Text size="xs" fw={500} c="dimmed">
-              MENU
-            </Text>
-          )}
-        </Group>
-
         <Box style={{ position: 'relative', minHeight: '200px' }}>
           <Transition
             mounted={!sidebarCollapsed}
