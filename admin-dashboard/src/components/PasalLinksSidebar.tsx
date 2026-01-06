@@ -321,7 +321,7 @@ export function PasalLinksSidebar({
         pendingLinks.length > 0 ? (
           <Stack gap="xs">
             {pendingLinks.map((link) => (
-              <Card key={link.targetPasalId} withBorder padding="xs" radius="sm">
+              <Card key={link.targetPasalId} shadow="none" withBorder padding="xs" radius="sm">
                 <Group justify="space-between" wrap="nowrap">
                   <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
                     <Badge size="xs" color="blue" variant="light">
@@ -372,6 +372,7 @@ export function PasalLinksSidebar({
                 padding="xs"
                 radius="sm"
                 style={{ cursor: 'pointer' }}
+                shadow="none"
               >
                 <Box
                   onClick={() => setExpandedLinkId(isExpanded ? null : link.id)}

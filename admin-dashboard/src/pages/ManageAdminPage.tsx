@@ -239,7 +239,7 @@ export function ManageAdminPage() {
                     <Table.Td><Badge color="blue" variant="filled">{record.role}</Badge></Table.Td>
                     <Table.Td><Badge color={record.is_active ? 'green' : 'gray'} variant="light">{record.is_active ? 'Aktif' : 'Nonaktif'}</Badge></Table.Td>
                     <Table.Td onClick={(e) => e.stopPropagation()}>
-                      <Menu withArrow position="left" shadow="md">
+                      <Menu withArrow position="left" shadow="sm">
                         <Menu.Target>
                           <ActionIcon variant="subtle" color="blue">
                             <IconEdit size={16} />
