@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/config/app_colors.dart';
+import 'package:flutter/services.dart';
 import '../../models/pasal_model.dart';
 import '../../models/pasal_link_model.dart';
 import '../../core/services/data_service.dart';
@@ -223,43 +224,99 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                         ),
 
                         // Right: UU Name Chip
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: uuColor.withValues(
-                              alpha: isDark ? 0.1 : 0.05,
-                            ),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: uuColor.withValues(
-                                alpha: isDark ? 0.5 : 0.3,
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
                               ),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _getUUIcon(_kodeUU),
-                                size: 14,
-                                color: uuColor,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                (_kodeUU ?? 'UU').toUpperCase(),
-                                style: TextStyle(
-                                  color: uuColor,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
+                              decoration: BoxDecoration(
+                                color: uuColor.withValues(
+                                  alpha: isDark ? 0.1 : 0.05,
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: uuColor.withValues(alpha: 0.2),
+                                  width: 1,
                                 ),
                               ),
-                            ],
-                          ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _getUUIcon(_kodeUU),
+                                    size: 14,
+                                    color: uuColor,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    (_kodeUU ?? 'UU').toUpperCase(),
+                                    style: TextStyle(
+                                      color: uuColor,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Copy Button integrated in Card
+                            InkWell(
+                              onTap: () async {
+                                final sb = StringBuffer();
+                                sb.writeln(_kodeUU ?? "UU");
+                                sb.writeln("Pasal ${_currentPasal.nomor}");
+                                if (_currentPasal.judul != null &&
+                                    _currentPasal.judul!.trim().isNotEmpty) {
+                                  sb.writeln(
+                                    _currentPasal.judul!.toUpperCase(),
+                                  );
+                                }
+                                sb.writeln();
+                                sb.writeln(_currentPasal.isi);
+                                if (_currentPasal.penjelasan != null &&
+                                    _currentPasal.penjelasan!.isNotEmpty) {
+                                  sb.writeln();
+                                  sb.writeln("PENJELASAN");
+                                  sb.writeln(_currentPasal.penjelasan);
+                                }
+
+                                await Clipboard.setData(
+                                  ClipboardData(text: sb.toString()),
+                                );
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: const Text(
+                                        "Pasal berhasil disalin",
+                                      ),
+                                      backgroundColor: Colors.green,
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      margin: const EdgeInsets.all(16),
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(20),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Icon(
+                                  Icons.copy_rounded,
+                                  size: 20,
+                                  color: isDark
+                                      ? Colors.grey[400]
+                                      : Colors.grey[500],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
