@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class AppColors {
   // Primary Brand Colors
   static const Color primary = Colors.blue;
-  static const Color secondary = Colors.grey;
+  static const Color secondary = Colors.green;
 
   // Backgrounds
   static const Color scaffoldLight = Color(0xFFF5F7FA);
@@ -36,7 +36,7 @@ class AppColors {
   static const Color success = Colors.green;
   static const Color error = Colors.red;
   static const Color warning = Colors.orange;
-  static const Color info = Colors.blue;
+  static const Color info = AppColors.primary;
 
   // Icon Colors
   static const Color iconLight = Color(0xFF616161); // Colors.grey[700]

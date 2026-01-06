@@ -397,7 +397,7 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
           icon,
           size: 14,
           color: highlight
-              ? Colors.blue
+              ? AppColors.primary
               : (isDark ? Colors.grey[500] : Colors.grey[500]),
         ),
         const SizedBox(width: 4),
@@ -407,7 +407,7 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
             fontSize: 12,
             fontWeight: highlight ? FontWeight.w600 : FontWeight.normal,
             color: highlight
-                ? Colors.blue
+                ? AppColors.primary
                 : (isDark ? Colors.grey[400] : Colors.grey[600]),
           ),
         ),

@@ -339,7 +339,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             const Icon(
                               Icons.search,
                               size: 16,
-                              color: Colors.blue,
+                              color: AppColors.primary,
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -366,7 +366,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             const Icon(
                               Icons.arrow_forward,
                               size: 16,
-                              color: Colors.blue,
+                              color: AppColors.primary,
                             ),
                           ],
                         ),
@@ -572,14 +572,18 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.filter_alt, size: 14, color: Colors.blue[400]),
+                  Icon(
+                    Icons.filter_alt,
+                    size: 14,
+                    color: AppColors.primary.withValues(alpha: 0.8),
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     'Filter Aktif',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.blue[400],
+                      color: AppColors.primary.withValues(alpha: 0.8),
                     ),
                   ),
                 ],
@@ -596,7 +600,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   'Hapus Semua',
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.blue[400],
+                    color: AppColors.primary.withValues(alpha: 0.8),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -649,7 +653,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.blue,
+        color: AppColors.primary,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(

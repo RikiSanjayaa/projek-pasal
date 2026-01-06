@@ -114,18 +114,22 @@ class KeywordResultScreen extends StatelessWidget {
                                       fontSize: 10,
                                       color: isActive
                                           ? Colors.white
-                                          : Colors.blue,
+                                          : AppColors.primary,
                                     ),
                                   ),
                                   backgroundColor: isActive
-                                      ? Colors.blue
+                                      ? AppColors.primary
                                       : AppColors.card(isDark),
                                   side: BorderSide(
                                     color: isActive
                                         ? Colors.transparent
                                         : (isDark
-                                              ? Colors.blue.shade700
-                                              : Colors.blue.shade100),
+                                              ? AppColors.primary.withValues(
+                                                  alpha: 0.8,
+                                                )
+                                              : AppColors.primary.withValues(
+                                                  alpha: 0.8,
+                                                )),
                                   ),
                                   visualDensity: VisualDensity.compact,
                                 );

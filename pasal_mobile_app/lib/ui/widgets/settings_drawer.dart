@@ -42,7 +42,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -201,12 +201,17 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                     padding: const EdgeInsets.all(16),
                                     decoration: BoxDecoration(
                                       color: isDark
-                                          ? Colors.grey[850]
-                                          : Colors.grey[100],
+                                          ? AppColors.primary.withValues(
+                                              alpha: 0.1,
+                                            )
+                                          : AppColors.primary.withValues(
+                                              alpha: 0.05,
+                                            ),
                                       borderRadius: BorderRadius.circular(12),
                                       border: showUpdateAvailable
                                           ? Border.all(
-                                              color: Colors.blue.withAlpha(100),
+                                              color: AppColors.primary
+                                                  .withAlpha(100),
                                             )
                                           : null,
                                     ),
@@ -223,9 +228,10 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                                     ? Colors.green.withValues(
                                                         alpha: 0.1,
                                                       )
-                                                    : Colors.blue.withValues(
-                                                        alpha: 0.1,
-                                                      ),
+                                                    : AppColors.primary
+                                                          .withValues(
+                                                            alpha: 0.1,
+                                                          ),
                                                 borderRadius:
                                                     BorderRadius.circular(10),
                                               ),
@@ -343,7 +349,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                               valueColor:
                                                   const AlwaysStoppedAnimation<
                                                     Color
-                                                  >(Colors.blue),
+                                                  >(AppColors.primary),
                                             ),
                                           ),
                                           const SizedBox(height: 8),
@@ -354,7 +360,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                               Text(
                                                 "${progress.progressPercent}%",
                                                 style: TextStyle(
-                                                  color: Colors.blue,
+                                                  color: AppColors.primary,
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.bold,
                                                 ),
@@ -425,7 +431,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                 icon,
                 size: 24,
                 color: isSelected
-                    ? Colors.blue
+                    ? AppColors.primary
                     : (isDark ? Colors.grey[500] : Colors.grey[600]),
               ),
               const SizedBox(height: 4),

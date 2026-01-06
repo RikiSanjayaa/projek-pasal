@@ -182,8 +182,14 @@ class _UpdateBannerState extends State<UpdateBanner>
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: isDark
-                              ? [Colors.blue.shade900, Colors.blue.shade900]
-                              : [Colors.blue.shade500, Colors.blue.shade600],
+                              ? [
+                                  AppColors.primary.withValues(alpha: 0.8),
+                                  AppColors.primary.withValues(alpha: 0.6),
+                                ]
+                              : [
+                                  AppColors.primary.withValues(alpha: 0.8),
+                                  AppColors.primary.withValues(alpha: 0.6),
+                                ],
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),

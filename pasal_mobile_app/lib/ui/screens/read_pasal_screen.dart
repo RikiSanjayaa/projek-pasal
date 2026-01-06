@@ -350,10 +350,14 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: isDark ? 0.1 : 0.05),
+                    color: AppColors.primary.withValues(
+                      alpha: isDark ? 0.1 : 0.05,
+                    ),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: Colors.blue.withValues(alpha: isDark ? 0.5 : 0.3),
+                      color: AppColors.primary.withValues(
+                        alpha: isDark ? 0.5 : 0.3,
+                      ),
                     ),
                   ),
                   child: Column(
@@ -364,7 +368,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                           Icon(
                             Icons.lightbulb_outline,
                             size: 14,
-                            color: Colors.blue[400],
+                            color: AppColors.primary.withValues(alpha: 0.8),
                           ),
                           const SizedBox(width: 6),
                           Text(
@@ -372,7 +376,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: Colors.blue[400],
+                              color: AppColors.primary.withValues(alpha: 0.8),
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -402,7 +406,9 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                     Icon(
                       Icons.local_offer_outlined,
                       size: 14,
-                      color: isDark ? Colors.grey[500] : Colors.grey[500],
+                      color: isDark
+                          ? AppColors.primary.withValues(alpha: 0.8)
+                          : AppColors.primary.withValues(alpha: 0.8),
                     ),
                     const SizedBox(width: 6),
                     Text(
