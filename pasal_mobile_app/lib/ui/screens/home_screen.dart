@@ -23,8 +23,8 @@ class _HomeScreenState extends State<HomeScreen> {
   List<UndangUndangModel> _listUU = [];
 
   List<String> _allAvailableKeywords = [];
-  List<String> _popularKeywords = []; // Top keywords by usage
-  Map<String, int> _keywordUsageCount = {}; // Keyword -> pasal count
+  List<String> _popularKeywords = [];
+  Map<String, int> _keywordUsageCount = {};
 
   String _selectedFilterUUId = 'ALL';
   List<String> _selectedKeywords = [];
@@ -33,10 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
 
-  // Collapsible filter state
   bool _filtersExpanded = false;
 
-  // How many keyword chips to show before [+N]
   static const int _visibleKeywordChipsCount = 3;
 
   int _currentPage = 1;
@@ -84,7 +82,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return timeB.compareTo(timeA);
     });
 
-    // Count keyword usage and collect all keywords
     final Map<String, int> keywordCount = {};
     for (var p in _allPasalCache) {
       for (var k in p.keywords) {
@@ -99,7 +96,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _allAvailableKeywords = keywordCount.keys.toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
-    // Get popular keywords (top N by usage)
     final sortedByUsage = keywordCount.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     _popularKeywords = sortedByUsage.take(15).map((e) => e.key).toList();
@@ -151,16 +147,13 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase().trim();
 
-      // Use SearchUtils to handle "pasal X" search pattern
       final nomorQuery = SearchUtils.extractNomorQuery(q);
 
       source = source.where((p) {
-        // Match nomor: "pasal 1" should find nomor "1", "1A", etc.
         final nomorMatch =
             p.nomor.toLowerCase().contains(nomorQuery) ||
             'pasal ${p.nomor}'.toLowerCase().contains(q);
 
-        // Match content and title
         final contentMatch = p.isi.toLowerCase().contains(q);
         final titleMatch =
             p.judul != null && p.judul!.toLowerCase().contains(q);
@@ -168,7 +161,6 @@ class _HomeScreenState extends State<HomeScreen> {
         return nomorMatch || contentMatch || titleMatch;
       }).toList();
 
-      // Sort by nomor relevance when searching by number
       if (SearchUtils.isNomorSearch(q)) {
         source = SearchUtils.sortByNomorRelevance(
           source,
@@ -198,17 +190,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Get keyword suggestions based on search query
   List<String> _getKeywordSuggestions() {
     if (_searchQuery.isEmpty) {
-      // Show popular keywords when search is empty
       return _popularKeywords
           .where((k) => !_selectedKeywords.contains(k))
           .take(5)
           .toList();
     }
 
-    // Filter keywords by search query
     final q = _searchQuery.toLowerCase();
     return _allAvailableKeywords
         .where(
@@ -241,8 +230,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final keywordSuggestions = _getKeywordSuggestions();
 
-    // Don't show overlay if no suggestions
-    if (keywordSuggestions.isEmpty && _searchQuery.isEmpty) {
+    // Only show overlay when user is typing (Match Screenshot behavior)
+    // Remove "Popular Keywords" (Zero State) as requested
+    if (_searchQuery.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    if (keywordSuggestions.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -263,14 +257,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Keyword suggestions section
                   if (keywordSuggestions.isNotEmpty) ...[
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                       child: Text(
-                        _searchQuery.isEmpty
-                            ? 'KEYWORD POPULER'
-                            : 'KEYWORD COCOK',
+                        'KEYWORD COCOK',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -325,7 +316,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 8),
                   ],
 
-                  // Hint to search in content
                   if (_searchQuery.isNotEmpty) ...[
                     InkWell(
                       onTap: () {
@@ -395,13 +385,10 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Update banner
             UpdateBanner(onSyncComplete: _handleSyncComplete),
 
-            // Header
             _buildHeader(isDark),
 
-            // Search bar with overlay
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
               child: CompositedTransformTarget(
@@ -443,13 +430,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // Active filters summary (shows when any filter is active)
             _buildActiveFiltersSection(isDark),
 
-            // Filter sections container
             _buildFilterSections(isDark),
 
-            // Results header
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
@@ -473,7 +457,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 10),
 
-            // Results list
             Expanded(
               child: _paginatedData.isEmpty
                   ? const Center(child: Text("Data tidak ditemukan."))
@@ -508,7 +491,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Builds the header section with title and hamburger menu
   Widget _buildHeader(bool isDark) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -537,7 +519,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Builds the active filters section showing selected keywords and UU
   Widget _buildActiveFiltersSection(bool isDark) {
     final hasActiveKeywords = _selectedKeywords.isNotEmpty;
     final hasActiveUU = _selectedFilterUUId != 'ALL';
@@ -566,7 +547,6 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header with clear all button
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -609,12 +589,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 8),
 
-          // Active filter chips
           Wrap(
             spacing: 6,
             runSpacing: 6,
             children: [
-              // Selected UU chip
               if (hasActiveUU && selectedUUName != null)
                 _buildActiveFilterChip(
                   label: selectedUUName,
@@ -628,7 +606,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   isDark: isDark,
                 ),
 
-              // Selected keyword chips
               ..._selectedKeywords.map(
                 (k) => _buildActiveFilterChip(
                   label: k,
@@ -679,7 +656,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Builds a refined, unified, and compact filter section
   Widget _buildFilterSections(bool isDark) {
     final hasAnyFilters =
         _allAvailableKeywords.isNotEmpty || _listUU.isNotEmpty;
@@ -896,7 +872,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildKeywordChipsRow(bool isDark) {
-    // Get keywords to display (popular, excluding already selected)
     final displayKeywords = _popularKeywords
         .where((k) => !_selectedKeywords.contains(k))
         .take(_visibleKeywordChipsCount)
@@ -916,7 +891,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Label row
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Row(
@@ -935,12 +909,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        // Chips row
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              // Search button
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: InkWell(
@@ -964,7 +936,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // Keyword chips
               ...displayKeywords.map(
                 (keyword) => Padding(
                   padding: const EdgeInsets.only(right: 8),
@@ -996,7 +967,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // [+N] button to open bottom sheet
               if (remainingCount > 0)
                 InkWell(
                   onTap: () => _showKeywordBottomSheet(),
@@ -1039,7 +1009,6 @@ class _HomeScreenState extends State<HomeScreen> {
       autoFocus: autoFocus,
       onKeywordToggle: (keyword) {
         _toggleKeyword(keyword);
-        // Force rebuild of bottom sheet
         Navigator.of(context).pop();
         _showKeywordBottomSheet(autoFocus: autoFocus);
       },
@@ -1058,7 +1027,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     _currentPage--;
                     _updatePagination();
                   });
-                  // Scroll to top after page change
                   _listScrollController.jumpTo(0);
                 }
               : null,
@@ -1072,7 +1040,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     _currentPage++;
                     _updatePagination();
                   });
-                  // Scroll to top after page change
                   _listScrollController.jumpTo(0);
                 }
               : null,
