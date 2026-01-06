@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/config/app_colors.dart';
 import '../../models/undang_undang_model.dart';
 import '../../models/pasal_model.dart';
 import '../../core/services/data_service.dart';
@@ -93,10 +94,7 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
           Builder(
             builder: (context) => IconButton(
               onPressed: () => Scaffold.of(context).openEndDrawer(),
-              icon: Icon(
-                Icons.menu,
-                color: isDark ? Colors.grey[300] : Colors.grey[700],
-              ),
+              icon: Icon(Icons.menu, color: AppColors.icon(isDark)),
               tooltip: 'Pengaturan',
             ),
           ),
@@ -113,11 +111,9 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
                     vertical: 16,
                   ),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.grey[900] : Colors.white,
+                    color: AppColors.card(isDark),
                     border: Border(
-                      bottom: BorderSide(
-                        color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
-                      ),
+                      bottom: BorderSide(color: AppColors.border(isDark)),
                     ),
                   ),
                   child: Column(
@@ -130,10 +126,14 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
                             width: 56,
                             height: 56,
                             decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.15),
+                              color: color.withValues(
+                                alpha: isDark ? 0.1 : 0.05,
+                              ),
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
-                                color: color.withValues(alpha: 0.3),
+                                color: color.withValues(
+                                  alpha: isDark ? 0.5 : 0.3,
+                                ),
                               ),
                             ),
                             child: Icon(icon, color: color, size: 28),
@@ -168,7 +168,7 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: isDark ? Colors.white : Colors.black,
+                                    color: AppColors.textPrimary(isDark),
                                   ),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
@@ -181,9 +181,7 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
                                       widget.undangUndang.namaLengkap!,
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: isDark
-                                            ? Colors.grey[400]
-                                            : Colors.grey[600],
+                                        color: AppColors.textSecondary(isDark),
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -219,12 +217,12 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: isDark
-                                ? color.withValues(alpha: 0.1)
-                                : color.withValues(alpha: 0.05),
+                            color: color.withValues(alpha: isDark ? 0.1 : 0.05),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                              color: color.withValues(alpha: 0.2),
+                              color: color.withValues(
+                                alpha: isDark ? 0.5 : 0.3,
+                              ),
                             ),
                           ),
                           child: Column(
@@ -301,7 +299,7 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
                             )
                           : null,
                       filled: true,
-                      fillColor: isDark ? Colors.grey[850] : Colors.white,
+                      fillColor: AppColors.inputFill(isDark),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,

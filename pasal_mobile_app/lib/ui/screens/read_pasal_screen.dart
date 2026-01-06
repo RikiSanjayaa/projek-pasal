@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/config/app_colors.dart';
 import '../../models/pasal_model.dart';
 import '../../models/pasal_link_model.dart';
 import '../../core/services/data_service.dart';
@@ -72,9 +73,9 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF121212) : Colors.white;
-    final textColor = isDark ? Colors.white : Colors.black87;
-    final subTextColor = isDark ? Colors.grey[400] : Colors.grey[600];
+    final bgColor = AppColors.scaffold(isDark);
+    final textColor = AppColors.textPrimary(isDark);
+    final subTextColor = AppColors.textSecondary(isDark);
     final uuColor = UUColorHelper.getColor(_kodeUU);
 
     return Scaffold(
@@ -116,7 +117,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
       bottomNavigationBar: Container(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          color: AppColors.bottomNav(isDark),
           border: Border(
             top: BorderSide(
               color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
@@ -191,26 +192,14 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF1E1E1E)
-                      : const Color(0xFFFAFAFA),
+                  color: AppColors.card(isDark),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: isDark
                         ? Colors.white.withValues(alpha: 0.08)
-                        : Colors.black.withValues(alpha: 0.03),
+                        : Colors.black.withValues(alpha: 0.05),
                     width: 1,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(
-                        alpha: isDark ? 0.3 : 0.08,
-                      ),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                      spreadRadius: -4,
-                    ),
-                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,10 +229,14 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: uuColor.withValues(alpha: 0.1),
+                            color: uuColor.withValues(
+                              alpha: isDark ? 0.1 : 0.05,
+                            ),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: uuColor.withValues(alpha: 0.2),
+                              color: uuColor.withValues(
+                                alpha: isDark ? 0.5 : 0.3,
+                              ),
                               width: 1,
                             ),
                           ),
@@ -357,14 +350,10 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF1A202C)
-                        : const Color(0xFFF1F5F9),
+                    color: Colors.blue.withValues(alpha: isDark ? 0.1 : 0.05),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isDark
-                          ? Colors.blue.withValues(alpha: 0.15)
-                          : Colors.blue.withValues(alpha: 0.1),
+                      color: Colors.blue.withValues(alpha: isDark ? 0.5 : 0.3),
                     ),
                   ),
                   child: Column(
@@ -440,7 +429,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                             vertical: 5,
                           ),
                           decoration: BoxDecoration(
-                            color: isDark ? Colors.grey[800] : Colors.grey[100],
+                            color: AppColors.card(isDark),
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
                               color: isDark
@@ -521,12 +510,14 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                 margin: const EdgeInsets.only(bottom: 8),
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: isDark
-                                      ? Colors.orange.withValues(alpha: 0.1)
-                                      : Colors.orange.withValues(alpha: 0.05),
+                                  color: Colors.orange.withValues(
+                                    alpha: isDark ? 0.1 : 0.05,
+                                  ),
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
-                                    color: Colors.orange.withValues(alpha: 0.2),
+                                    color: Colors.orange.withValues(
+                                      alpha: isDark ? 0.5 : 0.3,
+                                    ),
                                   ),
                                 ),
                                 child: Row(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/config/app_colors.dart';
 import '../../models/pasal_model.dart';
 import '../../models/undang_undang_model.dart';
 import '../../core/services/data_service.dart';
@@ -254,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Material(
           elevation: 8,
           borderRadius: BorderRadius.circular(12),
-          color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+          color: AppColors.card(isDark),
           child: Container(
             constraints: const BoxConstraints(maxHeight: 400),
             child: SingleChildScrollView(
@@ -431,7 +432,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           )
                         : null,
                     filled: true,
-                    fillColor: isDark ? Colors.grey[800] : Colors.white,
+                    fillColor: AppColors.inputFill(isDark),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -556,11 +557,11 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark
-            ? Colors.blue.withValues(alpha: 0.15)
-            : Colors.blue.withValues(alpha: 0.08),
+        color: AppColors.primary.withValues(alpha: isDark ? 0.1 : 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: isDark ? 0.5 : 0.3),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -681,8 +682,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (!hasAnyFilters) return const SizedBox.shrink();
 
-    final blueColor = Colors.blue;
-    final bgColor = isDark ? Colors.grey[850] : Colors.white;
+    final blueColor = AppColors.primary;
+    final bgColor = AppColors.card(isDark);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -850,7 +851,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildUUChip(String label, String id, bool isDark) {
     final bool isSelected = _selectedFilterUUId == id;
-    final blueColor = Colors.blue;
+    final blueColor = AppColors.primary;
 
     return Padding(
       padding: const EdgeInsets.only(right: 8),
@@ -866,9 +867,7 @@ class _HomeScreenState extends State<HomeScreen> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected
-                ? blueColor
-                : (isDark ? Colors.grey[850] : Colors.grey[50]),
+            color: isSelected ? blueColor : AppColors.card(isDark),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isSelected
@@ -908,7 +907,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return const SizedBox.shrink();
     }
 
-    final blueColor = Colors.blue;
+    final blueColor = AppColors.primary;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -946,7 +945,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.grey[850] : Colors.grey[100],
+                      color: AppColors.card(isDark),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: isDark ? Colors.grey[700]! : Colors.grey[200]!,
@@ -974,7 +973,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.grey[850] : Colors.grey[100],
+                        color: AppColors.card(isDark),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: isDark ? Colors.grey[700]! : Colors.grey[200]!,

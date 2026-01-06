@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/config/app_colors.dart';
 import '../../core/services/data_service.dart';
 import '../../models/undang_undang_model.dart';
 import '../../core/services/sync_manager.dart';
@@ -74,21 +75,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
   // Get icon for each UU type - delegated to centralized helper
   IconData _getUUIcon(String kode) {
     return UUColorHelper.getIcon(kode);
-  }
-
-  // Get gradient for card
-  List<Color> _getCardGradient(String kode, bool isDark) {
-    final baseColor = _getUUColor(kode);
-    if (isDark) {
-      return [
-        baseColor.withValues(alpha: 0.1),
-        baseColor.withValues(alpha: 0.1),
-      ];
-    }
-    return [
-      baseColor.withValues(alpha: 0.1),
-      baseColor.withValues(alpha: 0.05),
-    ];
   }
 
   @override
@@ -220,9 +206,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: isDark ? 0.15 : 0.1),
+          color: color.withValues(alpha: isDark ? 0.1 : 0.05),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
+          border: Border.all(
+            color: color.withValues(alpha: isDark ? 0.5 : 0.3),
+          ),
         ),
         child: Row(
           children: [
@@ -243,14 +231,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.grey[800],
+                    color: AppColors.textPrimary(isDark),
                   ),
                 ),
                 Text(
                   label,
                   style: TextStyle(
                     fontSize: 11,
-                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    color: AppColors.textSecondary(isDark),
                   ),
                 ),
               ],
@@ -278,14 +266,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: _getCardGradient(uu.kode, isDark),
-          ),
+          color: color.withValues(alpha: isDark ? 0.1 : 0.05),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: color.withValues(alpha: isDark ? 0.3 : 0.2),
+            color: color.withValues(alpha: isDark ? 0.5 : 0.3),
           ),
         ),
         child: Padding(
@@ -351,7 +335,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: isDark ? Colors.white : Colors.grey[800],
+                        color: AppColors.textPrimary(isDark),
                         height: 1.3,
                       ),
                     ),

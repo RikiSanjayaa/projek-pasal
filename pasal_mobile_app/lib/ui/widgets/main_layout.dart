@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/config/theme_controller.dart';
+import '../../core/config/app_colors.dart';
 
 class MainLayout extends StatelessWidget {
   final Widget child;
@@ -28,9 +29,7 @@ class MainLayout extends StatelessWidget {
         final isDark = Theme.of(context).brightness == Brightness.dark;
 
         return Scaffold(
-          backgroundColor:
-              backgroundColor ??
-              (isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FA)),
+          backgroundColor: backgroundColor ?? AppColors.scaffold(isDark),
           appBar: appBar,
           body: SafeArea(child: child),
           floatingActionButton: floatingActionButton,

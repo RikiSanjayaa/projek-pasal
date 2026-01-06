@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/config/app_colors.dart';
 import '../../models/pasal_model.dart';
 import '../../core/services/data_service.dart';
 import '../utils/highlight_text.dart';
@@ -22,8 +23,8 @@ class PasalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : Colors.black;
-    final subTextColor = isDark ? Colors.grey[400] : Colors.grey[600];
+    final textColor = AppColors.textPrimary(isDark);
+    final subTextColor = AppColors.textSecondary(isDark);
 
     final displayNomor = pasal.nomor.toLowerCase().startsWith('pasal')
         ? pasal.nomor
@@ -36,9 +37,7 @@ class PasalCard extends StatelessWidget {
 
         final baseColor = UUColorHelper.getColor(kodeUU);
 
-        final cardBgColor = isDark
-            ? Colors.white.withValues(alpha: 0.1)
-            : Colors.white.withValues(alpha: 0.8);
+        final cardBgColor = AppColors.card(isDark);
 
         final labelBgColor = isDark
             ? baseColor.withValues(alpha: 0.6)
@@ -113,7 +112,7 @@ class PasalCard extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
-                          color: isDark ? Colors.white70 : Colors.black87,
+                          color: AppColors.textPrimary(isDark),
                         ),
                       ),
                     ),

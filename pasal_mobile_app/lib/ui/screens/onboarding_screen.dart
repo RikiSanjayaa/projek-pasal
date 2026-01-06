@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/config/app_colors.dart';
 import '../../core/services/sync_manager.dart';
 import '../../core/services/sync_progress.dart';
 import 'main_navigation.dart';
@@ -21,21 +22,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       "desc":
           "Aplikasi Kitab Undang-Undang Hukum (KUHP, ITE, dll) dalam genggaman Anda.",
       "icon": Icons.menu_book_rounded,
-      "color": Colors.blue,
+      "color": AppColors.primary,
     },
     {
       "title": "Pencarian Cepat",
       "desc":
           "Cari pasal berdasarkan nomor atau kata kunci dengan fitur highlight pintar.",
       "icon": Icons.search_rounded,
-      "color": Colors.green,
+      "color": AppColors.success,
     },
     {
       "title": "Siapkan Data Offline",
       "desc":
           "Unduh data sekarang agar aplikasi bisa digunakan tanpa internet.",
       "icon": Icons.cloud_download_rounded,
-      "color": Colors.orange,
+      "color": AppColors.warning,
     },
   ];
 
@@ -56,7 +57,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text("Unduhan dibatalkan"),
-          backgroundColor: Colors.orange,
+          backgroundColor: AppColors.warning,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
@@ -69,7 +70,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result.message),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
@@ -88,19 +89,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+        backgroundColor: AppColors.card(isDark),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.15),
+                color: AppColors.success.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.check_circle,
-                color: Colors.green,
+                color: AppColors.success,
                 size: 28,
               ),
             ),
@@ -108,7 +109,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Text(
               "Unduhan Selesai!",
               style: TextStyle(
-                color: isDark ? Colors.white : Colors.grey[800],
+                color: AppColors.textPrimary(isDark),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -153,7 +154,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
@@ -176,19 +177,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: isDark ? Colors.grey[800] : Colors.grey[100],
+        color: AppColors.inputFill(isDark),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: Colors.blue),
+          Icon(icon, size: 20, color: AppColors.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               text,
               style: TextStyle(
                 fontSize: 14,
-                color: isDark ? Colors.grey[300] : Colors.grey[700],
+                color: AppColors.textSecondary(isDark),
               ),
             ),
           ),
@@ -203,24 +204,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+        backgroundColor: AppColors.card(isDark),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           "Batalkan Unduhan?",
           style: TextStyle(
-            color: isDark ? Colors.white : Colors.grey[900],
+            color: AppColors.textPrimary(isDark),
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           "Unduhan akan dihentikan dan Anda perlu mengulang dari awal. Yakin ingin membatalkan?",
-          style: TextStyle(color: isDark ? Colors.grey[300] : Colors.grey[700]),
+          style: TextStyle(color: AppColors.textSecondary(isDark)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             style: TextButton.styleFrom(
-              foregroundColor: isDark ? Colors.grey[400] : Colors.grey[600],
+              foregroundColor: AppColors.textSecondary(isDark),
             ),
             child: const Text("Lanjutkan Unduhan"),
           ),
@@ -229,7 +230,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Navigator.pop(context);
               syncManager.cancelSync();
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: const Text("Ya, Batalkan"),
           ),
         ],
@@ -240,7 +241,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FA);
+    final bgColor = AppColors.scaffold(isDark);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -278,17 +279,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 height: 160,
                 width: 160,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      color.withValues(alpha: isDark ? 0.3 : 0.15),
-                      color.withValues(alpha: isDark ? 0.15 : 0.05),
-                    ],
-                  ),
+                  color: color.withValues(alpha: isDark ? 0.1 : 0.05),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: color.withValues(alpha: 0.3),
+                    color: color.withValues(alpha: isDark ? 0.5 : 0.3),
                     width: 2,
                   ),
                 ),
@@ -302,7 +296,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.grey[800],
+                  color: AppColors.textPrimary(isDark),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -313,7 +307,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 page['desc']!,
                 style: TextStyle(
                   fontSize: 16,
-                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  color: AppColors.textSecondary(isDark),
                   height: 1.5,
                 ),
                 textAlign: TextAlign.center,
@@ -342,31 +336,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 height: 120,
                 width: 120,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: isError
-                        ? [
-                            Colors.red.withValues(alpha: isDark ? 0.3 : 0.15),
-                            Colors.red.withValues(alpha: isDark ? 0.15 : 0.05),
-                          ]
-                        : [
-                            Colors.blue.withValues(alpha: isDark ? 0.3 : 0.15),
-                            Colors.blue.withValues(alpha: isDark ? 0.15 : 0.05),
-                          ],
-                  ),
+                  color: (isError ? AppColors.error : AppColors.primary)
+                      .withValues(alpha: isDark ? 0.1 : 0.05),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: (isError ? Colors.red : Colors.blue).withValues(
-                      alpha: 0.3,
-                    ),
+                    color: (isError ? AppColors.error : AppColors.primary)
+                        .withValues(alpha: isDark ? 0.5 : 0.3),
                     width: 2,
                   ),
                 ),
                 child: Icon(
                   _getPhaseIcon(progress?.phase),
                   size: 50,
-                  color: isError ? Colors.red : Colors.blue,
+                  color: isError ? AppColors.error : AppColors.primary,
                 ),
               ),
               const SizedBox(height: 40),
@@ -377,7 +359,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.grey[800],
+                  color: AppColors.textPrimary(isDark),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -387,15 +369,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.blue.withValues(
-                        alpha: isComplete ? 0.3 : 0.1,
-                      ),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(10),
@@ -406,7 +379,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         ? Colors.grey[800]
                         : Colors.white, // Clean white for light mode
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      isError ? Colors.red : Colors.blue,
+                      isError ? AppColors.error : AppColors.primary,
                     ),
                   ),
                 ),
@@ -422,7 +395,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue,
+                      color: AppColors.primary,
                     ),
                   ),
                   if (progress?.estimatedRemainingFormatted != null)
@@ -430,7 +403,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       progress!.estimatedRemainingFormatted!,
                       style: TextStyle(
                         fontSize: 14,
-                        color: isDark ? Colors.grey[500] : Colors.grey[600],
+                        color: AppColors.textSecondary(isDark),
                       ),
                     ),
                 ],
@@ -441,11 +414,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.grey[850] : Colors.white,
+                  color: AppColors.card(isDark),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
-                  ),
+                  border: Border.all(color: AppColors.border(isDark)),
                 ),
                 child: Column(
                   children: [
@@ -458,12 +429,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               ? Icon(
                                   Icons.check_circle,
                                   size: 20,
-                                  color: Colors.green,
+                                  color: AppColors.success,
                                 )
                               : CircularProgressIndicator(
                                   strokeWidth: 2,
                                   valueColor: AlwaysStoppedAnimation(
-                                    isDark ? Colors.blue[300] : Colors.blue,
+                                    AppColors.primary,
                                   ),
                                 ),
                         ),
@@ -473,9 +444,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             progress?.currentOperation ?? "Mempersiapkan...",
                             style: TextStyle(
                               fontSize: 14,
-                              color: isDark
-                                  ? Colors.grey[300]
-                                  : Colors.grey[700],
+                              color: AppColors.textPrimary(isDark),
                             ),
                           ),
                         ),
@@ -489,16 +458,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           Icon(
                             Icons.book,
                             size: 16,
-                            color: isDark ? Colors.grey[500] : Colors.grey[500],
+                            color: AppColors.textSecondary(isDark),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             progress!.uuProgressText!,
                             style: TextStyle(
                               fontSize: 13,
-                              color: isDark
-                                  ? Colors.grey[500]
-                                  : Colors.grey[600],
+                              color: AppColors.textSecondary(isDark),
                             ),
                           ),
                         ],
@@ -536,7 +503,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   icon: const Icon(Icons.close, size: 18),
                   label: const Text("Batalkan Unduhan"),
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.red.shade400,
+                    foregroundColor: AppColors.error,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 8,
@@ -554,22 +521,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark
-            ? Colors.blue.withValues(alpha: 0.2)
-            : Colors.blue.withValues(alpha: 0.1),
+        color: AppColors.primary.withValues(alpha: isDark ? 0.1 : 0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: isDark ? 0.5 : 0.3),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: Colors.blue),
+          Icon(icon, size: 16, color: AppColors.primary),
           const SizedBox(width: 6),
           Text(
             text,
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? Colors.blue[300] : Colors.blue[700],
+              color: AppColors.primary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -603,15 +570,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        color: AppColors.card(isDark),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
-          ),
-        ],
       ),
       child: Column(
         children: [
@@ -627,8 +587,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 width: _currentPage == index ? 28 : 8,
                 decoration: BoxDecoration(
                   color: _currentPage == index
-                      ? Colors.blue
-                      : (isDark ? Colors.grey[700] : Colors.grey[300]),
+                      ? AppColors.primary
+                      : AppColors.border(isDark),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -652,7 +612,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(

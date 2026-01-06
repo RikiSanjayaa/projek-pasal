@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../core/config/app_colors.dart';
 import '../widgets/settings_drawer.dart';
 import 'home_screen.dart';
 import 'library_screen.dart';
@@ -52,11 +53,9 @@ class _MainNavigationState extends State<MainNavigation> {
           child: Container(
             height: 72,
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+              color: AppColors.bottomNav(isDark),
               border: Border.all(
-                color: isDark
-                    ? Colors.grey.withValues(alpha: 0.2)
-                    : Colors.grey.withValues(alpha: 0.1),
+                color: AppColors.border(isDark).withValues(alpha: 0.2),
               ),
               borderRadius: BorderRadius.circular(24),
             ),
@@ -106,10 +105,10 @@ class _MainNavigationState extends State<MainNavigation> {
   }) {
     final isSelected = _selectedIndex == index;
     final color = disabled
-        ? (isDark ? Colors.grey[700] : Colors.grey[400])
+        ? AppColors.textSecondary(isDark).withValues(alpha: 0.5)
         : isSelected
-        ? Colors.blue
-        : (isDark ? Colors.grey[500] : Colors.grey[600]);
+        ? AppColors.primary
+        : AppColors.textSecondary(isDark);
 
     return Expanded(
       child: GestureDetector(
@@ -135,7 +134,7 @@ class _MainNavigationState extends State<MainNavigation> {
                     ),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? Colors.blue.withValues(alpha: 0.15)
+                          ? AppColors.primary.withValues(alpha: 0.15)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -155,7 +154,7 @@ class _MainNavigationState extends State<MainNavigation> {
                           vertical: 1,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.orange,
+                          color: AppColors.warning,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: const Text(

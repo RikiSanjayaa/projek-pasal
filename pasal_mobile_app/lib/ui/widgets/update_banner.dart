@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/config/app_colors.dart';
 import '../../core/services/sync_manager.dart';
 import '../../core/services/sync_progress.dart';
 
@@ -64,7 +65,7 @@ class _UpdateBannerState extends State<UpdateBanner>
                 ),
               ],
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 3),
           ),
@@ -80,7 +81,7 @@ class _UpdateBannerState extends State<UpdateBanner>
                 Text("Sinkronisasi dibatalkan"),
               ],
             ),
-            backgroundColor: Colors.orange,
+            backgroundColor: AppColors.warning,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -94,7 +95,7 @@ class _UpdateBannerState extends State<UpdateBanner>
                 Expanded(child: Text(result.message)),
               ],
             ),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 3),
           ),
@@ -109,24 +110,24 @@ class _UpdateBannerState extends State<UpdateBanner>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+        backgroundColor: AppColors.card(isDark),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           "Batalkan Sinkronisasi?",
           style: TextStyle(
-            color: isDark ? Colors.white : Colors.grey[900],
+            color: AppColors.textPrimary(isDark),
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           "Sinkronisasi akan dihentikan. Anda dapat mencoba lagi nanti.",
-          style: TextStyle(color: isDark ? Colors.grey[300] : Colors.grey[700]),
+          style: TextStyle(color: AppColors.textSecondary(isDark)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             style: TextButton.styleFrom(
-              foregroundColor: isDark ? Colors.grey[400] : Colors.grey[600],
+              foregroundColor: AppColors.textSecondary(isDark),
             ),
             child: const Text("Lanjutkan"),
           ),
@@ -135,7 +136,7 @@ class _UpdateBannerState extends State<UpdateBanner>
               Navigator.pop(context);
               syncManager.cancelSync();
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: const Text("Batalkan"),
           ),
         ],
@@ -185,13 +186,6 @@ class _UpdateBannerState extends State<UpdateBanner>
                               : [Colors.blue.shade500, Colors.blue.shade600],
                         ),
                         borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.blue.withAlpha(77),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
                       ),
                       child: Material(
                         color: Colors.transparent,
@@ -265,7 +259,7 @@ class _UpdateBannerState extends State<UpdateBanner>
             onPressed: _handleSync,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
-              foregroundColor: Colors.blue.shade700,
+              foregroundColor: AppColors.primary,
               elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               shape: RoundedRectangleBorder(
@@ -438,7 +432,11 @@ class SyncStatusIndicator extends StatelessWidget {
           case SyncState.error:
             return const Tooltip(
               message: "Gagal sinkronisasi",
-              child: Icon(Icons.sync_problem, color: Colors.orange, size: 20),
+              child: Icon(
+                Icons.sync_problem,
+                color: AppColors.warning,
+                size: 20,
+              ),
             );
           case SyncState.idle:
             return ValueListenableBuilder<bool>(
@@ -449,7 +447,7 @@ class SyncStatusIndicator extends StatelessWidget {
                     message: "Update tersedia",
                     child: Icon(
                       Icons.system_update,
-                      color: Colors.blue,
+                      color: AppColors.info,
                       size: 20,
                     ),
                   );
