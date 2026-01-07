@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/config/app_colors.dart';
 import '../../models/undang_undang_model.dart';
 import '../../models/pasal_model.dart';
-import '../../core/services/data_service.dart';
+import '../../core/services/query_service.dart';
 import '../../core/services/sync_manager.dart';
 import '../widgets/pasal_card.dart';
 import '../widgets/settings_drawer.dart';
@@ -43,7 +43,7 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
   }
 
   void _loadPasal() async {
-    final pasal = await DataService.getPasalByUU(widget.undangUndang.id);
+    final pasal = await QueryService.getPasalByUU(widget.undangUndang.id);
     setState(() {
       _allPasal = pasal;
       _filteredPasal = _allPasal;

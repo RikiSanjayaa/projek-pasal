@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/config/app_colors.dart';
-import '../../core/services/data_service.dart';
+import '../../core/services/query_service.dart';
 import '../../core/services/sync_manager.dart';
-import 'main_navigation.dart';
+import '../widgets/main_navigation.dart';
 import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -25,7 +25,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
     await Future.delayed(const Duration(seconds: 2));
 
-    final allPasal = await DataService.getAllPasal();
+    final allPasal = await QueryService.getAllPasal();
 
     if (mounted) {
       if (allPasal.isEmpty) {

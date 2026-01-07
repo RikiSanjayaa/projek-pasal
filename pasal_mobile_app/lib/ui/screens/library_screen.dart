@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/config/app_colors.dart';
-import '../../core/services/data_service.dart';
+import '../../core/services/query_service.dart';
 import '../../models/undang_undang_model.dart';
 import '../../core/services/sync_manager.dart';
 import 'detail_uu_screen.dart';
@@ -47,8 +47,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
   void _loadData() async {
     await Future.delayed(const Duration(milliseconds: 100));
 
-    final uuData = await DataService.getAllUU();
-    final pasalData = await DataService.getAllPasal();
+    final uuData = await QueryService.getAllUU();
+    final pasalData = await QueryService.getAllPasal();
 
     // Count pasal per UU
     final Map<String, int> counts = {};

@@ -11,16 +11,16 @@ class SyncManager {
 
   static const String _lastSyncKey = 'last_sync_timestamp';
   static const String _syncIntervalKey = 'sync_interval_days';
-  
+
   /// Default sync interval in days
   static const int defaultSyncIntervalDays = 7;
 
   /// Notifier for sync state changes
   final ValueNotifier<SyncState> state = ValueNotifier(SyncState.idle);
-  
+
   /// Notifier for update availability
   final ValueNotifier<bool> updateAvailable = ValueNotifier(false);
-  
+
   /// Notifier for detailed sync progress
   final ValueNotifier<SyncProgress?> progress = ValueNotifier(null);
 
@@ -80,10 +80,10 @@ class SyncManager {
   /// Check if sync is needed based on time interval
   Future<bool> isSyncDue() async {
     if (_lastSyncTime == null) return true;
-    
+
     final intervalDays = await getSyncIntervalDays();
     final daysSinceLastSync = DateTime.now().difference(_lastSyncTime!).inDays;
-    
+
     return daysSinceLastSync >= intervalDays;
   }
 
@@ -96,7 +96,7 @@ class SyncManager {
   /// Get human-readable last sync text
   String get lastSyncText {
     if (_lastSyncTime == null) return "Belum pernah sinkronisasi";
-    
+
     final days = daysSinceLastSync;
     if (days == 0) {
       final hours = DateTime.now().difference(_lastSyncTime!).inHours;
@@ -122,10 +122,10 @@ class SyncManager {
   /// Check for updates on app launch
   Future<bool> checkOnLaunch() async {
     state.value = SyncState.checking;
-    
+
     try {
       final syncDue = await isSyncDue();
-      
+
       if (!syncDue) {
         state.value = SyncState.idle;
         updateAvailable.value = false;
@@ -135,7 +135,7 @@ class SyncManager {
       final hasUpdates = await DataService.checkForUpdates();
       updateAvailable.value = hasUpdates;
       state.value = SyncState.idle;
-      
+
       return hasUpdates;
     } catch (e) {
       print("Error checking for updates on launch: $e");
@@ -149,7 +149,7 @@ class SyncManager {
   Future<SyncResult> performSync() async {
     state.value = SyncState.syncing;
     progress.value = SyncProgress.initial(isIncremental: _lastSyncTime != null);
-    
+
     try {
       final result = await DataService.syncDataWithProgress(
         lastSyncTime: _lastSyncTime,
@@ -157,7 +157,7 @@ class SyncManager {
           progress.value = p;
         },
       );
-      
+
       if (result.success) {
         await _saveLastSyncTime();
         updateAvailable.value = false;
@@ -167,7 +167,7 @@ class SyncManager {
       } else {
         state.value = SyncState.error;
       }
-      
+
       return result;
     } catch (e) {
       print("Error performing sync: $e");
@@ -200,7 +200,7 @@ class SyncManager {
   /// Force check for updates (ignores time interval)
   Future<bool> forceCheckUpdates() async {
     state.value = SyncState.checking;
-    
+
     try {
       final hasUpdates = await DataService.checkForUpdates();
       updateAvailable.value = hasUpdates;
@@ -220,12 +220,99 @@ class SyncManager {
 }
 
 /// Sync state enum
-enum SyncState {
-  idle,
-  checking,
-  syncing,
-  error,
-}
+enum SyncState { idle, checking, syncing, error }
 
 /// Global sync manager instance
 final syncManager = SyncManager();
+
+/// Result class for sync operations
+class SyncResult {
+  final bool success;
+  final String message;
+  final bool synced;
+  final SyncError? error;
+
+  SyncResult({
+    required this.success,
+    required this.message,
+    required this.synced,
+    this.error,
+  });
+
+  @override
+  String toString() =>
+      'SyncResult(success: $success, message: $message, synced: $synced)';
+}
+
+/// Error types for better error handling
+enum SyncErrorType { network, server, database, unknown }
+
+/// Detailed error information for sync failures
+class SyncError {
+  final SyncErrorType type;
+  final String message;
+  final String? details;
+
+  SyncError({required this.type, required this.message, this.details});
+
+  String get userMessage {
+    switch (type) {
+      case SyncErrorType.network:
+        return 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+      case SyncErrorType.server:
+        return 'Server sedang mengalami gangguan. Coba lagi nanti.';
+      case SyncErrorType.database:
+        return 'Gagal menyimpan data ke penyimpanan lokal.';
+      case SyncErrorType.unknown:
+        return 'Terjadi kesalahan yang tidak diketahui.';
+    }
+  }
+
+  @override
+  String toString() => 'SyncError(type: $type, message: $message)';
+}
+
+/// Helper to determine error type from exception
+SyncError classifyError(dynamic e) {
+  final errorString = e.toString().toLowerCase();
+
+  if (errorString.contains('socket') ||
+      errorString.contains('connection') ||
+      errorString.contains('network') ||
+      errorString.contains('timeout') ||
+      errorString.contains('host')) {
+    return SyncError(
+      type: SyncErrorType.network,
+      message: 'Network error',
+      details: e.toString(),
+    );
+  }
+
+  if (errorString.contains('postgresql') ||
+      errorString.contains('supabase') ||
+      errorString.contains('500') ||
+      errorString.contains('502') ||
+      errorString.contains('503')) {
+    return SyncError(
+      type: SyncErrorType.server,
+      message: 'Server error',
+      details: e.toString(),
+    );
+  }
+
+  if (errorString.contains('drift') ||
+      errorString.contains('sqlite') ||
+      errorString.contains('database')) {
+    return SyncError(
+      type: SyncErrorType.database,
+      message: 'Database error',
+      details: e.toString(),
+    );
+  }
+
+  return SyncError(
+    type: SyncErrorType.unknown,
+    message: 'Unknown error',
+    details: e.toString(),
+  );
+}

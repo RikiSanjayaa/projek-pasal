@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/config/app_colors.dart';
 import '../../models/pasal_model.dart';
-import '../../core/services/data_service.dart';
+import '../../core/services/query_service.dart';
 import '../utils/highlight_text.dart';
 import '../screens/read_pasal_screen.dart';
 import '../utils/uu_color_helper.dart';
@@ -31,7 +31,7 @@ class PasalCard extends StatelessWidget {
         : "Pasal ${pasal.nomor}";
 
     return FutureBuilder<String>(
-      future: DataService.getKodeUU(pasal.undangUndangId),
+      future: QueryService.getKodeUU(pasal.undangUndangId),
       builder: (context, snapshot) {
         final kodeUU = snapshot.data ?? "UU";
 

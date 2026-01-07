@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/config/app_colors.dart';
 import '../../core/services/archive_service.dart';
-import '../../core/services/data_service.dart';
+import '../../core/services/query_service.dart';
 import '../../core/utils/search_utils.dart';
 import '../../models/pasal_model.dart';
 import '../widgets/main_layout.dart';
@@ -42,7 +42,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   }
 
   Future<void> _initData() async {
-    final data = await DataService.getAllPasal();
+    final data = await QueryService.getAllPasal();
     if (mounted) {
       setState(() {
         _allPasalCache = data;

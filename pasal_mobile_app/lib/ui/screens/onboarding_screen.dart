@@ -3,7 +3,7 @@ import '../../core/config/app_colors.dart';
 import '../../core/services/sync_manager.dart';
 import '../../core/services/sync_progress.dart';
 import '../widgets/app_notification.dart';
-import 'main_navigation.dart';
+import '../widgets/main_navigation.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});

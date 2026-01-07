@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/config/app_colors.dart';
-import '../../core/services/data_service.dart';
+import '../../core/services/query_service.dart';
 import '../widgets/settings_drawer.dart';
 
 class KeywordResultScreen extends StatelessWidget {
@@ -34,7 +34,7 @@ class KeywordResultScreen extends StatelessWidget {
         ],
       ),
       body: FutureBuilder<List>(
-        future: DataService.getPasalByKeyword(keyword),
+        future: QueryService.getPasalByKeyword(keyword),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -59,7 +59,7 @@ class KeywordResultScreen extends StatelessWidget {
               final pasal = results[index];
 
               return FutureBuilder<String>(
-                future: DataService.getKodeUU(pasal.undangUndangId),
+                future: QueryService.getKodeUU(pasal.undangUndangId),
                 builder: (context, kodeSnapshot) {
                   final kodeUU = kodeSnapshot.data ?? "UU";
 

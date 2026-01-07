@@ -3,14 +3,14 @@ import 'dart:async';
 import '../../core/config/app_colors.dart';
 import 'package:flutter/services.dart';
 import '../../models/pasal_model.dart';
-import '../../models/pasal_link_model.dart';
-import '../../core/services/data_service.dart';
+import '../../core/services/query_service.dart';
 import '../utils/highlight_text.dart';
 import '../widgets/settings_drawer.dart';
 import '../widgets/law_content_formatter.dart';
 import '../utils/uu_color_helper.dart';
 import '../../core/services/archive_service.dart';
 import '../widgets/app_notification.dart';
+import '../widgets/pasal_sections.dart';
 
 class ReadPasalScreen extends StatefulWidget {
   final PasalModel pasal;
@@ -55,7 +55,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
   }
 
   Future<void> _loadUUInfo() async {
-    final kode = await DataService.getKodeUU(_currentPasal.undangUndangId);
+    final kode = await QueryService.getKodeUU(_currentPasal.undangUndangId);
     if (mounted) {
       setState(() {
         _kodeUU = kode;
@@ -87,7 +87,6 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = AppColors.scaffold(isDark);
     final textColor = AppColors.textPrimary(isDark);
-    final subTextColor = AppColors.textSecondary(isDark);
     final uuColor = UUColorHelper.getColor(_kodeUU);
 
     return Scaffold(
@@ -562,271 +561,29 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                     if (_currentPasal.penjelasan != null &&
                         _currentPasal.penjelasan!.length > 3) ...[
                       const SizedBox(height: 24),
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(
-                            alpha: isDark ? 0.1 : 0.05,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: AppColors.primary.withValues(
-                              alpha: isDark ? 0.5 : 0.3,
-                            ),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.lightbulb_outline,
-                                  size: 14,
-                                  color: AppColors.primary.withValues(
-                                    alpha: 0.8,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'PENJELASAN',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.primary.withValues(
-                                      alpha: 0.8,
-                                    ),
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            HighlightText(
-                              text: _currentPasal.penjelasan!,
-                              query: _localSearchQuery,
-                              textAlign: TextAlign.justify,
-                              style: TextStyle(
-                                fontSize: 14,
-                                height: 1.6,
-                                color: subTextColor,
-                              ),
-                            ),
-                          ],
-                        ),
+                      PenjelasanSection(
+                        penjelasan: _currentPasal.penjelasan!,
+                        searchQuery: _localSearchQuery,
                       ),
                     ],
 
                     if (_currentPasal.keywords.isNotEmpty) ...[
                       const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.local_offer_outlined,
-                            size: 14,
-                            color: isDark
-                                ? AppColors.primary.withValues(alpha: 0.8)
-                                : AppColors.primary.withValues(alpha: 0.8),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'KATA KUNCI',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: isDark
-                                  ? Colors.grey[500]
-                                  : Colors.grey[500],
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        alignment: WrapAlignment.start,
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: _currentPasal.keywords
-                            .map(
-                              (k) => Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.card(isDark),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: isDark
-                                        ? Colors.grey[700]!
-                                        : Colors.grey[300]!,
-                                  ),
-                                ),
-                                child: Text(
-                                  k,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: isDark
-                                        ? Colors.grey[300]
-                                        : Colors.grey[700],
-                                  ),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                      ),
+                      KeywordsSection(keywords: _currentPasal.keywords),
                     ],
 
-                    FutureBuilder<List<PasalLinkWithTarget>>(
-                      future: DataService.getPasalLinks(_currentPasal.id),
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                          return const SizedBox.shrink();
-                        }
-                        final links = snapshot.data!;
-
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 24),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.link_rounded,
-                                  size: 14,
-                                  color: Colors.orange[400],
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'PASAL TERKAIT',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.orange[400],
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            ...links.map((link) {
-                              final relatedPasal = link.targetPasal;
-
-                              return FutureBuilder<String>(
-                                future: DataService.getKodeUU(
-                                  relatedPasal.undangUndangId,
-                                ),
-                                builder: (context, kodeSnapshot) {
-                                  final kodeUU = kodeSnapshot.data ?? "UU";
-                                  final relColor = UUColorHelper.getColor(
-                                    kodeUU,
-                                  );
-
-                                  return GestureDetector(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => ReadPasalScreen(
-                                            pasal: relatedPasal,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    child: Container(
-                                      margin: const EdgeInsets.only(bottom: 8),
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: Colors.orange.withValues(
-                                          alpha: isDark ? 0.1 : 0.05,
-                                        ),
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                          color: Colors.orange.withValues(
-                                            alpha: isDark ? 0.5 : 0.3,
-                                          ),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(8),
-                                            decoration: BoxDecoration(
-                                              color: relColor.withValues(
-                                                alpha: 0.15,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: Icon(
-                                              _getUUIcon(kodeUU),
-                                              size: 16,
-                                              color: relColor,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Row(
-                                                  children: [
-                                                    Text(
-                                                      "Pasal ${relatedPasal.nomor}",
-                                                      style: TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        fontSize: 13,
-                                                        color: textColor,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 10),
-                                                    Text(
-                                                      kodeUU,
-                                                      style: TextStyle(
-                                                        fontSize: 11,
-                                                        color: relColor,
-                                                        fontWeight:
-                                                            FontWeight.w500,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                if (link.keterangan != null &&
-                                                    link
-                                                        .keterangan!
-                                                        .isNotEmpty) ...[
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    link.keterangan!,
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      color: subTextColor,
-                                                      fontStyle:
-                                                          FontStyle.italic,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ],
-                                            ),
-                                          ),
-                                          Icon(
-                                            Icons.chevron_right_rounded,
-                                            size: 20,
-                                            color: subTextColor,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              );
-                            }),
-                          ],
+                    const SizedBox(height: 24),
+                    RelatedPasalLinks(
+                      pasalId: _currentPasal.id,
+                      onNavigate: (pasal) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ReadPasalScreen(pasal: pasal),
+                          ),
                         );
                       },
+                      getUUIcon: _getUUIcon,
                     ),
 
                     const SizedBox(height: 20),

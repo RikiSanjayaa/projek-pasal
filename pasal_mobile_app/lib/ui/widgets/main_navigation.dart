@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/config/app_colors.dart';
-import '../widgets/settings_drawer.dart';
-import 'home_screen.dart';
-import 'library_screen.dart';
-import 'archive_screen.dart';
+import 'settings_drawer.dart';
+import '../screens/home_screen.dart';
+import '../screens/library_screen.dart';
+import '../screens/archive_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});

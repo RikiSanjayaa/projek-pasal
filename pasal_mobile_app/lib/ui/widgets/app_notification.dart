@@ -3,25 +3,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/config/app_colors.dart';
 
-/// Shows a generalized app notification at the top of the screen.
-///
-/// This handles logic to remove existing notifications if present.
-/// The [overlayEntry] parameter allows the caller to keep track of the current entry
-/// to dismiss it if needed, though this function manages replacement automatically
-/// if you use a simplified state management approach or pass the same variable.
-///
-/// However, to strictly mimic the behavior we had:
-/// We need a way to track the *current* overlay at a global or scoped level to replace it.
-///
-/// For a simple reusable function, we can just return the created OverlayEntry
-/// and let the caller manage the "replace if exists" logic,
-/// OR we can use a global key/singleton helper.
-///
-/// Given the current codebase structure, a static class with a static variable
-/// might be the easiest way to ensure only one notification shows at a time globally,
-/// or we can keep it simple and just export the Widget and a helper method
-/// that returns the entry.
-
 class AppNotification {
   static OverlayEntry? _currentEntry;
 

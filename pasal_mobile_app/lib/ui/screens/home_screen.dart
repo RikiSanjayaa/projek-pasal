@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import '../../core/config/app_colors.dart';
 import '../../models/pasal_model.dart';
 import '../../models/undang_undang_model.dart';
-import '../../core/services/data_service.dart';
+import '../../core/services/query_service.dart';
 import '../../core/utils/search_utils.dart';
 import '../widgets/pasal_card.dart';
 import '../widgets/main_layout.dart';
 import '../widgets/update_banner.dart';
 import '../widgets/keyword_bottom_sheet.dart';
+import '../widgets/pagination_footer.dart';
+import '../widgets/filter_widgets.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -70,11 +72,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _initData() async {
-    final rawUU = await DataService.getAllUU();
+    final rawUU = await QueryService.getAllUU();
     final uniqueIds = <String>{};
     _listUU = rawUU.where((uu) => uniqueIds.add(uu.id)).toList();
 
-    _allPasalCache = await DataService.getAllPasal();
+    _allPasalCache = await QueryService.getAllPasal();
     _allPasalCache.sort((a, b) {
       final timeA = a.updatedAt ?? a.createdAt ?? DateTime(2000);
       final timeB = b.updatedAt ?? b.createdAt ?? DateTime(2000);
@@ -314,7 +316,29 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            _buildActiveFiltersSection(isDark),
+            ActiveFiltersSection(
+              selectedKeywords: _selectedKeywords,
+              selectedUUName: _selectedFilterUUId != 'ALL'
+                  ? _listUU
+                        .where((u) => u.id == _selectedFilterUUId)
+                        .firstOrNull
+                        ?.kode
+                  : null,
+              onClearAll: () {
+                setState(() {
+                  _selectedKeywords.clear();
+                  _selectedFilterUUId = 'ALL';
+                  _applyFilterAndSearch();
+                });
+              },
+              onRemoveUU: () {
+                setState(() {
+                  _selectedFilterUUId = 'ALL';
+                  _applyFilterAndSearch();
+                });
+              },
+              onRemoveKeyword: (keyword) => _removeKeyword(keyword),
+            ),
 
             _buildFilterSections(isDark),
 
@@ -355,7 +379,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 20,
                                   ),
-                                  child: _buildPaginationFooter(isDark),
+                                  child: PaginationFooter(
+                                    currentPage: _currentPage,
+                                    totalPages: _totalPages,
+                                    onPrevious: () {
+                                      setState(() {
+                                        _currentPage--;
+                                        _updatePagination();
+                                      });
+                                      _listScrollController.jumpTo(0);
+                                    },
+                                    onNext: () {
+                                      setState(() {
+                                        _currentPage++;
+                                        _updatePagination();
+                                      });
+                                      _listScrollController.jumpTo(0);
+                                    },
+                                  ),
                                 )
                               : const SizedBox(height: 20);
                         }
@@ -397,143 +438,6 @@ class _HomeScreenState extends State<HomeScreen> {
               color: isDark ? Colors.grey[300] : Colors.grey[700],
             ),
             tooltip: 'Pengaturan',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActiveFiltersSection(bool isDark) {
-    final hasActiveKeywords = _selectedKeywords.isNotEmpty;
-    final hasActiveUU = _selectedFilterUUId != 'ALL';
-
-    if (!hasActiveKeywords && !hasActiveUU) {
-      return const SizedBox.shrink();
-    }
-
-    // Find selected UU name
-    String? selectedUUName;
-    if (hasActiveUU) {
-      final uu = _listUU.where((u) => u.id == _selectedFilterUUId).firstOrNull;
-      selectedUUName = uu?.kode;
-    }
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: isDark ? 0.1 : 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.primary.withValues(alpha: isDark ? 0.5 : 0.3),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.filter_alt,
-                    size: 14,
-                    color: AppColors.primary.withValues(alpha: 0.8),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Filter Aktif',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary.withValues(alpha: 0.8),
-                    ),
-                  ),
-                ],
-              ),
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedKeywords.clear();
-                    _selectedFilterUUId = 'ALL';
-                    _applyFilterAndSearch();
-                  });
-                },
-                child: Text(
-                  'Hapus Semua',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.primary.withValues(alpha: 0.8),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              if (hasActiveUU && selectedUUName != null)
-                _buildActiveFilterChip(
-                  label: selectedUUName,
-                  icon: Icons.menu_book,
-                  onRemove: () {
-                    setState(() {
-                      _selectedFilterUUId = 'ALL';
-                      _applyFilterAndSearch();
-                    });
-                  },
-                  isDark: isDark,
-                ),
-
-              ..._selectedKeywords.map(
-                (k) => _buildActiveFilterChip(
-                  label: k,
-                  icon: Icons.tag,
-                  onRemove: () => _removeKeyword(k),
-                  isDark: isDark,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActiveFilterChip({
-    required String label,
-    required IconData icon,
-    required VoidCallback onRemove,
-    required bool isDark,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: Colors.white),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Colors.white,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(width: 4),
-          GestureDetector(
-            onTap: onRemove,
-            child: const Icon(Icons.close, size: 14, color: Colors.white70),
           ),
         ],
       ),
@@ -896,39 +800,6 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.of(context).pop();
         _showKeywordBottomSheet(autoFocus: autoFocus);
       },
-    );
-  }
-
-  Widget _buildPaginationFooter(bool isDark) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.chevron_left),
-          onPressed: _currentPage > 1
-              ? () {
-                  setState(() {
-                    _currentPage--;
-                    _updatePagination();
-                  });
-                  _listScrollController.jumpTo(0);
-                }
-              : null,
-        ),
-        Text("$_currentPage / $_totalPages"),
-        IconButton(
-          icon: const Icon(Icons.chevron_right),
-          onPressed: _currentPage < _totalPages
-              ? () {
-                  setState(() {
-                    _currentPage++;
-                    _updatePagination();
-                  });
-                  _listScrollController.jumpTo(0);
-                }
-              : null,
-        ),
-      ],
     );
   }
 }
