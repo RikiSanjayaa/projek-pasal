@@ -85,7 +85,6 @@ export function ResetPasswordPage() {
       setMessage('Password updated. Redirecting to login...')
       setTimeout(() => navigate('/login'), 1200)
     } catch (err: any) {
-      console.error('Failed to update password', err)
       setMessage(String(err?.message || err))
     } finally {
       setLoading(false)

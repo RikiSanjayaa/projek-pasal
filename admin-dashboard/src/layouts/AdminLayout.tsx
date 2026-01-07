@@ -80,7 +80,6 @@ export function AdminLayout() {
       showNotification({ title: 'Terkirim', message: 'Permintaan reset password terkirim. Periksa email untuk instruksi.', color: 'green' })
       closeResetModal()
     } catch (err: any) {
-      console.error('Failed to request password reset', err)
       showNotification({ title: 'Error', message: String(err?.message || err), color: 'red' })
     }
   }

@@ -75,7 +75,6 @@ export function LoginPage() {
       setResetModalOpened(false)
       resetForm.reset()
     } catch (err: any) {
-      console.error('Failed to request password reset', err)
       showNotification({
         title: 'Gagal Mengirim Email Reset',
         message: String(err?.message || err),

@@ -118,8 +118,6 @@ export function PasalCreatePage() {
           .insert(linksToInsert as never)
 
         if (linkError) {
-          console.error('Error creating links:', linkError)
-          // Don't throw - pasal already created, just notify about link failure
           notifications.show({
             title: 'Peringatan',
             message: 'Pasal berhasil dibuat, tetapi gagal membuat beberapa link pasal terkait.',

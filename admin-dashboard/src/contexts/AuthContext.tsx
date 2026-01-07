@@ -38,10 +38,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Tidak perlu timeout untuk getSession
         const { data: { session }, error } = await supabase.auth.getSession();
 
-        if (error) {
-          console.error('Session error:', error);
-        }
-
         if (!isMounted) return;
 
         setSession(session);
@@ -65,7 +61,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setAdminUser(result.data)
               }
             } catch (adminError: any) {
-              console.error('Error fetching admin user (background):', adminError)
               const msg = String(adminError?.message || adminError)
               if (msg.includes('Failed to fetch') || msg.includes('timeout') || adminError?.status >= 500) {
                 setServerDown(true)
@@ -73,8 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           })()
         }
-      } catch (error) {
-        console.error('Auth initialization error:', error);
+      } catch {
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -101,10 +95,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           window.location.href = `${window.location.origin}/reset-password`
-          // return early — the redirect will reload the app and the session should be detected from URL
           return
-        } catch (e) {
-          console.error('Failed to redirect on PASSWORD_RECOVERY', e)
+        } catch {
         }
       }
       if (!isMounted) return;
@@ -128,7 +120,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setAdminUser(result.data)
             }
           } catch (error: any) {
-            console.error('Error fetching admin user on auth change (background):', error)
             const msg = String(error?.message || error)
             if (msg.includes('Failed to fetch') || msg.includes('timeout') || error?.status >= 500) {
               setServerDown(true)
@@ -167,8 +158,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       return { error: null }
     } catch (e: any) {
-      // Network / unexpected error
-      console.error('signIn error:', e)
       setServerDown(true)
       return { error: e as Error, serverDown: true }
     }

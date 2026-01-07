@@ -33,8 +33,7 @@ export function ManageAdminPage() {
         try {
           const { data } = await supabase.from('admin_users').select('id,email,nama,role,is_active').order('created_at', { ascending: false })
           if (data) setAdmins(data as any)
-        } catch (err) {
-          console.error('Failed to fetch admin users', err)
+        } catch {
         }
       })()
   }, [adminUser])
@@ -66,7 +65,6 @@ export function ManageAdminPage() {
       setToggleModalOpen(false)
       setToggleTarget(null)
     } catch (err: any) {
-      console.error('Failed to toggle admin active state', err)
       showNotification({ title: 'Error', message: String(err?.message || err), color: 'red' })
     } finally {
       setToggleLoading(false)
@@ -114,7 +112,6 @@ export function ManageAdminPage() {
       setNamaInput('')
       setEmailError(null)
     } catch (err: any) {
-      console.error(err)
       showNotification({ title: 'Error', message: String(err?.message || err), color: 'red' })
     } finally {
       setCreateLoading(false)
@@ -390,7 +387,6 @@ export function ManageAdminPage() {
                 await requestPasswordRecovery(resetTarget.email)
                 showNotification({ title: 'Terkirim', message: 'Email reset password terkirim.', color: 'green' })
               } catch (err: any) {
-                console.error('Failed to request password reset for admin', err)
                 showNotification({ title: 'Error', message: String(err?.message || err), color: 'red' })
               } finally {
                 setResetLoading(false)
