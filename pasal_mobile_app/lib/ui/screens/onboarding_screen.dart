@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/config/app_colors.dart';
 import '../../core/services/sync_manager.dart';
 import '../../core/services/sync_progress.dart';
+import '../widgets/app_notification.dart';
 import 'main_navigation.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -54,29 +55,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _showCompletionDialog(dbSize);
     } else if (syncManager.progress.value?.phase == SyncPhase.cancelled) {
       setState(() => _isDownloading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text("Unduhan dibatalkan"),
-          backgroundColor: AppColors.warning,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          margin: const EdgeInsets.all(16),
-        ),
+      AppNotification.show(
+        context,
+        "Unduhan dibatalkan",
+        color: AppColors.warning,
+        icon: Icons.cancel,
       );
     } else {
       setState(() => _isDownloading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result.message),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          margin: const EdgeInsets.all(16),
-        ),
+      AppNotification.show(
+        context,
+        result.message,
+        color: AppColors.error,
+        icon: Icons.error_outline,
       );
     }
   }

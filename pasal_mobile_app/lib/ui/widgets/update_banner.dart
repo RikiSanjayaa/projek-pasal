@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/config/app_colors.dart';
 import '../../core/services/sync_manager.dart';
 import '../../core/services/sync_progress.dart';
+import 'app_notification.dart';
 
 /// Banner widget that shows when updates are available
 /// Now with detailed progress tracking during sync
@@ -42,63 +43,26 @@ class _UpdateBannerState extends State<UpdateBanner>
 
     if (mounted) {
       if (result.success) {
-        final progress = syncManager.progress.value;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text("Sinkronisasi selesai"),
-                      if (progress != null)
-                        Text(
-                          progress.completionSummary,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 3),
-          ),
+        AppNotification.show(
+          context,
+          "Sinkronisasi selesai",
+          color: AppColors.success,
+          icon: Icons.check_circle,
         );
         widget.onSyncComplete?.call();
       } else if (syncManager.progress.value?.phase == SyncPhase.cancelled) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.cancel, color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Text("Sinkronisasi dibatalkan"),
-              ],
-            ),
-            backgroundColor: AppColors.warning,
-            behavior: SnackBarBehavior.floating,
-          ),
+        AppNotification.show(
+          context,
+          "Sinkronisasi dibatalkan",
+          color: AppColors.warning,
+          icon: Icons.cancel,
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Expanded(child: Text(result.message)),
-              ],
-            ),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 3),
-          ),
+        AppNotification.show(
+          context,
+          result.message,
+          color: AppColors.error,
+          icon: Icons.error_outline,
         );
       }
     }

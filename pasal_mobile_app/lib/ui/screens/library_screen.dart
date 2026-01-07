@@ -87,7 +87,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         children: [
           // Header section
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -98,8 +98,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       child: Text(
                         "Pustaka Hukum",
                         style: TextStyle(
-                          fontSize: 28,
+                          fontSize: 26,
                           fontWeight: FontWeight.bold,
+                          height: 1.2,
                         ),
                       ),
                     ),

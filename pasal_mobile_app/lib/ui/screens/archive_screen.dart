@@ -68,7 +68,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
             'pasal ${p.nomor}'.toLowerCase().contains(q);
 
         final contentMatch = p.isi.toLowerCase().contains(q);
-        
+
         final titleMatch =
             p.judul != null && p.judul!.toLowerCase().contains(q);
 
@@ -86,12 +86,12 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
 
     setState(() {
       _filteredData = source;
-      
+
       _totalPages = (_filteredData.length / _itemsPerPage).ceil();
       if (_totalPages == 0) _totalPages = 1;
 
-      if (_currentPage > _totalPages) _currentPage = 1; 
-      
+      if (_currentPage > _totalPages) _currentPage = 1;
+
       _updatePagination();
     });
   }
@@ -117,13 +117,13 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
       child: ValueListenableBuilder<List<String>>(
         valueListenable: archiveService.archivedIds,
         builder: (context, archivedIds, child) {
-          
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_filteredData.length != archivedIds.length && _searchQuery.isEmpty) {
+            if (_filteredData.length != archivedIds.length &&
+                _searchQuery.isEmpty) {
               _applyFilterAndPagination();
             }
           });
-          
+
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -152,23 +152,32 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                           ),
                           tooltip: 'Pengaturan',
                         );
-                      }
+                      },
                     ),
                   ],
                 ),
               ),
 
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 5,
+                ),
                 child: TextField(
                   controller: _searchController,
+                  keyboardAppearance: isDark
+                      ? Brightness.dark
+                      : Brightness.light,
                   onChanged: (val) {
                     _searchQuery = val;
-                    _currentPage = 1; 
+                    _currentPage = 1;
                     _applyFilterAndPagination();
                   },
                   decoration: InputDecoration(
-                    hintText: "Cari judul, nomor, atau isi...",
+                    hintText: "Cari nomor, nama atau isi pasal...",
+                    hintStyle: TextStyle(
+                      color: isDark ? Colors.white70 : Colors.black54,
+                    ),
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
@@ -193,13 +202,16 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
               ),
 
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 5,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      _searchQuery.isNotEmpty 
-                          ? "Hasil Pencarian" 
+                      _searchQuery.isNotEmpty
+                          ? "Hasil Pencarian"
                           : "Daftar Koleksi",
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
@@ -213,25 +225,27 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 10),
 
               Expanded(
-                child: _filteredData.isEmpty 
+                child: _filteredData.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              Icons.bookmark_border_rounded, 
-                              size: 64, 
-                              color: isDark ? Colors.grey[700] : Colors.grey[300]
+                              Icons.bookmark_border_rounded,
+                              size: 64,
+                              color: isDark
+                                  ? Colors.grey[700]
+                                  : Colors.grey[300],
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              _searchQuery.isNotEmpty 
-                                ? "Tidak ditemukan." 
-                                : "Belum ada pasal tersimpan.",
+                              _searchQuery.isNotEmpty
+                                  ? "Tidak ditemukan."
+                                  : "Belum ada pasal tersimpan.",
                               style: TextStyle(color: Colors.grey[500]),
                             ),
                           ],
@@ -239,26 +253,27 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                       )
                     : NotificationListener<ScrollNotification>(
                         onNotification: (scrollInfo) {
-                           if (scrollInfo is UserScrollNotification) {
-                             FocusScope.of(context).unfocus();
-                           }
-                           return false;
+                          if (scrollInfo is UserScrollNotification) {
+                            FocusScope.of(context).unfocus();
+                          }
+                          return false;
                         },
                         child: ListView.builder(
                           controller: _scrollController,
                           padding: const EdgeInsets.symmetric(horizontal: 20),
-                          itemCount: _paginatedData.length + 1, 
+                          itemCount: _paginatedData.length + 1,
                           itemBuilder: (context, index) {
-                            
                             if (index == _paginatedData.length) {
-                               return _filteredData.length > _itemsPerPage 
+                              return _filteredData.length > _itemsPerPage
                                   ? Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 20),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 20,
+                                      ),
                                       child: _buildPaginationFooter(isDark),
-                                    ) 
+                                    )
                                   : const SizedBox(height: 80);
                             }
-                            
+
                             final pasal = _paginatedData[index];
                             return PasalCard(
                               pasal: pasal,

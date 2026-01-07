@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/config/app_colors.dart';
 import '../../core/config/theme_controller.dart';
 import '../../core/services/sync_manager.dart';
+import 'app_notification.dart';
 
 /// Reusable Settings Sheet that can be shown from anywhere in the app
 class SettingsSheet extends StatefulWidget {
@@ -143,27 +144,11 @@ class _SettingsSheetState extends State<SettingsSheet> {
                                 final hasUpdate = await syncManager
                                     .forceCheckUpdates();
                                 if (mounted && !hasUpdate) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.check_circle,
-                                            color: AppColors.iconDark,
-                                            size: 18,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          const Text("Data sudah up-to-date"),
-                                        ],
-                                      ),
-                                      behavior: SnackBarBehavior.floating,
-                                      backgroundColor: AppColors.success,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      margin: const EdgeInsets.all(16),
-                                      duration: const Duration(seconds: 2),
-                                    ),
+                                  AppNotification.show(
+                                    context,
+                                    "Data sudah up-to-date",
+                                    color: AppColors.success,
+                                    icon: Icons.check_circle,
                                   );
                                 }
                               },

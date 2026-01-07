@@ -24,7 +24,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<String> _allAvailableKeywords = [];
   List<String> _popularKeywords = [];
-  Map<String, int> _keywordUsageCount = {};
 
   String _selectedFilterUUId = 'ALL';
   List<String> _selectedKeywords = [];
@@ -92,7 +91,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    _keywordUsageCount = keywordCount;
     _allAvailableKeywords = keywordCount.keys.toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
@@ -250,123 +248,6 @@ class _HomeScreenState extends State<HomeScreen> {
           elevation: 8,
           borderRadius: BorderRadius.circular(12),
           color: AppColors.card(isDark),
-          child: Container(
-            constraints: const BoxConstraints(maxHeight: 400),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (keywordSuggestions.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                      child: Text(
-                        'KEYWORD COCOK',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.grey[500] : Colors.grey[600],
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                    ...keywordSuggestions.map(
-                      (keyword) => InkWell(
-                        onTap: () {
-                          _toggleKeyword(keyword);
-                          _updateOverlay();
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.tag,
-                                size: 16,
-                                color: isDark ? Colors.grey[500] : Colors.grey,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  keyword,
-                                  style: TextStyle(
-                                    color: isDark
-                                        ? Colors.white
-                                        : Colors.black87,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                '${_keywordUsageCount[keyword] ?? 0} pasal',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: isDark
-                                      ? Colors.grey[600]
-                                      : Colors.grey[500],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-
-                  if (_searchQuery.isNotEmpty) ...[
-                    InkWell(
-                      onTap: () {
-                        _searchFocusNode.unfocus();
-                        _removeOverlay();
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.search,
-                              size: 16,
-                              color: AppColors.primary,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: RichText(
-                                text: TextSpan(
-                                  style: TextStyle(
-                                    color: isDark
-                                        ? Colors.white
-                                        : Colors.black87,
-                                  ),
-                                  children: [
-                                    const TextSpan(text: 'Cari "'),
-                                    TextSpan(
-                                      text: _searchQuery,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const TextSpan(text: '" di isi pasal'),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const Icon(
-                              Icons.arrow_forward,
-                              size: 16,
-                              color: AppColors.primary,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
         ),
       ),
     );
@@ -405,7 +286,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     _updateOverlay();
                   },
                   decoration: InputDecoration(
-                    hintText: "Cari pasal atau keyword...",
+                    hintText: "Cari nomor, nama atau isi pasal...",
+                    hintStyle: TextStyle(
+                      color: isDark ? Colors.white70 : Colors.black54,
+                    ),
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
