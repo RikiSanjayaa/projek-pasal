@@ -10,6 +10,7 @@ Secrets (set with `supabase secrets set` or in dashboard)
 
 - `SERVICE_ROLE` — your Supabase service_role key
 - `SUPABASE_URL` — your Supabase project URL
+- `ALLOWED_ORIGINS` — (optional) comma-separated list of allowed CORS origins (e.g., `https://admin.example.com,https://staging.example.com`)
 
 Deploy
 
@@ -23,7 +24,7 @@ supabase functions deploy create-admin --project-ref <your-project-ref>
 3. Set secrets:
 
 ```bash
-supabase secrets set SERVICE_ROLE="<service-role>" SUPABASE_URL="https://xyz.supabase.co"
+supabase secrets set SERVICE_ROLE="<service-role>" SUPABASE_URL="https://xyz.supabase.co" ALLOWED_ORIGINS="https://your-admin-dashboard.com"
 ```
 
 Call example (from admin frontend):
