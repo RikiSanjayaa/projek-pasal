@@ -182,45 +182,47 @@ export function DashboardPage() {
 
   return (
     <Stack gap="xl" mb="xl">
-      <div>
-        <Title order={2}>Dashboard</Title>
-        <Text c="dimmed">Selamat datang di Dashboard Admin CariPasal</Text>
-      </div>
+      <Group justify="space-between" align="end">
+        <div>
+          <Title order={2}>Dashboard</Title>
+          <Text c="dimmed">Selamat datang di Dashboard Admin CariPasal</Text>
+        </div>
 
-      {/* Stats Badges - Compact & Clickable */}
-      <Group gap="md">
-        <Button
-          variant="light"
-          color="blue"
-          size="md"
-          radius="xl"
-          leftSection={<IconScale size={20} />}
-          onClick={() => navigate('/pasal')}
-        >
-          {loadingDashboard ? '...' : `${pasalCount || 0} Pasal`}
-        </Button>
+        {/* Stats Badges - Compact & Clickable */}
+        <Group gap="md">
+          <Button
+            variant="light"
+            color="blue"
+            size="md"
+            radius="xl"
+            leftSection={<IconScale size={20} />}
+            onClick={() => navigate('/pasal')}
+          >
+            {loadingDashboard ? '...' : `${pasalCount || 0} Pasal`}
+          </Button>
 
-        <Button
-          variant="light"
-          color="green"
-          size="md"
-          radius="xl"
-          leftSection={<IconBook size={20} />}
-          onClick={() => navigate('/undang-undang')}
-        >
-          {loadingDashboard ? '...' : `${uuCount || 0} Sumber Undang-Undang`}
-        </Button>
+          <Button
+            variant="light"
+            color="green"
+            size="md"
+            radius="xl"
+            leftSection={<IconBook size={20} />}
+            onClick={() => navigate('/undang-undang')}
+          >
+            {loadingDashboard ? '...' : `${uuCount || 0} Sumber Undang-Undang`}
+          </Button>
 
-        <Button
-          variant="light"
-          color="orange"
-          size="md"
-          radius="xl"
-          leftSection={<IconHistory size={20} />}
-          onClick={() => navigate('/audit-log')}
-        >
-          {loadingDashboard ? '...' : `${totalChangesToday || 0} Perubahan Hari Ini`}
-        </Button>
+          <Button
+            variant="light"
+            color="orange"
+            size="md"
+            radius="xl"
+            leftSection={<IconHistory size={20} />}
+            onClick={() => navigate('/audit-log')}
+          >
+            {loadingDashboard ? '...' : `${totalChangesToday || 0} Perubahan Hari Ini`}
+          </Button>
+        </Group>
       </Group>
 
       {/* Main Analytics Section */}
