@@ -270,5 +270,211 @@ void main() {
         expect(progress.estimatedTotalBytesFormatted, '1.00 MB');
       });
     });
+
+    group('elapsed', () {
+      test('returns duration since startTime', () {
+        final startTime = DateTime.now().subtract(const Duration(seconds: 5));
+        final progress = SyncProgress(
+          phase: SyncPhase.downloadingPasal,
+          currentOperation: 'Downloading',
+          startTime: startTime,
+        );
+
+        // Allow small tolerance for test execution time
+        expect(progress.elapsed.inSeconds, greaterThanOrEqualTo(5));
+        expect(progress.elapsed.inSeconds, lessThan(10));
+      });
+    });
+
+    group('estimatedRemaining', () {
+      test('returns null when progress is 0', () {
+        final progress = SyncProgress(
+          phase: SyncPhase.downloadingPasal,
+          currentOperation: 'Downloading',
+          startTime: DateTime.now().subtract(const Duration(seconds: 5)),
+          totalPasal: 100,
+          downloadedPasal: 0,
+        );
+        expect(progress.estimatedRemaining, isNull);
+      });
+
+      test('returns null when progress is 1 (complete)', () {
+        final progress = SyncProgress(
+          phase: SyncPhase.complete,
+          currentOperation: 'Complete',
+          startTime: DateTime.now().subtract(const Duration(seconds: 5)),
+          totalPasal: 100,
+          downloadedPasal: 100,
+        );
+        expect(progress.estimatedRemaining, isNull);
+      });
+
+      test('returns null when elapsed time is less than 1 second', () {
+        final progress = SyncProgress(
+          phase: SyncPhase.downloadingPasal,
+          currentOperation: 'Downloading',
+          startTime: DateTime.now(), // Just started
+          totalPasal: 100,
+          downloadedPasal: 50,
+        );
+        expect(progress.estimatedRemaining, isNull);
+      });
+
+      test('calculates estimated remaining time correctly', () {
+        // If 50% done after 10 seconds, remaining should be ~10 seconds
+        final progress = SyncProgress(
+          phase: SyncPhase.downloadingPasal,
+          currentOperation: 'Downloading',
+          startTime: DateTime.now().subtract(const Duration(seconds: 10)),
+          totalPasal: 100,
+          downloadedPasal: 50,
+        );
+
+        final remaining = progress.estimatedRemaining;
+        expect(remaining, isNotNull);
+        // Should be approximately 10 seconds (with some tolerance)
+        expect(remaining!.inSeconds, greaterThanOrEqualTo(8));
+        expect(remaining.inSeconds, lessThanOrEqualTo(12));
+      });
+
+      test('calculates remaining time for 25% progress', () {
+        // If 25% done after 5 seconds, total ~20 seconds, remaining ~15 seconds
+        final progress = SyncProgress(
+          phase: SyncPhase.downloadingPasal,
+          currentOperation: 'Downloading',
+          startTime: DateTime.now().subtract(const Duration(seconds: 5)),
+          totalPasal: 100,
+          downloadedPasal: 25,
+        );
+
+        final remaining = progress.estimatedRemaining;
+        expect(remaining, isNotNull);
+        expect(remaining!.inSeconds, greaterThanOrEqualTo(13));
+        expect(remaining.inSeconds, lessThanOrEqualTo(17));
+      });
+
+      test('calculates remaining time for 75% progress', () {
+        // If 75% done after 15 seconds, total ~20 seconds, remaining ~5 seconds
+        final progress = SyncProgress(
+          phase: SyncPhase.downloadingPasal,
+          currentOperation: 'Downloading',
+          startTime: DateTime.now().subtract(const Duration(seconds: 15)),
+          totalPasal: 100,
+          downloadedPasal: 75,
+        );
+
+        final remaining = progress.estimatedRemaining;
+        expect(remaining, isNotNull);
+        expect(remaining!.inSeconds, greaterThanOrEqualTo(3));
+        expect(remaining.inSeconds, lessThanOrEqualTo(7));
+      });
+    });
+
+    group('estimatedRemainingFormatted', () {
+      test('returns null when estimatedRemaining is null', () {
+        final progress = SyncProgress(
+          phase: SyncPhase.downloadingPasal,
+          currentOperation: 'Downloading',
+          startTime: DateTime.now(), // Just started, not enough data
+          totalPasal: 100,
+          downloadedPasal: 50,
+        );
+        expect(progress.estimatedRemainingFormatted, isNull);
+      });
+
+      test('returns "Hampir selesai" for less than 5 seconds', () {
+        // 95% done after 19 seconds → remaining ~1 second
+        final progress = SyncProgress(
+          phase: SyncPhase.downloadingPasal,
+          currentOperation: 'Downloading',
+          startTime: DateTime.now().subtract(const Duration(seconds: 19)),
+          totalPasal: 100,
+          downloadedPasal: 95,
+        );
+
+        expect(progress.estimatedRemainingFormatted, 'Hampir selesai');
+      });
+
+      test('returns seconds format for less than 60 seconds', () {
+        // 50% done after 15 seconds → remaining ~15 seconds
+        final progress = SyncProgress(
+          phase: SyncPhase.downloadingPasal,
+          currentOperation: 'Downloading',
+          startTime: DateTime.now().subtract(const Duration(seconds: 15)),
+          totalPasal: 100,
+          downloadedPasal: 50,
+        );
+
+        final formatted = progress.estimatedRemainingFormatted;
+        expect(formatted, isNotNull);
+        expect(formatted, contains('detik lagi'));
+      });
+
+      test('returns minutes format for 60+ seconds', () {
+        // 50% done after 2 minutes → remaining ~2 minutes
+        final progress = SyncProgress(
+          phase: SyncPhase.downloadingPasal,
+          currentOperation: 'Downloading',
+          startTime: DateTime.now().subtract(const Duration(minutes: 2)),
+          totalPasal: 100,
+          downloadedPasal: 50,
+        );
+
+        final formatted = progress.estimatedRemainingFormatted;
+        expect(formatted, isNotNull);
+        expect(formatted, contains('menit'));
+      });
+
+      test('returns minutes and seconds format when applicable', () {
+        // 50% done after 90 seconds → remaining ~90 seconds = 1 min 30 sec
+        final progress = SyncProgress(
+          phase: SyncPhase.downloadingPasal,
+          currentOperation: 'Downloading',
+          startTime: DateTime.now().subtract(const Duration(seconds: 90)),
+          totalPasal: 100,
+          downloadedPasal: 50,
+        );
+
+        final formatted = progress.estimatedRemainingFormatted;
+        expect(formatted, isNotNull);
+        // Should contain both menit and detik
+        expect(formatted, contains('menit'));
+      });
+
+      test('returns only minutes when seconds is 0', () {
+        // 50% done after exactly 2 minutes → remaining exactly 2 minutes
+        final progress = SyncProgress(
+          phase: SyncPhase.downloadingPasal,
+          currentOperation: 'Downloading',
+          startTime: DateTime.now().subtract(const Duration(minutes: 2)),
+          totalPasal: 100,
+          downloadedPasal: 50,
+        );
+
+        final formatted = progress.estimatedRemainingFormatted;
+        expect(formatted, isNotNull);
+        // Format should be "X menit lagi" or "X menit Y detik lagi"
+        expect(formatted, contains('menit'));
+      });
+    });
+
+    group('toString', () {
+      test('returns formatted string representation', () {
+        final progress = SyncProgress(
+          phase: SyncPhase.downloadingPasal,
+          currentOperation: 'Downloading',
+          startTime: DateTime.now(),
+          totalPasal: 100,
+          downloadedPasal: 50,
+          downloadedBytes: 1024,
+        );
+
+        final str = progress.toString();
+        expect(str, contains('SyncProgress'));
+        expect(str, contains('downloadingPasal'));
+        expect(str, contains('50%'));
+        expect(str, contains('50/100'));
+      });
+    });
   });
 }
