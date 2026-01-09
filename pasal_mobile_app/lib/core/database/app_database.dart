@@ -307,6 +307,94 @@ class AppDatabase extends _$AppDatabase {
       onConflict: DoUpdate((old) => data, target: [pasalLinksTable.id]),
     );
   }
+
+  // ============================================================
+  // Active-only queries for sync filtering
+  // ============================================================
+
+  // Get only active undang-undang
+  Future<List<UndangUndangTableData>> getActiveUndangUndang() {
+    return (select(
+      undangUndangTable,
+    )..where((tbl) => tbl.isActive.equals(true))).get();
+  }
+
+  // ============================================================
+  // Deletion methods for sync cleanup
+  // ============================================================
+
+  // Delete undang-undang by ID
+  Future<int> deleteUndangUndangById(String id) {
+    return (delete(undangUndangTable)..where((tbl) => tbl.id.equals(id))).go();
+  }
+
+  // Delete all pasal by undang-undang ID
+  Future<int> deletePasalByUndangUndangId(String undangUndangId) {
+    return (delete(pasalTable)
+          ..where((tbl) => tbl.undangUndangId.equals(undangUndangId)))
+        .go();
+  }
+
+  // Delete pasal links by source pasal ID
+  Future<int> deletePasalLinksBySourcePasalId(String sourcePasalId) {
+    return (delete(pasalLinksTable)
+          ..where((tbl) => tbl.sourcePasalId.equals(sourcePasalId)))
+        .go();
+  }
+
+  // Delete pasal links by target pasal ID
+  Future<int> deletePasalLinksByTargetPasalId(String targetPasalId) {
+    return (delete(pasalLinksTable)
+          ..where((tbl) => tbl.targetPasalId.equals(targetPasalId)))
+        .go();
+  }
+
+  // Delete inactive undang-undang and their related data
+  Future<void> deleteInactiveUndangUndang() async {
+    final inactiveUU = await (select(undangUndangTable)
+          ..where((tbl) => tbl.isActive.equals(false)))
+        .get();
+
+    for (final uu in inactiveUU) {
+      // Get all pasal for this UU to delete their links
+      final pasalList = await getPasalByUndangUndang(uu.id);
+      for (final pasal in pasalList) {
+        await deletePasalLinksBySourcePasalId(pasal.id);
+        await deletePasalLinksByTargetPasalId(pasal.id);
+      }
+      // Delete all pasal for this UU
+      await deletePasalByUndangUndangId(uu.id);
+      // Delete the UU itself
+      await deleteUndangUndangById(uu.id);
+    }
+  }
+
+  // Delete a single UU and all its related data (pasal and links)
+  Future<void> deleteUndangUndangWithRelatedData(String uuId) async {
+    // Get all pasal for this UU to delete their links
+    final pasalList = await getPasalByUndangUndang(uuId);
+    for (final pasal in pasalList) {
+      await deletePasalLinksBySourcePasalId(pasal.id);
+      await deletePasalLinksByTargetPasalId(pasal.id);
+    }
+    // Delete all pasal for this UU
+    await deletePasalByUndangUndangId(uuId);
+    // Delete the UU itself
+    await deleteUndangUndangById(uuId);
+  }
+
+  // Delete inactive pasal and their links
+  Future<void> deleteInactivePasal() async {
+    final inactivePasal = await (select(pasalTable)
+          ..where((tbl) => tbl.isActive.equals(false)))
+        .get();
+
+    for (final pasal in inactivePasal) {
+      await deletePasalLinksBySourcePasalId(pasal.id);
+      await deletePasalLinksByTargetPasalId(pasal.id);
+      await deletePasalById(pasal.id);
+    }
+  }
 }
 
 LazyDatabase _openConnection() {

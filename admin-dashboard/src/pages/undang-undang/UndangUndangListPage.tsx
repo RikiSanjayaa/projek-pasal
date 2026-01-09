@@ -17,11 +17,12 @@ import {
   Switch,
   Skeleton,
   ScrollArea,
+  Alert,
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
-import { IconPlus, IconEdit } from '@tabler/icons-react'
+import { IconPlus, IconEdit, IconAlertCircle } from '@tabler/icons-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { UndangUndang, UndangUndangInsert, UndangUndangUpdate } from '@/lib/database.types'
@@ -31,7 +32,7 @@ export function UndangUndangListPage() {
   const queryClient = useQueryClient()
   const [createModal, { open: openCreate, close: closeCreate }] = useDisclosure(false)
   const [editModal, { open: openEdit, close: closeEdit }] = useDisclosure(false)
-  const [selectedUU, setSelectedUU] = useState<UndangUndang | null>(null)
+  const [selectedUU, setSelectedUU] = useState<(UndangUndang & { pasal?: { id: string; nomor: string }[] }) | null>(null)
 
   const baseColumnWidth = 150
   const selectableWidth = 40
@@ -350,9 +351,34 @@ export function UndangUndangListPage() {
             />
             <Switch
               label="Aktif"
-              description="Undang-undang yang tidak aktif tidak akan tampil di aplikasi"
+              description="Mengubah status ini akan mempengaruhi semua pasal terkait"
               {...editForm.getInputProps('is_active', { type: 'checkbox' })}
             />
+            {selectedUU && editForm.values.is_active !== selectedUU.is_active && (
+              <Alert
+                icon={<IconAlertCircle size={16} />}
+                color={editForm.values.is_active ? 'green' : 'orange'}
+                variant="light"
+              >
+                {editForm.values.is_active ? (
+                  <>
+                    <Text size="sm" fw={500}>Mengaktifkan {selectedUU.kode}</Text>
+                    <Text size="xs">
+                      Semua {selectedUU.pasal?.length || 0} pasal terkait akan ikut diaktifkan
+                      dan akan tampil di aplikasi mobile.
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text size="sm" fw={500}>Menonaktifkan {selectedUU.kode}</Text>
+                    <Text size="xs">
+                      Semua {selectedUU.pasal?.length || 0} pasal terkait akan ikut dinonaktifkan
+                      dan akan dihapus dari aplikasi mobile saat sync berikutnya.
+                    </Text>
+                  </>
+                )}
+              </Alert>
+            )}
             <Group justify="flex-end" mt="md">
               <Button variant="default" onClick={closeEdit}>
                 Batal

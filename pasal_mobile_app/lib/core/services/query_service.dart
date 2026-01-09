@@ -21,9 +21,12 @@ class QueryService {
   // Undang-Undang Queries
   // ============================================================
 
+  /// Get all active undang-undang
+  /// Only returns UU that are active (is_active = true)
   static Future<List<UndangUndangModel>> getAllUU() async {
     try {
-      final data = await _database.getAllUndangUndang();
+      // Use getActiveUndangUndang to only return active UU
+      final data = await _database.getActiveUndangUndang();
       return data
           .map(
             (row) => UndangUndangModel(

@@ -48,6 +48,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
     await Future.delayed(const Duration(milliseconds: 100));
 
     final uuData = await QueryService.getAllUU();
+    // Sort alphabetically by Name
+    uuData.sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
+
     final pasalData = await QueryService.getAllPasal();
 
     // Count pasal per UU

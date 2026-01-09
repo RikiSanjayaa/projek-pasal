@@ -37,6 +37,32 @@ const PAGE_SIZE_OPTIONS = [
   { value: '30', label: '30 per halaman' },
 ]
 
+// Helper function to determine pasal status
+const getPasalStatus = (pasal: PasalWithUndangUndang): { label: string; color: string; description: string } => {
+  // Check if UU is inactive (pasal inactive due to UU cascade)
+  if (!pasal.undang_undang?.is_active) {
+    return {
+      label: 'UU Nonaktif',
+      color: 'orange',
+      description: 'Pasal tidak aktif karena UU dinonaktifkan',
+    }
+  }
+  // Check if pasal itself is inactive (soft-deleted)
+  if (!pasal.is_active) {
+    return {
+      label: 'Dihapus',
+      color: 'red',
+      description: 'Pasal telah dihapus',
+    }
+  }
+  // Active
+  return {
+    label: 'Aktif',
+    color: 'green',
+    description: 'Pasal aktif dan akan tampil di aplikasi mobile',
+  }
+}
+
 // Define table columns
 const pasalColumns: Column<PasalWithUndangUndang>[] = [
   {
@@ -93,6 +119,21 @@ const pasalColumns: Column<PasalWithUndangUndang>[] = [
       </Group>
     ),
   },
+  {
+    key: 'status',
+    title: 'Status',
+    width: 120,
+    render: (_, record) => {
+      const status = getPasalStatus(record)
+      return (
+        <Tooltip label={status.description}>
+          <Badge color={status.color} variant="light">
+            {status.label}
+          </Badge>
+        </Tooltip>
+      )
+    },
+  },
 ]
 
 export function PasalListPage() {
@@ -136,18 +177,17 @@ export function PasalListPage() {
   const [selectedPasal, setSelectedPasal] = useState<PasalWithUndangUndang | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
 
-  // Fetch undang-undang for filter
+  // Fetch undang-undang for filter (include inactive UU)
   const { data: undangUndangList } = useQuery({
-    queryKey: ['undang_undang', 'list'],
+    queryKey: ['undang_undang', 'list', 'all'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('undang_undang')
-        .select('id, kode, nama')
-        .eq('is_active', true)
+        .select('id, kode, nama, is_active')
         .order('kode')
 
       if (error) throw error
-      return data as { id: string; kode: string; nama: string }[]
+      return data as { id: string; kode: string; nama: string; is_active: boolean }[]
     },
   })
 
@@ -198,10 +238,12 @@ export function PasalListPage() {
         searchTerm = searchTerm.substring(6).trim()
       }
 
+      // Show active pasal AND pasal inactive due to UU (not soft-deleted)
+      // Soft-deleted pasal (deleted_at IS NOT NULL) are shown in the Trash page
       let query = supabase
         .from('pasal')
         .select('*, undang_undang!inner(*)', { count: 'exact' })
-        .eq('is_active', true)
+        .is('deleted_at', null)
         .order('nomor')
         .range((page - 1) * pageSize, page * pageSize - 1)
 
@@ -404,7 +446,9 @@ export function PasalListPage() {
               data={
                 undangUndangList?.map((uu) => ({
                   value: uu.id,
-                  label: `${uu.kode} - ${uu.nama}`,
+                  label: uu.is_active
+                    ? `${uu.kode} - ${uu.nama}`
+                    : `${uu.kode} - ${uu.nama} (Nonaktif)`,
                 })) || []
               }
               value={filterUU}
