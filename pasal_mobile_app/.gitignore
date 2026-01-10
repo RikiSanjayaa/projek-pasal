@@ -26,6 +26,8 @@ android/**/generated/
 android/**/gradle/
 android/app/build/
 android/app/.cxx/
+android/.kotlin/
+
 
 # =========================
 # 3. iOS (MOBILE)
