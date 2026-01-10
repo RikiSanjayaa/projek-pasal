@@ -20,6 +20,7 @@ import { AuditLogPage } from './pages/AuditLogPage'
 import { AuditLogDetailPage } from './pages/AuditLogDetailPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { ManageAdminPage } from './pages/ManageAdminPage'
+import { ManageUsersPage } from './pages/ManageUsersPage'
 
 // Protected Route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -67,6 +68,7 @@ function App() {
         <Route path="audit-log" element={<AuditLogPage />} />
         <Route path="audit-log/:id" element={<AuditLogDetailPage />} />
         <Route path="manage-admin" element={<ManageAdminPage />} />
+        <Route path="manage-users" element={<ManageUsersPage />} />
       </Route>
 
       {/* Catch all - 404 */}

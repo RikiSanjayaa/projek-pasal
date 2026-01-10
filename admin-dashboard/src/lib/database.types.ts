@@ -194,6 +194,67 @@ export interface Database {
           created_at?: string
         }
       }
+      users: {
+        Row: {
+          id: string
+          email: string
+          nama: string
+          is_active: boolean
+          created_at: string
+          expires_at: string
+          created_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          email: string
+          nama: string
+          is_active?: boolean
+          created_at?: string
+          expires_at: string
+          created_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string
+          nama?: string
+          is_active?: boolean
+          created_at?: string
+          expires_at?: string
+          created_by?: string | null
+          updated_at?: string
+        }
+      }
+      user_devices: {
+        Row: {
+          id: string
+          user_id: string
+          device_id: string
+          device_name: string | null
+          is_active: boolean
+          last_active_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          device_id: string
+          device_name?: string | null
+          is_active?: boolean
+          last_active_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          device_id?: string
+          device_name?: string | null
+          is_active?: boolean
+          last_active_at?: string
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -251,6 +312,14 @@ export type PasalLinkInsert = Database['public']['Tables']['pasal_links']['Inser
 export type AdminUser = Database['public']['Tables']['admin_users']['Row']
 export type AuditLog = Database['public']['Tables']['audit_logs']['Row']
 
+export type User = Database['public']['Tables']['users']['Row']
+export type UserInsert = Database['public']['Tables']['users']['Insert']
+export type UserUpdate = Database['public']['Tables']['users']['Update']
+
+export type UserDevice = Database['public']['Tables']['user_devices']['Row']
+export type UserDeviceInsert = Database['public']['Tables']['user_devices']['Insert']
+export type UserDeviceUpdate = Database['public']['Tables']['user_devices']['Update']
+
 // Extended types with relations
 export interface PasalWithUndangUndang extends Pasal {
   undang_undang: UndangUndang
@@ -258,4 +327,9 @@ export interface PasalWithUndangUndang extends Pasal {
 
 export interface AuditLogWithAdmin extends AuditLog {
   admin_users?: AdminUser | null
+}
+
+export interface UserWithDevices extends User {
+  user_devices: UserDevice[]
+  created_by_admin?: AdminUser | null
 }

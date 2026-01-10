@@ -30,6 +30,7 @@ import {
   IconMoon,
   IconLogout,
   IconUser,
+  IconUsers,
   IconKey,
   IconChevronLeft,
   IconChevronRight,
@@ -44,6 +45,7 @@ const navItems = [
   { label: 'Pasal', icon: IconScale, path: '/pasal' },
   { label: 'Undang-Undang', icon: IconBook, path: '/undang-undang' },
   { label: 'Import Data', icon: IconUpload, path: '/bulk-import' },
+  { label: 'Kelola Pengguna', icon: IconUsers, path: '/manage-users' },
   { label: 'Audit Log', icon: IconHistory, path: '/audit-log' },
 ]
 
