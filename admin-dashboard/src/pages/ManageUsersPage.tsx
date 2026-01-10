@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { requestPasswordRecovery } from '@/lib/auth'
 import type { UserWithDevices } from '@/lib/database.types'
+import { SearchablePaginatedList } from '@/components/SearchablePaginatedList'
 
 // Helper to format date in Indonesian locale
 function formatDate(dateStr: string): string {
@@ -263,9 +264,6 @@ export function ManageUsersPage() {
     )
   }
 
-  const activeUsers = users.filter(u => u.is_active && daysUntilExpiry(u.expires_at) >= 0)
-  const expiredOrInactiveUsers = users.filter(u => !u.is_active || daysUntilExpiry(u.expires_at) < 0)
-
   return (
     <div>
       <Group mb="md" style={{ display: 'block' }}>
@@ -301,168 +299,171 @@ export function ManageUsersPage() {
         </div>
       </Group>
 
-      {/* Active Users Table */}
-      <Title order={5} mt="lg" mb="sm">Pengguna Aktif ({activeUsers.length})</Title>
-      <Card shadow="sm" padding="md" radius="md" withBorder>
-        {activeUsers.length === 0 ? (
-          <Text c="dimmed" ta="center">Tidak ada pengguna aktif</Text>
-        ) : (
-          <Table striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Nama</Table.Th>
-                <Table.Th>Email</Table.Th>
-                <Table.Th>Masa Aktif</Table.Th>
-                <Table.Th>Perangkat</Table.Th>
-                <Table.Th w={120}>Aksi</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {activeUsers.map((user) => {
-                const activeDevices = user.user_devices?.filter(d => d.is_active).length || 0
-                return (
-                  <Table.Tr key={user.id}>
-                    <Table.Td><Text fw={600}>{user.nama}</Text></Table.Td>
-                    <Table.Td>{user.email}</Table.Td>
-                    <Table.Td><ExpiryBadge expiresAt={user.expires_at} /></Table.Td>
-                    <Table.Td>
-                      <Tooltip label="Lihat perangkat">
-                        <Badge
-                          color={activeDevices > 0 ? 'blue' : 'gray'}
-                          variant="light"
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => {
-                            setDevicesTarget({ user })
-                            setDevicesModalOpen(true)
-                          }}
-                          leftSection={<IconDevices size={12} />}
-                        >
-                          {activeDevices} aktif
-                        </Badge>
-                      </Tooltip>
-                    </Table.Td>
-                    <Table.Td onClick={(e) => e.stopPropagation()}>
-                      <Menu withArrow position="left" shadow="sm">
-                        <Menu.Target>
-                          <ActionIcon variant="subtle" color="blue">
-                            <IconEdit size={16} />
-                          </ActionIcon>
-                        </Menu.Target>
-                        <Menu.Dropdown>
-                          <Menu.Item
-                            color="blue"
+      {/* Users List with Search and Pagination */}
+      <SearchablePaginatedList
+        data={users}
+        searchTitle="Cari User"
+        searchPlaceholder="Cari berdasarkan nama atau email..."
+        getSearchableText={(user) => `${user.nama} ${user.email}`.toLowerCase()}
+        isActive={(user) => user.is_active && daysUntilExpiry(user.expires_at) >= 0}
+        activeSection={{
+          title: 'Pengguna Aktif',
+          emptyText: 'Tidak ada pengguna aktif',
+          render: (items) => (
+            <Table striped highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Nama</Table.Th>
+                  <Table.Th>Email</Table.Th>
+                  <Table.Th>Masa Aktif</Table.Th>
+                  <Table.Th>Perangkat</Table.Th>
+                  <Table.Th w={120}>Aksi</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {items.map((user) => {
+                  const activeDevices = user.user_devices?.filter(d => d.is_active).length || 0
+                  return (
+                    <Table.Tr key={user.id}>
+                      <Table.Td><Text fw={600}>{user.nama}</Text></Table.Td>
+                      <Table.Td>{user.email}</Table.Td>
+                      <Table.Td><ExpiryBadge expiresAt={user.expires_at} /></Table.Td>
+                      <Table.Td>
+                        <Tooltip label="Lihat perangkat">
+                          <Badge
+                            color={activeDevices > 0 ? 'blue' : 'gray'}
+                            variant="light"
+                            style={{ cursor: 'pointer' }}
                             onClick={() => {
                               setDevicesTarget({ user })
                               setDevicesModalOpen(true)
                             }}
+                            leftSection={<IconDevices size={12} />}
                           >
-                            Kelola Perangkat
-                          </Menu.Item>
-                          <Menu.Item
-                            color="yellow"
-                            onClick={() => {
-                              setResetTarget({ id: user.id, email: user.email })
-                              setResetConfirmOpen(true)
-                            }}
-                          >
-                            Kirim Reset Password
-                          </Menu.Item>
-                          <Menu.Item
-                            color="red"
-                            onClick={() => {
-                              setToggleTarget({ id: user.id, email: user.email, targetActive: false })
-                              setToggleModalOpen(true)
-                            }}
-                          >
-                            Nonaktifkan Pengguna
-                          </Menu.Item>
-                        </Menu.Dropdown>
-                      </Menu>
-                    </Table.Td>
-                  </Table.Tr>
-                )
-              })}
-            </Table.Tbody>
-          </Table>
-        )}
-      </Card>
-
-      {/* Expired/Inactive Users Table */}
-      <Title order={5} mt="lg" mb="sm">Pengguna Tidak Aktif / Kadaluarsa ({expiredOrInactiveUsers.length})</Title>
-      <Card shadow="sm" padding="md" radius="md" withBorder>
-        {expiredOrInactiveUsers.length === 0 ? (
-          <Text c="dimmed" ta="center">Tidak ada pengguna tidak aktif atau kadaluarsa</Text>
-        ) : (
-          <Table striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Nama</Table.Th>
-                <Table.Th>Email</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th>Masa Aktif</Table.Th>
-                <Table.Th w={120}>Aksi</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {expiredOrInactiveUsers.map((user) => {
-                const isExpired = daysUntilExpiry(user.expires_at) < 0
-                return (
-                  <Table.Tr key={user.id}>
-                    <Table.Td><Text fw={600}>{user.nama}</Text></Table.Td>
-                    <Table.Td>{user.email}</Table.Td>
-                    <Table.Td>
-                      {!user.is_active && <Badge color="gray" variant="filled" mr={4}>Nonaktif</Badge>}
-                      {isExpired && <Badge color="red" variant="filled">Kadaluarsa</Badge>}
-                    </Table.Td>
-                    <Table.Td><ExpiryBadge expiresAt={user.expires_at} /></Table.Td>
-                    <Table.Td onClick={(e) => e.stopPropagation()}>
-                      <Menu withArrow position="left" shadow="sm">
-                        <Menu.Target>
-                          <ActionIcon variant="subtle" color="blue">
-                            <IconEdit size={16} />
-                          </ActionIcon>
-                        </Menu.Target>
-                        <Menu.Dropdown>
-                          <Menu.Item
-                            color="green"
-                            leftSection={<IconRefresh size={14} />}
-                            onClick={() => {
-                              setReprovisionTarget({ id: user.id, email: user.email })
-                              setReprovisionModalOpen(true)
-                            }}
-                          >
-                            Perpanjang 3 Tahun
-                          </Menu.Item>
-                          {!user.is_active && (
+                            {activeDevices} aktif
+                          </Badge>
+                        </Tooltip>
+                      </Table.Td>
+                      <Table.Td onClick={(e) => e.stopPropagation()}>
+                        <Menu withArrow position="left" shadow="sm">
+                          <Menu.Target>
+                            <ActionIcon variant="subtle" color="blue">
+                              <IconEdit size={16} />
+                            </ActionIcon>
+                          </Menu.Target>
+                          <Menu.Dropdown>
                             <Menu.Item
-                              color="green"
+                              color="blue"
                               onClick={() => {
-                                setToggleTarget({ id: user.id, email: user.email, targetActive: true })
+                                setDevicesTarget({ user })
+                                setDevicesModalOpen(true)
+                              }}
+                            >
+                              Kelola Perangkat
+                            </Menu.Item>
+                            <Menu.Item
+                              color="yellow"
+                              onClick={() => {
+                                setResetTarget({ id: user.id, email: user.email })
+                                setResetConfirmOpen(true)
+                              }}
+                            >
+                              Kirim Reset Password
+                            </Menu.Item>
+                            <Menu.Item
+                              color="red"
+                              onClick={() => {
+                                setToggleTarget({ id: user.id, email: user.email, targetActive: false })
                                 setToggleModalOpen(true)
                               }}
                             >
-                              Aktifkan Pengguna
+                              Nonaktifkan Pengguna
                             </Menu.Item>
-                          )}
-                          <Menu.Item
-                            color="yellow"
-                            onClick={() => {
-                              setResetTarget({ id: user.id, email: user.email })
-                              setResetConfirmOpen(true)
-                            }}
-                          >
-                            Kirim Reset Password
-                          </Menu.Item>
-                        </Menu.Dropdown>
-                      </Menu>
-                    </Table.Td>
-                  </Table.Tr>
-                )
-              })}
-            </Table.Tbody>
-          </Table>
-        )}
-      </Card>
+                          </Menu.Dropdown>
+                        </Menu>
+                      </Table.Td>
+                    </Table.Tr>
+                  )
+                })}
+              </Table.Tbody>
+            </Table>
+          ),
+        }}
+        inactiveSection={{
+          title: 'Pengguna Tidak Aktif / Kadaluarsa',
+          emptyText: 'Tidak ada pengguna tidak aktif atau kadaluarsa',
+          render: (items) => (
+            <Table striped highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Nama</Table.Th>
+                  <Table.Th>Email</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                  <Table.Th>Masa Aktif</Table.Th>
+                  <Table.Th w={120}>Aksi</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {items.map((user) => {
+                  const isExpired = daysUntilExpiry(user.expires_at) < 0
+                  return (
+                    <Table.Tr key={user.id}>
+                      <Table.Td><Text fw={600}>{user.nama}</Text></Table.Td>
+                      <Table.Td>{user.email}</Table.Td>
+                      <Table.Td>
+                        {!user.is_active && <Badge color="gray" variant="filled" mr={4}>Nonaktif</Badge>}
+                        {isExpired && <Badge color="red" variant="filled">Kadaluarsa</Badge>}
+                      </Table.Td>
+                      <Table.Td><ExpiryBadge expiresAt={user.expires_at} /></Table.Td>
+                      <Table.Td onClick={(e) => e.stopPropagation()}>
+                        <Menu withArrow position="left" shadow="sm">
+                          <Menu.Target>
+                            <ActionIcon variant="subtle" color="blue">
+                              <IconEdit size={16} />
+                            </ActionIcon>
+                          </Menu.Target>
+                          <Menu.Dropdown>
+                            <Menu.Item
+                              color="green"
+                              leftSection={<IconRefresh size={14} />}
+                              onClick={() => {
+                                setReprovisionTarget({ id: user.id, email: user.email })
+                                setReprovisionModalOpen(true)
+                              }}
+                            >
+                              Perpanjang 3 Tahun
+                            </Menu.Item>
+                            {!user.is_active && (
+                              <Menu.Item
+                                color="green"
+                                onClick={() => {
+                                  setToggleTarget({ id: user.id, email: user.email, targetActive: true })
+                                  setToggleModalOpen(true)
+                                }}
+                              >
+                                Aktifkan Pengguna
+                              </Menu.Item>
+                            )}
+                            <Menu.Item
+                              color="yellow"
+                              onClick={() => {
+                                setResetTarget({ id: user.id, email: user.email })
+                                setResetConfirmOpen(true)
+                              }}
+                            >
+                              Kirim Reset Password
+                            </Menu.Item>
+                          </Menu.Dropdown>
+                        </Menu>
+                      </Table.Td>
+                    </Table.Tr>
+                  )
+                })}
+              </Table.Tbody>
+            </Table>
+          ),
+        }}
+      />
 
       {/* Credentials Modal */}
       <Modal opened={credsModalOpen} onClose={() => setCredsModalOpen(false)} title="Kredensial Sementara" closeOnClickOutside={false} closeOnEscape={false}>

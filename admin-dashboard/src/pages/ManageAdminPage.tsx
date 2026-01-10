@@ -5,6 +5,7 @@ import { IconCopy, IconEdit } from '@tabler/icons-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { requestPasswordRecovery } from '@/lib/auth'
+import { SearchablePaginatedList } from '@/components/SearchablePaginatedList'
 
 
 export function ManageAdminPage() {
@@ -178,7 +179,7 @@ export function ManageAdminPage() {
 
       <div>
         {admins.length === 0 && <Text>No admin users found.</Text>}
-        {/* Super Admin table */}
+        {/* Super Admin table - separate, minimal entries */}
         <Title order={5} mt="lg" mb="sm">Super Admin</Title>
         <Card shadow="sm" padding="md" radius="md" withBorder>
           {admins.filter(a => a.role === 'super_admin').length === 0 ? (
@@ -213,75 +214,129 @@ export function ManageAdminPage() {
           )}
         </Card>
 
-        <Title order={5} mt="lg" mb="sm">Admin Biasa</Title>
-        <Card shadow="sm" padding="md" radius="md" withBorder>
-          {admins.filter(a => a.role !== 'super_admin').length === 0 ? (
-            <Text c="dimmed" ta="center">(none)</Text>
-          ) : (
-            <Table striped highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Nama</Table.Th>
-                  <Table.Th>Email</Table.Th>
-                  <Table.Th>Role</Table.Th>
-                  <Table.Th>Aktif</Table.Th>
-                  <Table.Th w={120}>Aksi</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {admins.filter(a => a.role !== 'super_admin').map((record) => (
-                  <Table.Tr key={record.id}>
-                    <Table.Td><Text fw={600}>{record.nama || record.email}</Text></Table.Td>
-                    <Table.Td>{record.email}</Table.Td>
-                    <Table.Td><Badge color="blue" variant="filled">{record.role}</Badge></Table.Td>
-                    <Table.Td><Badge color={record.is_active ? 'green' : 'gray'} variant="light">{record.is_active ? 'Aktif' : 'Nonaktif'}</Badge></Table.Td>
-                    <Table.Td onClick={(e) => e.stopPropagation()}>
-                      <Menu withArrow position="left" shadow="sm">
-                        <Menu.Target>
-                          <ActionIcon variant="subtle" color="blue">
-                            <IconEdit size={16} />
-                          </ActionIcon>
-                        </Menu.Target>
-                        <Menu.Dropdown>
-                          <Menu.Item
-                            color="yellow"
-                            onClick={() => {
-                              setResetTarget({ id: record.id, email: record.email })
-                              setResetConfirmOpen(true)
-                            }}
-                          >
-                            Kirim email Reset Password
-                          </Menu.Item>
-                          {record.is_active ? (
-                            <Menu.Item
-                              color="red"
-                              onClick={() => {
-                                setToggleTarget({ id: record.id, email: record.email, targetActive: false })
-                                setToggleModalOpen(true)
-                              }}
-                            >
-                              Nonaktifkan Admin
-                            </Menu.Item>
-                          ) : (
-                            <Menu.Item
-                              color="green"
-                              onClick={() => {
-                                setToggleTarget({ id: record.id, email: record.email, targetActive: true })
-                                setToggleModalOpen(true)
-                              }}
-                            >
-                              Aktifkan Admin
-                            </Menu.Item>
-                          )}
-                        </Menu.Dropdown>
-                      </Menu>
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          )}
-        </Card>
+        {/* Admin Biasa with Search and Pagination */}
+
+        <div style={{ marginTop: '1.5rem' }}>
+          <SearchablePaginatedList
+            data={admins.filter(a => a.role !== 'super_admin')}
+            searchTitle="Cari Admin"
+            searchPlaceholder="Cari admin berdasarkan nama atau email..."
+            getSearchableText={(admin) => `${admin.nama} ${admin.email}`.toLowerCase()}
+            isActive={(admin) => admin.is_active}
+            activeSection={{
+              title: 'Admin Aktif',
+              emptyText: 'Tidak ada admin aktif',
+              render: (items) => (
+                <Table striped highlightOnHover>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Nama</Table.Th>
+                      <Table.Th>Email</Table.Th>
+                      <Table.Th>Role</Table.Th>
+                      <Table.Th>Status</Table.Th>
+                      <Table.Th w={120}>Aksi</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {items.map((record) => (
+                      <Table.Tr key={record.id}>
+                        <Table.Td><Text fw={600}>{record.nama || record.email}</Text></Table.Td>
+                        <Table.Td>{record.email}</Table.Td>
+                        <Table.Td><Badge color="blue" variant="filled">{record.role}</Badge></Table.Td>
+                        <Table.Td><Badge color="green" variant="light">Aktif</Badge></Table.Td>
+                        <Table.Td onClick={(e) => e.stopPropagation()}>
+                          <Menu withArrow position="left" shadow="sm">
+                            <Menu.Target>
+                              <ActionIcon variant="subtle" color="blue">
+                                <IconEdit size={16} />
+                              </ActionIcon>
+                            </Menu.Target>
+                            <Menu.Dropdown>
+                              <Menu.Item
+                                color="yellow"
+                                onClick={() => {
+                                  setResetTarget({ id: record.id, email: record.email })
+                                  setResetConfirmOpen(true)
+                                }}
+                              >
+                                Kirim email Reset Password
+                              </Menu.Item>
+                              <Menu.Item
+                                color="red"
+                                onClick={() => {
+                                  setToggleTarget({ id: record.id, email: record.email, targetActive: false })
+                                  setToggleModalOpen(true)
+                                }}
+                              >
+                                Nonaktifkan Admin
+                              </Menu.Item>
+                            </Menu.Dropdown>
+                          </Menu>
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              ),
+            }}
+            inactiveSection={{
+              title: 'Admin Nonaktif',
+              emptyText: 'Tidak ada admin nonaktif',
+              render: (items) => (
+                <Table striped highlightOnHover>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Nama</Table.Th>
+                      <Table.Th>Email</Table.Th>
+                      <Table.Th>Role</Table.Th>
+                      <Table.Th>Status</Table.Th>
+                      <Table.Th w={120}>Aksi</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {items.map((record) => (
+                      <Table.Tr key={record.id}>
+                        <Table.Td><Text fw={600}>{record.nama || record.email}</Text></Table.Td>
+                        <Table.Td>{record.email}</Table.Td>
+                        <Table.Td><Badge color="blue" variant="filled">{record.role}</Badge></Table.Td>
+                        <Table.Td><Badge color="gray" variant="light">Nonaktif</Badge></Table.Td>
+                        <Table.Td onClick={(e) => e.stopPropagation()}>
+                          <Menu withArrow position="left" shadow="sm">
+                            <Menu.Target>
+                              <ActionIcon variant="subtle" color="blue">
+                                <IconEdit size={16} />
+                              </ActionIcon>
+                            </Menu.Target>
+                            <Menu.Dropdown>
+                              <Menu.Item
+                                color="yellow"
+                                onClick={() => {
+                                  setResetTarget({ id: record.id, email: record.email })
+                                  setResetConfirmOpen(true)
+                                }}
+                              >
+                                Kirim email Reset Password
+                              </Menu.Item>
+                              <Menu.Item
+                                color="green"
+                                onClick={() => {
+                                  setToggleTarget({ id: record.id, email: record.email, targetActive: true })
+                                  setToggleModalOpen(true)
+                                }}
+                              >
+                                Aktifkan Admin
+                              </Menu.Item>
+                            </Menu.Dropdown>
+                          </Menu>
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              ),
+            }}
+          />
+        </div>
       </div>
 
       <Modal opened={modalOpen} onClose={() => setModalOpen(false)} title="Temporary credentials" closeOnClickOutside={false} closeOnEscape={false}>
