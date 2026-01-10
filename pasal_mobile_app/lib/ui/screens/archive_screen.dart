@@ -6,7 +6,6 @@ import '../../core/utils/search_utils.dart';
 import '../../models/pasal_model.dart';
 import '../widgets/main_layout.dart';
 import '../widgets/pasal_card.dart';
-import '../widgets/settings_drawer.dart';
 
 class ArchiveScreen extends StatefulWidget {
   const ArchiveScreen({super.key});
@@ -113,10 +112,9 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return MainLayout(
-      endDrawer: const SettingsDrawer(),
       child: ValueListenableBuilder<List<String>>(
         valueListenable: archiveService.archivedIds,
-        builder: (context, archivedIds, child) {
+        builder: (_, archivedIds, child) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (_filteredData.length != archivedIds.length &&
                 _searchQuery.isEmpty) {
@@ -140,19 +138,13 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                         height: 1.2,
                       ),
                     ),
-                    Builder(
-                      builder: (context) {
-                        return IconButton(
-                          onPressed: () {
-                            Scaffold.of(context).openEndDrawer();
-                          },
-                          icon: Icon(
-                            Icons.menu,
-                            color: isDark ? Colors.grey[300] : Colors.grey[700],
-                          ),
-                          tooltip: 'Pengaturan',
-                        );
-                      },
+                    IconButton(
+                      onPressed: () => Scaffold.of(context).openEndDrawer(),
+                      icon: Icon(
+                        Icons.menu,
+                        color: isDark ? Colors.grey[300] : Colors.grey[700],
+                      ),
+                      tooltip: 'Pengaturan',
                     ),
                   ],
                 ),

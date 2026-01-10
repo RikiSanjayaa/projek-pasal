@@ -58,7 +58,7 @@ class _MainNavigationState extends State<MainNavigation> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
           child: Container(
-            height: 72,
+            height: 78,
             decoration: BoxDecoration(
               color: AppColors.bottomNav(isDark),
               border: Border.all(
