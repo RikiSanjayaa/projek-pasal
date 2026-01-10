@@ -33,7 +33,7 @@ class AppNotification {
       ),
     );
 
-    Overlay.of(context).insert(_currentEntry!);
+    Overlay.of(context, rootOverlay: true).insert(_currentEntry!);
   }
 }
 
@@ -106,12 +106,12 @@ class _AnimatedNotificationState extends State<_AnimatedNotification>
             color: Colors.transparent,
             child: Container(
               constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.65,
+                maxWidth: MediaQuery.of(context).size.width * 0.85,
               ),
-              padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+              padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
               decoration: BoxDecoration(
                 color: widget.bgColor,
-                borderRadius: BorderRadius.circular(30),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
                     color: widget.bgColor.withValues(alpha: 0.3),
@@ -122,6 +122,7 @@ class _AnimatedNotificationState extends State<_AnimatedNotification>
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
                     padding: const EdgeInsets.all(5),
@@ -141,6 +142,7 @@ class _AnimatedNotificationState extends State<_AnimatedNotification>
                         fontSize: 12,
                         letterSpacing: 0.2,
                       ),
+                      maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),

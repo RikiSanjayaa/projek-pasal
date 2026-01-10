@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:pasal_mobile_app/core/services/sync_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/undang_undang_model.dart';
 import '../../models/pasal_model.dart';
@@ -35,27 +36,35 @@ class DataService {
   }
 
   /// Check if there are updates available on the server
+  /// Uses a SECURITY DEFINER function to bypass RLS and detect
+  /// changes to inactive records (which are not visible via normal queries)
   static Future<bool> checkForUpdates() async {
     try {
-      final localLatest = await _database.getLatestPasalTimestamp();
-      if (localLatest == null) return true;
+      // Get the last sync time from SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final lastSyncMs = prefs.getInt('last_sync_timestamp');
 
-      final response = await supabase
-          .from('pasal')
-          .select('updated_at')
-          .order('updated_at', ascending: false)
-          .limit(1)
-          .maybeSingle();
+      // If we've never synced, we definitely need to sync
+      if (lastSyncMs == null) return true;
 
-      if (response != null && response['updated_at'] != null) {
-        final serverLatest = DateTime.parse(response['updated_at']);
-        if (serverLatest.difference(localLatest).inSeconds > 5) {
-          return true;
-        }
-      }
-      return false;
+      final lastSyncTime = DateTime.fromMillisecondsSinceEpoch(lastSyncMs);
+      // Add a small buffer to account for any timing issues
+      final checkTime = lastSyncTime.subtract(const Duration(seconds: 10));
+      final sinceTimestamp = checkTime.toUtc().toIso8601String();
+
+      // Call the check_sync_updates RPC function which bypasses RLS
+      // This allows us to detect changes to inactive records
+      final response = await supabase.rpc(
+        'check_sync_updates',
+        params: {'since_timestamp': sinceTimestamp},
+      );
+
+      // The function returns a boolean
+      return response == true;
     } catch (e) {
       print("Check for updates error: $e");
+      // On error, assume we might need update or just fail safely.
+      // Returning false to avoid error loops, but could return true to force retry.
       return false;
     }
   }
@@ -233,9 +242,11 @@ class DataService {
 
       if (_checkCancelled()) return (false, _cancelledProgress(startTime));
 
+      // Only download active UU
       final List<dynamic> responseUU = await supabase
           .from('undang_undang')
           .select()
+          .eq('is_active', true)
           .order('tahun', ascending: false);
 
       final uuBytes = jsonEncode(responseUU).length;
@@ -254,14 +265,15 @@ class DataService {
         ),
       );
 
-      // Get pasal counts per UU for accurate progress
+      // Get pasal counts per UU for accurate progress (only active pasal)
       final Map<String, int> pasalCounts = {};
       for (var uu in responseUU) {
         final uuId = uu['id'] as String;
         final countResponse = await supabase
             .from('pasal')
             .select('id')
-            .eq('undang_undang_id', uuId);
+            .eq('undang_undang_id', uuId)
+            .eq('is_active', true);
         pasalCounts[uuId] = (countResponse as List).length;
         totalPasal += pasalCounts[uuId]!;
       }
@@ -326,6 +338,8 @@ class DataService {
 
       // Phase 4: Clear and sync each UU
       await _database.clearAllUndangUndang();
+      await _database
+          .clearAllPasal(); // Critical: Ensure orphaned pasals are removed
 
       for (int i = 0; i < responseUU.length; i++) {
         if (_checkCancelled()) return (false, _cancelledProgress(startTime));
@@ -367,11 +381,12 @@ class DataService {
           ),
         );
 
-        // Download and save pasal for this UU
+        // Download and save pasal for this UU (only active pasal)
         final pasalResponse = await supabase
             .from('pasal')
             .select()
-            .eq('undang_undang_id', uu.id);
+            .eq('undang_undang_id', uu.id)
+            .eq('is_active', true);
 
         final pasalBytes = jsonEncode(pasalResponse).length;
         totalBytes += pasalBytes;
@@ -463,16 +478,22 @@ class DataService {
     int totalBytes = 0;
     int newRecords = 0;
     int updatedRecords = 0;
-    int deletedRecords = 0;
+    int deletedRecords = 0; // Track records deleted due to being inactive
 
     try {
-      final sinceTimestamp = lastSyncTime.toUtc().toIso8601String();
+      // Add a 5-minute buffer to account for potential clock drift between client and server
+      // This ensures we catch updates that might have happened slightly "before" our last sync time
+      // due to clock skew. Duplicates are handled safely by upsert/delete idempotency.
+      final adjustedLastSync = lastSyncTime.subtract(
+        const Duration(minutes: 5),
+      );
+      final sinceTimestamp = adjustedLastSync.toUtc().toIso8601String();
 
-      // Phase 1: Check for updated UU
+      // Phase 1: Get all updates via RPC function (bypasses RLS for inactive records)
       _emitProgress(
         SyncProgress(
           phase: SyncPhase.downloadingUU,
-          currentOperation: "Memeriksa pembaruan undang-undang...",
+          currentOperation: "Memeriksa pembaruan data...",
           startTime: startTime,
           isIncremental: true,
         ),
@@ -481,49 +502,70 @@ class DataService {
       if (_checkCancelled())
         return (false, _cancelledProgress(startTime, isIncremental: true));
 
-      final List<dynamic> updatedUU = await supabase
-          .from('undang_undang')
-          .select()
-          .gt('updated_at', sinceTimestamp);
+      // Use RPC function with SECURITY DEFINER to get all updates including inactive
+      final syncResponse = await supabase.rpc(
+        'get_sync_updates',
+        params: {'since_timestamp': sinceTimestamp},
+      );
 
-      totalBytes += jsonEncode(updatedUU).length;
+      // Parse response - the function returns a single row with two JSONB columns
+      final List<dynamic> updatedUU;
+      final List<dynamic> updatedPasal;
 
-      for (var item in updatedUU) {
-        final uu = UndangUndangModel.fromJson(item);
-        await _database.upsertUndangUndang(
-          UndangUndangTableCompanion(
-            id: Value(uu.id),
-            kode: Value(uu.kode),
-            nama: Value(uu.nama),
-            namaLengkap: Value(uu.namaLengkap),
-            deskripsi: Value(uu.deskripsi),
-            tahun: Value(uu.tahun),
-            isActive: Value(uu.isActive),
-            updatedAt: Value(uu.updatedAt),
-          ),
-        );
+      if (syncResponse != null &&
+          syncResponse is List &&
+          syncResponse.isNotEmpty) {
+        final row = syncResponse[0];
+        updatedUU = (row['updated_uu'] as List?) ?? [];
+        updatedPasal = (row['updated_pasal'] as List?) ?? [];
+      } else {
+        updatedUU = [];
+        updatedPasal = [];
       }
 
-      if (_checkCancelled())
-        return (false, _cancelledProgress(startTime, isIncremental: true));
+      totalBytes += jsonEncode(updatedUU).length;
+      totalBytes += jsonEncode(updatedPasal).length;
 
-      // Phase 2: Check for updated pasal
+      // Phase 2: Process UU updates
       _emitProgress(
         SyncProgress(
-          phase: SyncPhase.downloadingPasal,
-          currentOperation: "Memeriksa pembaruan pasal...",
+          phase: SyncPhase.downloadingUU,
+          currentOperation: "Memproses ${updatedUU.length} undang-undang...",
           startTime: startTime,
           isIncremental: true,
           downloadedBytes: totalBytes,
         ),
       );
 
-      final List<dynamic> updatedPasal = await supabase
-          .from('pasal')
-          .select()
-          .gt('updated_at', sinceTimestamp);
+      for (var item in updatedUU) {
+        final uu = UndangUndangModel.fromJson(item);
 
-      totalBytes += jsonEncode(updatedPasal).length;
+        if (!uu.isActive) {
+          // UU became inactive - delete it and all related data from local DB
+          await _database.deleteUndangUndangWithRelatedData(uu.id);
+          deletedRecords++;
+        } else {
+          // UU is active - upsert it
+          await _database.upsertUndangUndang(
+            UndangUndangTableCompanion(
+              id: Value(uu.id),
+              kode: Value(uu.kode),
+              nama: Value(uu.nama),
+              namaLengkap: Value(uu.namaLengkap),
+              deskripsi: Value(uu.deskripsi),
+              tahun: Value(uu.tahun),
+              isActive: Value(uu.isActive),
+              updatedAt: Value(uu.updatedAt),
+            ),
+          );
+          updatedRecords++;
+        }
+      }
+
+      if (_checkCancelled())
+        return (false, _cancelledProgress(startTime, isIncremental: true));
+
+      // Phase 3: Prepare pasal processing
       final totalUpdates = updatedPasal.length;
 
       if (_checkCancelled())
@@ -604,31 +646,43 @@ class DataService {
         final pasal = PasalModel.fromJson(item);
         final relatedIds = linksMap[pasal.id] ?? [];
 
-        // Check if this is new or updated
+        // Check if this is a new record
         final existing = await _database.getPasalById(pasal.id);
-        if (existing == null) {
-          newRecords++;
-        } else if (!pasal.isActive) {
+
+        if (!pasal.isActive) {
+          // Pasal became inactive - delete from local DB
+          if (existing != null) {
+            // Delete associated links first
+            await _database.deletePasalLinksBySourcePasalId(pasal.id);
+            await _database.deletePasalLinksByTargetPasalId(pasal.id);
+            // Delete the pasal
+            await _database.deletePasalById(pasal.id);
+          }
           deletedRecords++;
         } else {
-          updatedRecords++;
-        }
+          // Active pasal - upsert it
+          await _database.upsertPasal(
+            PasalTableCompanion(
+              id: Value(pasal.id),
+              undangUndangId: Value(pasal.undangUndangId),
+              nomor: Value(pasal.nomor),
+              isi: Value(pasal.isi),
+              penjelasan: Value(pasal.penjelasan),
+              judul: Value(pasal.judul),
+              keywords: Value(jsonEncode(pasal.keywords)),
+              relatedIds: Value(jsonEncode(relatedIds)),
+              isActive: Value(pasal.isActive),
+              createdAt: Value(pasal.createdAt),
+              updatedAt: Value(pasal.updatedAt),
+            ),
+          );
 
-        await _database.upsertPasal(
-          PasalTableCompanion(
-            id: Value(pasal.id),
-            undangUndangId: Value(pasal.undangUndangId),
-            nomor: Value(pasal.nomor),
-            isi: Value(pasal.isi),
-            penjelasan: Value(pasal.penjelasan),
-            judul: Value(pasal.judul),
-            keywords: Value(jsonEncode(pasal.keywords)),
-            relatedIds: Value(jsonEncode(relatedIds)),
-            isActive: Value(pasal.isActive),
-            createdAt: Value(pasal.createdAt),
-            updatedAt: Value(pasal.updatedAt),
-          ),
-        );
+          if (existing == null) {
+            newRecords++;
+          } else {
+            updatedRecords++;
+          }
+        }
 
         _emitProgress(
           SyncProgress(

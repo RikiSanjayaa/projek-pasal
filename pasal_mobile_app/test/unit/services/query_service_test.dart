@@ -27,7 +27,7 @@ void main() {
             TestDataFactory.createUndangUndang(id: 'uu-2', kode: 'KUHPer'),
           ];
           when(
-            mockDatabase.getAllUndangUndang(),
+            mockDatabase.getActiveUndangUndang(),
           ).thenAnswer((_) async => testData);
 
           final result = await QueryService.getAllUU();
@@ -37,22 +37,22 @@ void main() {
           expect(result[0].kode, 'KUHP');
           expect(result[1].id, 'uu-2');
           expect(result[1].kode, 'KUHPer');
-          verify(mockDatabase.getAllUndangUndang()).called(1);
+          verify(mockDatabase.getActiveUndangUndang()).called(1);
         },
       );
 
       test('returns empty list when database is empty', () async {
-        when(mockDatabase.getAllUndangUndang()).thenAnswer((_) async => []);
+        when(mockDatabase.getActiveUndangUndang()).thenAnswer((_) async => []);
 
         final result = await QueryService.getAllUU();
 
         expect(result, isEmpty);
-        verify(mockDatabase.getAllUndangUndang()).called(1);
+        verify(mockDatabase.getActiveUndangUndang()).called(1);
       });
 
       test('returns empty list when database throws exception', () async {
         when(
-          mockDatabase.getAllUndangUndang(),
+          mockDatabase.getActiveUndangUndang(),
         ).thenThrow(Exception('DB Error'));
 
         final result = await QueryService.getAllUU();
@@ -74,7 +74,7 @@ void main() {
           ),
         ];
         when(
-          mockDatabase.getAllUndangUndang(),
+          mockDatabase.getActiveUndangUndang(),
         ).thenAnswer((_) async => testData);
 
         final result = await QueryService.getAllUU();

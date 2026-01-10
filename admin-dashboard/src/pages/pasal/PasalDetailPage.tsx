@@ -12,7 +12,7 @@ import {
   Alert,
 } from '@mantine/core'
 import { useQuery } from '@tanstack/react-query'
-import { IconArrowLeft, IconEdit, IconTrash } from '@tabler/icons-react'
+import { IconArrowLeft, IconEdit, IconTrash, IconAlertCircle } from '@tabler/icons-react'
 import { supabase } from '@/lib/supabase'
 import { PasalLinksSidebar } from '@/components/PasalLinksSidebar'
 import type { PasalWithUndangUndang } from '@/lib/database.types'
@@ -95,7 +95,7 @@ export function PasalDetailPage() {
             Kembali
           </Button>
         </Group>
-        {pasal.is_active === true && (
+        {pasal.is_active === true && pasal.undang_undang?.is_active === true && (
           <Button
             leftSection={<IconEdit size={16} />}
             onClick={() => navigate(`/pasal/${pasal.id}/edit`)}
@@ -116,7 +116,19 @@ export function PasalDetailPage() {
         <Text c="dimmed">Detail pasal</Text>
       </div>
 
-      {pasal.is_active === false && (
+      {/* Alert for inactive UU */}
+      {pasal.undang_undang?.is_active === false && (
+        <Alert icon={<IconAlertCircle size={16} />} color="orange" variant="light">
+          <Text fw={500}>Undang-Undang Nonaktif</Text>
+          <Text size="sm">
+            Pasal ini tidak aktif karena {pasal.undang_undang?.kode} telah dinonaktifkan.
+            Pasal tidak akan tampil di aplikasi mobile sampai UU diaktifkan kembali.
+          </Text>
+        </Alert>
+      )}
+
+      {/* Alert for soft-deleted pasal (individual deletion) */}
+      {pasal.is_active === false && pasal.undang_undang?.is_active === true && (
         <Alert icon={<IconTrash size={16} />} color="red" variant="light">
           <Text fw={500}>Pasal ini telah dihapus</Text>
           <Text size="sm">

@@ -12,56 +12,99 @@ class $UndangUndangTableTable extends UndangUndangTable
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
-      'id', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _kodeMeta = const VerificationMeta('kode');
   @override
   late final GeneratedColumn<String> kode = GeneratedColumn<String>(
-      'kode', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+    'kode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _namaMeta = const VerificationMeta('nama');
   @override
   late final GeneratedColumn<String> nama = GeneratedColumn<String>(
-      'nama', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _namaLengkapMeta =
-      const VerificationMeta('namaLengkap');
+    'nama',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _namaLengkapMeta = const VerificationMeta(
+    'namaLengkap',
+  );
   @override
   late final GeneratedColumn<String> namaLengkap = GeneratedColumn<String>(
-      'nama_lengkap', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _deskripsiMeta =
-      const VerificationMeta('deskripsi');
+    'nama_lengkap',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _deskripsiMeta = const VerificationMeta(
+    'deskripsi',
+  );
   @override
   late final GeneratedColumn<String> deskripsi = GeneratedColumn<String>(
-      'deskripsi', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+    'deskripsi',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _tahunMeta = const VerificationMeta('tahun');
   @override
   late final GeneratedColumn<int> tahun = GeneratedColumn<int>(
-      'tahun', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultValue: const Constant(0));
-  static const VerificationMeta _isActiveMeta =
-      const VerificationMeta('isActive');
+    'tahun',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
   @override
   late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
-      'is_active', aliasedName, false,
-      type: DriftSqlType.bool,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('CHECK ("is_active" IN (0, 1))'),
-      defaultValue: const Constant(true));
-  static const VerificationMeta _updatedAtMeta =
-      const VerificationMeta('updatedAt');
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
   @override
   late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-      'updated_at', aliasedName, true,
-      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+    'updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, kode, nama, namaLengkap, deskripsi, tahun, isActive, updatedAt];
+  List<GeneratedColumn> get $columns => [
+    id,
+    kode,
+    nama,
+    namaLengkap,
+    deskripsi,
+    tahun,
+    isActive,
+    updatedAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -69,8 +112,9 @@ class $UndangUndangTableTable extends UndangUndangTable
   static const String $name = 'undang_undang_table';
   @override
   VerificationContext validateIntegrity(
-      Insertable<UndangUndangTableData> instance,
-      {bool isInserting = false}) {
+    Insertable<UndangUndangTableData> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
@@ -80,37 +124,52 @@ class $UndangUndangTableTable extends UndangUndangTable
     }
     if (data.containsKey('kode')) {
       context.handle(
-          _kodeMeta, kode.isAcceptableOrUnknown(data['kode']!, _kodeMeta));
+        _kodeMeta,
+        kode.isAcceptableOrUnknown(data['kode']!, _kodeMeta),
+      );
     } else if (isInserting) {
       context.missing(_kodeMeta);
     }
     if (data.containsKey('nama')) {
       context.handle(
-          _namaMeta, nama.isAcceptableOrUnknown(data['nama']!, _namaMeta));
+        _namaMeta,
+        nama.isAcceptableOrUnknown(data['nama']!, _namaMeta),
+      );
     } else if (isInserting) {
       context.missing(_namaMeta);
     }
     if (data.containsKey('nama_lengkap')) {
       context.handle(
+        _namaLengkapMeta,
+        namaLengkap.isAcceptableOrUnknown(
+          data['nama_lengkap']!,
           _namaLengkapMeta,
-          namaLengkap.isAcceptableOrUnknown(
-              data['nama_lengkap']!, _namaLengkapMeta));
+        ),
+      );
     }
     if (data.containsKey('deskripsi')) {
-      context.handle(_deskripsiMeta,
-          deskripsi.isAcceptableOrUnknown(data['deskripsi']!, _deskripsiMeta));
+      context.handle(
+        _deskripsiMeta,
+        deskripsi.isAcceptableOrUnknown(data['deskripsi']!, _deskripsiMeta),
+      );
     }
     if (data.containsKey('tahun')) {
       context.handle(
-          _tahunMeta, tahun.isAcceptableOrUnknown(data['tahun']!, _tahunMeta));
+        _tahunMeta,
+        tahun.isAcceptableOrUnknown(data['tahun']!, _tahunMeta),
+      );
     }
     if (data.containsKey('is_active')) {
-      context.handle(_isActiveMeta,
-          isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta));
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
     }
     if (data.containsKey('updated_at')) {
-      context.handle(_updatedAtMeta,
-          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
     }
     return context;
   }
@@ -121,22 +180,38 @@ class $UndangUndangTableTable extends UndangUndangTable
   UndangUndangTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return UndangUndangTableData(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
-      kode: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}kode'])!,
-      nama: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}nama'])!,
-      namaLengkap: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}nama_lengkap']),
-      deskripsi: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}deskripsi']),
-      tahun: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}tahun'])!,
-      isActive: attachedDatabase.typeMapping
-          .read(DriftSqlType.bool, data['${effectivePrefix}is_active'])!,
-      updatedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at']),
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      kode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kode'],
+      )!,
+      nama: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nama'],
+      )!,
+      namaLengkap: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nama_lengkap'],
+      ),
+      deskripsi: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}deskripsi'],
+      ),
+      tahun: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}tahun'],
+      )!,
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      ),
     );
   }
 
@@ -156,15 +231,16 @@ class UndangUndangTableData extends DataClass
   final int tahun;
   final bool isActive;
   final DateTime? updatedAt;
-  const UndangUndangTableData(
-      {required this.id,
-      required this.kode,
-      required this.nama,
-      this.namaLengkap,
-      this.deskripsi,
-      required this.tahun,
-      required this.isActive,
-      this.updatedAt});
+  const UndangUndangTableData({
+    required this.id,
+    required this.kode,
+    required this.nama,
+    this.namaLengkap,
+    this.deskripsi,
+    required this.tahun,
+    required this.isActive,
+    this.updatedAt,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -204,8 +280,10 @@ class UndangUndangTableData extends DataClass
     );
   }
 
-  factory UndangUndangTableData.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory UndangUndangTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return UndangUndangTableData(
       id: serializer.fromJson<String>(json['id']),
@@ -233,32 +311,33 @@ class UndangUndangTableData extends DataClass
     };
   }
 
-  UndangUndangTableData copyWith(
-          {String? id,
-          String? kode,
-          String? nama,
-          Value<String?> namaLengkap = const Value.absent(),
-          Value<String?> deskripsi = const Value.absent(),
-          int? tahun,
-          bool? isActive,
-          Value<DateTime?> updatedAt = const Value.absent()}) =>
-      UndangUndangTableData(
-        id: id ?? this.id,
-        kode: kode ?? this.kode,
-        nama: nama ?? this.nama,
-        namaLengkap: namaLengkap.present ? namaLengkap.value : this.namaLengkap,
-        deskripsi: deskripsi.present ? deskripsi.value : this.deskripsi,
-        tahun: tahun ?? this.tahun,
-        isActive: isActive ?? this.isActive,
-        updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
-      );
+  UndangUndangTableData copyWith({
+    String? id,
+    String? kode,
+    String? nama,
+    Value<String?> namaLengkap = const Value.absent(),
+    Value<String?> deskripsi = const Value.absent(),
+    int? tahun,
+    bool? isActive,
+    Value<DateTime?> updatedAt = const Value.absent(),
+  }) => UndangUndangTableData(
+    id: id ?? this.id,
+    kode: kode ?? this.kode,
+    nama: nama ?? this.nama,
+    namaLengkap: namaLengkap.present ? namaLengkap.value : this.namaLengkap,
+    deskripsi: deskripsi.present ? deskripsi.value : this.deskripsi,
+    tahun: tahun ?? this.tahun,
+    isActive: isActive ?? this.isActive,
+    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+  );
   UndangUndangTableData copyWithCompanion(UndangUndangTableCompanion data) {
     return UndangUndangTableData(
       id: data.id.present ? data.id.value : this.id,
       kode: data.kode.present ? data.kode.value : this.kode,
       nama: data.nama.present ? data.nama.value : this.nama,
-      namaLengkap:
-          data.namaLengkap.present ? data.namaLengkap.value : this.namaLengkap,
+      namaLengkap: data.namaLengkap.present
+          ? data.namaLengkap.value
+          : this.namaLengkap,
       deskripsi: data.deskripsi.present ? data.deskripsi.value : this.deskripsi,
       tahun: data.tahun.present ? data.tahun.value : this.tahun,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
@@ -283,7 +362,15 @@ class UndangUndangTableData extends DataClass
 
   @override
   int get hashCode => Object.hash(
-      id, kode, nama, namaLengkap, deskripsi, tahun, isActive, updatedAt);
+    id,
+    kode,
+    nama,
+    namaLengkap,
+    deskripsi,
+    tahun,
+    isActive,
+    updatedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -330,9 +417,9 @@ class UndangUndangTableCompanion
     this.isActive = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
-  })  : id = Value(id),
-        kode = Value(kode),
-        nama = Value(nama);
+  }) : id = Value(id),
+       kode = Value(kode),
+       nama = Value(nama);
   static Insertable<UndangUndangTableData> custom({
     Expression<String>? id,
     Expression<String>? kode,
@@ -357,16 +444,17 @@ class UndangUndangTableCompanion
     });
   }
 
-  UndangUndangTableCompanion copyWith(
-      {Value<String>? id,
-      Value<String>? kode,
-      Value<String>? nama,
-      Value<String?>? namaLengkap,
-      Value<String?>? deskripsi,
-      Value<int>? tahun,
-      Value<bool>? isActive,
-      Value<DateTime?>? updatedAt,
-      Value<int>? rowid}) {
+  UndangUndangTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? kode,
+    Value<String>? nama,
+    Value<String?>? namaLengkap,
+    Value<String?>? deskripsi,
+    Value<int>? tahun,
+    Value<bool>? isActive,
+    Value<DateTime?>? updatedAt,
+    Value<int>? rowid,
+  }) {
     return UndangUndangTableCompanion(
       id: id ?? this.id,
       kode: kode ?? this.kode,
@@ -439,95 +527,146 @@ class $PasalTableTable extends PasalTable
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
-      'id', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _undangUndangIdMeta =
-      const VerificationMeta('undangUndangId');
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _undangUndangIdMeta = const VerificationMeta(
+    'undangUndangId',
+  );
   @override
   late final GeneratedColumn<String> undangUndangId = GeneratedColumn<String>(
-      'undang_undang_id', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+    'undang_undang_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _nomorMeta = const VerificationMeta('nomor');
   @override
   late final GeneratedColumn<String> nomor = GeneratedColumn<String>(
-      'nomor', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+    'nomor',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _isiMeta = const VerificationMeta('isi');
   @override
   late final GeneratedColumn<String> isi = GeneratedColumn<String>(
-      'isi', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _penjelasanMeta =
-      const VerificationMeta('penjelasan');
+    'isi',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _penjelasanMeta = const VerificationMeta(
+    'penjelasan',
+  );
   @override
   late final GeneratedColumn<String> penjelasan = GeneratedColumn<String>(
-      'penjelasan', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+    'penjelasan',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _judulMeta = const VerificationMeta('judul');
   @override
   late final GeneratedColumn<String> judul = GeneratedColumn<String>(
-      'judul', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _keywordsMeta =
-      const VerificationMeta('keywords');
+    'judul',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _keywordsMeta = const VerificationMeta(
+    'keywords',
+  );
   @override
   late final GeneratedColumn<String> keywords = GeneratedColumn<String>(
-      'keywords', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('[]'));
-  static const VerificationMeta _relatedIdsMeta =
-      const VerificationMeta('relatedIds');
+    'keywords',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _relatedIdsMeta = const VerificationMeta(
+    'relatedIds',
+  );
   @override
   late final GeneratedColumn<String> relatedIds = GeneratedColumn<String>(
-      'related_ids', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('[]'));
-  static const VerificationMeta _isActiveMeta =
-      const VerificationMeta('isActive');
+    'related_ids',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
   @override
   late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
-      'is_active', aliasedName, false,
-      type: DriftSqlType.bool,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('CHECK ("is_active" IN (0, 1))'),
-      defaultValue: const Constant(true));
-  static const VerificationMeta _createdAtMeta =
-      const VerificationMeta('createdAt');
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
   @override
   late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
-      'created_at', aliasedName, true,
-      type: DriftSqlType.dateTime, requiredDuringInsert: false);
-  static const VerificationMeta _updatedAtMeta =
-      const VerificationMeta('updatedAt');
+    'created_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
   @override
   late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-      'updated_at', aliasedName, true,
-      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+    'updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
-        id,
-        undangUndangId,
-        nomor,
-        isi,
-        penjelasan,
-        judul,
-        keywords,
-        relatedIds,
-        isActive,
-        createdAt,
-        updatedAt
-      ];
+    id,
+    undangUndangId,
+    nomor,
+    isi,
+    penjelasan,
+    judul,
+    keywords,
+    relatedIds,
+    isActive,
+    createdAt,
+    updatedAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
   static const String $name = 'pasal_table';
   @override
-  VerificationContext validateIntegrity(Insertable<PasalTableData> instance,
-      {bool isInserting = false}) {
+  VerificationContext validateIntegrity(
+    Insertable<PasalTableData> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
@@ -537,55 +676,72 @@ class $PasalTableTable extends PasalTable
     }
     if (data.containsKey('undang_undang_id')) {
       context.handle(
+        _undangUndangIdMeta,
+        undangUndangId.isAcceptableOrUnknown(
+          data['undang_undang_id']!,
           _undangUndangIdMeta,
-          undangUndangId.isAcceptableOrUnknown(
-              data['undang_undang_id']!, _undangUndangIdMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_undangUndangIdMeta);
     }
     if (data.containsKey('nomor')) {
       context.handle(
-          _nomorMeta, nomor.isAcceptableOrUnknown(data['nomor']!, _nomorMeta));
+        _nomorMeta,
+        nomor.isAcceptableOrUnknown(data['nomor']!, _nomorMeta),
+      );
     } else if (isInserting) {
       context.missing(_nomorMeta);
     }
     if (data.containsKey('isi')) {
       context.handle(
-          _isiMeta, isi.isAcceptableOrUnknown(data['isi']!, _isiMeta));
+        _isiMeta,
+        isi.isAcceptableOrUnknown(data['isi']!, _isiMeta),
+      );
     } else if (isInserting) {
       context.missing(_isiMeta);
     }
     if (data.containsKey('penjelasan')) {
       context.handle(
-          _penjelasanMeta,
-          penjelasan.isAcceptableOrUnknown(
-              data['penjelasan']!, _penjelasanMeta));
+        _penjelasanMeta,
+        penjelasan.isAcceptableOrUnknown(data['penjelasan']!, _penjelasanMeta),
+      );
     }
     if (data.containsKey('judul')) {
       context.handle(
-          _judulMeta, judul.isAcceptableOrUnknown(data['judul']!, _judulMeta));
+        _judulMeta,
+        judul.isAcceptableOrUnknown(data['judul']!, _judulMeta),
+      );
     }
     if (data.containsKey('keywords')) {
-      context.handle(_keywordsMeta,
-          keywords.isAcceptableOrUnknown(data['keywords']!, _keywordsMeta));
+      context.handle(
+        _keywordsMeta,
+        keywords.isAcceptableOrUnknown(data['keywords']!, _keywordsMeta),
+      );
     }
     if (data.containsKey('related_ids')) {
       context.handle(
-          _relatedIdsMeta,
-          relatedIds.isAcceptableOrUnknown(
-              data['related_ids']!, _relatedIdsMeta));
+        _relatedIdsMeta,
+        relatedIds.isAcceptableOrUnknown(data['related_ids']!, _relatedIdsMeta),
+      );
     }
     if (data.containsKey('is_active')) {
-      context.handle(_isActiveMeta,
-          isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta));
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
     }
     if (data.containsKey('created_at')) {
-      context.handle(_createdAtMeta,
-          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
     }
     if (data.containsKey('updated_at')) {
-      context.handle(_updatedAtMeta,
-          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
     }
     return context;
   }
@@ -594,34 +750,56 @@ class $PasalTableTable extends PasalTable
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-        {undangUndangId, nomor},
-      ];
+    {undangUndangId, nomor},
+  ];
   @override
   PasalTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return PasalTableData(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
       undangUndangId: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}undang_undang_id'])!,
-      nomor: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}nomor'])!,
-      isi: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}isi'])!,
-      penjelasan: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}penjelasan']),
-      judul: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}judul']),
-      keywords: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}keywords'])!,
-      relatedIds: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}related_ids'])!,
-      isActive: attachedDatabase.typeMapping
-          .read(DriftSqlType.bool, data['${effectivePrefix}is_active'])!,
-      createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at']),
-      updatedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at']),
+        DriftSqlType.string,
+        data['${effectivePrefix}undang_undang_id'],
+      )!,
+      nomor: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nomor'],
+      )!,
+      isi: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}isi'],
+      )!,
+      penjelasan: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}penjelasan'],
+      ),
+      judul: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}judul'],
+      ),
+      keywords: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}keywords'],
+      )!,
+      relatedIds: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}related_ids'],
+      )!,
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      ),
     );
   }
 
@@ -643,18 +821,19 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
   final bool isActive;
   final DateTime? createdAt;
   final DateTime? updatedAt;
-  const PasalTableData(
-      {required this.id,
-      required this.undangUndangId,
-      required this.nomor,
-      required this.isi,
-      this.penjelasan,
-      this.judul,
-      required this.keywords,
-      required this.relatedIds,
-      required this.isActive,
-      this.createdAt,
-      this.updatedAt});
+  const PasalTableData({
+    required this.id,
+    required this.undangUndangId,
+    required this.nomor,
+    required this.isi,
+    this.penjelasan,
+    this.judul,
+    required this.keywords,
+    required this.relatedIds,
+    required this.isActive,
+    this.createdAt,
+    this.updatedAt,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -689,8 +868,9 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
       penjelasan: penjelasan == null && nullToAbsent
           ? const Value.absent()
           : Value(penjelasan),
-      judul:
-          judul == null && nullToAbsent ? const Value.absent() : Value(judul),
+      judul: judul == null && nullToAbsent
+          ? const Value.absent()
+          : Value(judul),
       keywords: Value(keywords),
       relatedIds: Value(relatedIds),
       isActive: Value(isActive),
@@ -703,8 +883,10 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
     );
   }
 
-  factory PasalTableData.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory PasalTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return PasalTableData(
       id: serializer.fromJson<String>(json['id']),
@@ -738,31 +920,31 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
     };
   }
 
-  PasalTableData copyWith(
-          {String? id,
-          String? undangUndangId,
-          String? nomor,
-          String? isi,
-          Value<String?> penjelasan = const Value.absent(),
-          Value<String?> judul = const Value.absent(),
-          String? keywords,
-          String? relatedIds,
-          bool? isActive,
-          Value<DateTime?> createdAt = const Value.absent(),
-          Value<DateTime?> updatedAt = const Value.absent()}) =>
-      PasalTableData(
-        id: id ?? this.id,
-        undangUndangId: undangUndangId ?? this.undangUndangId,
-        nomor: nomor ?? this.nomor,
-        isi: isi ?? this.isi,
-        penjelasan: penjelasan.present ? penjelasan.value : this.penjelasan,
-        judul: judul.present ? judul.value : this.judul,
-        keywords: keywords ?? this.keywords,
-        relatedIds: relatedIds ?? this.relatedIds,
-        isActive: isActive ?? this.isActive,
-        createdAt: createdAt.present ? createdAt.value : this.createdAt,
-        updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
-      );
+  PasalTableData copyWith({
+    String? id,
+    String? undangUndangId,
+    String? nomor,
+    String? isi,
+    Value<String?> penjelasan = const Value.absent(),
+    Value<String?> judul = const Value.absent(),
+    String? keywords,
+    String? relatedIds,
+    bool? isActive,
+    Value<DateTime?> createdAt = const Value.absent(),
+    Value<DateTime?> updatedAt = const Value.absent(),
+  }) => PasalTableData(
+    id: id ?? this.id,
+    undangUndangId: undangUndangId ?? this.undangUndangId,
+    nomor: nomor ?? this.nomor,
+    isi: isi ?? this.isi,
+    penjelasan: penjelasan.present ? penjelasan.value : this.penjelasan,
+    judul: judul.present ? judul.value : this.judul,
+    keywords: keywords ?? this.keywords,
+    relatedIds: relatedIds ?? this.relatedIds,
+    isActive: isActive ?? this.isActive,
+    createdAt: createdAt.present ? createdAt.value : this.createdAt,
+    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+  );
   PasalTableData copyWithCompanion(PasalTableCompanion data) {
     return PasalTableData(
       id: data.id.present ? data.id.value : this.id,
@@ -771,12 +953,14 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
           : this.undangUndangId,
       nomor: data.nomor.present ? data.nomor.value : this.nomor,
       isi: data.isi.present ? data.isi.value : this.isi,
-      penjelasan:
-          data.penjelasan.present ? data.penjelasan.value : this.penjelasan,
+      penjelasan: data.penjelasan.present
+          ? data.penjelasan.value
+          : this.penjelasan,
       judul: data.judul.present ? data.judul.value : this.judul,
       keywords: data.keywords.present ? data.keywords.value : this.keywords,
-      relatedIds:
-          data.relatedIds.present ? data.relatedIds.value : this.relatedIds,
+      relatedIds: data.relatedIds.present
+          ? data.relatedIds.value
+          : this.relatedIds,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -802,8 +986,19 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
   }
 
   @override
-  int get hashCode => Object.hash(id, undangUndangId, nomor, isi, penjelasan,
-      judul, keywords, relatedIds, isActive, createdAt, updatedAt);
+  int get hashCode => Object.hash(
+    id,
+    undangUndangId,
+    nomor,
+    isi,
+    penjelasan,
+    judul,
+    keywords,
+    relatedIds,
+    isActive,
+    createdAt,
+    updatedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -861,10 +1056,10 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
-  })  : id = Value(id),
-        undangUndangId = Value(undangUndangId),
-        nomor = Value(nomor),
-        isi = Value(isi);
+  }) : id = Value(id),
+       undangUndangId = Value(undangUndangId),
+       nomor = Value(nomor),
+       isi = Value(isi);
   static Insertable<PasalTableData> custom({
     Expression<String>? id,
     Expression<String>? undangUndangId,
@@ -895,19 +1090,20 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     });
   }
 
-  PasalTableCompanion copyWith(
-      {Value<String>? id,
-      Value<String>? undangUndangId,
-      Value<String>? nomor,
-      Value<String>? isi,
-      Value<String?>? penjelasan,
-      Value<String?>? judul,
-      Value<String>? keywords,
-      Value<String>? relatedIds,
-      Value<bool>? isActive,
-      Value<DateTime?>? createdAt,
-      Value<DateTime?>? updatedAt,
-      Value<int>? rowid}) {
+  PasalTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? undangUndangId,
+    Value<String>? nomor,
+    Value<String>? isi,
+    Value<String?>? penjelasan,
+    Value<String?>? judul,
+    Value<String>? keywords,
+    Value<String>? relatedIds,
+    Value<bool>? isActive,
+    Value<DateTime?>? createdAt,
+    Value<DateTime?>? updatedAt,
+    Value<int>? rowid,
+  }) {
     return PasalTableCompanion(
       id: id ?? this.id,
       undangUndangId: undangUndangId ?? this.undangUndangId,
@@ -995,45 +1191,80 @@ class $PasalLinksTableTable extends PasalLinksTable
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
-      'id', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _sourcePasalIdMeta =
-      const VerificationMeta('sourcePasalId');
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourcePasalIdMeta = const VerificationMeta(
+    'sourcePasalId',
+  );
   @override
   late final GeneratedColumn<String> sourcePasalId = GeneratedColumn<String>(
-      'source_pasal_id', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _targetPasalIdMeta =
-      const VerificationMeta('targetPasalId');
+    'source_pasal_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _targetPasalIdMeta = const VerificationMeta(
+    'targetPasalId',
+  );
   @override
   late final GeneratedColumn<String> targetPasalId = GeneratedColumn<String>(
-      'target_pasal_id', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _keteranganMeta =
-      const VerificationMeta('keterangan');
+    'target_pasal_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _keteranganMeta = const VerificationMeta(
+    'keterangan',
+  );
   @override
   late final GeneratedColumn<String> keterangan = GeneratedColumn<String>(
-      'keterangan', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _isActiveMeta =
-      const VerificationMeta('isActive');
+    'keterangan',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
   @override
   late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
-      'is_active', aliasedName, false,
-      type: DriftSqlType.bool,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('CHECK ("is_active" IN (0, 1))'),
-      defaultValue: const Constant(true));
-  static const VerificationMeta _createdAtMeta =
-      const VerificationMeta('createdAt');
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
   @override
   late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
-      'created_at', aliasedName, true,
-      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+    'created_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, sourcePasalId, targetPasalId, keterangan, isActive, createdAt];
+  List<GeneratedColumn> get $columns => [
+    id,
+    sourcePasalId,
+    targetPasalId,
+    keterangan,
+    isActive,
+    createdAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1041,8 +1272,9 @@ class $PasalLinksTableTable extends PasalLinksTable
   static const String $name = 'pasal_links_table';
   @override
   VerificationContext validateIntegrity(
-      Insertable<PasalLinksTableData> instance,
-      {bool isInserting = false}) {
+    Insertable<PasalLinksTableData> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
@@ -1052,33 +1284,43 @@ class $PasalLinksTableTable extends PasalLinksTable
     }
     if (data.containsKey('source_pasal_id')) {
       context.handle(
+        _sourcePasalIdMeta,
+        sourcePasalId.isAcceptableOrUnknown(
+          data['source_pasal_id']!,
           _sourcePasalIdMeta,
-          sourcePasalId.isAcceptableOrUnknown(
-              data['source_pasal_id']!, _sourcePasalIdMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_sourcePasalIdMeta);
     }
     if (data.containsKey('target_pasal_id')) {
       context.handle(
+        _targetPasalIdMeta,
+        targetPasalId.isAcceptableOrUnknown(
+          data['target_pasal_id']!,
           _targetPasalIdMeta,
-          targetPasalId.isAcceptableOrUnknown(
-              data['target_pasal_id']!, _targetPasalIdMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_targetPasalIdMeta);
     }
     if (data.containsKey('keterangan')) {
       context.handle(
-          _keteranganMeta,
-          keterangan.isAcceptableOrUnknown(
-              data['keterangan']!, _keteranganMeta));
+        _keteranganMeta,
+        keterangan.isAcceptableOrUnknown(data['keterangan']!, _keteranganMeta),
+      );
     }
     if (data.containsKey('is_active')) {
-      context.handle(_isActiveMeta,
-          isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta));
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
     }
     if (data.containsKey('created_at')) {
-      context.handle(_createdAtMeta,
-          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
     }
     return context;
   }
@@ -1087,24 +1329,36 @@ class $PasalLinksTableTable extends PasalLinksTable
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-        {sourcePasalId, targetPasalId},
-      ];
+    {sourcePasalId, targetPasalId},
+  ];
   @override
   PasalLinksTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return PasalLinksTableData(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
       sourcePasalId: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}source_pasal_id'])!,
+        DriftSqlType.string,
+        data['${effectivePrefix}source_pasal_id'],
+      )!,
       targetPasalId: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}target_pasal_id'])!,
-      keterangan: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}keterangan']),
-      isActive: attachedDatabase.typeMapping
-          .read(DriftSqlType.bool, data['${effectivePrefix}is_active'])!,
-      createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at']),
+        DriftSqlType.string,
+        data['${effectivePrefix}target_pasal_id'],
+      )!,
+      keterangan: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}keterangan'],
+      ),
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      ),
     );
   }
 
@@ -1122,13 +1376,14 @@ class PasalLinksTableData extends DataClass
   final String? keterangan;
   final bool isActive;
   final DateTime? createdAt;
-  const PasalLinksTableData(
-      {required this.id,
-      required this.sourcePasalId,
-      required this.targetPasalId,
-      this.keterangan,
-      required this.isActive,
-      this.createdAt});
+  const PasalLinksTableData({
+    required this.id,
+    required this.sourcePasalId,
+    required this.targetPasalId,
+    this.keterangan,
+    required this.isActive,
+    this.createdAt,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1160,8 +1415,10 @@ class PasalLinksTableData extends DataClass
     );
   }
 
-  factory PasalLinksTableData.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory PasalLinksTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return PasalLinksTableData(
       id: serializer.fromJson<String>(json['id']),
@@ -1185,21 +1442,21 @@ class PasalLinksTableData extends DataClass
     };
   }
 
-  PasalLinksTableData copyWith(
-          {String? id,
-          String? sourcePasalId,
-          String? targetPasalId,
-          Value<String?> keterangan = const Value.absent(),
-          bool? isActive,
-          Value<DateTime?> createdAt = const Value.absent()}) =>
-      PasalLinksTableData(
-        id: id ?? this.id,
-        sourcePasalId: sourcePasalId ?? this.sourcePasalId,
-        targetPasalId: targetPasalId ?? this.targetPasalId,
-        keterangan: keterangan.present ? keterangan.value : this.keterangan,
-        isActive: isActive ?? this.isActive,
-        createdAt: createdAt.present ? createdAt.value : this.createdAt,
-      );
+  PasalLinksTableData copyWith({
+    String? id,
+    String? sourcePasalId,
+    String? targetPasalId,
+    Value<String?> keterangan = const Value.absent(),
+    bool? isActive,
+    Value<DateTime?> createdAt = const Value.absent(),
+  }) => PasalLinksTableData(
+    id: id ?? this.id,
+    sourcePasalId: sourcePasalId ?? this.sourcePasalId,
+    targetPasalId: targetPasalId ?? this.targetPasalId,
+    keterangan: keterangan.present ? keterangan.value : this.keterangan,
+    isActive: isActive ?? this.isActive,
+    createdAt: createdAt.present ? createdAt.value : this.createdAt,
+  );
   PasalLinksTableData copyWithCompanion(PasalLinksTableCompanion data) {
     return PasalLinksTableData(
       id: data.id.present ? data.id.value : this.id,
@@ -1209,8 +1466,9 @@ class PasalLinksTableData extends DataClass
       targetPasalId: data.targetPasalId.present
           ? data.targetPasalId.value
           : this.targetPasalId,
-      keterangan:
-          data.keterangan.present ? data.keterangan.value : this.keterangan,
+      keterangan: data.keterangan.present
+          ? data.keterangan.value
+          : this.keterangan,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
@@ -1231,7 +1489,13 @@ class PasalLinksTableData extends DataClass
 
   @override
   int get hashCode => Object.hash(
-      id, sourcePasalId, targetPasalId, keterangan, isActive, createdAt);
+    id,
+    sourcePasalId,
+    targetPasalId,
+    keterangan,
+    isActive,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1269,9 +1533,9 @@ class PasalLinksTableCompanion extends UpdateCompanion<PasalLinksTableData> {
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
-  })  : id = Value(id),
-        sourcePasalId = Value(sourcePasalId),
-        targetPasalId = Value(targetPasalId);
+  }) : id = Value(id),
+       sourcePasalId = Value(sourcePasalId),
+       targetPasalId = Value(targetPasalId);
   static Insertable<PasalLinksTableData> custom({
     Expression<String>? id,
     Expression<String>? sourcePasalId,
@@ -1292,14 +1556,15 @@ class PasalLinksTableCompanion extends UpdateCompanion<PasalLinksTableData> {
     });
   }
 
-  PasalLinksTableCompanion copyWith(
-      {Value<String>? id,
-      Value<String>? sourcePasalId,
-      Value<String>? targetPasalId,
-      Value<String?>? keterangan,
-      Value<bool>? isActive,
-      Value<DateTime?>? createdAt,
-      Value<int>? rowid}) {
+  PasalLinksTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? sourcePasalId,
+    Value<String>? targetPasalId,
+    Value<String?>? keterangan,
+    Value<bool>? isActive,
+    Value<DateTime?>? createdAt,
+    Value<int>? rowid,
+  }) {
     return PasalLinksTableCompanion(
       id: id ?? this.id,
       sourcePasalId: sourcePasalId ?? this.sourcePasalId,
@@ -1359,40 +1624,44 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $UndangUndangTableTable undangUndangTable =
       $UndangUndangTableTable(this);
   late final $PasalTableTable pasalTable = $PasalTableTable(this);
-  late final $PasalLinksTableTable pasalLinksTable =
-      $PasalLinksTableTable(this);
+  late final $PasalLinksTableTable pasalLinksTable = $PasalLinksTableTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [undangUndangTable, pasalTable, pasalLinksTable];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+    undangUndangTable,
+    pasalTable,
+    pasalLinksTable,
+  ];
 }
 
-typedef $$UndangUndangTableTableCreateCompanionBuilder
-    = UndangUndangTableCompanion Function({
-  required String id,
-  required String kode,
-  required String nama,
-  Value<String?> namaLengkap,
-  Value<String?> deskripsi,
-  Value<int> tahun,
-  Value<bool> isActive,
-  Value<DateTime?> updatedAt,
-  Value<int> rowid,
-});
-typedef $$UndangUndangTableTableUpdateCompanionBuilder
-    = UndangUndangTableCompanion Function({
-  Value<String> id,
-  Value<String> kode,
-  Value<String> nama,
-  Value<String?> namaLengkap,
-  Value<String?> deskripsi,
-  Value<int> tahun,
-  Value<bool> isActive,
-  Value<DateTime?> updatedAt,
-  Value<int> rowid,
-});
+typedef $$UndangUndangTableTableCreateCompanionBuilder =
+    UndangUndangTableCompanion Function({
+      required String id,
+      required String kode,
+      required String nama,
+      Value<String?> namaLengkap,
+      Value<String?> deskripsi,
+      Value<int> tahun,
+      Value<bool> isActive,
+      Value<DateTime?> updatedAt,
+      Value<int> rowid,
+    });
+typedef $$UndangUndangTableTableUpdateCompanionBuilder =
+    UndangUndangTableCompanion Function({
+      Value<String> id,
+      Value<String> kode,
+      Value<String> nama,
+      Value<String?> namaLengkap,
+      Value<String?> deskripsi,
+      Value<int> tahun,
+      Value<bool> isActive,
+      Value<DateTime?> updatedAt,
+      Value<int> rowid,
+    });
 
 class $$UndangUndangTableTableFilterComposer
     extends Composer<_$AppDatabase, $UndangUndangTableTable> {
@@ -1404,28 +1673,44 @@ class $$UndangUndangTableTableFilterComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnFilters<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get kode => $composableBuilder(
-      column: $table.kode, builder: (column) => ColumnFilters(column));
+    column: $table.kode,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get nama => $composableBuilder(
-      column: $table.nama, builder: (column) => ColumnFilters(column));
+    column: $table.nama,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get namaLengkap => $composableBuilder(
-      column: $table.namaLengkap, builder: (column) => ColumnFilters(column));
+    column: $table.namaLengkap,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get deskripsi => $composableBuilder(
-      column: $table.deskripsi, builder: (column) => ColumnFilters(column));
+    column: $table.deskripsi,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get tahun => $composableBuilder(
-      column: $table.tahun, builder: (column) => ColumnFilters(column));
+    column: $table.tahun,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<bool> get isActive => $composableBuilder(
-      column: $table.isActive, builder: (column) => ColumnFilters(column));
+    column: $table.isActive,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $$UndangUndangTableTableOrderingComposer
@@ -1438,28 +1723,44 @@ class $$UndangUndangTableTableOrderingComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnOrderings<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get kode => $composableBuilder(
-      column: $table.kode, builder: (column) => ColumnOrderings(column));
+    column: $table.kode,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get nama => $composableBuilder(
-      column: $table.nama, builder: (column) => ColumnOrderings(column));
+    column: $table.nama,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get namaLengkap => $composableBuilder(
-      column: $table.namaLengkap, builder: (column) => ColumnOrderings(column));
+    column: $table.namaLengkap,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get deskripsi => $composableBuilder(
-      column: $table.deskripsi, builder: (column) => ColumnOrderings(column));
+    column: $table.deskripsi,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get tahun => $composableBuilder(
-      column: $table.tahun, builder: (column) => ColumnOrderings(column));
+    column: $table.tahun,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<bool> get isActive => $composableBuilder(
-      column: $table.isActive, builder: (column) => ColumnOrderings(column));
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$UndangUndangTableTableAnnotationComposer
@@ -1481,7 +1782,9 @@ class $$UndangUndangTableTableAnnotationComposer
       $composableBuilder(column: $table.nama, builder: (column) => column);
 
   GeneratedColumn<String> get namaLengkap => $composableBuilder(
-      column: $table.namaLengkap, builder: (column) => column);
+    column: $table.namaLengkap,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get deskripsi =>
       $composableBuilder(column: $table.deskripsi, builder: (column) => column);
@@ -1496,25 +1799,33 @@ class $$UndangUndangTableTableAnnotationComposer
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
 
-class $$UndangUndangTableTableTableManager extends RootTableManager<
-    _$AppDatabase,
-    $UndangUndangTableTable,
-    UndangUndangTableData,
-    $$UndangUndangTableTableFilterComposer,
-    $$UndangUndangTableTableOrderingComposer,
-    $$UndangUndangTableTableAnnotationComposer,
-    $$UndangUndangTableTableCreateCompanionBuilder,
-    $$UndangUndangTableTableUpdateCompanionBuilder,
-    (
-      UndangUndangTableData,
-      BaseReferences<_$AppDatabase, $UndangUndangTableTable,
-          UndangUndangTableData>
-    ),
-    UndangUndangTableData,
-    PrefetchHooks Function()> {
+class $$UndangUndangTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $UndangUndangTableTable,
+          UndangUndangTableData,
+          $$UndangUndangTableTableFilterComposer,
+          $$UndangUndangTableTableOrderingComposer,
+          $$UndangUndangTableTableAnnotationComposer,
+          $$UndangUndangTableTableCreateCompanionBuilder,
+          $$UndangUndangTableTableUpdateCompanionBuilder,
+          (
+            UndangUndangTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $UndangUndangTableTable,
+              UndangUndangTableData
+            >,
+          ),
+          UndangUndangTableData,
+          PrefetchHooks Function()
+        > {
   $$UndangUndangTableTableTableManager(
-      _$AppDatabase db, $UndangUndangTableTable table)
-      : super(TableManagerState(
+    _$AppDatabase db,
+    $UndangUndangTableTable table,
+  ) : super(
+        TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
@@ -1523,102 +1834,112 @@ class $$UndangUndangTableTableTableManager extends RootTableManager<
               $$UndangUndangTableTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $$UndangUndangTableTableAnnotationComposer(
-                  $db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> id = const Value.absent(),
-            Value<String> kode = const Value.absent(),
-            Value<String> nama = const Value.absent(),
-            Value<String?> namaLengkap = const Value.absent(),
-            Value<String?> deskripsi = const Value.absent(),
-            Value<int> tahun = const Value.absent(),
-            Value<bool> isActive = const Value.absent(),
-            Value<DateTime?> updatedAt = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              UndangUndangTableCompanion(
-            id: id,
-            kode: kode,
-            nama: nama,
-            namaLengkap: namaLengkap,
-            deskripsi: deskripsi,
-            tahun: tahun,
-            isActive: isActive,
-            updatedAt: updatedAt,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String id,
-            required String kode,
-            required String nama,
-            Value<String?> namaLengkap = const Value.absent(),
-            Value<String?> deskripsi = const Value.absent(),
-            Value<int> tahun = const Value.absent(),
-            Value<bool> isActive = const Value.absent(),
-            Value<DateTime?> updatedAt = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              UndangUndangTableCompanion.insert(
-            id: id,
-            kode: kode,
-            nama: nama,
-            namaLengkap: namaLengkap,
-            deskripsi: deskripsi,
-            tahun: tahun,
-            isActive: isActive,
-            updatedAt: updatedAt,
-            rowid: rowid,
-          ),
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> kode = const Value.absent(),
+                Value<String> nama = const Value.absent(),
+                Value<String?> namaLengkap = const Value.absent(),
+                Value<String?> deskripsi = const Value.absent(),
+                Value<int> tahun = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<DateTime?> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => UndangUndangTableCompanion(
+                id: id,
+                kode: kode,
+                nama: nama,
+                namaLengkap: namaLengkap,
+                deskripsi: deskripsi,
+                tahun: tahun,
+                isActive: isActive,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String kode,
+                required String nama,
+                Value<String?> namaLengkap = const Value.absent(),
+                Value<String?> deskripsi = const Value.absent(),
+                Value<int> tahun = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<DateTime?> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => UndangUndangTableCompanion.insert(
+                id: id,
+                kode: kode,
+                nama: nama,
+                namaLengkap: namaLengkap,
+                deskripsi: deskripsi,
+                tahun: tahun,
+                isActive: isActive,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
           prefetchHooksCallback: null,
-        ));
+        ),
+      );
 }
 
-typedef $$UndangUndangTableTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $UndangUndangTableTable,
-    UndangUndangTableData,
-    $$UndangUndangTableTableFilterComposer,
-    $$UndangUndangTableTableOrderingComposer,
-    $$UndangUndangTableTableAnnotationComposer,
-    $$UndangUndangTableTableCreateCompanionBuilder,
-    $$UndangUndangTableTableUpdateCompanionBuilder,
-    (
+typedef $$UndangUndangTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $UndangUndangTableTable,
       UndangUndangTableData,
-      BaseReferences<_$AppDatabase, $UndangUndangTableTable,
-          UndangUndangTableData>
-    ),
-    UndangUndangTableData,
-    PrefetchHooks Function()>;
-typedef $$PasalTableTableCreateCompanionBuilder = PasalTableCompanion Function({
-  required String id,
-  required String undangUndangId,
-  required String nomor,
-  required String isi,
-  Value<String?> penjelasan,
-  Value<String?> judul,
-  Value<String> keywords,
-  Value<String> relatedIds,
-  Value<bool> isActive,
-  Value<DateTime?> createdAt,
-  Value<DateTime?> updatedAt,
-  Value<int> rowid,
-});
-typedef $$PasalTableTableUpdateCompanionBuilder = PasalTableCompanion Function({
-  Value<String> id,
-  Value<String> undangUndangId,
-  Value<String> nomor,
-  Value<String> isi,
-  Value<String?> penjelasan,
-  Value<String?> judul,
-  Value<String> keywords,
-  Value<String> relatedIds,
-  Value<bool> isActive,
-  Value<DateTime?> createdAt,
-  Value<DateTime?> updatedAt,
-  Value<int> rowid,
-});
+      $$UndangUndangTableTableFilterComposer,
+      $$UndangUndangTableTableOrderingComposer,
+      $$UndangUndangTableTableAnnotationComposer,
+      $$UndangUndangTableTableCreateCompanionBuilder,
+      $$UndangUndangTableTableUpdateCompanionBuilder,
+      (
+        UndangUndangTableData,
+        BaseReferences<
+          _$AppDatabase,
+          $UndangUndangTableTable,
+          UndangUndangTableData
+        >,
+      ),
+      UndangUndangTableData,
+      PrefetchHooks Function()
+    >;
+typedef $$PasalTableTableCreateCompanionBuilder =
+    PasalTableCompanion Function({
+      required String id,
+      required String undangUndangId,
+      required String nomor,
+      required String isi,
+      Value<String?> penjelasan,
+      Value<String?> judul,
+      Value<String> keywords,
+      Value<String> relatedIds,
+      Value<bool> isActive,
+      Value<DateTime?> createdAt,
+      Value<DateTime?> updatedAt,
+      Value<int> rowid,
+    });
+typedef $$PasalTableTableUpdateCompanionBuilder =
+    PasalTableCompanion Function({
+      Value<String> id,
+      Value<String> undangUndangId,
+      Value<String> nomor,
+      Value<String> isi,
+      Value<String?> penjelasan,
+      Value<String?> judul,
+      Value<String> keywords,
+      Value<String> relatedIds,
+      Value<bool> isActive,
+      Value<DateTime?> createdAt,
+      Value<DateTime?> updatedAt,
+      Value<int> rowid,
+    });
 
 class $$PasalTableTableFilterComposer
     extends Composer<_$AppDatabase, $PasalTableTable> {
@@ -1630,38 +1951,59 @@ class $$PasalTableTableFilterComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnFilters<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get undangUndangId => $composableBuilder(
-      column: $table.undangUndangId,
-      builder: (column) => ColumnFilters(column));
+    column: $table.undangUndangId,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get nomor => $composableBuilder(
-      column: $table.nomor, builder: (column) => ColumnFilters(column));
+    column: $table.nomor,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get isi => $composableBuilder(
-      column: $table.isi, builder: (column) => ColumnFilters(column));
+    column: $table.isi,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get penjelasan => $composableBuilder(
-      column: $table.penjelasan, builder: (column) => ColumnFilters(column));
+    column: $table.penjelasan,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get judul => $composableBuilder(
-      column: $table.judul, builder: (column) => ColumnFilters(column));
+    column: $table.judul,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get keywords => $composableBuilder(
-      column: $table.keywords, builder: (column) => ColumnFilters(column));
+    column: $table.keywords,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get relatedIds => $composableBuilder(
-      column: $table.relatedIds, builder: (column) => ColumnFilters(column));
+    column: $table.relatedIds,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<bool> get isActive => $composableBuilder(
-      column: $table.isActive, builder: (column) => ColumnFilters(column));
+    column: $table.isActive,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $$PasalTableTableOrderingComposer
@@ -1674,38 +2016,59 @@ class $$PasalTableTableOrderingComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnOrderings<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get undangUndangId => $composableBuilder(
-      column: $table.undangUndangId,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.undangUndangId,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get nomor => $composableBuilder(
-      column: $table.nomor, builder: (column) => ColumnOrderings(column));
+    column: $table.nomor,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get isi => $composableBuilder(
-      column: $table.isi, builder: (column) => ColumnOrderings(column));
+    column: $table.isi,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get penjelasan => $composableBuilder(
-      column: $table.penjelasan, builder: (column) => ColumnOrderings(column));
+    column: $table.penjelasan,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get judul => $composableBuilder(
-      column: $table.judul, builder: (column) => ColumnOrderings(column));
+    column: $table.judul,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get keywords => $composableBuilder(
-      column: $table.keywords, builder: (column) => ColumnOrderings(column));
+    column: $table.keywords,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get relatedIds => $composableBuilder(
-      column: $table.relatedIds, builder: (column) => ColumnOrderings(column));
+    column: $table.relatedIds,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<bool> get isActive => $composableBuilder(
-      column: $table.isActive, builder: (column) => ColumnOrderings(column));
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PasalTableTableAnnotationComposer
@@ -1721,7 +2084,9 @@ class $$PasalTableTableAnnotationComposer
       $composableBuilder(column: $table.id, builder: (column) => column);
 
   GeneratedColumn<String> get undangUndangId => $composableBuilder(
-      column: $table.undangUndangId, builder: (column) => column);
+    column: $table.undangUndangId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get nomor =>
       $composableBuilder(column: $table.nomor, builder: (column) => column);
@@ -1730,7 +2095,9 @@ class $$PasalTableTableAnnotationComposer
       $composableBuilder(column: $table.isi, builder: (column) => column);
 
   GeneratedColumn<String> get penjelasan => $composableBuilder(
-      column: $table.penjelasan, builder: (column) => column);
+    column: $table.penjelasan,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get judul =>
       $composableBuilder(column: $table.judul, builder: (column) => column);
@@ -1739,7 +2106,9 @@ class $$PasalTableTableAnnotationComposer
       $composableBuilder(column: $table.keywords, builder: (column) => column);
 
   GeneratedColumn<String> get relatedIds => $composableBuilder(
-      column: $table.relatedIds, builder: (column) => column);
+    column: $table.relatedIds,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<bool> get isActive =>
       $composableBuilder(column: $table.isActive, builder: (column) => column);
@@ -1751,23 +2120,27 @@ class $$PasalTableTableAnnotationComposer
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
 
-class $$PasalTableTableTableManager extends RootTableManager<
-    _$AppDatabase,
-    $PasalTableTable,
-    PasalTableData,
-    $$PasalTableTableFilterComposer,
-    $$PasalTableTableOrderingComposer,
-    $$PasalTableTableAnnotationComposer,
-    $$PasalTableTableCreateCompanionBuilder,
-    $$PasalTableTableUpdateCompanionBuilder,
-    (
-      PasalTableData,
-      BaseReferences<_$AppDatabase, $PasalTableTable, PasalTableData>
-    ),
-    PasalTableData,
-    PrefetchHooks Function()> {
+class $$PasalTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PasalTableTable,
+          PasalTableData,
+          $$PasalTableTableFilterComposer,
+          $$PasalTableTableOrderingComposer,
+          $$PasalTableTableAnnotationComposer,
+          $$PasalTableTableCreateCompanionBuilder,
+          $$PasalTableTableUpdateCompanionBuilder,
+          (
+            PasalTableData,
+            BaseReferences<_$AppDatabase, $PasalTableTable, PasalTableData>,
+          ),
+          PasalTableData,
+          PrefetchHooks Function()
+        > {
   $$PasalTableTableTableManager(_$AppDatabase db, $PasalTableTable table)
-      : super(TableManagerState(
+    : super(
+        TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
@@ -1776,104 +2149,107 @@ class $$PasalTableTableTableManager extends RootTableManager<
               $$PasalTableTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $$PasalTableTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> id = const Value.absent(),
-            Value<String> undangUndangId = const Value.absent(),
-            Value<String> nomor = const Value.absent(),
-            Value<String> isi = const Value.absent(),
-            Value<String?> penjelasan = const Value.absent(),
-            Value<String?> judul = const Value.absent(),
-            Value<String> keywords = const Value.absent(),
-            Value<String> relatedIds = const Value.absent(),
-            Value<bool> isActive = const Value.absent(),
-            Value<DateTime?> createdAt = const Value.absent(),
-            Value<DateTime?> updatedAt = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              PasalTableCompanion(
-            id: id,
-            undangUndangId: undangUndangId,
-            nomor: nomor,
-            isi: isi,
-            penjelasan: penjelasan,
-            judul: judul,
-            keywords: keywords,
-            relatedIds: relatedIds,
-            isActive: isActive,
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String id,
-            required String undangUndangId,
-            required String nomor,
-            required String isi,
-            Value<String?> penjelasan = const Value.absent(),
-            Value<String?> judul = const Value.absent(),
-            Value<String> keywords = const Value.absent(),
-            Value<String> relatedIds = const Value.absent(),
-            Value<bool> isActive = const Value.absent(),
-            Value<DateTime?> createdAt = const Value.absent(),
-            Value<DateTime?> updatedAt = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              PasalTableCompanion.insert(
-            id: id,
-            undangUndangId: undangUndangId,
-            nomor: nomor,
-            isi: isi,
-            penjelasan: penjelasan,
-            judul: judul,
-            keywords: keywords,
-            relatedIds: relatedIds,
-            isActive: isActive,
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-            rowid: rowid,
-          ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> undangUndangId = const Value.absent(),
+                Value<String> nomor = const Value.absent(),
+                Value<String> isi = const Value.absent(),
+                Value<String?> penjelasan = const Value.absent(),
+                Value<String?> judul = const Value.absent(),
+                Value<String> keywords = const Value.absent(),
+                Value<String> relatedIds = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<DateTime?> createdAt = const Value.absent(),
+                Value<DateTime?> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PasalTableCompanion(
+                id: id,
+                undangUndangId: undangUndangId,
+                nomor: nomor,
+                isi: isi,
+                penjelasan: penjelasan,
+                judul: judul,
+                keywords: keywords,
+                relatedIds: relatedIds,
+                isActive: isActive,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String undangUndangId,
+                required String nomor,
+                required String isi,
+                Value<String?> penjelasan = const Value.absent(),
+                Value<String?> judul = const Value.absent(),
+                Value<String> keywords = const Value.absent(),
+                Value<String> relatedIds = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<DateTime?> createdAt = const Value.absent(),
+                Value<DateTime?> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PasalTableCompanion.insert(
+                id: id,
+                undangUndangId: undangUndangId,
+                nomor: nomor,
+                isi: isi,
+                penjelasan: penjelasan,
+                judul: judul,
+                keywords: keywords,
+                relatedIds: relatedIds,
+                isActive: isActive,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
           prefetchHooksCallback: null,
-        ));
+        ),
+      );
 }
 
-typedef $$PasalTableTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $PasalTableTable,
-    PasalTableData,
-    $$PasalTableTableFilterComposer,
-    $$PasalTableTableOrderingComposer,
-    $$PasalTableTableAnnotationComposer,
-    $$PasalTableTableCreateCompanionBuilder,
-    $$PasalTableTableUpdateCompanionBuilder,
-    (
+typedef $$PasalTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PasalTableTable,
       PasalTableData,
-      BaseReferences<_$AppDatabase, $PasalTableTable, PasalTableData>
-    ),
-    PasalTableData,
-    PrefetchHooks Function()>;
-typedef $$PasalLinksTableTableCreateCompanionBuilder = PasalLinksTableCompanion
-    Function({
-  required String id,
-  required String sourcePasalId,
-  required String targetPasalId,
-  Value<String?> keterangan,
-  Value<bool> isActive,
-  Value<DateTime?> createdAt,
-  Value<int> rowid,
-});
-typedef $$PasalLinksTableTableUpdateCompanionBuilder = PasalLinksTableCompanion
-    Function({
-  Value<String> id,
-  Value<String> sourcePasalId,
-  Value<String> targetPasalId,
-  Value<String?> keterangan,
-  Value<bool> isActive,
-  Value<DateTime?> createdAt,
-  Value<int> rowid,
-});
+      $$PasalTableTableFilterComposer,
+      $$PasalTableTableOrderingComposer,
+      $$PasalTableTableAnnotationComposer,
+      $$PasalTableTableCreateCompanionBuilder,
+      $$PasalTableTableUpdateCompanionBuilder,
+      (
+        PasalTableData,
+        BaseReferences<_$AppDatabase, $PasalTableTable, PasalTableData>,
+      ),
+      PasalTableData,
+      PrefetchHooks Function()
+    >;
+typedef $$PasalLinksTableTableCreateCompanionBuilder =
+    PasalLinksTableCompanion Function({
+      required String id,
+      required String sourcePasalId,
+      required String targetPasalId,
+      Value<String?> keterangan,
+      Value<bool> isActive,
+      Value<DateTime?> createdAt,
+      Value<int> rowid,
+    });
+typedef $$PasalLinksTableTableUpdateCompanionBuilder =
+    PasalLinksTableCompanion Function({
+      Value<String> id,
+      Value<String> sourcePasalId,
+      Value<String> targetPasalId,
+      Value<String?> keterangan,
+      Value<bool> isActive,
+      Value<DateTime?> createdAt,
+      Value<int> rowid,
+    });
 
 class $$PasalLinksTableTableFilterComposer
     extends Composer<_$AppDatabase, $PasalLinksTableTable> {
@@ -1885,22 +2261,34 @@ class $$PasalLinksTableTableFilterComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnFilters<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get sourcePasalId => $composableBuilder(
-      column: $table.sourcePasalId, builder: (column) => ColumnFilters(column));
+    column: $table.sourcePasalId,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get targetPasalId => $composableBuilder(
-      column: $table.targetPasalId, builder: (column) => ColumnFilters(column));
+    column: $table.targetPasalId,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get keterangan => $composableBuilder(
-      column: $table.keterangan, builder: (column) => ColumnFilters(column));
+    column: $table.keterangan,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<bool> get isActive => $composableBuilder(
-      column: $table.isActive, builder: (column) => ColumnFilters(column));
+    column: $table.isActive,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $$PasalLinksTableTableOrderingComposer
@@ -1913,24 +2301,34 @@ class $$PasalLinksTableTableOrderingComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnOrderings<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get sourcePasalId => $composableBuilder(
-      column: $table.sourcePasalId,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.sourcePasalId,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get targetPasalId => $composableBuilder(
-      column: $table.targetPasalId,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.targetPasalId,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get keterangan => $composableBuilder(
-      column: $table.keterangan, builder: (column) => ColumnOrderings(column));
+    column: $table.keterangan,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<bool> get isActive => $composableBuilder(
-      column: $table.isActive, builder: (column) => ColumnOrderings(column));
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PasalLinksTableTableAnnotationComposer
@@ -1946,13 +2344,19 @@ class $$PasalLinksTableTableAnnotationComposer
       $composableBuilder(column: $table.id, builder: (column) => column);
 
   GeneratedColumn<String> get sourcePasalId => $composableBuilder(
-      column: $table.sourcePasalId, builder: (column) => column);
+    column: $table.sourcePasalId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get targetPasalId => $composableBuilder(
-      column: $table.targetPasalId, builder: (column) => column);
+    column: $table.targetPasalId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get keterangan => $composableBuilder(
-      column: $table.keterangan, builder: (column) => column);
+    column: $table.keterangan,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<bool> get isActive =>
       $composableBuilder(column: $table.isActive, builder: (column) => column);
@@ -1961,24 +2365,33 @@ class $$PasalLinksTableTableAnnotationComposer
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 }
 
-class $$PasalLinksTableTableTableManager extends RootTableManager<
-    _$AppDatabase,
-    $PasalLinksTableTable,
-    PasalLinksTableData,
-    $$PasalLinksTableTableFilterComposer,
-    $$PasalLinksTableTableOrderingComposer,
-    $$PasalLinksTableTableAnnotationComposer,
-    $$PasalLinksTableTableCreateCompanionBuilder,
-    $$PasalLinksTableTableUpdateCompanionBuilder,
-    (
-      PasalLinksTableData,
-      BaseReferences<_$AppDatabase, $PasalLinksTableTable, PasalLinksTableData>
-    ),
-    PasalLinksTableData,
-    PrefetchHooks Function()> {
+class $$PasalLinksTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PasalLinksTableTable,
+          PasalLinksTableData,
+          $$PasalLinksTableTableFilterComposer,
+          $$PasalLinksTableTableOrderingComposer,
+          $$PasalLinksTableTableAnnotationComposer,
+          $$PasalLinksTableTableCreateCompanionBuilder,
+          $$PasalLinksTableTableUpdateCompanionBuilder,
+          (
+            PasalLinksTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $PasalLinksTableTable,
+              PasalLinksTableData
+            >,
+          ),
+          PasalLinksTableData,
+          PrefetchHooks Function()
+        > {
   $$PasalLinksTableTableTableManager(
-      _$AppDatabase db, $PasalLinksTableTable table)
-      : super(TableManagerState(
+    _$AppDatabase db,
+    $PasalLinksTableTable table,
+  ) : super(
+        TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
@@ -1987,64 +2400,71 @@ class $$PasalLinksTableTableTableManager extends RootTableManager<
               $$PasalLinksTableTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $$PasalLinksTableTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> id = const Value.absent(),
-            Value<String> sourcePasalId = const Value.absent(),
-            Value<String> targetPasalId = const Value.absent(),
-            Value<String?> keterangan = const Value.absent(),
-            Value<bool> isActive = const Value.absent(),
-            Value<DateTime?> createdAt = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              PasalLinksTableCompanion(
-            id: id,
-            sourcePasalId: sourcePasalId,
-            targetPasalId: targetPasalId,
-            keterangan: keterangan,
-            isActive: isActive,
-            createdAt: createdAt,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String id,
-            required String sourcePasalId,
-            required String targetPasalId,
-            Value<String?> keterangan = const Value.absent(),
-            Value<bool> isActive = const Value.absent(),
-            Value<DateTime?> createdAt = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              PasalLinksTableCompanion.insert(
-            id: id,
-            sourcePasalId: sourcePasalId,
-            targetPasalId: targetPasalId,
-            keterangan: keterangan,
-            isActive: isActive,
-            createdAt: createdAt,
-            rowid: rowid,
-          ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> sourcePasalId = const Value.absent(),
+                Value<String> targetPasalId = const Value.absent(),
+                Value<String?> keterangan = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<DateTime?> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PasalLinksTableCompanion(
+                id: id,
+                sourcePasalId: sourcePasalId,
+                targetPasalId: targetPasalId,
+                keterangan: keterangan,
+                isActive: isActive,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String sourcePasalId,
+                required String targetPasalId,
+                Value<String?> keterangan = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<DateTime?> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PasalLinksTableCompanion.insert(
+                id: id,
+                sourcePasalId: sourcePasalId,
+                targetPasalId: targetPasalId,
+                keterangan: keterangan,
+                isActive: isActive,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
           prefetchHooksCallback: null,
-        ));
+        ),
+      );
 }
 
-typedef $$PasalLinksTableTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $PasalLinksTableTable,
-    PasalLinksTableData,
-    $$PasalLinksTableTableFilterComposer,
-    $$PasalLinksTableTableOrderingComposer,
-    $$PasalLinksTableTableAnnotationComposer,
-    $$PasalLinksTableTableCreateCompanionBuilder,
-    $$PasalLinksTableTableUpdateCompanionBuilder,
-    (
+typedef $$PasalLinksTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PasalLinksTableTable,
       PasalLinksTableData,
-      BaseReferences<_$AppDatabase, $PasalLinksTableTable, PasalLinksTableData>
-    ),
-    PasalLinksTableData,
-    PrefetchHooks Function()>;
+      $$PasalLinksTableTableFilterComposer,
+      $$PasalLinksTableTableOrderingComposer,
+      $$PasalLinksTableTableAnnotationComposer,
+      $$PasalLinksTableTableCreateCompanionBuilder,
+      $$PasalLinksTableTableUpdateCompanionBuilder,
+      (
+        PasalLinksTableData,
+        BaseReferences<
+          _$AppDatabase,
+          $PasalLinksTableTable,
+          PasalLinksTableData
+        >,
+      ),
+      PasalLinksTableData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;

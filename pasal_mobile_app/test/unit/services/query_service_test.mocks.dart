@@ -587,6 +587,79 @@ class MockAppDatabase extends _i1.Mock implements _i3.AppDatabase {
           as _i5.Future<void>);
 
   @override
+  _i5.Future<List<_i3.UndangUndangTableData>> getActiveUndangUndang() =>
+      (super.noSuchMethod(
+            Invocation.method(#getActiveUndangUndang, []),
+            returnValue: _i5.Future<List<_i3.UndangUndangTableData>>.value(
+              <_i3.UndangUndangTableData>[],
+            ),
+          )
+          as _i5.Future<List<_i3.UndangUndangTableData>>);
+
+  @override
+  _i5.Future<int> deleteUndangUndangById(String? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteUndangUndangById, [id]),
+            returnValue: _i5.Future<int>.value(0),
+          )
+          as _i5.Future<int>);
+
+  @override
+  _i5.Future<int> deletePasalByUndangUndangId(String? undangUndangId) =>
+      (super.noSuchMethod(
+            Invocation.method(#deletePasalByUndangUndangId, [undangUndangId]),
+            returnValue: _i5.Future<int>.value(0),
+          )
+          as _i5.Future<int>);
+
+  @override
+  _i5.Future<int> deletePasalLinksBySourcePasalId(String? sourcePasalId) =>
+      (super.noSuchMethod(
+            Invocation.method(#deletePasalLinksBySourcePasalId, [
+              sourcePasalId,
+            ]),
+            returnValue: _i5.Future<int>.value(0),
+          )
+          as _i5.Future<int>);
+
+  @override
+  _i5.Future<int> deletePasalLinksByTargetPasalId(String? targetPasalId) =>
+      (super.noSuchMethod(
+            Invocation.method(#deletePasalLinksByTargetPasalId, [
+              targetPasalId,
+            ]),
+            returnValue: _i5.Future<int>.value(0),
+          )
+          as _i5.Future<int>);
+
+  @override
+  _i5.Future<void> deleteInactiveUndangUndang() =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteInactiveUndangUndang, []),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> deleteUndangUndangWithRelatedData(String? uuId) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteUndangUndangWithRelatedData, [uuId]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> deleteInactivePasal() =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteInactivePasal, []),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
   _i2.Migrator createMigrator() =>
       (super.noSuchMethod(
             Invocation.method(#createMigrator, []),
