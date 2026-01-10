@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/app_colors.dart';
+import '../../core/services/auth_service.dart';
 import '../../core/services/query_service.dart';
 import '../../core/services/sync_manager.dart';
 import '../widgets/main_navigation.dart';
+import 'login_screen.dart';
+import 'lock_screen.dart';
 import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -20,28 +24,58 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkDataAndNavigate() async {
-    // Initialize sync manager
+    // Initialize services
     await syncManager.initialize();
+    await authService.initialize();
 
     await Future.delayed(const Duration(seconds: 2));
 
+    if (!mounted) return;
+
+    // 1. Check if user is logged in
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) {
+      // Not logged in - go to login
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+      return;
+    }
+
+    // 2. Check local expiry (works offline)
+    final expiryResult = await authService.checkExpiryOffline();
+    if (!mounted) return;
+
+    if (expiryResult == ExpiryCheckResult.expired) {
+      // Expired - show lock screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LockScreen()),
+      );
+      return;
+    }
+
+    // 3. Check if we have local data
     final allPasal = await QueryService.getAllPasal();
 
-    if (mounted) {
-      if (allPasal.isEmpty) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-        );
-      } else {
-        // Check for updates in background (non-blocking)
-        syncManager.checkOnLaunch();
+    if (!mounted) return;
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainNavigation()),
-        );
-      }
+    if (allPasal.isEmpty) {
+      // No data - need to download
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      );
+    } else {
+      // Has data - go to main app
+      // Check for updates in background (non-blocking)
+      syncManager.checkOnLaunch();
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const MainNavigation()),
+      );
     }
   }
 

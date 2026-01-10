@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/config/app_colors.dart';
 import 'settings_drawer.dart';
+import 'expiry_warning_banner.dart';
 import '../screens/home_screen.dart';
 import '../screens/library_screen.dart';
 import '../screens/archive_screen.dart';
@@ -36,7 +37,12 @@ class _MainNavigationState extends State<MainNavigation> {
     return Scaffold(
       extendBody: true, // Allow body to extend behind navbar
       endDrawer: const SettingsDrawer(),
-      body: _pages[_selectedIndex],
+      body: Column(
+        children: [
+          const ExpiryWarningBanner(),
+          Expanded(child: _pages[_selectedIndex]),
+        ],
+      ),
       bottomNavigationBar: Container(
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         decoration: BoxDecoration(
