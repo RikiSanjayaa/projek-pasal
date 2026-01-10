@@ -6,7 +6,7 @@ import '../../core/services/query_service.dart';
 import '../../core/utils/search_utils.dart';
 import '../widgets/pasal_card.dart';
 import '../widgets/main_layout.dart';
-import '../widgets/update_banner.dart';
+// import '../widgets/update_banner.dart';
 import '../widgets/keyword_bottom_sheet.dart';
 import '../widgets/pagination_footer.dart';
 import '../widgets/filter_widgets.dart';
@@ -268,7 +268,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            UpdateBanner(onSyncComplete: _handleSyncComplete),
+            // UpdateBanner(onSyncComplete: _handleSyncComplete),
 
             _buildHeader(isDark),
 

@@ -79,88 +79,95 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.card(isDark),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.check_circle,
-                color: AppColors.success,
-                size: 28,
-              ),
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: AppColors.card(isDark),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            const SizedBox(width: 12),
-            Text(
-              "Unduhan Selesai!",
-              style: TextStyle(
-                color: AppColors.textPrimary(isDark),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildInfoRow(
-              Icons.article,
-              "${progress?.totalPasal ?? 0} pasal",
-              isDark,
-            ),
-            const SizedBox(height: 10),
-            _buildInfoRow(
-              Icons.folder,
-              "${progress?.totalUU ?? 0} undang-undang",
-              isDark,
-            ),
-            const SizedBox(height: 10),
-            _buildInfoRow(
-              Icons.cloud_download,
-              progress?.downloadedBytesFormatted ?? "0 B",
-              isDark,
-            ),
-            const SizedBox(height: 10),
-            _buildInfoRow(Icons.storage, "Database: $dbSize", isDark),
-          ],
-        ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MainNavigation(),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  child: const Icon(
+                    Icons.check_circle,
+                    color: AppColors.success,
+                    size: 28,
+                  ),
                 ),
-                elevation: 0,
-              ),
-              child: const Text(
-                "Mulai Menggunakan Aplikasi",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "Unduhan Selesai!",
+                    style: TextStyle(
+                      color: AppColors.textPrimary(isDark),
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2, 
+                  ),
+                ),
+              ],
             ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildInfoRow(
+                  Icons.article,
+                  "${progress?.totalPasal ?? 0} pasal",
+                  isDark,
+                ),
+                const SizedBox(height: 10),
+                _buildInfoRow(
+                  Icons.folder,
+                  "${progress?.totalUU ?? 0} undang-undang",
+                  isDark,
+                ),
+                const SizedBox(height: 10),
+                _buildInfoRow(
+                  Icons.cloud_download,
+                  progress?.downloadedBytesFormatted ?? "0 B",
+                  isDark,
+                ),
+                const SizedBox(height: 10),
+                _buildInfoRow(Icons.storage, "Database: $dbSize", isDark),
+              ],
+            ),
+            actions: [
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const MainNavigation(),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    "Mulai Menggunakan Aplikasi",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -194,38 +201,41 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.card(isDark),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          "Batalkan Unduhan?",
-          style: TextStyle(
-            color: AppColors.textPrimary(isDark),
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          "Unduhan akan dihentikan dan Anda perlu mengulang dari awal. Yakin ingin membatalkan?",
-          style: TextStyle(color: AppColors.textSecondary(isDark)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.textSecondary(isDark),
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: AppColors.card(isDark),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            child: const Text("Lanjutkan Unduhan"),
+            title: Text(
+              "Batalkan Unduhan?",
+              style: TextStyle(
+                color: AppColors.textPrimary(isDark),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: Text(
+              "Unduhan akan dihentikan dan Anda perlu mengulang dari awal. Yakin ingin membatalkan?",
+              style: TextStyle(color: AppColors.textSecondary(isDark)),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary(isDark),
+                ),
+                child: const Text("Lanjutkan Unduhan"),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  syncManager.cancelSync();
+                },
+                style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                child: const Text("Ya, Batalkan"),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              syncManager.cancelSync();
-            },
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text("Ya, Batalkan"),
-          ),
-        ],
-      ),
     );
   }
 
@@ -240,9 +250,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: Column(
           children: [
             Expanded(
-              child: _isDownloading
-                  ? _buildDownloadingView(isDark)
-                  : _buildOnboardingPages(isDark),
+              child:
+                  _isDownloading
+                      ? _buildDownloadingView(isDark)
+                      : _buildOnboardingPages(isDark),
             ),
             if (!_isDownloading) _buildBottomSection(isDark),
           ],
@@ -366,9 +377,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: LinearProgressIndicator(
                     value: progress?.progress ?? 0,
                     minHeight: 12,
-                    backgroundColor: isDark
-                        ? Colors.grey[800]
-                        : Colors.white, // Clean white for light mode
+                    backgroundColor:
+                        isDark
+                            ? Colors.grey[800]
+                            : Colors.white, // Clean white for light mode
                     valueColor: AlwaysStoppedAnimation<Color>(
                       isError ? AppColors.error : AppColors.primary,
                     ),
@@ -416,18 +428,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         SizedBox(
                           width: 20,
                           height: 20,
-                          child: isComplete
-                              ? Icon(
-                                  Icons.check_circle,
-                                  size: 20,
-                                  color: AppColors.success,
-                                )
-                              : CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation(
-                                    AppColors.primary,
+                          child:
+                              isComplete
+                                  ? Icon(
+                                    Icons.check_circle,
+                                    size: 20,
+                                    color: AppColors.success,
+                                  )
+                                  : CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation(
+                                      AppColors.primary,
+                                    ),
                                   ),
-                                ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -577,9 +590,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 height: 8,
                 width: _currentPage == index ? 28 : 8,
                 decoration: BoxDecoration(
-                  color: _currentPage == index
-                      ? AppColors.primary
-                      : AppColors.border(isDark),
+                  color:
+                      _currentPage == index
+                          ? AppColors.primary
+                          : AppColors.border(isDark),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),

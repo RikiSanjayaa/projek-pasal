@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/config/theme_controller.dart';
 import '../../core/config/app_colors.dart';
+import 'update_banner.dart';
 
 class MainLayout extends StatelessWidget {
   final Widget child;
@@ -31,7 +32,15 @@ class MainLayout extends StatelessWidget {
         return Scaffold(
           backgroundColor: backgroundColor ?? AppColors.scaffold(isDark),
           appBar: appBar,
-          body: SafeArea(child: child),
+          body: SafeArea(
+            child: Column(
+              children: [
+                const UpdateBanner(), 
+                
+                Expanded(child: child),
+              ],
+            ),
+          ),
           floatingActionButton: floatingActionButton,
           bottomNavigationBar: bottomNavigationBar,
           endDrawer: endDrawer,
