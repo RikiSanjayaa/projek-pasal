@@ -12,8 +12,14 @@ enum AuthState { unknown, authenticated, unauthenticated, expired }
 /// Result type for expiry check
 enum ExpiryCheckResult { valid, expired, noData }
 
+/// Result type for active status verification
+enum ActiveStatusResult { active, inactive, expired, error }
+
+/// Reason for forced logout/deactivation
+enum DeactivationReason { none, accountInactive, accountExpired, accountDeleted }
+
 /// Result type for login
-enum LoginResultType { success, failure, expired, deviceConflict }
+enum LoginResultType { success, successAdmin, failure, expired, deviceConflict }
 
 /// Login result class
 class LoginResult {
@@ -25,6 +31,8 @@ class LoginResult {
 
   factory LoginResult.success() =>
       LoginResult._(true, null, LoginResultType.success);
+  factory LoginResult.successAdmin() =>
+      LoginResult._(true, null, LoginResultType.successAdmin);
   factory LoginResult.failure(String error) =>
       LoginResult._(false, error, LoginResultType.failure);
   factory LoginResult.expired(String error) =>
@@ -48,17 +56,23 @@ class AuthService {
   static const String _expiresAtKey = 'user_expires_at';
   static const String _userEmailKey = 'user_email';
   static const String _userNameKey = 'user_name';
+  static const String _isAdminKey = 'is_admin';
 
   // Notifiers for UI
   final ValueNotifier<AuthState> state = ValueNotifier(AuthState.unknown);
   final ValueNotifier<int?> daysUntilExpiry = ValueNotifier(null);
   final ValueNotifier<String?> userName = ValueNotifier(null);
+  final ValueNotifier<bool> isAdmin = ValueNotifier(false);
+  final ValueNotifier<DeactivationReason> deactivationReason =
+      ValueNotifier(DeactivationReason.none);
 
   /// Initialize auth service - call on app startup
   Future<void> initialize() async {
-    // Load user name from storage for display
+    // Load user name and admin status from storage for display
     final name = await _secureStorage.read(key: _userNameKey);
     userName.value = name;
+    final adminFlag = await _secureStorage.read(key: _isAdminKey);
+    isAdmin.value = adminFlag == 'true';
   }
 
   /// Generate or retrieve device ID
@@ -113,10 +127,41 @@ class AuthService {
           .maybeSingle();
 
       if (userProfile == null) {
-        // User exists in auth but not in users table (might be an admin)
-        await _supabase.auth.signOut();
-        return LoginResult.failure(
-            'Akun tidak ditemukan. Hubungi administrator.');
+        // User not in users table - check if they're an admin
+        final adminProfile = await _supabase
+            .from('admin_users')
+            .select()
+            .eq('id', userId)
+            .maybeSingle();
+
+        if (adminProfile == null) {
+          // Not in either table
+          await _supabase.auth.signOut();
+          return LoginResult.failure(
+              'Akun tidak ditemukan. Hubungi administrator.');
+        }
+
+        // Check if admin is active
+        if (adminProfile['is_active'] != true) {
+          await _supabase.auth.signOut();
+          return LoginResult.failure(
+              'Akun admin tidak aktif. Hubungi super administrator.');
+        }
+
+        // Admin login successful - no device binding or expiry for admins
+        await _secureStorage.write(key: _userEmailKey, value: email);
+        await _secureStorage.write(
+          key: _userNameKey,
+          value: adminProfile['nama'] ?? email,
+        );
+        await _secureStorage.write(key: _isAdminKey, value: 'true');
+
+        userName.value = adminProfile['nama'] ?? email;
+        isAdmin.value = true;
+        daysUntilExpiry.value = null; // Admins don't expire
+        state.value = AuthState.authenticated;
+
+        return LoginResult.successAdmin();
       }
 
       // 3. Check if user is active
@@ -177,9 +222,11 @@ class AuthService {
         key: _userNameKey,
         value: userProfile['nama'] ?? email,
       );
+      await _secureStorage.write(key: _isAdminKey, value: 'false');
 
       // 8. Update state
       userName.value = userProfile['nama'] ?? email;
+      isAdmin.value = false;
       _updateExpiryState(expiresAt);
       state.value = AuthState.authenticated;
 
@@ -207,7 +254,16 @@ class AuthService {
 
   /// Check expiry on app start (works offline)
   /// Returns expired if local expires_at is in the past
+  /// Admins never expire, so they always return valid
   Future<ExpiryCheckResult> checkExpiryOffline() async {
+    // Check if user is admin - admins don't expire
+    final adminFlag = await _secureStorage.read(key: _isAdminKey);
+    if (adminFlag == 'true') {
+      isAdmin.value = true;
+      state.value = AuthState.authenticated;
+      return ExpiryCheckResult.valid;
+    }
+
     final expiresAtStr = await _secureStorage.read(key: _expiresAtKey);
     if (expiresAtStr == null) {
       return ExpiryCheckResult.noData;
@@ -239,11 +295,11 @@ class AuthService {
   /// Logout and clear device binding
   Future<void> logout() async {
     try {
-      final deviceId = await getDeviceId();
       final userId = _supabase.auth.currentUser?.id;
 
-      // Deactivate device on server
-      if (userId != null) {
+      // Deactivate device on server (only for regular users, not admins)
+      if (userId != null && !isAdmin.value) {
+        final deviceId = await getDeviceId();
         await _supabase
             .from('user_devices')
             .update({'is_active': false})
@@ -262,6 +318,7 @@ class AuthService {
     state.value = AuthState.unauthenticated;
     daysUntilExpiry.value = null;
     userName.value = null;
+    isAdmin.value = false;
   }
 
   /// Clear local auth data
@@ -269,11 +326,16 @@ class AuthService {
     await _secureStorage.delete(key: _expiresAtKey);
     await _secureStorage.delete(key: _userEmailKey);
     await _secureStorage.delete(key: _userNameKey);
+    await _secureStorage.delete(key: _isAdminKey);
     // Note: We keep device_id as it's device-specific, not user-specific
   }
 
   /// Update last active timestamp (call periodically or on app resume)
+  /// Skipped for admins since they don't have device records
   Future<void> updateLastActive() async {
+    // Skip for admins - they don't have device records
+    if (isAdmin.value) return;
+
     try {
       final userId = _supabase.auth.currentUser?.id;
       final deviceId = await getDeviceId();
@@ -298,6 +360,103 @@ class AuthService {
 
   /// Get current user email
   String? get currentUserEmail => _supabase.auth.currentUser?.email;
+
+  /// Clear the deactivation reason (call after showing message to user)
+  void clearDeactivationReason() {
+    deactivationReason.value = DeactivationReason.none;
+  }
+
+  /// Get user-friendly message for deactivation reason
+  String? get deactivationMessage {
+    switch (deactivationReason.value) {
+      case DeactivationReason.none:
+        return null;
+      case DeactivationReason.accountInactive:
+        return 'Akun Anda telah dinonaktifkan. Silakan hubungi administrator.';
+      case DeactivationReason.accountExpired:
+        return 'Akun Anda telah kadaluarsa. Silakan hubungi administrator untuk memperpanjang.';
+      case DeactivationReason.accountDeleted:
+        return 'Akun Anda tidak ditemukan. Silakan hubungi administrator.';
+    }
+  }
+
+  /// Verify if the current user's account is still active on the server
+  /// Call this before sync or on app resume to detect deactivated accounts
+  /// Returns [ActiveStatusResult] indicating the account status
+  /// If inactive/expired, automatically logs out the user
+  Future<ActiveStatusResult> verifyActiveStatus() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) {
+      return ActiveStatusResult.error;
+    }
+
+    try {
+      if (isAdmin.value) {
+        // Check admin_users table for admins
+        final adminProfile = await _supabase
+            .from('admin_users')
+            .select('is_active')
+            .eq('id', userId)
+            .maybeSingle();
+
+        if (adminProfile == null) {
+          // Admin record deleted
+          deactivationReason.value = DeactivationReason.accountDeleted;
+          await logout();
+          return ActiveStatusResult.inactive;
+        }
+
+        if (adminProfile['is_active'] != true) {
+          deactivationReason.value = DeactivationReason.accountInactive;
+          await logout();
+          return ActiveStatusResult.inactive;
+        }
+
+        return ActiveStatusResult.active;
+      } else {
+        // Check users table for regular users
+        final userProfile = await _supabase
+            .from('users')
+            .select('is_active, expires_at')
+            .eq('id', userId)
+            .maybeSingle();
+
+        if (userProfile == null) {
+          // User record deleted
+          deactivationReason.value = DeactivationReason.accountDeleted;
+          await logout();
+          return ActiveStatusResult.inactive;
+        }
+
+        if (userProfile['is_active'] != true) {
+          deactivationReason.value = DeactivationReason.accountInactive;
+          await logout();
+          return ActiveStatusResult.inactive;
+        }
+
+        // Check expiry for regular users
+        final expiresAt = DateTime.parse(userProfile['expires_at']);
+        if (expiresAt.isBefore(clock.now())) {
+          deactivationReason.value = DeactivationReason.accountExpired;
+          await logout();
+          state.value = AuthState.expired;
+          return ActiveStatusResult.expired;
+        }
+
+        // Update local expiry data
+        await _secureStorage.write(
+          key: _expiresAtKey,
+          value: expiresAt.toIso8601String(),
+        );
+        _updateExpiryState(expiresAt);
+
+        return ActiveStatusResult.active;
+      }
+    } catch (e) {
+      print('Error verifying active status: $e');
+      return ActiveStatusResult.error;
+    }
+  }
 }
 
 /// Global auth service instance

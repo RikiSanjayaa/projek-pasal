@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'auth_service.dart';
 import 'data_service.dart';
 import 'sync_progress.dart';
 
@@ -120,10 +121,20 @@ class SyncManager {
   }
 
   /// Check for updates on app launch
+  /// Also verifies account is still active
   Future<bool> checkOnLaunch() async {
     state.value = SyncState.checking;
 
     try {
+      // Verify account is still active
+      final activeStatus = await authService.verifyActiveStatus();
+      if (activeStatus != ActiveStatusResult.active &&
+          activeStatus != ActiveStatusResult.error) {
+        // Account deactivated or expired - auth service handles logout
+        state.value = SyncState.idle;
+        return false;
+      }
+
       final syncDue = await isSyncDue();
 
       if (!syncDue) {
@@ -146,9 +157,37 @@ class SyncManager {
 
   /// Perform sync with detailed progress tracking
   /// Uses incremental sync if we have a previous sync timestamp
+  /// Verifies account is still active before syncing
   Future<SyncResult> performSync() async {
     state.value = SyncState.syncing;
     progress.value = SyncProgress.initial(isIncremental: _lastSyncTime != null);
+
+    // Verify account is still active before syncing
+    final activeStatus = await authService.verifyActiveStatus();
+    if (activeStatus == ActiveStatusResult.inactive) {
+      state.value = SyncState.error;
+      return SyncResult(
+        success: false,
+        message: 'Akun telah dinonaktifkan. Silakan hubungi administrator.',
+        synced: false,
+        error: SyncError(
+          type: SyncErrorType.unknown,
+          message: 'Account deactivated',
+        ),
+      );
+    }
+    if (activeStatus == ActiveStatusResult.expired) {
+      state.value = SyncState.error;
+      return SyncResult(
+        success: false,
+        message: 'Akun telah kadaluarsa. Silakan hubungi administrator.',
+        synced: false,
+        error: SyncError(
+          type: SyncErrorType.unknown,
+          message: 'Account expired',
+        ),
+      );
+    }
 
     try {
       final result = await DataService.syncDataWithProgress(
@@ -198,10 +237,20 @@ class SyncManager {
   }
 
   /// Force check for updates (ignores time interval)
+  /// Also verifies account is still active
   Future<bool> forceCheckUpdates() async {
     state.value = SyncState.checking;
 
     try {
+      // Verify account is still active
+      final activeStatus = await authService.verifyActiveStatus();
+      if (activeStatus != ActiveStatusResult.active &&
+          activeStatus != ActiveStatusResult.error) {
+        // Account deactivated or expired - auth service handles logout
+        state.value = SyncState.idle;
+        return false;
+      }
+
       final hasUpdates = await DataService.checkForUpdates();
       updateAvailable.value = hasUpdates;
       state.value = SyncState.idle;

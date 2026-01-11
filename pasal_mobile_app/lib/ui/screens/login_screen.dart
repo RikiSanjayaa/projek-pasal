@@ -5,7 +5,9 @@ import '../widgets/app_notification.dart';
 import 'onboarding_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final String? deactivationMessage;
+
+  const LoginScreen({super.key, this.deactivationMessage});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -20,10 +22,84 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _errorMessage;
 
   @override
+  void initState() {
+    super.initState();
+    // Show deactivation message if present
+    if (widget.deactivationMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showDeactivationDialog(widget.deactivationMessage!);
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _showDeactivationDialog(String message) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.card(isDark),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.block, color: AppColors.error, size: 28),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                "Sesi Berakhir",
+                style: TextStyle(
+                  color: AppColors.textPrimary(isDark),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: TextStyle(color: AppColors.textSecondary(isDark), height: 1.5),
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () => Navigator.pop(context),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+                splashFactory: NoSplash.splashFactory,
+                overlayColor: Colors.black12,
+              ),
+              child: const Text(
+                "Mengerti",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _handleLogin() async {
@@ -104,17 +180,14 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         content: Text(
           message,
-          style: TextStyle(
-            color: AppColors.textSecondary(isDark),
-            height: 1.5,
-          ),
+          style: TextStyle(color: AppColors.textSecondary(isDark), height: 1.5),
         ),
         actions: [
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton(
+            child: FilledButton(
               onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
+              style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -122,6 +195,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 elevation: 0,
+                splashFactory: NoSplash.splashFactory,
+                overlayColor: Colors.black12,
               ),
               child: const Text(
                 "Mengerti",
@@ -171,17 +246,14 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         content: Text(
           message,
-          style: TextStyle(
-            color: AppColors.textSecondary(isDark),
-            height: 1.5,
-          ),
+          style: TextStyle(color: AppColors.textSecondary(isDark), height: 1.5),
         ),
         actions: [
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton(
+            child: FilledButton(
               onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
+              style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -189,6 +261,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 elevation: 0,
+                splashFactory: NoSplash.splashFactory,
+                overlayColor: Colors.black12,
               ),
               child: const Text(
                 "Mengerti",
@@ -221,10 +295,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     height: 120,
                     width: 120,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: isDark ? 0.1 : 0.05),
+                      color: AppColors.primary.withValues(
+                        alpha: isDark ? 0.1 : 0.05,
+                      ),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: AppColors.primary.withValues(alpha: isDark ? 0.5 : 0.3),
+                        color: AppColors.primary.withValues(
+                          alpha: isDark ? 0.5 : 0.3,
+                        ),
                         width: 2,
                       ),
                     ),
@@ -276,7 +354,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                        borderSide: const BorderSide(
+                          color: AppColors.primary,
+                          width: 2,
+                        ),
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -287,7 +368,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       if (value == null || value.trim().isEmpty) {
                         return 'Email tidak boleh kosong';
                       }
-                      if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value.trim())) {
+                      if (!RegExp(
+                        r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
+                      ).hasMatch(value.trim())) {
                         return 'Format email tidak valid';
                       }
                       return null;
@@ -307,7 +390,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       prefixIcon: const Icon(Icons.lock_outlined),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          _obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
                         ),
                         onPressed: () {
                           setState(() => _obscurePassword = !_obscurePassword);
@@ -325,7 +410,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                        borderSide: const BorderSide(
+                          color: AppColors.primary,
+                          width: 2,
+                        ),
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -379,16 +467,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   SizedBox(
                     width: double.infinity,
                     height: 54,
-                    child: ElevatedButton(
+                    child: FilledButton(
                       onPressed: _isLoading ? null : _handleLogin,
-                      style: ElevatedButton.styleFrom(
+                      style: FilledButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.5),
+                        disabledBackgroundColor: AppColors.primary.withValues(
+                          alpha: 0.5,
+                        ),
                       ),
                       child: _isLoading
                           ? const SizedBox(
@@ -396,7 +486,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               width: 24,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : const Row(

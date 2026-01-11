@@ -134,7 +134,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         actions: [
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton(
+            child: FilledButton(
               onPressed: () {
                 Navigator.pop(context);
                 Navigator.pushReplacement(
@@ -144,7 +144,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                 );
               },
-              style: ElevatedButton.styleFrom(
+              style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -591,7 +591,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           SizedBox(
             width: double.infinity,
             height: 54,
-            child: ElevatedButton(
+            child: FilledButton(
               onPressed: () {
                 if (_currentPage < _pages.length - 1) {
                   _pageController.nextPage(
@@ -602,7 +602,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _startDownload();
                 }
               },
-              style: ElevatedButton.styleFrom(
+              style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 elevation: 0,

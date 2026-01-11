@@ -5,7 +5,11 @@ import 'core/config/env.dart';
 import 'core/config/app_colors.dart';
 import 'core/services/data_service.dart';
 import 'ui/screens/splash_screen.dart';
+import 'ui/widgets/auth_wrapper.dart';
 import 'core/config/theme_controller.dart';
+
+/// Global navigator key for navigation from anywhere (e.g., AuthWrapper)
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +31,7 @@ class MyApp extends StatelessWidget {
       valueListenable: themeController,
       builder: (context, mode, child) {
         return MaterialApp(
+          navigatorKey: navigatorKey,
           title: 'CariPasal',
           debugShowCheckedModeBanner: false,
           themeMode: mode,
@@ -83,6 +88,10 @@ class MyApp extends StatelessWidget {
             ),
           ),
           home: const SplashScreen(),
+          builder: (context, child) {
+            // Wrap all routes with AuthWrapper to handle forced logout
+            return AuthWrapper(child: child ?? const SizedBox.shrink());
+          },
         );
       },
     );

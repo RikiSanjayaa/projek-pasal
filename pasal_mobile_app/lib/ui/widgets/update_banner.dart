@@ -225,9 +225,9 @@ class _UpdateBannerState extends State<UpdateBanner>
             child: const Text("Nanti"),
           ),
           const SizedBox(width: 4),
-          ElevatedButton(
+          FilledButton(
             onPressed: _handleSync,
-            style: ElevatedButton.styleFrom(
+            style: FilledButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: AppColors.primary,
               elevation: 0,

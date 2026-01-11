@@ -277,7 +277,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Builder(
-              builder: (context) => ElevatedButton(
+              builder: (context) => FilledButton(
                 onPressed: () {
                   Navigator.push(
                     context,
