@@ -51,6 +51,37 @@ export function AuditLogHint({
       return `Link Pasal (${sourceStr} -> ${targetStr})`
     }
 
+    if (log.table_name === 'users') {
+      const email = (data.email as string) || ''
+      const nama = (data.nama as string) || ''
+      const isActive = data.is_active as boolean | undefined
+
+      // Determine what changed for UPDATE action
+      if (log.action === 'UPDATE' && log.old_data && log.new_data) {
+        const oldData = log.old_data as Record<string, unknown>
+        const newData = log.new_data as Record<string, unknown>
+
+        if (oldData.is_active !== newData.is_active) {
+          const status = newData.is_active ? 'diaktifkan' : 'dinonaktifkan'
+          return `User ${nama || email} ${status}`
+        }
+        if (oldData.expires_at !== newData.expires_at) {
+          return `User ${nama || email} - masa aktif diperpanjang`
+        }
+        return `User ${nama || email} - data diperbarui`
+      }
+
+      if (log.action === 'CREATE') {
+        return `User baru: ${nama || email}`
+      }
+
+      if (log.action === 'DELETE') {
+        return `User dihapus: ${nama || email}`
+      }
+
+      return `User: ${nama || email}${isActive === false ? ' (nonaktif)' : ''}`
+    }
+
     return '-'
   }
 

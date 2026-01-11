@@ -1,7 +1,7 @@
 import React from 'react'
 import { Button, Card, Group, Modal, Text, Title, Stack, CopyButton, ActionIcon, Badge, TextInput, Alert, Menu, Table, Tooltip } from '@mantine/core'
 import { showNotification } from '@mantine/notifications'
-import { IconCopy, IconEdit, IconDevices, IconRefresh } from '@tabler/icons-react'
+import { IconCopy, IconEdit, IconDevices, IconRefresh, IconTrash } from '@tabler/icons-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { requestPasswordRecovery } from '@/lib/auth'
@@ -48,6 +48,7 @@ export function ManageUsersPage() {
   const [resetLoading, setResetLoading] = React.useState(false)
   const [reprovisionLoading, setReprovisionLoading] = React.useState(false)
   const [forceLogoutLoading, setForceLogoutLoading] = React.useState(false)
+  const [deleteLoading, setDeleteLoading] = React.useState(false)
 
   // Modal states
   const [credsModalOpen, setCredsModalOpen] = React.useState(false)
@@ -56,6 +57,7 @@ export function ManageUsersPage() {
   const [resetConfirmOpen, setResetConfirmOpen] = React.useState(false)
   const [reprovisionModalOpen, setReprovisionModalOpen] = React.useState(false)
   const [devicesModalOpen, setDevicesModalOpen] = React.useState(false)
+  const [deleteModalOpen, setDeleteModalOpen] = React.useState(false)
 
   // Data states
   const [pendingBody, setPendingBody] = React.useState<{ email: string; nama: string } | null>(null)
@@ -70,8 +72,10 @@ export function ManageUsersPage() {
   const [resetTarget, setResetTarget] = React.useState<{ id: string; email: string } | null>(null)
   const [reprovisionTarget, setReprovisionTarget] = React.useState<{ id: string; email: string } | null>(null)
   const [devicesTarget, setDevicesTarget] = React.useState<{ user: UserWithDevices } | null>(null)
+  const [deleteTarget, setDeleteTarget] = React.useState<{ id: string; email: string; nama: string } | null>(null)
 
   const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`
+  const DELETE_USER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`
 
   // Fetch users with their devices
   const fetchUsers = React.useCallback(async () => {
@@ -192,6 +196,47 @@ export function ManageUsersPage() {
       showNotification({ title: 'Error', message: String(err?.message || err), color: 'red' })
     } finally {
       setForceLogoutLoading(false)
+    }
+  }
+
+  // Delete user via Edge Function
+  const deleteUser = async (userId: string) => {
+    if (!session?.access_token) return
+    setDeleteLoading(true)
+    try {
+      const res = await fetch(DELETE_USER_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ user_id: userId }),
+      })
+
+      let json: any = null
+      const ct = res.headers.get('content-type') || ''
+      let textBody = ''
+      if (ct.includes('application/json')) {
+        try { json = await res.json() } catch (e) { textBody = await res.text() }
+      } else {
+        textBody = await res.text()
+        try { json = JSON.parse(textBody) } catch (e) { }
+      }
+
+      if (!res.ok) {
+        const errMsg = json?.error || textBody || res.statusText || 'Request failed'
+        throw new Error(errMsg)
+      }
+
+      // Remove user from local state
+      setUsers((prev) => prev.filter((u) => u.id !== userId))
+      setDeleteModalOpen(false)
+      setDeleteTarget(null)
+      showNotification({ title: 'Berhasil', message: 'Pengguna berhasil dihapus', color: 'green' })
+    } catch (err: any) {
+      showNotification({ title: 'Error', message: String(err?.message || err), color: 'red' })
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -345,42 +390,58 @@ export function ManageUsersPage() {
                         </Tooltip>
                       </Table.Td>
                       <Table.Td onClick={(e) => e.stopPropagation()}>
-                        <Menu withArrow position="left" shadow="sm">
-                          <Menu.Target>
-                            <ActionIcon variant="subtle" color="blue">
-                              <IconEdit size={16} />
-                            </ActionIcon>
-                          </Menu.Target>
-                          <Menu.Dropdown>
-                            <Menu.Item
-                              color="blue"
-                              onClick={() => {
-                                setDevicesTarget({ user })
-                                setDevicesModalOpen(true)
-                              }}
-                            >
-                              Kelola Perangkat
-                            </Menu.Item>
-                            <Menu.Item
-                              color="yellow"
-                              onClick={() => {
-                                setResetTarget({ id: user.id, email: user.email })
-                                setResetConfirmOpen(true)
-                              }}
-                            >
-                              Kirim Reset Password
-                            </Menu.Item>
-                            <Menu.Item
+                        <Group gap={4}>
+                          <Menu withArrow position="left" shadow="sm">
+                            <Menu.Target>
+                              <Tooltip label="Kelola">
+                                <ActionIcon variant="subtle" color="blue">
+                                  <IconEdit size={16} />
+                                </ActionIcon>
+                              </Tooltip>
+                            </Menu.Target>
+                            <Menu.Dropdown>
+                              <Menu.Item
+                                color="blue"
+                                onClick={() => {
+                                  setDevicesTarget({ user })
+                                  setDevicesModalOpen(true)
+                                }}
+                              >
+                                Kelola Perangkat
+                              </Menu.Item>
+                              <Menu.Item
+                                color="yellow"
+                                onClick={() => {
+                                  setResetTarget({ id: user.id, email: user.email })
+                                  setResetConfirmOpen(true)
+                                }}
+                              >
+                                Kirim Reset Password
+                              </Menu.Item>
+                              <Menu.Item
+                                color="orange"
+                                onClick={() => {
+                                  setToggleTarget({ id: user.id, email: user.email, targetActive: false })
+                                  setToggleModalOpen(true)
+                                }}
+                              >
+                                Nonaktifkan Pengguna
+                              </Menu.Item>
+                            </Menu.Dropdown>
+                          </Menu>
+                          <Tooltip label="Hapus">
+                            <ActionIcon
+                              variant="subtle"
                               color="red"
                               onClick={() => {
-                                setToggleTarget({ id: user.id, email: user.email, targetActive: false })
-                                setToggleModalOpen(true)
+                                setDeleteTarget({ id: user.id, email: user.email, nama: user.nama })
+                                setDeleteModalOpen(true)
                               }}
                             >
-                              Nonaktifkan Pengguna
-                            </Menu.Item>
-                          </Menu.Dropdown>
-                        </Menu>
+                              <IconTrash size={16} />
+                            </ActionIcon>
+                          </Tooltip>
+                        </Group>
                       </Table.Td>
                     </Table.Tr>
                   )
@@ -416,45 +477,61 @@ export function ManageUsersPage() {
                       </Table.Td>
                       <Table.Td><ExpiryBadge expiresAt={user.expires_at} /></Table.Td>
                       <Table.Td onClick={(e) => e.stopPropagation()}>
-                        <Menu withArrow position="left" shadow="sm">
-                          <Menu.Target>
-                            <ActionIcon variant="subtle" color="blue">
-                              <IconEdit size={16} />
-                            </ActionIcon>
-                          </Menu.Target>
-                          <Menu.Dropdown>
-                            <Menu.Item
-                              color="green"
-                              leftSection={<IconRefresh size={14} />}
-                              onClick={() => {
-                                setReprovisionTarget({ id: user.id, email: user.email })
-                                setReprovisionModalOpen(true)
-                              }}
-                            >
-                              Perpanjang 3 Tahun
-                            </Menu.Item>
-                            {!user.is_active && (
+                        <Group gap={4}>
+                          <Menu withArrow position="left" shadow="sm">
+                            <Menu.Target>
+                              <Tooltip label="Kelola">
+                                <ActionIcon variant="subtle" color="blue">
+                                  <IconEdit size={16} />
+                                </ActionIcon>
+                              </Tooltip>
+                            </Menu.Target>
+                            <Menu.Dropdown>
                               <Menu.Item
                                 color="green"
+                                leftSection={<IconRefresh size={14} />}
                                 onClick={() => {
-                                  setToggleTarget({ id: user.id, email: user.email, targetActive: true })
-                                  setToggleModalOpen(true)
+                                  setReprovisionTarget({ id: user.id, email: user.email })
+                                  setReprovisionModalOpen(true)
                                 }}
                               >
-                                Aktifkan Pengguna
+                                Perpanjang 3 Tahun
                               </Menu.Item>
-                            )}
-                            <Menu.Item
-                              color="yellow"
+                              {!user.is_active && (
+                                <Menu.Item
+                                  color="green"
+                                  onClick={() => {
+                                    setToggleTarget({ id: user.id, email: user.email, targetActive: true })
+                                    setToggleModalOpen(true)
+                                  }}
+                                >
+                                  Aktifkan Pengguna
+                                </Menu.Item>
+                              )}
+                              <Menu.Item
+                                color="yellow"
+                                onClick={() => {
+                                  setResetTarget({ id: user.id, email: user.email })
+                                  setResetConfirmOpen(true)
+                                }}
+                              >
+                                Kirim Reset Password
+                              </Menu.Item>
+                            </Menu.Dropdown>
+                          </Menu>
+                          <Tooltip label="Hapus">
+                            <ActionIcon
+                              variant="subtle"
+                              color="red"
                               onClick={() => {
-                                setResetTarget({ id: user.id, email: user.email })
-                                setResetConfirmOpen(true)
+                                setDeleteTarget({ id: user.id, email: user.email, nama: user.nama })
+                                setDeleteModalOpen(true)
                               }}
                             >
-                              Kirim Reset Password
-                            </Menu.Item>
-                          </Menu.Dropdown>
-                        </Menu>
+                              <IconTrash size={16} />
+                            </ActionIcon>
+                          </Tooltip>
+                        </Group>
                       </Table.Td>
                     </Table.Tr>
                   )
@@ -638,6 +715,23 @@ export function ManageUsersPage() {
             <Text c="dimmed" ta="center">Pengguna belum pernah login dari perangkat manapun.</Text>
           )}
           <Button variant="default" onClick={() => { setDevicesModalOpen(false); setDevicesTarget(null) }}>Tutup</Button>
+        </Stack>
+      </Modal>
+
+      {/* Delete User Confirmation Modal */}
+      <Modal opened={deleteModalOpen} onClose={() => { setDeleteModalOpen(false); setDeleteTarget(null) }} title="Hapus Pengguna">
+        <Stack>
+          <Alert color="red" title="Peringatan!">
+            Tindakan ini tidak dapat dibatalkan. Pengguna akan dihapus secara permanen dari sistem dan tidak akan bisa login kembali.
+          </Alert>
+          <Text>Anda yakin ingin menghapus pengguna <b>{deleteTarget?.nama}</b> ({deleteTarget?.email})?</Text>
+          <Group>
+            <Button variant="default" onClick={() => { setDeleteModalOpen(false); setDeleteTarget(null) }}>Batal</Button>
+            <Button color="red" loading={deleteLoading} onClick={async () => {
+              if (!deleteTarget) return
+              await deleteUser(deleteTarget.id)
+            }}>Hapus</Button>
+          </Group>
         </Stack>
       </Modal>
     </div>
