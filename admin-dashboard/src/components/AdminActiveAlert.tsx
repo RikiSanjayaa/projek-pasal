@@ -29,7 +29,7 @@ export function AdminActiveAlert() {
   return (
     <Alert icon={<IconAlertCircle size={18} />} color="red" style={{ marginBottom: 30 }}>
       <Text fw={700}>Akun Dinonaktifkan</Text>
-      <Text size="sm" c="dimmed">Akun admin Anda saat ini dinonaktifkan — akses dibatasi hanya untuk melihat data <b>Pasal</b> dan <b>Undang-Undang</b>. Hubungi administrator untuk mengaktifkan kembali akun Anda.</Text>
+      <Text size="sm" c="dimmed">Akun admin Anda saat ini dinonaktifkan — Hubungi administrator untuk mengaktifkan kembali akun Anda.</Text>
     </Alert>
   )
 }

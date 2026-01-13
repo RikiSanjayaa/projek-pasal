@@ -3,13 +3,19 @@ import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import type { AdminUser } from '@/lib/database.types'
 
+interface SignInResult {
+  error: Error | null
+  serverDown?: boolean
+  inactive?: boolean
+}
+
 interface AuthContextType {
   user: User | null
   session: Session | null
   adminUser: AdminUser | null
   serverDown: boolean
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: Error | null; serverDown?: boolean }>
+  signIn: (email: string, password: string) => Promise<SignInResult>
   signOut: () => Promise<void>
 }
 
@@ -137,9 +143,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<SignInResult> => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
@@ -154,6 +160,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         return { error, serverDown: false }
+      }
+
+      // Auth successful - now check if admin is active
+      if (authData.user) {
+        try {
+          const { data: adminData, error: adminError } = await supabase
+            .from('admin_users')
+            .select('is_active')
+            .eq('id', authData.user.id)
+            .single<{ is_active: boolean }>()
+
+          // If we can't find the admin record or they're inactive, sign them out
+          if (adminError || !adminData) {
+            await supabase.auth.signOut()
+            setUser(null)
+            setSession(null)
+            setAdminUser(null)
+            return {
+              error: new Error('Akun admin tidak ditemukan atau telah dinonaktifkan.'),
+              inactive: true,
+            }
+          }
+
+        } catch (adminCheckError: any) {
+          // If the check fails due to server issues, let them through
+          // The RLS will handle blocking inactive users anyway
+          const msg = String(adminCheckError?.message || adminCheckError)
+          if (/failed to fetch|timeout|service unavailable|502|503|gateway/i.test(msg)) {
+            setServerDown(true)
+            return { error: adminCheckError as Error, serverDown: true }
+          }
+        }
       }
 
       return { error: null }

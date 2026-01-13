@@ -246,6 +246,7 @@ export function AuditLogPage() {
               { value: 'pasal', label: 'Pasal' },
               { value: 'undang_undang', label: 'Undang-Undang' },
               { value: 'pasal_links', label: 'Pasal Links' },
+              { value: 'users', label: 'Users' },
             ]}
             value={filterTable}
             onChange={setFilterTable}

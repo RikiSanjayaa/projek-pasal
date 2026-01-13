@@ -31,8 +31,8 @@ export function LoginPage() {
 
   // Redirect if already logged in (do imperative navigation inside effect)
   useEffect(() => {
-    if (user) navigate('/')
-  }, [user, navigate])
+    if (user && !loading) navigate('/')
+  }, [user, loading, navigate])
 
   type LoginFormValues = {
     email: string
@@ -89,11 +89,13 @@ export function LoginPage() {
     setLoading(true)
     setError(null)
 
-    const { error, serverDown: signInServerDown } = await signIn(values.email, values.password)
+    const { error, serverDown: signInServerDown, inactive } = await signIn(values.email, values.password)
 
     if (error) {
       if (signInServerDown || serverDown) {
         setError('Server sedang bermasalah. Silakan coba lagi nanti.')
+      } else if (inactive) {
+        setError(error.message || 'Akun Anda telah dinonaktifkan. Hubungi administrator.')
       } else {
         setError('Email atau password salah. Pastikan Anda terdaftar sebagai admin.')
       }

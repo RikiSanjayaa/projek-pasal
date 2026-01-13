@@ -28,7 +28,9 @@ class LockScreen extends StatelessWidget {
                   color: AppColors.error.withValues(alpha: isDark ? 0.1 : 0.05),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppColors.error.withValues(alpha: isDark ? 0.5 : 0.3),
+                    color: AppColors.error.withValues(
+                      alpha: isDark ? 0.5 : 0.3,
+                    ),
                     width: 2,
                   ),
                 ),
@@ -141,10 +143,7 @@ class LockScreen extends StatelessWidget {
                   icon: const Icon(Icons.logout),
                   label: const Text(
                     "Logout",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.error,

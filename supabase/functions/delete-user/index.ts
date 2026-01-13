@@ -1,6 +1,5 @@
-// Supabase Edge Function: create-user
-// Creates a new mobile app user with temporary password (any active admin)
-// Users have 3-year access expiry
+// Supabase Edge Function: delete-user
+// Deletes a mobile app user from both auth and database (any active admin)
 
 // deno-lint-ignore-file no-explicit-any
 // @ts-nocheck
@@ -85,85 +84,52 @@ serve(async (req) => {
     }
 
     // Parse and validate request body
-    const body = await req.json().catch(() => ({})) as { email?: string; nama?: string };
-    const email = (body.email || '').trim();
-    const nama = (body.nama || '').trim();
+    const body = await req.json().catch(() => ({})) as { user_id?: string };
+    const userId = (body.user_id || '').trim();
 
-    if (!email) return json({ error: 'Email is required' }, 400)
-    if (!nama) return json({ error: 'Nama is required' }, 400)
+    if (!userId) return json({ error: 'user_id is required' }, 400)
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return json({ error: 'Invalid email format' }, 400)
-    if (email.length > 254) return json({ error: 'Email too long' }, 400)
-    if (nama.length > 255) return json({ error: 'Nama too long' }, 400)
-
-    // Generate temporary password
-    const password = crypto.randomUUID();
-
-    // Create auth user
-    const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true  // Skip email verification
-    } as any);
-
-    if (createErr) {
-      return json({ error: createErr.message || 'Failed to create user' }, 500)
-    }
-    if (!created?.user?.id) {
-      return json({ error: 'Failed to create user' }, 500)
+    // Verify the user exists and get full data for audit log
+    const { data: targetUser, error: targetErr } = await supabaseAdmin.from('users').select('*').eq('id', userId).single();
+    if (targetErr || !targetUser) {
+      return json({ error: 'User not found' }, 404)
     }
 
-    const userId = created.user.id;
+    // Delete the user record from users table (cascade should handle user_devices)
+    const { error: deleteUserErr } = await supabaseAdmin.from('users').delete().eq('id', userId);
+    if (deleteUserErr) {
+      return json({ error: deleteUserErr.message || 'Failed to delete user record' }, 500)
+    }
 
-    // Calculate expiry date (3 years from now)
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + (3 * 365 * 24 * 60 * 60 * 1000)); // 3 years in milliseconds
-
-    // Create users table record
-    const { error: userInsertErr } = await supabaseAdmin.from('users').insert({
-      id: userId,
-      email,
-      nama,
-      is_active: true,
-      created_at: now.toISOString(),
-      expires_at: expiresAt.toISOString(),
-      created_by: callerId
-    });
-
-    if (userInsertErr) {
-      // Rollback: delete the auth user if users record creation fails
-      await supabaseAdmin.auth.admin.deleteUser(userId).catch(() => { });
-      return json({ error: userInsertErr.message || 'Failed to create user record' }, 500)
+    // Delete the auth user
+    const { error: deleteAuthErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    if (deleteAuthErr) {
+      // User record already deleted, log but don't fail
+      console.error('Failed to delete auth user:', deleteAuthErr.message);
+      // Still return success since the user record is deleted
     }
 
     // Manual audit log (since service role bypasses RLS triggers)
-    // Wrapped in try-catch to ensure audit failure doesn't affect user creation
+    // Wrapped in try-catch to ensure audit failure doesn't affect the operation
     try {
       const { data: adminData } = await supabaseAdmin.from('admin_users').select('email').eq('id', callerId).single();
       await supabaseAdmin.from('audit_logs').insert({
         admin_id: callerId,
         admin_email: adminData?.email || null,
-        action: 'CREATE' as any,
+        action: 'DELETE' as any,
         table_name: 'users',
         record_id: userId,
-        old_data: null,
-        new_data: {
-          id: userId,
-          email,
-          nama,
-          is_active: true,
-          expires_at: expiresAt.toISOString(),
-          created_by: callerId
-        }
+        old_data: targetUser,
+        new_data: null
       });
     } catch (auditErr) {
       console.error('Audit log error:', auditErr);
       // Continue - audit failure should not fail the operation
     }
 
-    return json({ email, password, expires_at: expiresAt.toISOString() }, 200)
+    return json({ success: true, email: targetUser.email }, 200)
   } catch (err) {
+    console.error('Delete user error:', err);
     return json({ error: 'Internal server error' }, 500)
   }
 });
