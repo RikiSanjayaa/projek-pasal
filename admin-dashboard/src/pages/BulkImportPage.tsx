@@ -11,9 +11,9 @@ import {
   Badge,
   Alert,
   Progress,
-  Code,
   ScrollArea,
   Accordion,
+  SegmentedControl,
 } from '@mantine/core'
 import { Dropzone } from '@mantine/dropzone'
 import { notifications } from '@mantine/notifications'
@@ -24,11 +24,19 @@ import {
   IconCheck,
   IconAlertCircle,
   IconDownload,
+  IconFileSpreadsheet,
 } from '@tabler/icons-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import * as XLSX from 'xlsx'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { XlsxImportGuide } from '@/components/bulk-import/XlsxImportGuide'
+import { JsonImportGuide } from '@/components/bulk-import/JsonImportGuide'
 import type { PasalInsert } from '@/lib/database.types'
+
+type FileFormat = 'json' | 'xlsx'
+
+const MAX_LINKS_PER_PASAL = 5
 
 interface PasalLink {
   targetUU: string
@@ -67,6 +75,7 @@ export function BulkImportPage() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const [progress, setProgress] = useState(0)
   const [currentPhase, setCurrentPhase] = useState<'pasal' | 'links'>('pasal')
+  const [fileFormat, setFileFormat] = useState<FileFormat>('xlsx')
 
   // Fetch undang-undang
   const { data: undangUndangList } = useQuery({
@@ -83,6 +92,121 @@ export function BulkImportPage() {
     },
   })
 
+  // Parse XLSX file to ImportPasal array
+  const parseXlsxFile = useCallback((data: ArrayBuffer): ImportPasal[] => {
+    const workbook = XLSX.read(data, { type: 'array' })
+    const sheetName = workbook.SheetNames[0]
+    const worksheet = workbook.Sheets[sheetName]
+
+    // Convert to JSON with header row
+    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '' })
+
+    if (rows.length === 0) {
+      throw new Error('File XLSX kosong atau tidak memiliki data')
+    }
+
+    const validated: ImportPasal[] = rows.map((row, index) => {
+      const rowNum = index + 2 // +2 because row 1 is header, data starts at row 2
+
+      // Get basic fields (trim whitespace)
+      const nomor = String(row['nomor'] || '').trim()
+      const judul = String(row['judul'] || '').trim() || undefined
+      const isi = String(row['isi'] || '').trim()
+      const penjelasan = String(row['penjelasan'] || '').trim() || undefined
+      const keywordsRaw = String(row['keywords'] || '').trim()
+
+      // Validate required fields
+      if (!nomor) {
+        throw new Error(`Baris ${rowNum}: kolom "nomor" wajib diisi`)
+      }
+      if (!isi) {
+        throw new Error(`Baris ${rowNum}: kolom "isi" wajib diisi`)
+      }
+
+      // Parse keywords (comma-separated)
+      const keywords = keywordsRaw
+        ? keywordsRaw.split(',').map((k: string) => k.trim()).filter((k: string) => k.length > 0)
+        : []
+
+      // Parse links from columns link1_targetUU, link1_targetNomor, link1_keterangan, etc.
+      const links: PasalLink[] = []
+      for (let i = 1; i <= MAX_LINKS_PER_PASAL; i++) {
+        const targetUU = String(row[`link${i}_targetUU`] || '').trim()
+        const targetNomor = String(row[`link${i}_targetNomor`] || '').trim()
+        const keterangan = String(row[`link${i}_keterangan`] || '').trim() || undefined
+
+        // Only add if both targetUU and targetNomor are provided
+        if (targetUU && targetNomor) {
+          links.push({ targetUU, targetNomor, keterangan })
+        } else if (targetUU && !targetNomor) {
+          throw new Error(`Baris ${rowNum}: link${i}_targetNomor wajib diisi jika link${i}_targetUU diisi`)
+        } else if (!targetUU && targetNomor) {
+          throw new Error(`Baris ${rowNum}: link${i}_targetUU wajib diisi jika link${i}_targetNomor diisi`)
+        }
+      }
+
+      return {
+        nomor,
+        judul,
+        isi,
+        penjelasan,
+        keywords,
+        links: links.length > 0 ? links : undefined,
+      }
+    })
+
+    return validated
+  }, [])
+
+  // Parse JSON file to ImportPasal array
+  const parseJsonFile = useCallback((content: string): ImportPasal[] => {
+    const parsed = JSON.parse(content)
+
+    // Validate structure
+    if (!Array.isArray(parsed)) {
+      throw new Error('JSON harus berupa array')
+    }
+
+    // Validate each item
+    const validated: ImportPasal[] = parsed.map((item: any, index: number) => {
+      if (!item.nomor) {
+        throw new Error(`Item ${index + 1}: field "nomor" wajib diisi`)
+      }
+      if (!item.isi) {
+        throw new Error(`Item ${index + 1}: field "isi" wajib diisi`)
+      }
+
+      // Validate links if present
+      let links: PasalLink[] = []
+      if (Array.isArray(item.links)) {
+        links = item.links.map((link: any, linkIdx: number) => {
+          if (!link.targetUU) {
+            throw new Error(`Item ${index + 1}, Link ${linkIdx + 1}: field "targetUU" wajib diisi`)
+          }
+          if (!link.targetNomor) {
+            throw new Error(`Item ${index + 1}, Link ${linkIdx + 1}: field "targetNomor" wajib diisi`)
+          }
+          return {
+            targetUU: String(link.targetUU),
+            targetNomor: String(link.targetNomor),
+            keterangan: link.keterangan || undefined,
+          }
+        })
+      }
+
+      return {
+        nomor: String(item.nomor),
+        judul: item.judul || undefined,
+        isi: item.isi,
+        penjelasan: item.penjelasan || undefined,
+        keywords: Array.isArray(item.keywords) ? item.keywords : [],
+        links: links.length > 0 ? links : undefined,
+      }
+    })
+
+    return validated
+  }, [])
+
   const handleFileDrop = useCallback((files: File[]) => {
     const file = files[0]
     if (!file) return
@@ -90,72 +214,58 @@ export function BulkImportPage() {
     setFileName(file.name)
     setImportResult(null)
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      try {
-        const content = e.target?.result as string
-        const parsed = JSON.parse(content)
+    const isXlsx = file.name.endsWith('.xlsx') || file.name.endsWith('.xls')
 
-        // Validate structure
-        if (!Array.isArray(parsed)) {
-          throw new Error('JSON harus berupa array')
+    if (isXlsx) {
+      // Read as ArrayBuffer for XLSX
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        try {
+          const data = e.target?.result as ArrayBuffer
+          const validated = parseXlsxFile(data)
+
+          setJsonData(validated)
+          notifications.show({
+            title: 'File berhasil dibaca',
+            message: `${validated.length} pasal siap diimport`,
+            color: 'green',
+          })
+        } catch (error: any) {
+          notifications.show({
+            title: 'Format XLSX tidak valid',
+            message: error.message,
+            color: 'red',
+          })
+          setJsonData(null)
         }
-
-        // Validate each item
-        const validated: ImportPasal[] = parsed.map((item: any, index: number) => {
-          if (!item.nomor) {
-            throw new Error(`Item ${index + 1}: field "nomor" wajib diisi`)
-          }
-          if (!item.isi) {
-            throw new Error(`Item ${index + 1}: field "isi" wajib diisi`)
-          }
-
-          // Validate links if present
-          let links: PasalLink[] = []
-          if (Array.isArray(item.links)) {
-            links = item.links.map((link: any, linkIdx: number) => {
-              if (!link.targetUU) {
-                throw new Error(`Item ${index + 1}, Link ${linkIdx + 1}: field "targetUU" wajib diisi`)
-              }
-              if (!link.targetNomor) {
-                throw new Error(`Item ${index + 1}, Link ${linkIdx + 1}: field "targetNomor" wajib diisi`)
-              }
-              return {
-                targetUU: String(link.targetUU),
-                targetNomor: String(link.targetNomor),
-                keterangan: link.keterangan || null,
-              }
-            })
-          }
-
-          return {
-            nomor: String(item.nomor),
-            judul: item.judul || null,
-            isi: item.isi,
-            penjelasan: item.penjelasan || null,
-            keywords: Array.isArray(item.keywords) ? item.keywords : [],
-            links: links.length > 0 ? links : undefined,
-          }
-        })
-
-        setJsonData(validated)
-        notifications.show({
-          title: 'File berhasil dibaca',
-          message: `${validated.length} pasal siap diimport`,
-          color: 'green',
-        })
-      } catch (error: any) {
-        notifications.show({
-          title: 'Format JSON tidak valid',
-          message: error.message,
-          color: 'red',
-        })
-        setJsonData(null)
       }
-    }
+      reader.readAsArrayBuffer(file)
+    } else {
+      // Read as text for JSON
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        try {
+          const content = e.target?.result as string
+          const validated = parseJsonFile(content)
 
-    reader.readAsText(file)
-  }, [])
+          setJsonData(validated)
+          notifications.show({
+            title: 'File berhasil dibaca',
+            message: `${validated.length} pasal siap diimport`,
+            color: 'green',
+          })
+        } catch (error: any) {
+          notifications.show({
+            title: 'Format JSON tidak valid',
+            message: error.message,
+            color: 'red',
+          })
+          setJsonData(null)
+        }
+      }
+      reader.readAsText(file)
+    }
+  }, [parseXlsxFile, parseJsonFile])
 
   // Import mutation
   const importMutation = useMutation({
@@ -339,7 +449,7 @@ export function BulkImportPage() {
     importMutation.mutate()
   }
 
-  const downloadTemplate = () => {
+  const downloadJsonTemplate = () => {
     const template: ImportPasal[] = [
       {
         nomor: "1",
@@ -373,29 +483,177 @@ export function BulkImportPage() {
     URL.revokeObjectURL(url)
   }
 
+  const downloadXlsxTemplate = () => {
+    // Create template data with example rows
+    const templateData = [
+      {
+        nomor: '1',
+        judul: 'Contoh Judul Pasal',
+        isi: 'Isi lengkap pasal. Tuliskan seluruh isi pasal di kolom ini.',
+        penjelasan: 'Penjelasan atau tafsir pasal (opsional)',
+        keywords: 'keyword1, keyword2, keyword3',
+        link1_targetUU: 'KUHAP',
+        link1_targetNomor: '21',
+        link1_keterangan: 'Lihat prosedur penyidikan',
+        link2_targetUU: '',
+        link2_targetNomor: '',
+        link2_keterangan: '',
+        link3_targetUU: '',
+        link3_targetNomor: '',
+        link3_keterangan: '',
+        link4_targetUU: '',
+        link4_targetNomor: '',
+        link4_keterangan: '',
+        link5_targetUU: '',
+        link5_targetNomor: '',
+        link5_keterangan: '',
+      },
+      {
+        nomor: '2',
+        judul: '',
+        isi: 'Pasal tanpa judul. Kolom judul boleh dikosongkan.',
+        penjelasan: '',
+        keywords: 'pidana, hukum',
+        link1_targetUU: 'KUHP',
+        link1_targetNomor: '340',
+        link1_keterangan: 'Pasal terkait',
+        link2_targetUU: 'KUHAP',
+        link2_targetNomor: '1',
+        link2_keterangan: 'Definisi umum',
+        link3_targetUU: '',
+        link3_targetNomor: '',
+        link3_keterangan: '',
+        link4_targetUU: '',
+        link4_targetNomor: '',
+        link4_keterangan: '',
+        link5_targetUU: '',
+        link5_targetNomor: '',
+        link5_keterangan: '',
+      },
+      {
+        nomor: '3',
+        judul: 'Pasal Tanpa Link',
+        isi: 'Pasal ini tidak memiliki link ke pasal lain. Kosongkan semua kolom link.',
+        penjelasan: 'Penjelasan singkat',
+        keywords: '',
+        link1_targetUU: '',
+        link1_targetNomor: '',
+        link1_keterangan: '',
+        link2_targetUU: '',
+        link2_targetNomor: '',
+        link2_keterangan: '',
+        link3_targetUU: '',
+        link3_targetNomor: '',
+        link3_keterangan: '',
+        link4_targetUU: '',
+        link4_targetNomor: '',
+        link4_keterangan: '',
+        link5_targetUU: '',
+        link5_targetNomor: '',
+        link5_keterangan: '',
+      },
+    ]
+
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(templateData)
+
+    // Set column widths for better readability
+    ws['!cols'] = [
+      { wch: 10 },  // nomor
+      { wch: 25 },  // judul
+      { wch: 50 },  // isi
+      { wch: 30 },  // penjelasan
+      { wch: 25 },  // keywords
+      { wch: 12 },  // link1_targetUU
+      { wch: 15 },  // link1_targetNomor
+      { wch: 25 },  // link1_keterangan
+      { wch: 12 },  // link2_targetUU
+      { wch: 15 },  // link2_targetNomor
+      { wch: 25 },  // link2_keterangan
+      { wch: 12 },  // link3_targetUU
+      { wch: 15 },  // link3_targetNomor
+      { wch: 25 },  // link3_keterangan
+      { wch: 12 },  // link4_targetUU
+      { wch: 15 },  // link4_targetNomor
+      { wch: 25 },  // link4_keterangan
+      { wch: 12 },  // link5_targetUU
+      { wch: 15 },  // link5_targetNomor
+      { wch: 25 },  // link5_keterangan
+    ]
+
+    // Create workbook
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Data Pasal')
+
+    // Download file
+    XLSX.writeFile(wb, 'template-import-pasal.xlsx')
+  }
+
   return (
     <Stack gap="lg">
       <div>
         <Title order={2}>Import Data Pasal</Title>
-        <Text c="dimmed">Import banyak pasal sekaligus menggunakan file JSON</Text>
+        <Text c="dimmed">Import banyak pasal sekaligus menggunakan file Excel (XLSX) atau JSON</Text>
       </div>
+
+      {/* Format Selector */}
+      <Card shadow="sm" padding="md" radius="md" withBorder>
+        <Group justify="space-between" align="center">
+          <div>
+            <Text fw={500}>Format File</Text>
+            <Text size="sm" c="dimmed">Pilih format file yang akan digunakan</Text>
+          </div>
+          <SegmentedControl
+            value={fileFormat}
+            onChange={(value) => {
+              setFileFormat(value as FileFormat)
+              setJsonData(null)
+              setFileName('')
+              setImportResult(null)
+            }}
+            size="md"
+            data={[
+              {
+                value: 'xlsx',
+                label: (
+                  <Group gap={8} px="xs" py={4} wrap="nowrap">
+                    <IconFileSpreadsheet size={18} />
+                    <Text size="sm" fw={500}>Excel (XLSX)</Text>
+                  </Group>
+                ),
+              },
+              {
+                value: 'json',
+                label: (
+                  <Group gap={8} px="xs" py={4} wrap="nowrap">
+                    <IconFileCode size={18} />
+                    <Text size="sm" fw={500}>JSON</Text>
+                  </Group>
+                ),
+              },
+            ]}
+          />
+        </Group>
+      </Card>
 
       {/* Template Download */}
       <Alert
-        icon={<IconFileCode size={16} />}
-        title="Format File JSON"
+        icon={fileFormat === 'xlsx' ? <IconFileSpreadsheet size={16} /> : <IconFileCode size={16} />}
+        title={fileFormat === 'xlsx' ? 'Format File Excel (XLSX)' : 'Format File JSON'}
         color="blue"
       >
         <Text size="sm" mb="sm">
-          Download template JSON untuk melihat format yang diperlukan.
+          {fileFormat === 'xlsx'
+            ? 'Download template Excel untuk melihat format kolom yang diperlukan. Buka dengan Microsoft Excel atau Google Sheets.'
+            : 'Download template JSON untuk melihat format yang diperlukan.'}
         </Text>
         <Button
           variant="light"
           size="xs"
           leftSection={<IconDownload size={14} />}
-          onClick={downloadTemplate}
+          onClick={fileFormat === 'xlsx' ? downloadXlsxTemplate : downloadJsonTemplate}
         >
-          Download Template
+          Download Template {fileFormat === 'xlsx' ? 'Excel' : 'JSON'}
         </Button>
       </Alert>
 
@@ -417,7 +675,14 @@ export function BulkImportPage() {
 
           <Dropzone
             onDrop={handleFileDrop}
-            accept={['application/json']}
+            accept={
+              fileFormat === 'xlsx'
+                ? {
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+                    'application/vnd.ms-excel': ['.xls'],
+                  }
+                : { 'application/json': ['.json'] }
+            }
             maxSize={5 * 1024 * 1024} // 5MB
             multiple={false}
           >
@@ -429,12 +694,18 @@ export function BulkImportPage() {
                 <IconX size={50} color="red" />
               </Dropzone.Reject>
               <Dropzone.Idle>
-                <IconUpload size={50} color="gray" />
+                {fileFormat === 'xlsx' ? (
+                  <IconFileSpreadsheet size={50} color="gray" />
+                ) : (
+                  <IconUpload size={50} color="gray" />
+                )}
               </Dropzone.Idle>
 
               <div>
                 <Text size="lg" inline>
-                  Drag file JSON ke sini atau klik untuk upload
+                  {fileFormat === 'xlsx'
+                    ? 'Drag file Excel (.xlsx) ke sini atau klik untuk upload'
+                    : 'Drag file JSON ke sini atau klik untuk upload'}
                 </Text>
                 <Text size="sm" c="dimmed" inline mt={7}>
                   Maksimal ukuran file 5MB
@@ -591,42 +862,8 @@ export function BulkImportPage() {
         </Stack>
       </Card>
 
-      {/* JSON Format Reference */}
-      <Card shadow="sm" padding="lg" radius="md" withBorder>
-        <Title order={4} mb="md">
-          Format JSON
-        </Title>
-        <Code block>
-          {`[
-  {
-    "nomor": "340",
-    "judul": "Pembunuhan Berencana",
-    "isi": "Barang siapa dengan sengaja...",
-    "penjelasan": "Penjelasan pasal...",
-    "keywords": ["pembunuhan", "berencana", "pidana mati"],
-    "links": [
-      {
-        "targetUU": "KUHAP",
-        "targetNomor": "21",
-        "keterangan": "Lihat prosedur penyidikan"
-      }
-    ]
-  },
-  {
-    "nomor": "341",
-    "isi": "Isi pasal tanpa judul...",
-    "keywords": []
-  }
-]`}
-        </Code>
-        <Text size="sm" c="dimmed" mt="md">
-          <strong>Field wajib:</strong> <Code>nomor</Code>, <Code>isi</Code>
-          <br />
-          <strong>Field opsional:</strong> <Code>judul</Code>, <Code>penjelasan</Code>, <Code>keywords</Code>, <Code>links</Code>
-          <br />
-          <strong>Link format:</strong> <Code>targetUU</Code> (kode UU), <Code>targetNomor</Code>, <Code>keterangan</Code> (opsional)
-        </Text>
-      </Card>
+      {/* Format Reference - Conditional based on fileFormat */}
+      {fileFormat === 'xlsx' ? <XlsxImportGuide /> : <JsonImportGuide />}
     </Stack>
   )
 }
