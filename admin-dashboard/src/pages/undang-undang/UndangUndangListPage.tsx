@@ -141,6 +141,7 @@ export function UndangUndangListPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['undang_undang'] })
+      queryClient.invalidateQueries({ queryKey: ['pasal'] })
       notifications.show({
         title: 'Berhasil',
         message: 'Undang-undang berhasil diperbarui',
