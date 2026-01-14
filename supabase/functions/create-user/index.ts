@@ -85,20 +85,30 @@ serve(async (req) => {
     }
 
     // Parse and validate request body
-    const body = await req.json().catch(() => ({})) as { email?: string; nama?: string };
+    const body = await req.json().catch(() => ({})) as { email?: string; nama?: string; password?: string };
     const email = (body.email || '').trim();
-    const nama = (body.nama || '').trim();
+    const customPassword = (body.password || '').trim();
+
+    // Nama defaults to email prefix if not provided
+    let nama = (body.nama || '').trim();
+    if (!nama && email) {
+      nama = email.split('@')[0];
+    }
 
     if (!email) return json({ error: 'Email is required' }, 400)
-    if (!nama) return json({ error: 'Nama is required' }, 400)
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) return json({ error: 'Invalid email format' }, 400)
     if (email.length > 254) return json({ error: 'Email too long' }, 400)
     if (nama.length > 255) return json({ error: 'Nama too long' }, 400)
 
-    // Generate temporary password
-    const password = crypto.randomUUID();
+    // Validate password if provided
+    if (customPassword && customPassword.length < 8) {
+      return json({ error: 'Password harus minimal 8 karakter' }, 400)
+    }
+
+    // Generate temporary password or use custom
+    const password = customPassword || crypto.randomUUID();
 
     // Create auth user
     const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({

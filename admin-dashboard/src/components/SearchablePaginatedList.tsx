@@ -1,5 +1,5 @@
 import React, { ReactNode, useMemo, useState } from 'react'
-import { TextInput, Group, Pagination, Select, Text, Stack, Card, Title } from '@mantine/core'
+import { TextInput, Group, Pagination, Select, Text, Stack, Card, Title, ScrollArea } from '@mantine/core'
 import { IconSearch } from '@tabler/icons-react'
 
 interface PaginationInfo {
@@ -14,6 +14,7 @@ interface PaginationInfo {
 interface SectionConfig<T> {
   title: string
   emptyText: string
+  actionElement?: ReactNode
   render: (items: T[], pagination: PaginationInfo) => ReactNode
 }
 
@@ -149,16 +150,21 @@ export function SearchablePaginatedList<T>({
 
       {/* Active Section */}
       <div>
-        <Title order={5} mb="sm">
-          {activeSection.title} ({activeItems.length})
-        </Title>
+        <Group justify="space-between" mb="sm" align="center">
+          <Title order={5}>
+            {activeSection.title} ({activeItems.length})
+          </Title>
+          {activeSection.actionElement}
+        </Group>
         <Card shadow="sm" padding="md" radius="md" withBorder>
           {paginatedActiveItems.length === 0 ? (
             <Text c="dimmed" ta="center">
               {activeSection.emptyText}
             </Text>
           ) : (
-            activeSection.render(paginatedActiveItems, activePaginationInfo)
+            <ScrollArea style={{ width: '100%' }} type="auto" scrollbarSize={6} offsetScrollbars>
+              {activeSection.render(paginatedActiveItems, activePaginationInfo)}
+            </ScrollArea>
           )}
           {activeItems.length > 0 &&
             renderPaginationControls(
@@ -175,16 +181,21 @@ export function SearchablePaginatedList<T>({
 
       {/* Inactive Section */}
       <div>
-        <Title order={5} mb="sm">
-          {inactiveSection.title} ({inactiveItems.length})
-        </Title>
+        <Group justify="space-between" mb="sm" align="center">
+          <Title order={5}>
+            {inactiveSection.title} ({inactiveItems.length})
+          </Title>
+          {inactiveSection.actionElement}
+        </Group>
         <Card shadow="sm" padding="md" radius="md" withBorder>
           {paginatedInactiveItems.length === 0 ? (
             <Text c="dimmed" ta="center">
               {inactiveSection.emptyText}
             </Text>
           ) : (
-            inactiveSection.render(paginatedInactiveItems, inactivePaginationInfo)
+            <ScrollArea style={{ width: '100%' }} type="auto" scrollbarSize={6} offsetScrollbars>
+              {inactiveSection.render(paginatedInactiveItems, inactivePaginationInfo)}
+            </ScrollArea>
           )}
           {inactiveItems.length > 0 &&
             renderPaginationControls(

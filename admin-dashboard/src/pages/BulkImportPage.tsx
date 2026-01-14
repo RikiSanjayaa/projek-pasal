@@ -13,13 +13,12 @@ import {
   Progress,
   ScrollArea,
   Accordion,
-  SegmentedControl,
 } from '@mantine/core'
 import { Dropzone } from '@mantine/dropzone'
 import { notifications } from '@mantine/notifications'
 import {
   IconUpload,
-  IconFileCode,
+
   IconX,
   IconCheck,
   IconAlertCircle,
@@ -31,10 +30,9 @@ import * as XLSX from 'xlsx'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { XlsxImportGuide } from '@/components/bulk-import/XlsxImportGuide'
-import { JsonImportGuide } from '@/components/bulk-import/JsonImportGuide'
 import type { PasalInsert } from '@/lib/database.types'
 
-type FileFormat = 'json' | 'xlsx'
+
 
 const MAX_LINKS_PER_PASAL = 5
 
@@ -75,7 +73,6 @@ export function BulkImportPage() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const [progress, setProgress] = useState(0)
   const [currentPhase, setCurrentPhase] = useState<'pasal' | 'links'>('pasal')
-  const [fileFormat, setFileFormat] = useState<FileFormat>('xlsx')
 
   // Fetch undang-undang
   const { data: undangUndangList } = useQuery({
@@ -158,54 +155,7 @@ export function BulkImportPage() {
     return validated
   }, [])
 
-  // Parse JSON file to ImportPasal array
-  const parseJsonFile = useCallback((content: string): ImportPasal[] => {
-    const parsed = JSON.parse(content)
 
-    // Validate structure
-    if (!Array.isArray(parsed)) {
-      throw new Error('JSON harus berupa array')
-    }
-
-    // Validate each item
-    const validated: ImportPasal[] = parsed.map((item: any, index: number) => {
-      if (!item.nomor) {
-        throw new Error(`Item ${index + 1}: field "nomor" wajib diisi`)
-      }
-      if (!item.isi) {
-        throw new Error(`Item ${index + 1}: field "isi" wajib diisi`)
-      }
-
-      // Validate links if present
-      let links: PasalLink[] = []
-      if (Array.isArray(item.links)) {
-        links = item.links.map((link: any, linkIdx: number) => {
-          if (!link.targetUU) {
-            throw new Error(`Item ${index + 1}, Link ${linkIdx + 1}: field "targetUU" wajib diisi`)
-          }
-          if (!link.targetNomor) {
-            throw new Error(`Item ${index + 1}, Link ${linkIdx + 1}: field "targetNomor" wajib diisi`)
-          }
-          return {
-            targetUU: String(link.targetUU),
-            targetNomor: String(link.targetNomor),
-            keterangan: link.keterangan || undefined,
-          }
-        })
-      }
-
-      return {
-        nomor: String(item.nomor),
-        judul: item.judul || undefined,
-        isi: item.isi,
-        penjelasan: item.penjelasan || undefined,
-        keywords: Array.isArray(item.keywords) ? item.keywords : [],
-        links: links.length > 0 ? links : undefined,
-      }
-    })
-
-    return validated
-  }, [])
 
   const handleFileDrop = useCallback((files: File[]) => {
     const file = files[0]
@@ -214,58 +164,30 @@ export function BulkImportPage() {
     setFileName(file.name)
     setImportResult(null)
 
-    const isXlsx = file.name.endsWith('.xlsx') || file.name.endsWith('.xls')
+    // Read as ArrayBuffer for XLSX
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result as ArrayBuffer
+        const validated = parseXlsxFile(data)
 
-    if (isXlsx) {
-      // Read as ArrayBuffer for XLSX
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        try {
-          const data = e.target?.result as ArrayBuffer
-          const validated = parseXlsxFile(data)
-
-          setJsonData(validated)
-          notifications.show({
-            title: 'File berhasil dibaca',
-            message: `${validated.length} pasal siap diimport`,
-            color: 'green',
-          })
-        } catch (error: any) {
-          notifications.show({
-            title: 'Format XLSX tidak valid',
-            message: error.message,
-            color: 'red',
-          })
-          setJsonData(null)
-        }
+        setJsonData(validated)
+        notifications.show({
+          title: 'File berhasil dibaca',
+          message: `${validated.length} pasal siap diimport`,
+          color: 'green',
+        })
+      } catch (error: any) {
+        notifications.show({
+          title: 'Format XLSX tidak valid',
+          message: error.message,
+          color: 'red',
+        })
+        setJsonData(null)
       }
-      reader.readAsArrayBuffer(file)
-    } else {
-      // Read as text for JSON
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        try {
-          const content = e.target?.result as string
-          const validated = parseJsonFile(content)
-
-          setJsonData(validated)
-          notifications.show({
-            title: 'File berhasil dibaca',
-            message: `${validated.length} pasal siap diimport`,
-            color: 'green',
-          })
-        } catch (error: any) {
-          notifications.show({
-            title: 'Format JSON tidak valid',
-            message: error.message,
-            color: 'red',
-          })
-          setJsonData(null)
-        }
-      }
-      reader.readAsText(file)
     }
-  }, [parseXlsxFile, parseJsonFile])
+    reader.readAsArrayBuffer(file)
+  }, [parseXlsxFile])
 
   // Import mutation
   const importMutation = useMutation({
@@ -449,39 +371,7 @@ export function BulkImportPage() {
     importMutation.mutate()
   }
 
-  const downloadJsonTemplate = () => {
-    const template: ImportPasal[] = [
-      {
-        nomor: "1",
-        judul: "Contoh Judul Pasal",
-        isi: "Isi lengkap pasal...",
-        penjelasan: "Penjelasan atau tafsir pasal (opsional)",
-        keywords: ["keyword1", "keyword2"],
-        links: [
-          {
-            targetUU: "KUHAP",
-            targetNomor: "21",
-            keterangan: "Lihat prosedur penyidikan"
-          }
-        ]
-      },
-      {
-        nomor: "2",
-        isi: "Pasal tanpa judul dan link...",
-        keywords: []
-      }
-    ]
 
-    const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'template-import-pasal.json'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
 
   const downloadXlsxTemplate = () => {
     // Create template data with example rows
@@ -591,69 +481,29 @@ export function BulkImportPage() {
 
   return (
     <Stack gap="lg">
-      <div>
-        <Title order={2}>Import Data Pasal</Title>
-        <Text c="dimmed">Import banyak pasal sekaligus menggunakan file Excel (XLSX) atau JSON</Text>
-      </div>
-
-      {/* Format Selector */}
-      <Card shadow="sm" padding="md" radius="md" withBorder>
-        <Group justify="space-between" align="center">
-          <div>
-            <Text fw={500}>Format File</Text>
-            <Text size="sm" c="dimmed">Pilih format file yang akan digunakan</Text>
-          </div>
-          <SegmentedControl
-            value={fileFormat}
-            onChange={(value) => {
-              setFileFormat(value as FileFormat)
-              setJsonData(null)
-              setFileName('')
-              setImportResult(null)
-            }}
-            size="md"
-            data={[
-              {
-                value: 'xlsx',
-                label: (
-                  <Group gap={8} px="xs" py={4} wrap="nowrap">
-                    <IconFileSpreadsheet size={18} />
-                    <Text size="sm" fw={500}>Excel (XLSX)</Text>
-                  </Group>
-                ),
-              },
-              {
-                value: 'json',
-                label: (
-                  <Group gap={8} px="xs" py={4} wrap="nowrap">
-                    <IconFileCode size={18} />
-                    <Text size="sm" fw={500}>JSON</Text>
-                  </Group>
-                ),
-              },
-            ]}
-          />
-        </Group>
-      </Card>
+      <Group justify="space-between" align="flex-end">
+        <div>
+          <Title order={2}>Import Data Pasal</Title>
+          <Text c="dimmed">Import banyak pasal sekaligus menggunakan file Excel (XLSX)</Text>
+        </div>
+      </Group>
 
       {/* Template Download */}
       <Alert
-        icon={fileFormat === 'xlsx' ? <IconFileSpreadsheet size={16} /> : <IconFileCode size={16} />}
-        title={fileFormat === 'xlsx' ? 'Format File Excel (XLSX)' : 'Format File JSON'}
+        icon={<IconFileSpreadsheet size={16} />}
+        title="Format File Excel (XLSX)"
         color="blue"
       >
         <Text size="sm" mb="sm">
-          {fileFormat === 'xlsx'
-            ? 'Download template Excel untuk melihat format kolom yang diperlukan. Buka dengan Microsoft Excel atau Google Sheets.'
-            : 'Download template JSON untuk melihat format yang diperlukan.'}
+          Download template Excel untuk melihat format kolom yang diperlukan. Buka dengan Microsoft Excel atau Google Sheets.
         </Text>
         <Button
           variant="light"
           size="xs"
           leftSection={<IconDownload size={14} />}
-          onClick={fileFormat === 'xlsx' ? downloadXlsxTemplate : downloadJsonTemplate}
+          onClick={downloadXlsxTemplate}
         >
-          Download Template {fileFormat === 'xlsx' ? 'Excel' : 'JSON'}
+          Download Template Excel
         </Button>
       </Alert>
 
@@ -675,40 +525,37 @@ export function BulkImportPage() {
 
           <Dropzone
             onDrop={handleFileDrop}
-            accept={
-              fileFormat === 'xlsx'
-                ? {
-                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-                    'application/vnd.ms-excel': ['.xls'],
-                  }
-                : { 'application/json': ['.json'] }
-            }
+            accept={{
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+              'application/vnd.ms-excel': ['.xls'],
+            }}
             maxSize={5 * 1024 * 1024} // 5MB
             multiple={false}
+            style={{
+              border: '2px dashed var(--mantine-color-default-border)',
+              backgroundColor: 'var(--mantine-color-body)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}
           >
-            <Group justify="center" gap="xl" mih={120} style={{ pointerEvents: 'none' }}>
+            <Group justify="center" gap="md" mih={120} style={{ pointerEvents: 'none', flexDirection: 'column' }}>
               <Dropzone.Accept>
-                <IconCheck size={50} color="green" />
+                <IconCheck size={40} color="var(--mantine-color-teal-6)" />
               </Dropzone.Accept>
               <Dropzone.Reject>
-                <IconX size={50} color="red" />
+                <IconX size={40} color="var(--mantine-color-red-6)" />
               </Dropzone.Reject>
               <Dropzone.Idle>
-                {fileFormat === 'xlsx' ? (
-                  <IconFileSpreadsheet size={50} color="gray" />
-                ) : (
-                  <IconUpload size={50} color="gray" />
-                )}
+                <IconUpload size={40} color="var(--mantine-color-dimmed)" />
               </Dropzone.Idle>
 
-              <div>
+              <div style={{ textAlign: 'center' }}>
                 <Text size="lg" inline>
-                  {fileFormat === 'xlsx'
-                    ? 'Drag file Excel (.xlsx) ke sini atau klik untuk upload'
-                    : 'Drag file JSON ke sini atau klik untuk upload'}
+                  Drag file Excel ke sini
                 </Text>
                 <Text size="sm" c="dimmed" inline mt={7}>
-                  Maksimal ukuran file 5MB
+                  atau klik untuk browse (Max 5MB)
                 </Text>
               </div>
             </Group>
@@ -862,8 +709,7 @@ export function BulkImportPage() {
         </Stack>
       </Card>
 
-      {/* Format Reference - Conditional based on fileFormat */}
-      {fileFormat === 'xlsx' ? <XlsxImportGuide /> : <JsonImportGuide />}
+      <XlsxImportGuide />
     </Stack>
   )
 }
