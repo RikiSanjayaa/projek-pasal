@@ -1,5 +1,5 @@
 import React, { ReactNode, useMemo, useState } from 'react'
-import { TextInput, Group, Pagination, Select, Text, Stack, Card, Title } from '@mantine/core'
+import { TextInput, Group, Pagination, Select, Text, Stack, Card, Title, ScrollArea } from '@mantine/core'
 import { IconSearch } from '@tabler/icons-react'
 
 interface PaginationInfo {
@@ -158,7 +158,9 @@ export function SearchablePaginatedList<T>({
               {activeSection.emptyText}
             </Text>
           ) : (
-            activeSection.render(paginatedActiveItems, activePaginationInfo)
+            <ScrollArea style={{ width: '100%' }} type="auto" scrollbarSize={6} offsetScrollbars>
+              {activeSection.render(paginatedActiveItems, activePaginationInfo)}
+            </ScrollArea>
           )}
           {activeItems.length > 0 &&
             renderPaginationControls(
@@ -184,7 +186,9 @@ export function SearchablePaginatedList<T>({
               {inactiveSection.emptyText}
             </Text>
           ) : (
-            inactiveSection.render(paginatedInactiveItems, inactivePaginationInfo)
+            <ScrollArea style={{ width: '100%' }} type="auto" scrollbarSize={6} offsetScrollbars>
+              {inactiveSection.render(paginatedInactiveItems, inactivePaginationInfo)}
+            </ScrollArea>
           )}
           {inactiveItems.length > 0 &&
             renderPaginationControls(

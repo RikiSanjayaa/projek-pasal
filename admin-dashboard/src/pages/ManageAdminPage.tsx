@@ -1,5 +1,5 @@
 import React from 'react'
-import { Button, Card, Group, Modal, Text, Title, Stack, CopyButton, ActionIcon, Badge, TextInput, Alert, Menu, Table } from '@mantine/core'
+import { Button, Card, Group, Modal, Text, Title, Stack, CopyButton, ActionIcon, Badge, TextInput, Alert, Menu, Table, ScrollArea } from '@mantine/core'
 import { showNotification } from '@mantine/notifications'
 import { IconCopy, IconEdit } from '@tabler/icons-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -185,32 +185,36 @@ export function ManageAdminPage() {
           {admins.filter(a => a.role === 'super_admin').length === 0 ? (
             <Text c="dimmed" ta="center">(none)</Text>
           ) : (
-            <Table striped highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Nama</Table.Th>
-                  <Table.Th>Email</Table.Th>
-                  <Table.Th>Role</Table.Th>
-                  <Table.Th>Aktif</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {admins.filter(a => a.role === 'super_admin').map((a) => (
-                  <Table.Tr key={a.id}>
-                    <Table.Td>
-                      <Text fw={600}>{a.nama || a.email}</Text>
-                    </Table.Td>
-                    <Table.Td>{a.email}</Table.Td>
-                    <Table.Td>
-                      <Badge color="teal" variant="filled">{a.role}</Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge color={a.is_active ? 'green' : 'gray'} variant="light">{a.is_active ? 'Aktif' : 'Nonaktif'}</Badge>
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
+            <ScrollArea style={{ width: '100%' }} type="auto" scrollbarSize={6} offsetScrollbars>
+              <div style={{ minWidth: 550 }}>
+                <Table striped highlightOnHover style={{ width: '100%' }}>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Nama</Table.Th>
+                      <Table.Th>Email</Table.Th>
+                      <Table.Th>Role</Table.Th>
+                      <Table.Th>Aktif</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {admins.filter(a => a.role === 'super_admin').map((a) => (
+                      <Table.Tr key={a.id}>
+                        <Table.Td>
+                          <Text fw={600}>{a.nama || a.email}</Text>
+                        </Table.Td>
+                        <Table.Td>{a.email}</Table.Td>
+                        <Table.Td>
+                          <Badge color="teal" variant="filled">{a.role}</Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge color={a.is_active ? 'green' : 'gray'} variant="light">{a.is_active ? 'Aktif' : 'Nonaktif'}</Badge>
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </div>
+            </ScrollArea>
           )}
         </Card>
 
@@ -227,112 +231,116 @@ export function ManageAdminPage() {
               title: 'Admin Aktif',
               emptyText: 'Tidak ada admin aktif',
               render: (items) => (
-                <Table striped highlightOnHover>
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>Nama</Table.Th>
-                      <Table.Th>Email</Table.Th>
-                      <Table.Th>Role</Table.Th>
-                      <Table.Th>Status</Table.Th>
-                      <Table.Th w={120}>Aksi</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {items.map((record) => (
-                      <Table.Tr key={record.id}>
-                        <Table.Td><Text fw={600}>{record.nama || record.email}</Text></Table.Td>
-                        <Table.Td>{record.email}</Table.Td>
-                        <Table.Td><Badge color="blue" variant="filled">{record.role}</Badge></Table.Td>
-                        <Table.Td><Badge color="green" variant="light">Aktif</Badge></Table.Td>
-                        <Table.Td onClick={(e) => e.stopPropagation()}>
-                          <Menu withArrow position="left" shadow="sm">
-                            <Menu.Target>
-                              <ActionIcon variant="subtle" color="blue">
-                                <IconEdit size={16} />
-                              </ActionIcon>
-                            </Menu.Target>
-                            <Menu.Dropdown>
-                              <Menu.Item
-                                color="yellow"
-                                onClick={() => {
-                                  setResetTarget({ id: record.id, email: record.email })
-                                  setResetConfirmOpen(true)
-                                }}
-                              >
-                                Kirim email Reset Password
-                              </Menu.Item>
-                              <Menu.Item
-                                color="red"
-                                onClick={() => {
-                                  setToggleTarget({ id: record.id, email: record.email, targetActive: false })
-                                  setToggleModalOpen(true)
-                                }}
-                              >
-                                Nonaktifkan Admin
-                              </Menu.Item>
-                            </Menu.Dropdown>
-                          </Menu>
-                        </Table.Td>
+                <div style={{ minWidth: 600 }}>
+                  <Table striped highlightOnHover style={{ width: '100%' }}>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>Nama</Table.Th>
+                        <Table.Th>Email</Table.Th>
+                        <Table.Th>Role</Table.Th>
+                        <Table.Th>Status</Table.Th>
+                        <Table.Th>Aksi</Table.Th>
                       </Table.Tr>
-                    ))}
-                  </Table.Tbody>
-                </Table>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {items.map((record) => (
+                        <Table.Tr key={record.id}>
+                          <Table.Td><Text fw={600}>{record.nama || record.email}</Text></Table.Td>
+                          <Table.Td>{record.email}</Table.Td>
+                          <Table.Td><Badge color="blue" variant="filled">{record.role}</Badge></Table.Td>
+                          <Table.Td><Badge color="green" variant="light">Aktif</Badge></Table.Td>
+                          <Table.Td onClick={(e) => e.stopPropagation()}>
+                            <Menu withArrow position="left" shadow="sm">
+                              <Menu.Target>
+                                <ActionIcon variant="subtle" color="blue">
+                                  <IconEdit size={16} />
+                                </ActionIcon>
+                              </Menu.Target>
+                              <Menu.Dropdown>
+                                <Menu.Item
+                                  color="yellow"
+                                  onClick={() => {
+                                    setResetTarget({ id: record.id, email: record.email })
+                                    setResetConfirmOpen(true)
+                                  }}
+                                >
+                                  Kirim email Reset Password
+                                </Menu.Item>
+                                <Menu.Item
+                                  color="red"
+                                  onClick={() => {
+                                    setToggleTarget({ id: record.id, email: record.email, targetActive: false })
+                                    setToggleModalOpen(true)
+                                  }}
+                                >
+                                  Nonaktifkan Admin
+                                </Menu.Item>
+                              </Menu.Dropdown>
+                            </Menu>
+                          </Table.Td>
+                        </Table.Tr>
+                      ))}
+                    </Table.Tbody>
+                  </Table>
+                </div>
               ),
             }}
             inactiveSection={{
               title: 'Admin Nonaktif',
               emptyText: 'Tidak ada admin nonaktif',
               render: (items) => (
-                <Table striped highlightOnHover>
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>Nama</Table.Th>
-                      <Table.Th>Email</Table.Th>
-                      <Table.Th>Role</Table.Th>
-                      <Table.Th>Status</Table.Th>
-                      <Table.Th w={120}>Aksi</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {items.map((record) => (
-                      <Table.Tr key={record.id}>
-                        <Table.Td><Text fw={600}>{record.nama || record.email}</Text></Table.Td>
-                        <Table.Td>{record.email}</Table.Td>
-                        <Table.Td><Badge color="blue" variant="filled">{record.role}</Badge></Table.Td>
-                        <Table.Td><Badge color="gray" variant="light">Nonaktif</Badge></Table.Td>
-                        <Table.Td onClick={(e) => e.stopPropagation()}>
-                          <Menu withArrow position="left" shadow="sm">
-                            <Menu.Target>
-                              <ActionIcon variant="subtle" color="blue">
-                                <IconEdit size={16} />
-                              </ActionIcon>
-                            </Menu.Target>
-                            <Menu.Dropdown>
-                              <Menu.Item
-                                color="yellow"
-                                onClick={() => {
-                                  setResetTarget({ id: record.id, email: record.email })
-                                  setResetConfirmOpen(true)
-                                }}
-                              >
-                                Kirim email Reset Password
-                              </Menu.Item>
-                              <Menu.Item
-                                color="green"
-                                onClick={() => {
-                                  setToggleTarget({ id: record.id, email: record.email, targetActive: true })
-                                  setToggleModalOpen(true)
-                                }}
-                              >
-                                Aktifkan Admin
-                              </Menu.Item>
-                            </Menu.Dropdown>
-                          </Menu>
-                        </Table.Td>
+                <div style={{ minWidth: 600 }}>
+                  <Table striped highlightOnHover style={{ width: '100%' }}>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>Nama</Table.Th>
+                        <Table.Th>Email</Table.Th>
+                        <Table.Th>Role</Table.Th>
+                        <Table.Th>Status</Table.Th>
+                        <Table.Th>Aksi</Table.Th>
                       </Table.Tr>
-                    ))}
-                  </Table.Tbody>
-                </Table>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {items.map((record) => (
+                        <Table.Tr key={record.id}>
+                          <Table.Td><Text fw={600}>{record.nama || record.email}</Text></Table.Td>
+                          <Table.Td>{record.email}</Table.Td>
+                          <Table.Td><Badge color="blue" variant="filled">{record.role}</Badge></Table.Td>
+                          <Table.Td><Badge color="gray" variant="light">Nonaktif</Badge></Table.Td>
+                          <Table.Td onClick={(e) => e.stopPropagation()}>
+                            <Menu withArrow position="left" shadow="sm">
+                              <Menu.Target>
+                                <ActionIcon variant="subtle" color="blue">
+                                  <IconEdit size={16} />
+                                </ActionIcon>
+                              </Menu.Target>
+                              <Menu.Dropdown>
+                                <Menu.Item
+                                  color="yellow"
+                                  onClick={() => {
+                                    setResetTarget({ id: record.id, email: record.email })
+                                    setResetConfirmOpen(true)
+                                  }}
+                                >
+                                  Kirim email Reset Password
+                                </Menu.Item>
+                                <Menu.Item
+                                  color="green"
+                                  onClick={() => {
+                                    setToggleTarget({ id: record.id, email: record.email, targetActive: true })
+                                    setToggleModalOpen(true)
+                                  }}
+                                >
+                                  Aktifkan Admin
+                                </Menu.Item>
+                              </Menu.Dropdown>
+                            </Menu>
+                          </Table.Td>
+                        </Table.Tr>
+                      ))}
+                    </Table.Tbody>
+                  </Table>
+                </div>
               ),
             }}
           />

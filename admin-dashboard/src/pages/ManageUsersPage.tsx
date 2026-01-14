@@ -355,16 +355,17 @@ export function ManageUsersPage() {
           title: 'Pengguna Aktif',
           emptyText: 'Tidak ada pengguna aktif',
           render: (items) => (
-            <Table striped highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Nama</Table.Th>
-                  <Table.Th>Email</Table.Th>
-                  <Table.Th>Masa Aktif</Table.Th>
-                  <Table.Th>Perangkat</Table.Th>
-                  <Table.Th w={120}>Aksi</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
+            <div style={{ minWidth: 700 }}>
+              <Table striped highlightOnHover style={{ width: '100%' }}>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Nama</Table.Th>
+                    <Table.Th>Email</Table.Th>
+                    <Table.Th>Masa Aktif</Table.Th>
+                    <Table.Th>Perangkat</Table.Th>
+                    <Table.Th>Aksi</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
               <Table.Tbody>
                 {items.map((user) => {
                   const activeDevices = user.user_devices?.filter(d => d.is_active).length || 0
@@ -447,23 +448,25 @@ export function ManageUsersPage() {
                   )
                 })}
               </Table.Tbody>
-            </Table>
+              </Table>
+            </div>
           ),
         }}
         inactiveSection={{
           title: 'Pengguna Tidak Aktif / Kadaluarsa',
           emptyText: 'Tidak ada pengguna tidak aktif atau kadaluarsa',
           render: (items) => (
-            <Table striped highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Nama</Table.Th>
-                  <Table.Th>Email</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                  <Table.Th>Masa Aktif</Table.Th>
-                  <Table.Th w={120}>Aksi</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
+            <div style={{ minWidth: 700 }}>
+              <Table striped highlightOnHover style={{ width: '100%' }}>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Nama</Table.Th>
+                    <Table.Th>Email</Table.Th>
+                    <Table.Th>Status</Table.Th>
+                    <Table.Th>Masa Aktif</Table.Th>
+                    <Table.Th>Aksi</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
               <Table.Tbody>
                 {items.map((user) => {
                   const isExpired = daysUntilExpiry(user.expires_at) < 0
@@ -537,7 +540,8 @@ export function ManageUsersPage() {
                   )
                 })}
               </Table.Tbody>
-            </Table>
+              </Table>
+            </div>
           ),
         }}
       />
@@ -643,7 +647,9 @@ export function ManageUsersPage() {
               setResetConfirmOpen(false)
               setResetLoading(true)
               try {
-                await requestPasswordRecovery(resetTarget.email)
+                // Use public reset URL for mobile users (not admin dashboard)
+                const publicResetUrl = import.meta.env.VITE_PUBLIC_RESET_URL
+                await requestPasswordRecovery(resetTarget.email, publicResetUrl)
                 showNotification({ title: 'Terkirim', message: 'Email reset password terkirim.', color: 'green' })
               } catch (err: any) {
                 showNotification({ title: 'Error', message: String(err?.message || err), color: 'red' })
