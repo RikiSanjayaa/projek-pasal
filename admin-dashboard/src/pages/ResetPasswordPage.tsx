@@ -1,12 +1,27 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Card, Title, Text, Stack, PasswordInput, Button, Group, Progress, Box, LoadingOverlay, ThemeIcon } from '@mantine/core'
+import {
+  Card,
+  Title,
+  Text,
+  Stack,
+  PasswordInput,
+  Button,
+  Progress,
+  Box,
+  LoadingOverlay,
+  ThemeIcon,
+  Alert,
+  rem,
+  Group
+} from '@mantine/core'
+import { IconCheck, IconAlertCircle } from '@tabler/icons-react'
 import { supabase } from '@/lib/supabase'
 
 export function ResetPasswordPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  
+
   const [loading, setLoading] = useState(false)
   const [verifying, setVerifying] = useState(true)
   const [password, setPassword] = useState('')
@@ -45,7 +60,7 @@ export function ResetPasswordPage() {
 
       // 2. Cek apakah sesi sudah aktif
       const { data: { session } } = await supabase.auth.getSession()
-      
+
       if (session) {
         setVerifying(false)
         return
@@ -100,9 +115,9 @@ export function ResetPasswordPage() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      
+
       if (!session) {
-         throw new Error('Sesi kadaluarsa. Silakan minta reset password lagi dari aplikasi.')
+        throw new Error('Sesi kadaluarsa. Silakan minta reset password lagi dari aplikasi.')
       }
 
       const { error } = await supabase.auth.updateUser({ password })
@@ -121,7 +136,7 @@ export function ResetPasswordPage() {
       // Jika BUKAN dari mobile (artinya dari Web/Admin), redirect ke login
       if (source !== 'mobile') {
         setTimeout(() => {
-           navigate('/login')
+          navigate('/login')
         }, 2000)
       }
 
@@ -132,112 +147,166 @@ export function ResetPasswordPage() {
     }
   }
 
-  if (success) {
-    const searchParams = new URLSearchParams(location.search)
-    const isMobile = searchParams.get('source') === 'mobile'
-
-    return (
-      <Stack align="center" mt="xl" px="md">
-        <Card shadow="sm" padding="xl" radius="md" withBorder w={{ base: '100%', sm: 520 }} ta="center">
-          <ThemeIcon color="green" size={60} radius="xl" mx="auto" mb="md">
-             <Box style={{ fontSize: 32 }}>✓</Box>
-          </ThemeIcon>
-          <Title order={3} mb="sm">Password Berhasil Diubah!</Title>
-          
-          {isMobile ? (
-            <>
-              <Text c="dimmed" mb="xl">
-                Password akun Anda telah diperbarui. Silakan kembali ke aplikasi mobile dan login menggunakan password baru Anda.
-              </Text>
-              <Text size="xs" c="dimmed">
-                Anda boleh menutup halaman ini sekarang.
-              </Text>
-            </>
-          ) : (
-            <Text c="dimmed" mb="xl">
-              Password berhasil diupdate. Mengalihkan Anda ke halaman login...
-            </Text>
-          )}
-        </Card>
-      </Stack>
-    )
-  }
+  // Helper for requirement list items
+  const RequirementItem = ({ met, label }: { met: boolean; label: string }) => (
+    <Group gap={6} align="center">
+      {met ? (
+        <IconCheck size={14} color="var(--mantine-color-green-6)" />
+      ) : (
+        <Box
+          w={14}
+          h={14}
+          style={{
+            borderRadius: '50%',
+            border: '1.5px solid var(--mantine-color-dimmed)',
+            opacity: 0.5
+          }}
+        />
+      )}
+      <Text size="xs" c={met ? 'green' : 'dimmed'}>{label}</Text>
+    </Group>
+  );
 
   return (
-    <Stack align="center" mt="xl" px="md">
-      <Card shadow="sm" padding="lg" radius="md" withBorder w={{ base: '100%', sm: 520 }} pos="relative">
-        <LoadingOverlay visible={verifying} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} loaderProps={{ type: 'bars' }} />
-        
-        <Title order={3}>Reset Password</Title>
-        <div style={{ height: 12 }} />
+    <Box
+      style={{
+        minHeight: '100vh',
+        backgroundColor: 'var(--mantine-color-body)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem'
+      }}
+    >
+      {/* Branding */}
+      <Box mb="xl" ta="center">
+        <Title c="blue" order={1} style={{ fontSize: rem(26), fontWeight: 700 }}>CariPasal</Title>
+        <Text size="sm" c="dimmed">Reset Password</Text>
+      </Box>
 
-        {error ? (
-          <Box mb="md">
-             <Text c="red" size="sm" ta="center">{error}</Text>
-             <Group justify="center" mt="md">
-               <Button variant="light" onClick={() => navigate('/login')}>Kembali ke Login</Button>
-             </Group>
-          </Box>
+      <Card shadow="xl" padding="xl" radius="md" withBorder w="100%" maw={400} pos="relative">
+        <LoadingOverlay visible={verifying} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} loaderProps={{ type: 'bars' }} />
+
+        {success ? (
+          <Stack align="center" gap="md" ta="center">
+            {/* Success Icon */}
+            <ThemeIcon
+              color="green"
+              variant="light"
+              size={80}
+              radius={80}
+              mb="sm"
+            >
+              <IconCheck size={40} style={{ strokeWidth: 2.5 }} />
+            </ThemeIcon>
+
+            <Title order={2} ms="h3" mb="xs">Password Berhasil Diperbarui!</Title>
+
+            <Text c="dimmed" size="sm" mb="xl">
+              Password Anda telah berhasil diperbarui. Anda sekarang dapat login dengan password baru.
+            </Text>
+
+            {location.search.includes('source=mobile') ? (
+              <Box p="md" bg="var(--mantine-color-gray-light)" style={{ borderRadius: 'var(--mantine-radius-md)', width: '100%' }}>
+                <Text size="xs" c="var(--mantine-color-gray-light-color)">
+                  Anda dapat menutup halaman ini dan login melalui aplikasi CariPasal di perangkat Anda.
+                </Text>
+              </Box>
+            ) : (
+              <Box p="md" bg="var(--mantine-color-blue-light)" c="var(--mantine-color-blue-light-color)" style={{ borderRadius: 'var(--mantine-radius-md)', width: '100%' }}>
+                <Text size="sm">
+                  Mengalihkan ke halaman login...
+                </Text>
+              </Box>
+            )}
+          </Stack>
         ) : (
-          <>
-            {message && (
-              <Text c={message.includes('berhasil') ? 'green' : 'red'} size="sm" mb="md">
-                {message}
+          <Stack>
+            {/* Header */}
+            <Box ta="center" mb="sm">
+              <Title order={2} size="lg">Buat Password Baru</Title>
+              <Text size="sm" c="dimmed" mt={4}>
+                Masukkan password baru untuk akun Anda
               </Text>
+            </Box>
+
+            {/* Error from URL or Session */}
+            {error && (
+              <Alert icon={<IconAlertCircle size={16} />} title="Gagal Memuat" color="red" variant="light">
+                {error}
+                <Button variant="subtle" color="red" size="xs" mt="xs" onClick={() => navigate('/login')}>
+                  Kembali ke Login
+                </Button>
+              </Alert>
             )}
 
-            <Stack mt="md">
-              <PasswordInput
-                label="Password Baru"
-                placeholder="Masukkan password baru"
-                value={password}
-                onChange={(e) => setPassword(e.currentTarget.value)}
-                onKeyDown={handleKeyDown}
-                disabled={loading}
-              />
-              
-              {password && (
-                <Box>
-                  <Text size="xs" c="dimmed" mb={4}>Kekuatan Password</Text>
-                  <Progress value={passwordStrength} color={passwordStrength < 50 ? 'red' : passwordStrength < 75 ? 'yellow' : 'green'} size="sm" />
-                  <Stack gap="xs" mt="xs">
-                    <Text size="xs" c={password.length >= 8 ? 'green' : 'dimmed'}>
-                      {password.length >= 8 ? '✓' : '○'} Minimal 8 karakter
-                    </Text>
-                    <Text size="xs" c={/[a-z]/.test(password) ? 'green' : 'dimmed'}>
-                      {/[a-z]/.test(password) ? '✓' : '○'} Huruf kecil (a-z)
-                    </Text>
-                    <Text size="xs" c={/[A-Z]/.test(password) ? 'green' : 'dimmed'}>
-                      {/[A-Z]/.test(password) ? '✓' : '○'} Huruf besar (A-Z)
-                    </Text>
-                    <Text size="xs" c={/[0-9]/.test(password) ? 'green' : 'dimmed'}>
-                      {/[0-9]/.test(password) ? '✓' : '○'} Angka (0-9)
-                    </Text>
-                    <Text size="xs" c={/[^A-Za-z0-9]/.test(password) ? 'green' : 'dimmed'}>
-                      {/[^A-Za-z0-9]/.test(password) ? '✓' : '○'} Simbol (!@#$%^&*)
-                    </Text>
-                  </Stack>
-                </Box>
-              )}
+            {/* Form Error Message */}
+            {message && !error && (
+              <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light">
+                {message}
+              </Alert>
+            )}
 
-              <PasswordInput
-                label="Konfirmasi Password"
-                placeholder="Ulangi password baru"
-                value={confirm}
-                onChange={(e) => setConfirm(e.currentTarget.value)}
-                onKeyDown={handleKeyDown}
-                disabled={loading}
-              />
+            {!error && (
+              <>
+                <PasswordInput
+                  label="Password Baru"
+                  placeholder="Masukkan password baru"
+                  value={password}
+                  onChange={(e) => setPassword(e.currentTarget.value)}
+                  onKeyDown={handleKeyDown}
+                  disabled={loading}
+                />
 
-              <Group mt="md">
-                <Button color="blue" onClick={handleChangePassword} loading={loading} fullWidth>
-                  Simpan Password
+                {password && (
+                  <Box>
+                    <Box display="flex" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <Text size="xs" c="dimmed">Kekuatan password</Text>
+                      <Text size="xs" c="dimmed">{Math.round(passwordStrength)}%</Text>
+                    </Box>
+                    <Progress
+                      value={passwordStrength}
+                      color={passwordStrength < 50 ? 'red' : passwordStrength < 75 ? 'yellow' : 'green'}
+                      size="sm"
+                      radius="xl"
+                      mb="sm"
+                    />
+                    <Stack gap={4}>
+                      <RequirementItem met={password.length >= 8} label="Minimal 8 karakter" />
+                      <RequirementItem met={/[a-z]/.test(password)} label="Huruf kecil (a-z)" />
+                      <RequirementItem met={/[A-Z]/.test(password)} label="Huruf besar (A-Z)" />
+                      <RequirementItem met={/[0-9]/.test(password)} label="Angka (0-9)" />
+                      <RequirementItem met={/[^A-Za-z0-9]/.test(password)} label="Karakter spesial" />
+                    </Stack>
+                  </Box>
+                )}
+
+                <PasswordInput
+                  label="Konfirmasi Password"
+                  placeholder="Masukkan ulang password"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.currentTarget.value)}
+                  onKeyDown={handleKeyDown}
+                  disabled={loading}
+                  error={confirm && password !== confirm ? "Password tidak cocok" : null}
+                />
+
+                <Button
+                  fullWidth
+                  color="blue"
+                  size="md"
+                  mt="md"
+                  loading={loading}
+                  onClick={handleChangePassword}
+                >
+                  {loading ? 'Memproses...' : 'Ubah Password'}
                 </Button>
-              </Group>
-            </Stack>
-          </>
+              </>
+            )}
+          </Stack>
         )}
       </Card>
-    </Stack>
+    </Box>
   )
 }
