@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Card, Title, Text, Stack, PasswordInput, Button, Group, Progress, Box, LoadingOverlay, Alert } from '@mantine/core'
+import { Card, Title, Text, Stack, PasswordInput, Button, Group, Progress, Box, LoadingOverlay, ThemeIcon } from '@mantine/core'
 import { supabase } from '@/lib/supabase'
 
 export function ResetPasswordPage() {
@@ -13,6 +13,7 @@ export function ResetPasswordPage() {
   const [confirm, setConfirm] = useState('')
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
 
   const getPasswordStrength = (pwd: string) => {
     let strength = 0
@@ -31,7 +32,6 @@ export function ResetPasswordPage() {
 
     const checkSession = async () => {
       // 1. Cek apakah ada error di URL (misal link expired)
-      // Supabase biasanya mengirim error di hash fragment
       const hash = location.hash.substring(1) // remove #
       const params = new URLSearchParams(hash)
       const errorDescription = params.get('error_description')
@@ -51,26 +51,22 @@ export function ResetPasswordPage() {
         return
       }
 
-      // 3. Jika belum aktif, tunggu sebentar (Supabase client butuh waktu memproses hash URL)
+      // 3. Jika belum aktif, tunggu sebentar
       checkTimer = setTimeout(async () => {
         const { data: { session: retrySession } } = await supabase.auth.getSession()
         if (retrySession) {
           setVerifying(false)
         } else {
-          // Jika setelah menunggu masih tidak ada session, mungkin link rusak atau issue lain
-          // Tapi kita jangan langsung block user, biarkan mereka mencoba input
-          // Nanti akan gagal saat submit jika benar-benar tidak ada sesi
           setError('Sesi tidak terdeteksi otomatis. Pastikan Anda membuka link dari email.')
           setVerifying(false)
         }
       }, 2000)
     }
 
-    // Listener untuk menangkap event login otomatis dari link
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
         if (checkTimer) clearTimeout(checkTimer)
-        setError(null) // Clear any previous error if we successfully got a session
+        setError(null)
         setVerifying(false)
       }
     })
@@ -103,7 +99,6 @@ export function ResetPasswordPage() {
     setMessage(null)
 
     try {
-      // Pastikan session valid sebelum update
       const { data: { session } } = await supabase.auth.getSession()
       
       if (!session) {
@@ -113,23 +108,59 @@ export function ResetPasswordPage() {
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
 
-      // Hapus session recovery agar tidak bisa dipakai ulang
       try {
         sessionStorage.removeItem('recovery_session')
       } catch (e) { /* ignore */ }
 
-      setMessage('Password berhasil diperbarui! Mengalihkan ke login...')
-      
-      // Delay sedikit agar user bisa baca pesan sukses
-      setTimeout(() => {
-         navigate('/login')
-      }, 1500)
+      setSuccess(true)
+
+      // Cek apakah request dari mobile atau web
+      const searchParams = new URLSearchParams(location.search)
+      const source = searchParams.get('source')
+
+      // Jika BUKAN dari mobile (artinya dari Web/Admin), redirect ke login
+      if (source !== 'mobile') {
+        setTimeout(() => {
+           navigate('/login')
+        }, 2000)
+      }
 
     } catch (err: any) {
       setMessage(String(err?.message || err))
     } finally {
       setLoading(false)
     }
+  }
+
+  if (success) {
+    const searchParams = new URLSearchParams(location.search)
+    const isMobile = searchParams.get('source') === 'mobile'
+
+    return (
+      <Stack align="center" mt="xl" px="md">
+        <Card shadow="sm" padding="xl" radius="md" withBorder w={{ base: '100%', sm: 520 }} ta="center">
+          <ThemeIcon color="green" size={60} radius="xl" mx="auto" mb="md">
+             <Box style={{ fontSize: 32 }}>✓</Box>
+          </ThemeIcon>
+          <Title order={3} mb="sm">Password Berhasil Diubah!</Title>
+          
+          {isMobile ? (
+            <>
+              <Text c="dimmed" mb="xl">
+                Password akun Anda telah diperbarui. Silakan kembali ke aplikasi mobile dan login menggunakan password baru Anda.
+              </Text>
+              <Text size="xs" c="dimmed">
+                Anda boleh menutup halaman ini sekarang.
+              </Text>
+            </>
+          ) : (
+            <Text c="dimmed" mb="xl">
+              Password berhasil diupdate. Mengalihkan Anda ke halaman login...
+            </Text>
+          )}
+        </Card>
+      </Stack>
+    )
   }
 
   return (

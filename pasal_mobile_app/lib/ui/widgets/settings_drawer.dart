@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/config/env.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/app_colors.dart';
-import '../../core/config/env.dart';
+
 import '../../core/config/theme_controller.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/sync_manager.dart';
@@ -579,7 +579,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
               try {
                 await Supabase.instance.client.auth.resetPasswordForEmail(
                   authService.currentUserEmail!,
-                  redirectTo: '${Env.webAppUrl}/reset-password',
+                  redirectTo: '${Env.webAppUrl}/reset-password?source=mobile',
                 );
 
                 if (context.mounted) {
