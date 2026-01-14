@@ -647,7 +647,9 @@ export function ManageUsersPage() {
               setResetConfirmOpen(false)
               setResetLoading(true)
               try {
-                await requestPasswordRecovery(resetTarget.email)
+                // Use public reset URL for mobile users (not admin dashboard)
+                const publicResetUrl = import.meta.env.VITE_PUBLIC_RESET_URL
+                await requestPasswordRecovery(resetTarget.email, publicResetUrl)
                 showNotification({ title: 'Terkirim', message: 'Email reset password terkirim.', color: 'green' })
               } catch (err: any) {
                 showNotification({ title: 'Error', message: String(err?.message || err), color: 'red' })

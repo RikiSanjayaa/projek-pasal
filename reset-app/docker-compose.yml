@@ -1,8 +1,8 @@
 version: '3.8'
 
 services:
-  web-admin:
-    container_name: web-admin-container
+  reset-app:
+    container_name: web-reset-container
     build:
       context: .
       dockerfile: Dockerfile
@@ -11,7 +11,8 @@ services:
         VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
         VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY}
         VITE_APP_NAME: ${VITE_APP_NAME}
-        VITE_PUBLIC_RESET_URL: ${VITE_PUBLIC_RESET_URL}
+        APP_STORE_URL: ${APP_STORE_URL}
+        PLAY_STORE_URL: ${PLAY_STORE_URL}
     restart: unless-stopped
     ports:
       - "80:80"
