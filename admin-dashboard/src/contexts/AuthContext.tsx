@@ -100,6 +100,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             /* ignore sessionStorage errors */
           }
 
+          // If we are already on the reset password page, do NOTHING.
+          // Reloading the page will strip the hash fragment (access_token)
+          // and kill the session Supabase just established.
+          if (window.location.pathname === '/reset-password') {
+            return
+          }
+
           window.location.href = `${window.location.origin}/reset-password`
           return
         } catch {

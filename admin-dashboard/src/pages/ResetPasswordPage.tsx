@@ -1,14 +1,18 @@
-import React from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Card, Title, Text, Stack, PasswordInput, Button, Group, Progress, Box } from '@mantine/core'
+import React, { useEffect, useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { Card, Title, Text, Stack, PasswordInput, Button, Group, Progress, Box, LoadingOverlay, Alert } from '@mantine/core'
 import { supabase } from '@/lib/supabase'
 
 export function ResetPasswordPage() {
   const navigate = useNavigate()
-  const [loading, setLoading] = React.useState(false)
-  const [password, setPassword] = React.useState('')
-  const [confirm, setConfirm] = React.useState('')
-  const [message, setMessage] = React.useState<string | null>(null)
+  const location = useLocation()
+  
+  const [loading, setLoading] = useState(false)
+  const [verifying, setVerifying] = useState(true)
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const getPasswordStrength = (pwd: string) => {
     let strength = 0
@@ -21,6 +25,64 @@ export function ResetPasswordPage() {
   }
 
   const passwordStrength = getPasswordStrength(password)
+
+  useEffect(() => {
+    let checkTimer: NodeJS.Timeout
+
+    const checkSession = async () => {
+      // 1. Cek apakah ada error di URL (misal link expired)
+      // Supabase biasanya mengirim error di hash fragment
+      const hash = location.hash.substring(1) // remove #
+      const params = new URLSearchParams(hash)
+      const errorDescription = params.get('error_description')
+      const errorCode = params.get('error')
+
+      if (errorDescription || errorCode) {
+        setError(errorDescription?.replace(/\+/g, ' ') || 'Link reset password tidak valid atau sudah kadaluarsa.')
+        setVerifying(false)
+        return
+      }
+
+      // 2. Cek apakah sesi sudah aktif
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (session) {
+        setVerifying(false)
+        return
+      }
+
+      // 3. Jika belum aktif, tunggu sebentar (Supabase client butuh waktu memproses hash URL)
+      checkTimer = setTimeout(async () => {
+        const { data: { session: retrySession } } = await supabase.auth.getSession()
+        if (retrySession) {
+          setVerifying(false)
+        } else {
+          // Jika setelah menunggu masih tidak ada session, mungkin link rusak atau issue lain
+          // Tapi kita jangan langsung block user, biarkan mereka mencoba input
+          // Nanti akan gagal saat submit jika benar-benar tidak ada sesi
+          setError('Sesi tidak terdeteksi otomatis. Pastikan Anda membuka link dari email.')
+          setVerifying(false)
+        }
+      }, 2000)
+    }
+
+    // Listener untuk menangkap event login otomatis dari link
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
+        if (checkTimer) clearTimeout(checkTimer)
+        setError(null) // Clear any previous error if we successfully got a session
+        setVerifying(false)
+      }
+    })
+
+    checkSession()
+
+    return () => {
+      subscription.unsubscribe()
+      if (checkTimer) clearTimeout(checkTimer)
+    }
+  }, [location])
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleChangePassword()
@@ -29,61 +91,40 @@ export function ResetPasswordPage() {
 
   const handleChangePassword = async () => {
     if (password.length < 8) {
-      setMessage('Password must be at least 8 characters')
+      setMessage('Password harus minimal 8 karakter')
       return
     }
     if (password !== confirm) {
-      setMessage('Passwords do not match')
+      setMessage('Password tidak cocok')
       return
     }
 
     setLoading(true)
+    setMessage(null)
+
     try {
-      const { data: sessionData } = await supabase.auth.getSession()
-      const session = sessionData?.session
-
+      // Pastikan session valid sebelum update
+      const { data: { session } } = await supabase.auth.getSession()
+      
       if (!session) {
-        setMessage('No active session. The recovery token may not have been processed. Re-open the recovery link from your email or click the button below.')
-        setLoading(false)
-        return
-      }
-
-      // Determine whether this is a recovery session (user arrived from recovery link)
-      const isRecoverySession = (() => {
-        try {
-          const v = sessionStorage.getItem('recovery_session')
-          if (!v) return false
-          const ts = Number(v)
-          if (!ts || Number.isNaN(ts)) return false
-          // only accept recovery marker if it's recent (5 minutes)
-          return Date.now() - ts < 1000 * 60 * 5
-        } catch (e) {
-          return false
-        }
-      })()
-
-
-      // If the user is already logged in but this is NOT a recovery session,
-      // do not allow changing password via the recovery page to avoid
-      // accidental password resets when the user simply navigates here.
-      if (!isRecoverySession) {
-        setMessage('You are currently not in a password recovery flow. Open the recovery link from the email to continue.')
-        setLoading(false)
-        return
+         throw new Error('Sesi kadaluarsa. Silakan minta reset password lagi dari aplikasi.')
       }
 
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
 
-      // Clear recovery markers so the page cannot be reused maliciously
+      // Hapus session recovery agar tidak bisa dipakai ulang
       try {
         sessionStorage.removeItem('recovery_session')
-      } catch (e) {
-        /* ignore */
-      }
+      } catch (e) { /* ignore */ }
 
-      setMessage('Password updated. Redirecting to login...')
-      setTimeout(() => navigate('/login'), 1200)
+      setMessage('Password berhasil diperbarui! Mengalihkan ke login...')
+      
+      // Delay sedikit agar user bisa baca pesan sukses
+      setTimeout(() => {
+         navigate('/login')
+      }, 1500)
+
     } catch (err: any) {
       setMessage(String(err?.message || err))
     } finally {
@@ -93,57 +134,78 @@ export function ResetPasswordPage() {
 
   return (
     <Stack align="center" mt="xl" px="md">
-      <Card shadow="sm" padding="lg" radius="md" withBorder w={{ base: '100%', sm: 520 }}>
+      <Card shadow="sm" padding="lg" radius="md" withBorder w={{ base: '100%', sm: 520 }} pos="relative">
+        <LoadingOverlay visible={verifying} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} loaderProps={{ type: 'bars' }} />
+        
         <Title order={3}>Reset Password</Title>
-
         <div style={{ height: 12 }} />
 
-        {message && (
-          <Text c={message.includes('Password updated') ? 'green' : 'red'} size="sm">
-            {message}
-          </Text>
-        )}
+        {error ? (
+          <Box mb="md">
+             <Text c="red" size="sm" ta="center">{error}</Text>
+             <Group justify="center" mt="md">
+               <Button variant="light" onClick={() => navigate('/login')}>Kembali ke Login</Button>
+             </Group>
+          </Box>
+        ) : (
+          <>
+            {message && (
+              <Text c={message.includes('berhasil') ? 'green' : 'red'} size="sm" mb="md">
+                {message}
+              </Text>
+            )}
 
-        <Stack mt="md">
-          <PasswordInput
-            placeholder="New password"
-            value={password}
-            onChange={(e) => setPassword(e.currentTarget.value)}
-            onKeyDown={handleKeyDown}
-          />
-          {password && (
-            <Box>
-              <Text size="xs" c="dimmed">Password strength</Text>
-              <Progress value={passwordStrength} color={passwordStrength < 50 ? 'red' : passwordStrength < 75 ? 'yellow' : 'green'} size="sm" />
-              <Stack gap="xs" mt="xs">
-                <Text size="xs" c={password.length >= 8 ? 'green' : 'dimmed'}>
-                  {password.length >= 8 ? '✓' : '○'} At least 8 characters
-                </Text>
-                <Text size="xs" c={/[a-z]/.test(password) ? 'green' : 'dimmed'}>
-                  {/[a-z]/.test(password) ? '✓' : '○'} Lowercase letter (a-z)
-                </Text>
-                <Text size="xs" c={/[A-Z]/.test(password) ? 'green' : 'dimmed'}>
-                  {/[A-Z]/.test(password) ? '✓' : '○'} Uppercase letter (A-Z)
-                </Text>
-                <Text size="xs" c={/[0-9]/.test(password) ? 'green' : 'dimmed'}>
-                  {/[0-9]/.test(password) ? '✓' : '○'} Number (0-9)
-                </Text>
-                <Text size="xs" c={/[^A-Za-z0-9]/.test(password) ? 'green' : 'dimmed'}>
-                  {/[^A-Za-z0-9]/.test(password) ? '✓' : '○'} Special character (!@#$%^&*)
-                </Text>
-              </Stack>
-            </Box>
-          )}
-          <PasswordInput
-            placeholder="Confirm new password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.currentTarget.value)}
-            onKeyDown={handleKeyDown}
-          />
-          <Group>
-            <Button color="blue" onClick={handleChangePassword} loading={loading} fullWidth>Change Password</Button>
-          </Group>
-        </Stack>
+            <Stack mt="md">
+              <PasswordInput
+                label="Password Baru"
+                placeholder="Masukkan password baru"
+                value={password}
+                onChange={(e) => setPassword(e.currentTarget.value)}
+                onKeyDown={handleKeyDown}
+                disabled={loading}
+              />
+              
+              {password && (
+                <Box>
+                  <Text size="xs" c="dimmed" mb={4}>Kekuatan Password</Text>
+                  <Progress value={passwordStrength} color={passwordStrength < 50 ? 'red' : passwordStrength < 75 ? 'yellow' : 'green'} size="sm" />
+                  <Stack gap="xs" mt="xs">
+                    <Text size="xs" c={password.length >= 8 ? 'green' : 'dimmed'}>
+                      {password.length >= 8 ? '✓' : '○'} Minimal 8 karakter
+                    </Text>
+                    <Text size="xs" c={/[a-z]/.test(password) ? 'green' : 'dimmed'}>
+                      {/[a-z]/.test(password) ? '✓' : '○'} Huruf kecil (a-z)
+                    </Text>
+                    <Text size="xs" c={/[A-Z]/.test(password) ? 'green' : 'dimmed'}>
+                      {/[A-Z]/.test(password) ? '✓' : '○'} Huruf besar (A-Z)
+                    </Text>
+                    <Text size="xs" c={/[0-9]/.test(password) ? 'green' : 'dimmed'}>
+                      {/[0-9]/.test(password) ? '✓' : '○'} Angka (0-9)
+                    </Text>
+                    <Text size="xs" c={/[^A-Za-z0-9]/.test(password) ? 'green' : 'dimmed'}>
+                      {/[^A-Za-z0-9]/.test(password) ? '✓' : '○'} Simbol (!@#$%^&*)
+                    </Text>
+                  </Stack>
+                </Box>
+              )}
+
+              <PasswordInput
+                label="Konfirmasi Password"
+                placeholder="Ulangi password baru"
+                value={confirm}
+                onChange={(e) => setConfirm(e.currentTarget.value)}
+                onKeyDown={handleKeyDown}
+                disabled={loading}
+              />
+
+              <Group mt="md">
+                <Button color="blue" onClick={handleChangePassword} loading={loading} fullWidth>
+                  Simpan Password
+                </Button>
+              </Group>
+            </Stack>
+          </>
+        )}
       </Card>
     </Stack>
   )

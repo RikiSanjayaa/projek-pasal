@@ -16,7 +16,13 @@ void main() async {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
   );
-  await Supabase.initialize(url: Env.supabaseUrl, anonKey: Env.supabaseAnonKey);
+  await Supabase.initialize(
+    url: Env.supabaseUrl,
+    anonKey: Env.supabaseAnonKey,
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.implicit,
+    ),
+  );
 
   await DataService.initialize();
   runApp(const MyApp());
