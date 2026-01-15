@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import '../../core/config/app_colors.dart';
 import '../../core/services/sync_manager.dart';
@@ -201,49 +201,17 @@ class _UpdateBannerState extends State<UpdateBanner>
               margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.25),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                border: Border.all(
+                  color: isDark ? Colors.white10 : Colors.grey[200]!,
+                  width: 1,
+                ),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(24),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: isDark
-                            ? [
-                                const Color(
-                                  0xFF1A1F2C,
-                                ).withOpacity(0.95), // Dark sleek
-                                const Color(0xFF2D3447).withOpacity(0.95),
-                              ]
-                            : [
-                                Colors.white.withOpacity(0.95),
-                                const Color(
-                                  0xFFF0F4FF,
-                                ).withOpacity(0.95), // Very light blue tint
-                              ],
-                      ),
-                      border: Border.all(
-                        color: isDark
-                            ? Colors.white10
-                            : Colors.blue.withOpacity(0.1),
-                        width: 1,
-                      ),
-                    ),
-                    child: isSyncing
-                        ? _buildSyncingContent(isDark)
-                        : _buildUpdateAvailableContent(isDark),
-                  ),
-                ),
+                child: isSyncing
+                    ? _buildSyncingContent(isDark)
+                    : _buildUpdateAvailableContent(isDark),
               ),
             ),
           ),

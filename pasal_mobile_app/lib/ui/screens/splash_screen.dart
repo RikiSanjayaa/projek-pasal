@@ -172,14 +172,7 @@ class _SplashScreenState extends State<SplashScreen>
                         Container(
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primary.withOpacity(0.25),
-                                blurRadius: 80,
-                                spreadRadius: -5,
-                                offset: const Offset(0, 0),
-                              ),
-                            ],
+                            // Removed shadow/glow as requested
                           ),
                           child: Image.asset(
                             isDark
