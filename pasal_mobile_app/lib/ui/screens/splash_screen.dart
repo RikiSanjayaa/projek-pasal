@@ -233,7 +233,7 @@ class _SplashScreenState extends State<SplashScreen>
                         valueColor: AlwaysStoppedAnimation<Color>(
                           isDark
                               ? Colors.white54
-                              : AppColors.primary.withOpacity(0.8),
+                              : AppColors.primary.withValues(alpha: 0.8),
                         ),
                       ),
                     ),

@@ -31,6 +31,15 @@
    - `supabase/migrations/003_search_functions.sql` (search functions)
    - `supabase/migrations/004_pasal_links_audit.sql` (audit trigger untuk links)
    - `supabase/migrations/005_remove_ip_in_audit.sql` (revisi atribut audit)
+   - `supabase/migrations/006_fix_get_download_data.sql` (fix download data function)
+   - `supabase/migrations/007_fix_pasal_links_rls.sql` (fix RLS pasal_links)
+   - `supabase/migrations/008_audit_logs_retention.sql` (retention policy audit logs)
+   - `supabase/migrations/009_cascade_uu_is_active.sql` (cascade is_active UU ke pasal)
+   - `supabase/migrations/010_sync_check_function.sql` (fungsi sync untuk mobile)
+   - `supabase/migrations/011_user_auth_schema.sql` (schema users & user_devices)
+   - `supabase/migrations/012_update_rls_for_user_auth.sql` (RLS untuk user auth)
+   - `supabase/migrations/013_fix_cascade_uu_is_active.sql` (fix cascade untuk soft delete)
+   - `supabase/migrations/014_audit_improvements.sql` (audit untuk users, skip cascade)
    - `supabase/seed.sql` (opsional, untuk data dummy)
 
 #### Opsional: Jalankan Migrations via Supabase CLI
@@ -142,20 +151,27 @@ npm run dev
 
 Buka http://localhost:5173
 
-### 2.5 Create-admin flow (gunakan Supabase Edge Function)
+### 2.5 Deploy Edge Functions
 
-Proyek sebelumnya menggunakan server Express kecil untuk membuat akun admin menggunakan `service_role` key. Sekarang disarankan untuk mengganti server tersebut dengan Supabase Edge Function — ini menghilangkan kebutuhan menjalankan server terpisah.
-
-Langkah singkat:
-
-- Implementasikan fungsi di folder `supabase/functions/create-admin` (contoh tersedia di repo).
-- Deploy fungsi melalui Supabase CLI atau Dashboard Edge Functions.
-
-Deploy fungsi (CLI):
+Deploy semua Edge Functions yang diperlukan melalui Supabase CLI:
 
 ```bash
+# Deploy semua edge functions
 npx supabase functions deploy create-admin
+npx supabase functions deploy create-user
+npx supabase functions deploy create-users-batch
+npx supabase functions deploy delete-user
 ```
+
+**Daftar Edge Functions:**
+| Function | Deskripsi |
+|----------|-----------|
+| `create-admin` | Membuat akun admin baru |
+| `create-user` | Membuat akun pengguna mobile baru dengan masa aktif 3 tahun |
+| `create-users-batch` | Import batch pengguna mobile dari file XLSX |
+| `delete-user` | Menghapus akun pengguna mobile |
+
+**Catatan:** Edge functions memerlukan `SUPABASE_SERVICE_ROLE_KEY` untuk operasi admin (sudah dikonfigurasi otomatis di Supabase Cloud).
 
 ---
 

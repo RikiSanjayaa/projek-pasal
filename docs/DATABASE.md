@@ -72,6 +72,20 @@
 │  │ created_at               │                                               │
 │  └──────────────────────────┘                                               │
 │                                                                             │
+│                                                                             │
+│  ┌──────────────────────────┐         ┌──────────────────────────┐          │
+│  │         users            │         │      user_devices        │          │
+│  ├──────────────────────────┤         ├──────────────────────────┤          │
+│  │ id (PK, FK→auth)         │────────►│ id (PK)                  │          │
+│  │ email                    │         │ user_id (FK→users)       │          │
+│  │ nama                     │         │ device_id                │          │
+│  │ is_active                │         │ device_name              │          │
+│  │ expires_at               │         │ is_active                │          │
+│  │ created_by (FK→admin)    │         │ last_active_at           │          │
+│  │ created_at               │         │ created_at               │          │
+│  │ updated_at               │         └──────────────────────────┘          │
+│  └──────────────────────────┘                                               │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -192,6 +206,55 @@ Menyimpan log semua perubahan data.
 
 ---
 
+### 6. users
+
+Menyimpan data pengguna aplikasi mobile (bukan admin).
+
+| Column     | Type         | Nullable | Default | Description                                   |
+| ---------- | ------------ | -------- | ------- | --------------------------------------------- |
+| id         | UUID         | NO       | -       | PK, FK ke auth.users                          |
+| email      | VARCHAR(255) | NO       | -       | Email pengguna                                |
+| nama       | VARCHAR(255) | NO       | -       | Nama lengkap                                  |
+| is_active  | BOOLEAN      | NO       | true    | Status aktif                                  |
+| expires_at | TIMESTAMPTZ  | NO       | -       | Waktu kadaluarsa akses (biasanya 3 tahun)     |
+| created_by | UUID         | YES      | NULL    | FK ke admin_users (admin yang membuat)        |
+| created_at | TIMESTAMPTZ  | NO       | NOW()   | Waktu dibuat                                  |
+| updated_at | TIMESTAMPTZ  | NO       | NOW()   | Waktu diupdate                                |
+
+**Indexes:**
+
+- `idx_users_email` - Pencarian by email
+- `idx_users_is_active` - Filter aktif
+- `idx_users_expires_at` - Filter kadaluarsa
+
+---
+
+### 7. user_devices
+
+Menyimpan binding perangkat untuk kebijakan satu perangkat per pengguna.
+
+| Column         | Type         | Nullable | Default           | Description                          |
+| -------------- | ------------ | -------- | ----------------- | ------------------------------------ |
+| id             | UUID         | NO       | gen_random_uuid() | Primary key                          |
+| user_id        | UUID         | NO       | -                 | FK ke users                          |
+| device_id      | VARCHAR(255) | NO       | -                 | UUID perangkat (generated di app)    |
+| device_name    | VARCHAR(255) | YES      | NULL              | Nama perangkat: "Samsung Galaxy S21" |
+| is_active      | BOOLEAN      | NO       | true              | Status login aktif                   |
+| last_active_at | TIMESTAMPTZ  | NO       | NOW()             | Waktu terakhir aktif                 |
+| created_at     | TIMESTAMPTZ  | NO       | NOW()             | Waktu pertama login                  |
+
+**Indexes:**
+
+- `idx_user_devices_user_id` - Filter by user
+- `idx_user_devices_device_id` - Pencarian by device
+- `idx_user_devices_is_active` - Filter aktif
+
+**Constraints:**
+
+- `unique_user_device` - UNIQUE(user_id, device_id)
+
+---
+
 ## ENUM Types
 
 ### admin_role
@@ -253,15 +316,61 @@ Hapus permanen data yang sudah soft delete lebih dari N hari.
 SELECT * FROM cleanup_soft_deleted_data(30);
 ```
 
+### 5. cascade_uu_is_active_to_pasal
+
+Otomatis cascade is_active dari undang_undang ke semua pasal terkait.
+Pasal yang sudah soft delete (deleted_at IS NOT NULL) tidak akan ikut diaktifkan kembali.
+
+```sql
+-- Trigger otomatis saat undang_undang diupdate
+-- Tidak perlu dipanggil manual
+```
+
+### 6. check_sync_updates
+
+Cek apakah ada update data UU atau Pasal sejak timestamp tertentu.
+Menggunakan SECURITY DEFINER untuk bypass RLS (keperluan sync mobile).
+
+```sql
+SELECT check_sync_updates('2026-01-01T00:00:00Z'::TIMESTAMPTZ);
+-- Returns: TRUE jika ada update, FALSE jika tidak
+```
+
+### 7. get_sync_updates
+
+Ambil semua data yang diupdate sejak timestamp tertentu untuk sinkronisasi.
+Menggunakan SECURITY DEFINER untuk bypass RLS.
+
+```sql
+SELECT * FROM get_sync_updates('2026-01-01T00:00:00Z'::TIMESTAMPTZ);
+-- Returns: updated_uu (JSONB), updated_pasal (JSONB)
+```
+
+### 8. is_valid_user
+
+Cek apakah authenticated user adalah pengguna mobile yang valid (aktif dan belum kadaluarsa).
+
+```sql
+SELECT is_valid_user();
+-- Returns: TRUE jika valid, FALSE jika tidak
+```
+
 ---
 
 ## Triggers
 
-| Trigger                      | Table         | Event                      | Function                          |
-| ---------------------------- | ------------- | -------------------------- | --------------------------------- |
-| tr\_\*\_updated_at           | All           | BEFORE UPDATE              | update_updated_at()               |
-| tr_pasal_search_vector       | pasal         | BEFORE INSERT/UPDATE       | update_pasal_search_vector()      |
-| tr_pasal_cascade_soft_delete | pasal         | AFTER UPDATE               | cascade_soft_delete_pasal_links() |
-| tr_pasal_audit               | pasal         | AFTER INSERT/UPDATE/DELETE | log_audit()                       |
-| tr_undang_undang_audit       | undang_undang | AFTER INSERT/UPDATE/DELETE | log_audit()                       |
-| tr_pasal_links_audit         | pasal_links   | AFTER INSERT/UPDATE/DELETE | log_audit()                       |
+| Trigger                             | Table         | Event                      | Function                          |
+| ----------------------------------- | ------------- | -------------------------- | --------------------------------- |
+| tr\_\*\_updated_at                  | All           | BEFORE UPDATE              | update_updated_at()               |
+| tr_pasal_search_vector              | pasal         | BEFORE INSERT/UPDATE       | update_pasal_search_vector()      |
+| tr_pasal_cascade_soft_delete        | pasal         | AFTER UPDATE               | cascade_soft_delete_pasal_links() |
+| tr_pasal_audit                      | pasal         | AFTER INSERT/UPDATE/DELETE | log_audit()                       |
+| tr_undang_undang_audit              | undang_undang | AFTER INSERT/UPDATE/DELETE | log_audit()                       |
+| tr_pasal_links_audit                | pasal_links   | AFTER INSERT/UPDATE/DELETE | log_audit()                       |
+| tr_undang_undang_cascade_is_active  | undang_undang | AFTER UPDATE               | cascade_uu_is_active_to_pasal()   |
+| users_updated_at_trigger            | users         | BEFORE UPDATE              | update_users_updated_at()         |
+| tr_users_audit                      | users         | AFTER INSERT/UPDATE/DELETE | log_audit()                       |
+
+**Catatan:**
+- `log_audit()` function akan skip logging jika dalam mode cascade (ditandai dengan setting `app.is_cascade_update`)
+- Ini mencegah log bloat saat cascade update dari undang_undang ke pasal
