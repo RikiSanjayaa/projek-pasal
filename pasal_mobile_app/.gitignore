@@ -70,3 +70,6 @@ lib/core/config/env.dart
 /linux/
 /macos/
 /web/
+# Allow drift web support files (required for web builds)
+!/web/sqlite3.wasm
+!/web/drift_worker.dart.js
