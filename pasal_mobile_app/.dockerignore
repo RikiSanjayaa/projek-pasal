@@ -1,0 +1,48 @@
+# Build artifacts
+build/
+.dart_tool/
+.packages
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Flutter/Dart
+*.log
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Android
+android/.gradle/
+android/app/debug/
+android/app/profile/
+android/app/release/
+android/local.properties
+*.keystore
+!android/app/debug.keystore
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework/
+ios/Flutter/Flutter.podspec
+ios/Flutter/App.framework/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+
+# Test
+coverage/
+
+# Environment files (keep .env.example)
+.env
+.env.local
+.env.*.local
+
+# Secrets
+*.pem
+*.p12
