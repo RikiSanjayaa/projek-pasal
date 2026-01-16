@@ -12,6 +12,9 @@ RUN flutter pub get
 # Copy the rest of the app
 COPY . .
 
+# Ensure web platform is fully configured
+RUN flutter create . --platforms web
+
 # Build for web release
 RUN flutter build web --release
 
