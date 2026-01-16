@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../core/config/env.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -5,6 +6,7 @@ import '../../core/config/app_colors.dart';
 
 import '../../core/config/theme_controller.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/services/storage_info_service.dart';
 import '../../core/services/sync_manager.dart';
 import '../../core/services/sync_progress.dart';
 import '../screens/login_screen.dart';
@@ -495,6 +497,150 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                         );
                       },
                     ),
+
+                    // Storage Info section (only show on native platforms, not web)
+                    if (!kIsWeb) ...[
+                      const SizedBox(height: 24),
+
+                      Text(
+                        'Penyimpanan Lokal',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary(isDark),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      FutureBuilder<StorageInfo>(
+                        future: storageInfoService.getStorageInfo(),
+                        builder: (context, snapshot) {
+                          final isLoading =
+                              snapshot.connectionState ==
+                              ConnectionState.waiting;
+                          final info = snapshot.data;
+
+                          return Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.inputFill(isDark),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(
+                                        kIsWeb
+                                            ? Icons.storage_rounded
+                                            : Icons.folder_rounded,
+                                        color: AppColors.primary,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            isLoading
+                                                ? 'Memuat...'
+                                                : (info?.summary ??
+                                                      'Tidak tersedia'),
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.textPrimary(
+                                                isDark,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            isLoading
+                                                ? 'Menghitung ukuran...'
+                                                : (info?.storageType ??
+                                                      'Tidak tersedia'),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: isDark
+                                                  ? Colors.grey[500]
+                                                  : Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (!isLoading &&
+                                    info != null &&
+                                    info.isAvailable) ...[
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? Colors.grey[800]!.withAlpha(150)
+                                          : Colors.grey[200]!.withAlpha(150),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        _buildStorageInfoItem(
+                                          icon: Icons.article_rounded,
+                                          label: 'Pasal',
+                                          value: '${info.pasalCount}',
+                                          isDark: isDark,
+                                        ),
+                                        Container(
+                                          width: 1,
+                                          height: 30,
+                                          color: isDark
+                                              ? Colors.grey[700]
+                                              : Colors.grey[300],
+                                        ),
+                                        _buildStorageInfoItem(
+                                          icon: Icons.auto_stories_rounded,
+                                          label: 'UU',
+                                          value: '${info.uuCount}',
+                                          isDark: isDark,
+                                        ),
+                                        if (!kIsWeb) ...[
+                                          Container(
+                                            width: 1,
+                                            height: 30,
+                                            color: isDark
+                                                ? Colors.grey[700]
+                                                : Colors.grey[300],
+                                          ),
+                                          _buildStorageInfoItem(
+                                            icon: Icons.data_usage_rounded,
+                                            label: 'Ukuran',
+                                            value: info.formattedSize,
+                                            isDark: isDark,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ], // end of if (!kIsWeb)
                   ],
                 ),
               ),
@@ -724,6 +870,42 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildStorageInfoItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    required bool isDark,
+  }) {
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color: isDark ? Colors.grey[400] : Colors.grey[600],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary(isDark),
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: isDark ? Colors.grey[500] : Colors.grey[600],
+            ),
+          ),
+        ],
       ),
     );
   }

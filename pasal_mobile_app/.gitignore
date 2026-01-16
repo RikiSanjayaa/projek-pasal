@@ -9,7 +9,6 @@
 .pub/
 build/
 coverage/
-lib/generated_plugin_registrant.dart
 
 # =========================
 # 2. ANDROID (MOBILE)

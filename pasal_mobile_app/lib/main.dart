@@ -6,6 +6,7 @@ import 'core/config/app_colors.dart';
 import 'core/services/data_service.dart';
 import 'ui/screens/splash_screen.dart';
 import 'ui/widgets/auth_wrapper.dart';
+import 'ui/widgets/desktop_viewport_warning.dart';
 import 'core/config/theme_controller.dart';
 
 /// Global navigator key for navigation from anywhere (e.g., AuthWrapper)
@@ -96,7 +97,10 @@ class MyApp extends StatelessWidget {
           home: const SplashScreen(),
           builder: (context, child) {
             // Wrap all routes with AuthWrapper to handle forced logout
-            return AuthWrapper(child: child ?? const SizedBox.shrink());
+            // And DesktopViewportWarning to show mobile optimization notice on web
+            return DesktopViewportWarning(
+              child: AuthWrapper(child: child ?? const SizedBox.shrink()),
+            );
           },
         );
       },
