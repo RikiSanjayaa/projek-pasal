@@ -12,8 +12,14 @@ RUN flutter pub get
 # Copy the rest of the app
 COPY . .
 
+# Save custom web assets before flutter create overwrites them
+RUN cp -r web /tmp/web-custom
+
 # Ensure web platform is fully configured
 RUN flutter create . --platforms web
+
+# Restore custom web assets (favicon, icons, manifest, drift files)
+RUN cp -r /tmp/web-custom/* web/
 
 # Build for web release
 RUN flutter build web --release
