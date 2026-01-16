@@ -10,6 +10,9 @@ import '../widgets/main_layout.dart';
 import '../widgets/keyword_bottom_sheet.dart';
 import '../widgets/pagination_footer.dart';
 import '../widgets/filter_widgets.dart';
+import 'package:showcaseview/showcaseview.dart';
+import '../widgets/app_showcase.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,6 +22,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final GlobalKey _searchKey = GlobalKey();
+  final GlobalKey _filterKey = GlobalKey();
+
   List<PasalModel> _allPasalCache = [];
   List<PasalModel> _filteredData = [];
   List<PasalModel> _paginatedData = [];
@@ -101,6 +107,23 @@ class _HomeScreenState extends State<HomeScreen> {
     _popularKeywords = sortedByUsage.take(15).map((e) => e.key).toList();
 
     _applyFilterAndSearch();
+
+    final prefs = await SharedPreferences.getInstance();
+    bool hasShownShowcase = prefs.getBool('has_shown_home_showcase') ?? false;
+    if (!hasShownShowcase) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _filtersExpanded = true);
+
+          Future.delayed(const Duration(milliseconds: 400), () {
+            if (mounted) {
+              ShowcaseView.get().startShowCase([_searchKey, _filterKey]);
+              prefs.setBool('has_shown_home_showcase', true);
+            }
+          });
+        }
+      });
+    }
   }
 
   void _toggleKeyword(String keyword) {
@@ -130,40 +153,42 @@ class _HomeScreenState extends State<HomeScreen> {
           .toList();
     }
 
-    if (_selectedKeywords.isNotEmpty) {
-      source = source.where((p) {
-        return _selectedKeywords.every(
-          (selectedK) => p.keywords.any(
-            (pasalK) => pasalK.toLowerCase() == selectedK.toLowerCase(),
-          ),
-        );
-      }).toList();
-    }
-
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase().trim();
-
       final nomorQuery = SearchUtils.extractNomorQuery(q);
 
       source = source.where((p) {
         final nomorMatch =
             p.nomor.toLowerCase().contains(nomorQuery) ||
             'pasal ${p.nomor}'.toLowerCase().contains(q);
-
         final contentMatch = p.isi.toLowerCase().contains(q);
         final titleMatch =
             p.judul != null && p.judul!.toLowerCase().contains(q);
-
         return nomorMatch || contentMatch || titleMatch;
       }).toList();
+    }
 
-      if (SearchUtils.isNomorSearch(q)) {
-        source = SearchUtils.sortByNomorRelevance(
-          source,
-          nomorQuery,
-          (p) => p.nomor,
-        );
+    if (_selectedKeywords.isNotEmpty) {
+      final Map<PasalModel, int> scoredResults = {};
+
+      for (var p in source) {
+        int matchCount = 0;
+        for (var selectedK in _selectedKeywords) {
+          bool hasMatch = p.keywords.any(
+            (pasalK) => pasalK.toLowerCase() == selectedK.toLowerCase(),
+          );
+          if (hasMatch) matchCount++;
+        }
+        if (matchCount > 0) {
+          scoredResults[p] = matchCount;
+        }
       }
+      source = scoredResults.keys.toList();
+      source.sort((a, b) {
+        int scoreA = scoredResults[a]!;
+        int scoreB = scoredResults[b]!;
+        return scoreB.compareTo(scoreA);
+      });
     }
 
     setState(() {
@@ -258,7 +283,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return MainLayout(
       child: GestureDetector(
         onTap: () {
-          // Dismiss keyboard and overlay when tapping outside
           _searchFocusNode.unfocus();
         },
         child: Column(
@@ -268,43 +292,52 @@ class _HomeScreenState extends State<HomeScreen> {
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-              child: CompositedTransformTarget(
-                link: _searchLayerLink,
-                child: TextField(
-                  controller: _searchController,
-                  focusNode: _searchFocusNode,
-                  keyboardAppearance: isDark
-                      ? Brightness.dark
-                      : Brightness.light,
-                  onChanged: (val) {
-                    _searchQuery = val;
-                    _applyFilterAndSearch();
-                    _updateOverlay();
-                  },
-                  decoration: InputDecoration(
-                    hintText: "Cari nomor, nama atau isi pasal...",
-                    hintStyle: TextStyle(
-                      color: isDark ? Colors.white70 : Colors.black54,
+              child: AppShowcase(
+                showcaseKey: _searchKey,
+                title: 'Cari Pasal',
+                description:
+                    'Ketik untuk mencari pasal berdasarkan:\n\n• Nomor pasal (contoh: "Pasal 1")\n• Judul pasal\n• Isi konten pasal\n\nHasil akan langsung ditampilkan saat Anda mengetik.',
+                shapeBorder: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: CompositedTransformTarget(
+                  link: _searchLayerLink,
+                  child: TextField(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    keyboardAppearance: isDark
+                        ? Brightness.dark
+                        : Brightness.light,
+                    onChanged: (val) {
+                      _searchQuery = val;
+                      _applyFilterAndSearch();
+                      _updateOverlay();
+                    },
+                    decoration: InputDecoration(
+                      hintText: "Cari nomor, nama atau isi pasal...",
+                      hintStyle: TextStyle(
+                        color: isDark ? Colors.white70 : Colors.black54,
+                      ),
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 20),
+                              onPressed: () {
+                                _searchController.clear();
+                                _searchQuery = '';
+                                _applyFilterAndSearch();
+                                _updateOverlay();
+                              },
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: AppColors.inputFill(isDark),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: EdgeInsets.zero,
                     ),
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 20),
-                            onPressed: () {
-                              _searchController.clear();
-                              _searchQuery = '';
-                              _applyFilterAndSearch();
-                              _updateOverlay();
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: AppColors.inputFill(isDark),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: EdgeInsets.zero,
                   ),
                 ),
               ),
@@ -318,6 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         .firstOrNull
                         ?.kode
                   : null,
+
               onClearAll: () {
                 setState(() {
                   _selectedKeywords.clear();
@@ -325,16 +359,26 @@ class _HomeScreenState extends State<HomeScreen> {
                   _applyFilterAndSearch();
                 });
               },
+
               onRemoveUU: () {
                 setState(() {
                   _selectedFilterUUId = 'ALL';
                   _applyFilterAndSearch();
                 });
               },
+
               onRemoveKeyword: (keyword) => _removeKeyword(keyword),
             ),
-
-            _buildFilterSections(isDark),
+            AppShowcase(
+              showcaseKey: _filterKey,
+              title: 'Filter Pencarian',
+              description:
+                  'Persempit hasil pencarian dengan memilih:\n\n• Keywords - topik spesifik yang Anda cari\n• Undang-Undang - sumber hukum tertentu\n\nKombinasi filter menghasilkan pencarian lebih akurat.',
+              shapeBorder: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: _buildFilterSections(isDark),
+            ),
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -557,48 +601,53 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 12),
                       // Keywords section
                       _buildKeywordChipsRow(isDark),
-
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 10),
                       ),
 
                       // UU section
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.menu_book_outlined,
-                              size: 13,
-                              color: blueColor,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.menu_book_outlined,
+                                  size: 13,
+                                  color: blueColor,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Undang-Undang',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark
+                                        ? Colors.grey[400]
+                                        : Colors.grey[700],
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Undang-Undang',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: isDark
-                                    ? Colors.grey[400]
-                                    : Colors.grey[700],
-                                letterSpacing: 0.3,
-                              ),
+                          ),
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                _buildUUChip("Semua", 'ALL', isDark),
+                                ..._listUU
+                                    .map(
+                                      (uu) =>
+                                          _buildUUChip(uu.kode, uu.id, isDark),
+                                    )
+                                    .toList(),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            _buildUUChip("Semua", 'ALL', isDark),
-                            ..._listUU
-                                .map(
-                                  (uu) => _buildUUChip(uu.kode, uu.id, isDark),
-                                )
-                                .toList(),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

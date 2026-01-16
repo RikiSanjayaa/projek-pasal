@@ -8,6 +8,7 @@ import 'ui/screens/splash_screen.dart';
 import 'ui/widgets/auth_wrapper.dart';
 import 'ui/widgets/desktop_viewport_warning.dart';
 import 'core/config/theme_controller.dart';
+import 'package:showcaseview/showcaseview.dart';
 
 /// Global navigator key for navigation from anywhere (e.g., AuthWrapper)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -26,6 +27,10 @@ void main() async {
   );
 
   await DataService.initialize();
+
+  // Register ShowcaseView globally (v5.0.0+ API)
+  ShowcaseView.register();
+
   runApp(const MyApp());
 }
 
