@@ -10,6 +10,9 @@ import '../widgets/main_layout.dart';
 import '../widgets/keyword_bottom_sheet.dart';
 import '../widgets/pagination_footer.dart';
 import '../widgets/filter_widgets.dart';
+import 'package:showcaseview/showcaseview.dart';
+import '../widgets/app_showcase.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,6 +22,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final GlobalKey _menuKey = GlobalKey();
+  final GlobalKey _searchKey = GlobalKey();
+  final GlobalKey _filterKey = GlobalKey();
+  final GlobalKey _keywordFilterKey = GlobalKey();
+  final GlobalKey _uuFilterKey = GlobalKey();
+
   List<PasalModel> _allPasalCache = [];
   List<PasalModel> _filteredData = [];
   List<PasalModel> _paginatedData = [];
@@ -51,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _initData();
     _searchFocusNode.addListener(_onSearchFocusChange);
+
   }
 
   @override
@@ -93,14 +103,39 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    _allAvailableKeywords = keywordCount.keys.toList()
-      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    _allAvailableKeywords =
+        keywordCount.keys.toList()
+          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
-    final sortedByUsage = keywordCount.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final sortedByUsage =
+        keywordCount.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
     _popularKeywords = sortedByUsage.take(15).map((e) => e.key).toList();
 
     _applyFilterAndSearch();
+
+    final prefs = await SharedPreferences.getInstance();
+    bool hasShownShowcase = prefs.getBool('has_shown_home_showcase') ?? false;
+    if (!hasShownShowcase) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _filtersExpanded = true);
+
+          Future.delayed(const Duration(milliseconds: 400), () {
+            if (mounted) {
+              ShowCaseWidget.of(context).startShowCase([
+                _menuKey,
+                _searchKey,
+                _filterKey,
+                _keywordFilterKey,
+                _uuFilterKey,
+              ]);
+              prefs.setBool('has_shown_home_showcase', true);
+            }
+          });
+        }
+      });
+    }
   }
 
   void _toggleKeyword(String keyword) {
@@ -125,45 +160,47 @@ class _HomeScreenState extends State<HomeScreen> {
     List<PasalModel> source = _allPasalCache;
 
     if (_selectedFilterUUId != 'ALL') {
-      source = source
-          .where((p) => p.undangUndangId == _selectedFilterUUId)
-          .toList();
-    }
-
-    if (_selectedKeywords.isNotEmpty) {
-      source = source.where((p) {
-        return _selectedKeywords.every(
-          (selectedK) => p.keywords.any(
-            (pasalK) => pasalK.toLowerCase() == selectedK.toLowerCase(),
-          ),
-        );
-      }).toList();
+      source =
+          source.where((p) => p.undangUndangId == _selectedFilterUUId).toList();
     }
 
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase().trim();
-
       final nomorQuery = SearchUtils.extractNomorQuery(q);
 
-      source = source.where((p) {
-        final nomorMatch =
-            p.nomor.toLowerCase().contains(nomorQuery) ||
-            'pasal ${p.nomor}'.toLowerCase().contains(q);
+      source =
+          source.where((p) {
+            final nomorMatch =
+                p.nomor.toLowerCase().contains(nomorQuery) ||
+                'pasal ${p.nomor}'.toLowerCase().contains(q);
+            final contentMatch = p.isi.toLowerCase().contains(q);
+            final titleMatch =
+                p.judul != null && p.judul!.toLowerCase().contains(q);
+            return nomorMatch || contentMatch || titleMatch;
+          }).toList();
+    }
 
-        final contentMatch = p.isi.toLowerCase().contains(q);
-        final titleMatch =
-            p.judul != null && p.judul!.toLowerCase().contains(q);
+    if (_selectedKeywords.isNotEmpty) {
+      final Map<PasalModel, int> scoredResults = {};
 
-        return nomorMatch || contentMatch || titleMatch;
-      }).toList();
-
-      if (SearchUtils.isNomorSearch(q)) {
-        source = SearchUtils.sortByNomorRelevance(
-          source,
-          nomorQuery,
-          (p) => p.nomor,
-        );
+      for (var p in source) {
+        int matchCount = 0;
+        for (var selectedK in _selectedKeywords) {
+          bool hasMatch = p.keywords.any(
+            (pasalK) => pasalK.toLowerCase() == selectedK.toLowerCase(),
+          );
+          if (hasMatch) matchCount++;
+        }
+        if (matchCount > 0) {
+          scoredResults[p] = matchCount;
+        }
       }
+      source = scoredResults.keys.toList();
+      source.sort((a, b) {
+        int scoreA = scoredResults[a]!;
+        int scoreB = scoredResults[b]!;
+        return scoreB.compareTo(scoreA);
+      });
     }
 
     setState(() {
@@ -258,7 +295,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return MainLayout(
       child: GestureDetector(
         onTap: () {
-          // Dismiss keyboard and overlay when tapping outside
           _searchFocusNode.unfocus();
         },
         child: Column(
@@ -268,43 +304,51 @@ class _HomeScreenState extends State<HomeScreen> {
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-              child: CompositedTransformTarget(
-                link: _searchLayerLink,
-                child: TextField(
-                  controller: _searchController,
-                  focusNode: _searchFocusNode,
-                  keyboardAppearance: isDark
-                      ? Brightness.dark
-                      : Brightness.light,
-                  onChanged: (val) {
-                    _searchQuery = val;
-                    _applyFilterAndSearch();
-                    _updateOverlay();
-                  },
-                  decoration: InputDecoration(
-                    hintText: "Cari nomor, nama atau isi pasal...",
-                    hintStyle: TextStyle(
-                      color: isDark ? Colors.white70 : Colors.black54,
+              child: AppShowcase(
+                showcaseKey: _searchKey,
+                title: 'Pencarian',
+                description: 'Ketik nomor atau topik pasal di sini.',
+                shapeBorder: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: CompositedTransformTarget(
+                  link: _searchLayerLink,
+                  child: TextField(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    keyboardAppearance:
+                        isDark ? Brightness.dark : Brightness.light,
+                    onChanged: (val) {
+                      _searchQuery = val;
+                      _applyFilterAndSearch();
+                      _updateOverlay();
+                    },
+                    decoration: InputDecoration(
+                      hintText: "Cari nomor, nama atau isi pasal...",
+                      hintStyle: TextStyle(
+                        color: isDark ? Colors.white70 : Colors.black54,
+                      ),
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon:
+                          _searchQuery.isNotEmpty
+                              ? IconButton(
+                                icon: const Icon(Icons.clear, size: 20),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _searchQuery = '';
+                                  _applyFilterAndSearch();
+                                  _updateOverlay();
+                                },
+                              )
+                              : null,
+                      filled: true,
+                      fillColor: AppColors.inputFill(isDark),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: EdgeInsets.zero,
                     ),
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 20),
-                            onPressed: () {
-                              _searchController.clear();
-                              _searchQuery = '';
-                              _applyFilterAndSearch();
-                              _updateOverlay();
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: AppColors.inputFill(isDark),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: EdgeInsets.zero,
                   ),
                 ),
               ),
@@ -312,12 +356,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
             ActiveFiltersSection(
               selectedKeywords: _selectedKeywords,
-              selectedUUName: _selectedFilterUUId != 'ALL'
-                  ? _listUU
-                        .where((u) => u.id == _selectedFilterUUId)
-                        .firstOrNull
-                        ?.kode
-                  : null,
+              selectedUUName:
+                  _selectedFilterUUId != 'ALL'
+                      ? _listUU
+                          .where((u) => u.id == _selectedFilterUUId)
+                          .firstOrNull
+                          ?.kode
+                      : null,
+
               onClearAll: () {
                 setState(() {
                   _selectedKeywords.clear();
@@ -325,16 +371,25 @@ class _HomeScreenState extends State<HomeScreen> {
                   _applyFilterAndSearch();
                 });
               },
+
               onRemoveUU: () {
                 setState(() {
                   _selectedFilterUUId = 'ALL';
                   _applyFilterAndSearch();
                 });
               },
+
               onRemoveKeyword: (keyword) => _removeKeyword(keyword),
             ),
-
-            _buildFilterSections(isDark),
+            AppShowcase(
+              showcaseKey: _filterKey,
+              title: 'Filter Cepat',
+              description: 'Gunakan filter ini untuk memilih UU spesifik.',
+              shapeBorder: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: _buildFilterSections(isDark),
+            ),
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -360,16 +415,17 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 10),
 
             Expanded(
-              child: _paginatedData.isEmpty
-                  ? const Center(child: Text("Data tidak ditemukan."))
-                  : ListView.builder(
-                      controller: _listScrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: _paginatedData.length + 1,
-                      itemBuilder: (context, index) {
-                        if (index == _paginatedData.length) {
-                          return _totalPages > 1
-                              ? Padding(
+              child:
+                  _paginatedData.isEmpty
+                      ? const Center(child: Text("Data tidak ditemukan."))
+                      : ListView.builder(
+                        controller: _listScrollController,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: _paginatedData.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index == _paginatedData.length) {
+                            return _totalPages > 1
+                                ? Padding(
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 20,
                                   ),
@@ -392,17 +448,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                     },
                                   ),
                                 )
-                              : const SizedBox(height: 20);
-                        }
+                                : const SizedBox(height: 20);
+                          }
 
-                        return PasalCard(
-                          pasal: _paginatedData[index],
-                          contextList: _filteredData,
-                          searchQuery: _searchQuery,
-                          showUULabel: true,
-                        );
-                      },
-                    ),
+                          return PasalCard(
+                            pasal: _paginatedData[index],
+                            contextList: _filteredData,
+                            searchQuery: _searchQuery,
+                            showUULabel: true,
+                          );
+                        },
+                      ),
             ),
           ],
         ),
@@ -425,13 +481,18 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           // Hamburger menu button
-          IconButton(
-            onPressed: () => Scaffold.of(context).openEndDrawer(),
-            icon: Icon(
-              Icons.menu,
-              color: isDark ? Colors.grey[300] : Colors.grey[700],
+          AppShowcase(
+            showcaseKey: _menuKey,
+            title: 'Menu',
+            description: 'Buka menu pengaturan',
+            child: IconButton(
+              onPressed: () => Scaffold.of(context).openEndDrawer(),
+              icon: Icon(
+                Icons.menu,
+                color: isDark ? Colors.grey[300] : Colors.grey[700],
+              ),
+              tooltip: 'Pengaturan',
             ),
-            tooltip: 'Pengaturan',
           ),
         ],
       ),
@@ -455,33 +516,37 @@ class _HomeScreenState extends State<HomeScreen> {
           // Header / Toggle
           InkWell(
             onTap: () => setState(() => _filtersExpanded = !_filtersExpanded),
-            borderRadius: _filtersExpanded
-                ? const BorderRadius.vertical(top: Radius.circular(12))
-                : BorderRadius.circular(12),
+            borderRadius:
+                _filtersExpanded
+                    ? const BorderRadius.vertical(top: Radius.circular(12))
+                    : BorderRadius.circular(12),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: bgColor,
-                borderRadius: _filtersExpanded
-                    ? const BorderRadius.vertical(top: Radius.circular(12))
-                    : BorderRadius.circular(12),
-                border: _filtersExpanded
-                    ? Border(
-                        bottom: BorderSide(
-                          color: blueColor.withValues(alpha: 0.8),
-                        ),
-                      )
-                    : null,
+                borderRadius:
+                    _filtersExpanded
+                        ? const BorderRadius.vertical(top: Radius.circular(12))
+                        : BorderRadius.circular(12),
+                border:
+                    _filtersExpanded
+                        ? Border(
+                          bottom: BorderSide(
+                            color: blueColor.withValues(alpha: 0.8),
+                          ),
+                        )
+                        : null,
               ),
               child: Row(
                 children: [
                   Icon(
                     Icons.tune_rounded,
                     size: 16,
-                    color: _filtersExpanded
-                        ? blueColor
-                        : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                    color:
+                        _filtersExpanded
+                            ? blueColor
+                            : (isDark ? Colors.grey[400] : Colors.grey[600]),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -490,9 +555,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: _filtersExpanded
-                            ? blueColor
-                            : (isDark ? Colors.grey[200] : Colors.grey[700]),
+                        color:
+                            _filtersExpanded
+                                ? blueColor
+                                : (isDark
+                                    ? Colors.grey[200]
+                                    : Colors.grey[700]),
                       ),
                     ),
                   ),
@@ -523,9 +591,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Icon(
                       Icons.keyboard_arrow_down_rounded,
                       size: 18,
-                      color: _filtersExpanded
-                          ? blueColor
-                          : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                      color:
+                          _filtersExpanded
+                              ? blueColor
+                              : (isDark ? Colors.grey[400] : Colors.grey[600]),
                     ),
                   ),
                 ],
@@ -556,47 +625,73 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const SizedBox(height: 12),
                       // Keywords section
-                      _buildKeywordChipsRow(isDark),
-
+                      AppShowcase(
+                        showcaseKey: _keywordFilterKey,
+                        title: 'Filter Topik',
+                        description:
+                            'Pilih topik spesifik untuk hasil lebih akurat.',
+                        shapeBorder: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: _buildKeywordChipsRow(isDark),
+                      ),
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 10),
                       ),
 
                       // UU section
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Row(
+                      AppShowcase(
+                        showcaseKey: _uuFilterKey,
+                        title: 'Pilih Undang-Undang',
+                        description: 'Batasi pencarian hanya pada UU tertentu.',
+                        shapeBorder: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.menu_book_outlined,
-                              size: 13,
-                              color: blueColor,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Undang-Undang',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: isDark
-                                    ? Colors.grey[400]
-                                    : Colors.grey[700],
-                                letterSpacing: 0.3,
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.menu_book_outlined,
+                                    size: 13,
+                                    color: blueColor,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Undang-Undang',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color:
+                                          isDark
+                                              ? Colors.grey[400]
+                                              : Colors.grey[700],
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            _buildUUChip("Semua", 'ALL', isDark),
-                            ..._listUU
-                                .map(
-                                  (uu) => _buildUUChip(uu.kode, uu.id, isDark),
-                                )
-                                .toList(),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  _buildUUChip("Semua", 'ALL', isDark),
+                                  ..._listUU
+                                      .map(
+                                        (uu) => _buildUUChip(
+                                          uu.kode,
+                                          uu.id,
+                                          isDark,
+                                        ),
+                                      )
+                                      .toList(),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -632,9 +727,10 @@ class _HomeScreenState extends State<HomeScreen> {
             color: isSelected ? blueColor : AppColors.card(isDark),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isSelected
-                  ? blueColor
-                  : (isDark ? Colors.grey[700]! : Colors.grey[200]!),
+              color:
+                  isSelected
+                      ? blueColor
+                      : (isDark ? Colors.grey[700]! : Colors.grey[200]!),
               width: 1,
             ),
           ),
@@ -643,9 +739,10 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              color: isSelected
-                  ? Colors.white
-                  : (isDark ? Colors.grey[300] : Colors.grey[600]),
+              color:
+                  isSelected
+                      ? Colors.white
+                      : (isDark ? Colors.grey[300] : Colors.grey[600]),
             ),
           ),
         ),
@@ -654,10 +751,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildKeywordChipsRow(bool isDark) {
-    final displayKeywords = _popularKeywords
-        .where((k) => !_selectedKeywords.contains(k))
-        .take(_visibleKeywordChipsCount)
-        .toList();
+    final displayKeywords =
+        _popularKeywords
+            .where((k) => !_selectedKeywords.contains(k))
+            .take(_visibleKeywordChipsCount)
+            .toList();
 
     final remainingCount =
         _allAvailableKeywords.length -

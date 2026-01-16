@@ -11,6 +11,9 @@ import '../utils/uu_color_helper.dart';
 import '../../core/services/archive_service.dart';
 import '../widgets/app_notification.dart';
 import '../widgets/pasal_sections.dart';
+import 'package:showcaseview/showcaseview.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/app_showcase.dart';
 
 class ReadPasalScreen extends StatefulWidget {
   final PasalModel pasal;
@@ -29,6 +32,9 @@ class ReadPasalScreen extends StatefulWidget {
 }
 
 class _ReadPasalScreenState extends State<ReadPasalScreen> {
+  final GlobalKey _searchKey = GlobalKey();
+  final GlobalKey _archiveKey = GlobalKey();
+  final GlobalKey _copyKey = GlobalKey();
   String? _kodeUU;
   late PasalModel _currentPasal;
   final ScrollController _scrollController = ScrollController();
@@ -40,6 +46,21 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final prefs = await SharedPreferences.getInstance();
+      bool hasShown = prefs.getBool('has_shown_read_pasal_showcase') ?? false;
+
+      if (!hasShown && mounted) {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            ShowCaseWidget.of(
+              context,
+            ).startShowCase([_searchKey, _archiveKey, _copyKey]);
+            prefs.setBool('has_shown_read_pasal_showcase', true);
+          }
+        });
+      }
+    });
     _currentPasal = widget.pasal;
     _localSearchQuery = widget.searchQuery;
     _searchController = TextEditingController(text: widget.searchQuery);
@@ -109,32 +130,38 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: Icon(
-              _isSearching ? Icons.search_off : Icons.search,
-              color: isDark ? Colors.grey[300] : Colors.grey[700],
+          AppShowcase(
+            showcaseKey: _searchKey,
+            title: 'Cari Teks',
+            description: 'Cari kata tertentu di dalam pasal ini.',
+            child: IconButton(
+              icon: Icon(
+                _isSearching ? Icons.search_off : Icons.search,
+                color: isDark ? Colors.grey[300] : Colors.grey[700],
+              ),
+              onPressed: () {
+                setState(() {
+                  _isSearching = !_isSearching;
+                  if (!_isSearching) {
+                    _localSearchQuery = '';
+                    _searchController.clear();
+                  }
+                });
+              },
+              tooltip: _isSearching ? 'Tutup Pencarian' : 'Cari di Pasal',
             ),
-            onPressed: () {
-              setState(() {
-                _isSearching = !_isSearching;
-                if (!_isSearching) {
-                  _localSearchQuery = '';
-                  _searchController.clear();
-                }
-              });
-            },
-            tooltip: _isSearching ? 'Tutup Pencarian' : 'Cari di Pasal',
           ),
           Builder(
-            builder: (ctx) => IconButton(
-              icon: Icon(
-                Icons.menu,
-                color: isDark ? Colors.grey[300] : Colors.grey[700],
-                size: 24,
-              ),
-              onPressed: () => Scaffold.of(ctx).openEndDrawer(),
-              tooltip: 'Pengaturan',
-            ),
+            builder:
+                (ctx) => IconButton(
+                  icon: Icon(
+                    Icons.menu,
+                    color: isDark ? Colors.grey[300] : Colors.grey[700],
+                    size: 24,
+                  ),
+                  onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+                  tooltip: 'Pengaturan',
+                ),
           ),
           const SizedBox(width: 4),
         ],
@@ -156,13 +183,13 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
               // Previous button
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: prevPasal != null
-                      ? () => _navigate(context, prevPasal!)
-                      : null,
+                  onPressed:
+                      prevPasal != null
+                          ? () => _navigate(context, prevPasal!)
+                          : null,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: isDark
-                        ? Colors.grey[300]
-                        : Colors.grey[700],
+                    foregroundColor:
+                        isDark ? Colors.grey[300] : Colors.grey[700],
                     side: BorderSide(
                       color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
                     ),
@@ -182,9 +209,10 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
               // Next button
               Expanded(
                 child: FilledButton.icon(
-                  onPressed: nextPasal != null
-                      ? () => _navigate(context, nextPasal!)
-                      : null,
+                  onPressed:
+                      nextPasal != null
+                          ? () => _navigate(context, nextPasal!)
+                          : null,
                   style: FilledButton.styleFrom(
                     backgroundColor: uuColor,
                     foregroundColor: Colors.white,
@@ -215,9 +243,10 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                 color: bgColor,
                 border: Border(
                   bottom: BorderSide(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : Colors.black.withValues(alpha: 0.05),
+                    color:
+                        isDark
+                            ? Colors.white.withValues(alpha: 0.05)
+                            : Colors.black.withValues(alpha: 0.05),
                   ),
                 ),
               ),
@@ -239,17 +268,18 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                       size: 20,
                       color: isDark ? Colors.grey[400] : Colors.grey[600],
                     ),
-                    suffixIcon: _localSearchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 20),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {
-                                _localSearchQuery = '';
-                              });
-                            },
-                          )
-                        : null,
+                    suffixIcon:
+                        _localSearchQuery.isNotEmpty
+                            ? IconButton(
+                              icon: const Icon(Icons.clear, size: 20),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _localSearchQuery = '';
+                                });
+                              },
+                            )
+                            : null,
                     filled: true,
                     fillColor: AppColors.inputFill(isDark),
                     border: OutlineInputBorder(
@@ -285,9 +315,10 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                         color: AppColors.card(isDark),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.08)
-                              : Colors.black.withValues(alpha: 0.05),
+                          color:
+                              isDark
+                                  ? Colors.white.withValues(alpha: 0.08)
+                                  : Colors.black.withValues(alpha: 0.05),
                           width: 1,
                         ),
                       ),
@@ -362,119 +393,145 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   // Archive Button
-                                  ValueListenableBuilder<List<String>>(
-                                    valueListenable: archiveService.archivedIds,
-                                    builder: (context, ids, _) {
-                                      final isArchived = ids.contains(
-                                        _currentPasal.id,
-                                      );
-                                      return InkWell(
-                                        onTap: () {
-                                          archiveService.toggleArchive(
-                                            _currentPasal.id,
-                                          );
+                                  AppShowcase(
+                                    showcaseKey: _archiveKey,
+                                    title: 'Simpan',
+                                    description:
+                                        'Simpan pasal ke halaman Favorit.',
+                                    child: ValueListenableBuilder<List<String>>(
+                                      valueListenable:
+                                          archiveService.archivedIds,
+                                      builder: (context, ids, _) {
+                                        final isArchived = ids.contains(
+                                          _currentPasal.id,
+                                        );
+                                        return InkWell(
+                                          onTap: () {
+                                            archiveService.toggleArchive(
+                                              _currentPasal.id,
+                                            );
 
-                                          AppNotification.show(
-                                            context,
-                                            isArchived
-                                                ? "Dihapus dari Tersimpan"
-                                                : "Berhasil Disimpan",
-                                            color: isArchived
-                                                ? Colors.grey[700]
-                                                : AppColors.primary,
-                                            icon: isArchived
-                                                ? Icons.delete_outline_rounded
-                                                : Icons.bookmark_rounded,
-                                          );
-                                        },
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Container(
-                                          padding: const EdgeInsets.all(8.0),
-                                          decoration: BoxDecoration(
-                                            color: isDark
-                                                ? Colors.grey.withValues(
-                                                    alpha: 0.1,
-                                                  )
-                                                : Colors.grey.withValues(
-                                                    alpha: 0.05,
-                                                  ),
-                                            borderRadius: BorderRadius.circular(
-                                              8,
+                                            AppNotification.show(
+                                              context,
+                                              isArchived
+                                                  ? "Dihapus dari Tersimpan"
+                                                  : "Berhasil Disimpan",
+                                              color:
+                                                  isArchived
+                                                      ? Colors.grey[700]
+                                                      : AppColors.primary,
+                                              icon:
+                                                  isArchived
+                                                      ? Icons
+                                                          .delete_outline_rounded
+                                                      : Icons.bookmark_rounded,
+                                            );
+                                          },
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(8.0),
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  isDark
+                                                      ? Colors.grey.withValues(
+                                                        alpha: 0.1,
+                                                      )
+                                                      : Colors.grey.withValues(
+                                                        alpha: 0.05,
+                                                      ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: Icon(
+                                              isArchived
+                                                  ? Icons.bookmark_rounded
+                                                  : Icons
+                                                      .bookmark_border_rounded,
+                                              size: 18,
+                                              color:
+                                                  isArchived
+                                                      ? AppColors.primary
+                                                      : (isDark
+                                                          ? Colors.grey[400]
+                                                          : Colors.grey[600]),
                                             ),
                                           ),
-                                          child: Icon(
-                                            isArchived
-                                                ? Icons.bookmark_rounded
-                                                : Icons.bookmark_border_rounded,
-                                            size: 18,
-                                            color: isArchived
-                                                ? AppColors.primary
-                                                : (isDark
-                                                      ? Colors.grey[400]
-                                                      : Colors.grey[600]),
-                                          ),
-                                        ),
-                                      );
-                                    },
+                                        );
+                                      },
+                                    ),
                                   ),
                                   const SizedBox(width: 8),
 
                                   // Copy Button
-                                  InkWell(
-                                    onTap: () async {
-                                      final sb = StringBuffer();
-                                      sb.writeln(_kodeUU ?? "UU");
-                                      sb.writeln(
-                                        "Pasal ${_currentPasal.nomor}",
-                                      );
-                                      if (_currentPasal.judul != null &&
-                                          _currentPasal.judul!
-                                              .trim()
-                                              .isNotEmpty) {
+                                  AppShowcase(
+                                    showcaseKey: _copyKey,
+                                    title: 'Salin',
+                                    description:
+                                        'Salin isi pasal lengkap ke clipboard.',
+                                    child: InkWell(
+                                      onTap: () async {
+                                        final sb = StringBuffer();
+                                        sb.writeln(_kodeUU ?? "UU");
                                         sb.writeln(
-                                          _currentPasal.judul!.toUpperCase(),
+                                          "Pasal ${_currentPasal.nomor}",
                                         );
-                                      }
-                                      sb.writeln();
-                                      sb.writeln(_currentPasal.isi);
-                                      if (_currentPasal.penjelasan != null &&
-                                          _currentPasal
-                                              .penjelasan!
-                                              .isNotEmpty) {
+                                        if (_currentPasal.judul != null &&
+                                            _currentPasal.judul!
+                                                .trim()
+                                                .isNotEmpty) {
+                                          sb.writeln(
+                                            _currentPasal.judul!.toUpperCase(),
+                                          );
+                                        }
                                         sb.writeln();
-                                        sb.writeln("PENJELASAN");
-                                        sb.writeln(_currentPasal.penjelasan);
-                                      }
+                                        sb.writeln(_currentPasal.isi);
+                                        if (_currentPasal.penjelasan != null &&
+                                            _currentPasal
+                                                .penjelasan!
+                                                .isNotEmpty) {
+                                          sb.writeln();
+                                          sb.writeln("PENJELASAN");
+                                          sb.writeln(_currentPasal.penjelasan);
+                                        }
 
-                                      await Clipboard.setData(
-                                        ClipboardData(text: sb.toString()),
-                                      );
-                                      if (context.mounted) {
-                                        AppNotification.show(
-                                          context,
-                                          "Pasal berhasil disalin",
-                                          color: Colors.green,
-                                          icon: Icons.copy_rounded,
+                                        await Clipboard.setData(
+                                          ClipboardData(text: sb.toString()),
                                         );
-                                      }
-                                    },
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(8.0),
-                                      decoration: BoxDecoration(
-                                        color: isDark
-                                            ? Colors.grey.withValues(alpha: 0.1)
-                                            : Colors.grey.withValues(
-                                                alpha: 0.05,
-                                              ),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Icon(
-                                        Icons.copy_rounded,
-                                        size: 18,
-                                        color: isDark
-                                            ? Colors.grey[400]
-                                            : Colors.grey[600],
+                                        if (context.mounted) {
+                                          AppNotification.show(
+                                            context,
+                                            "Pasal berhasil disalin",
+                                            color: Colors.green,
+                                            icon: Icons.copy_rounded,
+                                          );
+                                        }
+                                      },
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(8.0),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              isDark
+                                                  ? Colors.grey.withValues(
+                                                    alpha: 0.1,
+                                                  )
+                                                  : Colors.grey.withValues(
+                                                    alpha: 0.05,
+                                                  ),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.copy_rounded,
+                                          size: 18,
+                                          color:
+                                              isDark
+                                                  ? Colors.grey[400]
+                                                  : Colors.grey[600],
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -518,9 +575,10 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                           Container(
                             height: 1,
                             width: double.infinity,
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.1)
-                                : Colors.black.withValues(alpha: 0.1),
+                            color:
+                                isDark
+                                    ? Colors.white.withValues(alpha: 0.1)
+                                    : Colors.black.withValues(alpha: 0.1),
                           ),
                           const SizedBox(height: 24),
 
@@ -550,9 +608,10 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                             searchQuery: _localSearchQuery,
                             fontSize: 16,
                             height: 1.8,
-                            color: isDark
-                                ? Colors.grey[200]
-                                : const Color(0xFF333333),
+                            color:
+                                isDark
+                                    ? Colors.grey[200]
+                                    : const Color(0xFF333333),
                           ),
                         ],
                       ),
