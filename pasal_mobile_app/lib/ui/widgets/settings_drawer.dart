@@ -1,14 +1,19 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../core/config/env.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/app_colors.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:showcaseview/showcaseview.dart';
+import 'app_showcase.dart';
 import '../../core/config/theme_controller.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/services/storage_info_service.dart';
 import '../../core/services/sync_manager.dart';
 import '../../core/services/sync_progress.dart';
 import '../screens/login_screen.dart';
 import 'app_notification.dart';
+import '../../core/services/tutorial_service.dart';
 
 /// A reusable end drawer widget for settings that can be used across all screens.
 /// Usage: Add this as the endDrawer of your Scaffold and use a hamburger icon
@@ -21,6 +26,30 @@ class SettingsDrawer extends StatefulWidget {
 }
 
 class _SettingsDrawerState extends State<SettingsDrawer> {
+  final GlobalKey _updateKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _checkAndShowTutorial(),
+    );
+  }
+
+  void _checkAndShowTutorial() async {
+    final prefs = await SharedPreferences.getInstance();
+    bool hasShown = prefs.getBool('has_shown_settings_showcase') ?? false;
+
+    if (!hasShown && mounted) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          ShowcaseView.get().startShowCase([_updateKey]);
+          prefs.setBool('has_shown_settings_showcase', true);
+        }
+      });
+    }
+  }
+
   bool _successFeedback = false;
 
   @override
@@ -193,308 +222,499 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                     const SizedBox(height: 24),
 
                     // Theme section
-                    Text(
-                      'Tema Aplikasi',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary(isDark),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ValueListenableBuilder<ThemeMode>(
-                      valueListenable: themeController,
-                      builder: (context, mode, _) {
-                        return Row(
-                          children: [
-                            _buildThemeOption(
-                              icon: Icons.brightness_auto_rounded,
-                              label: 'Sistem',
-                              isSelected: mode == ThemeMode.system,
-                              onTap: () =>
-                                  themeController.setTheme(ThemeMode.system),
-                              isDark: isDark,
-                            ),
-                            const SizedBox(width: 8),
-                            _buildThemeOption(
-                              icon: Icons.light_mode_rounded,
-                              label: 'Terang',
-                              isSelected: mode == ThemeMode.light,
-                              onTap: () =>
-                                  themeController.setTheme(ThemeMode.light),
-                              isDark: isDark,
-                            ),
-                            const SizedBox(width: 8),
-                            _buildThemeOption(
-                              icon: Icons.dark_mode_rounded,
-                              label: 'Gelap',
-                              isSelected: mode == ThemeMode.dark,
-                              onTap: () =>
-                                  themeController.setTheme(ThemeMode.dark),
-                              isDark: isDark,
-                            ),
-                          ],
-                        );
-                      },
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Tema Aplikasi',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary(isDark),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ValueListenableBuilder<ThemeMode>(
+                          valueListenable: themeController,
+                          builder: (context, mode, _) {
+                            return Row(
+                              children: [
+                                _buildThemeOption(
+                                  icon: Icons.brightness_auto_rounded,
+                                  label: 'Sistem',
+                                  isSelected: mode == ThemeMode.system,
+                                  onTap: () => themeController.setTheme(
+                                    ThemeMode.system,
+                                  ),
+                                  isDark: isDark,
+                                ),
+                                const SizedBox(width: 8),
+                                _buildThemeOption(
+                                  icon: Icons.light_mode_rounded,
+                                  label: 'Terang',
+                                  isSelected: mode == ThemeMode.light,
+                                  onTap: () =>
+                                      themeController.setTheme(ThemeMode.light),
+                                  isDark: isDark,
+                                ),
+                                const SizedBox(width: 8),
+                                _buildThemeOption(
+                                  icon: Icons.dark_mode_rounded,
+                                  label: 'Gelap',
+                                  isSelected: mode == ThemeMode.dark,
+                                  onTap: () =>
+                                      themeController.setTheme(ThemeMode.dark),
+                                  isDark: isDark,
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ],
                     ),
 
                     const SizedBox(height: 24),
 
                     // Sync section
-                    Text(
-                      'Sinkronisasi Data',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary(isDark),
+                    AppShowcase(
+                      showcaseKey: _updateKey,
+                      title: 'Sinkronisasi Data',
+                      description:
+                          'Pastikan data Anda selalu terbaru:\n\n• Tekan tombol ini untuk memeriksa pembaruan\n• Data pasal akan diunduh dari server\n• Proses berlangsung di latar belakang\n\nLakukan sinkronisasi secara berkala untuk mendapat data terbaru.',
+                      shapeBorder: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    ValueListenableBuilder<bool>(
-                      valueListenable: syncManager.updateAvailable,
-                      builder: (context, updateAvailable, _) {
-                        return ValueListenableBuilder<SyncState>(
-                          valueListenable: syncManager.state,
-                          builder: (context, state, _) {
-                            return ValueListenableBuilder<SyncProgress?>(
-                              valueListenable: syncManager.progress,
-                              builder: (context, progress, _) {
-                                final isSyncing = state == SyncState.syncing;
-                                final isChecking = state == SyncState.checking;
-                                final isBusy = isSyncing || isChecking;
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Sinkronisasi Data',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary(isDark),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ValueListenableBuilder<bool>(
+                            valueListenable: syncManager.updateAvailable,
+                            builder: (context, updateAvailable, _) {
+                              return ValueListenableBuilder<SyncState>(
+                                valueListenable: syncManager.state,
+                                builder: (context, state, _) {
+                                  return ValueListenableBuilder<SyncProgress?>(
+                                    valueListenable: syncManager.progress,
+                                    builder: (context, progress, _) {
+                                      final isSyncing =
+                                          state == SyncState.syncing;
+                                      final isChecking =
+                                          state == SyncState.checking;
+                                      final isBusy = isSyncing || isChecking;
 
-                                // Determine UI state
-                                final bool showSuccess =
-                                    _successFeedback && !isBusy;
-                                final bool showUpdateAvailable =
-                                    updateAvailable && !isBusy && !showSuccess;
+                                      final bool showSuccess =
+                                          _successFeedback && !isBusy;
+                                      final bool showUpdateAvailable =
+                                          updateAvailable &&
+                                          !isBusy &&
+                                          !showSuccess;
 
-                                return GestureDetector(
-                                  onTap: isBusy
-                                      ? null
-                                      : () async {
-                                          if (showUpdateAvailable) {
-                                            Navigator.pop(context);
-                                            syncManager.performSync();
-                                          } else {
-                                            final hasUpdate = await syncManager
-                                                .forceCheckUpdates();
-                                            if (mounted) {
-                                              if (!hasUpdate) {
-                                                setState(() {
-                                                  _successFeedback = true;
-                                                });
-                                                Future.delayed(
-                                                  const Duration(seconds: 3),
-                                                  () {
-                                                    if (mounted) {
+                                      return GestureDetector(
+                                        onTap: isBusy
+                                            ? null
+                                            : () async {
+                                                if (showUpdateAvailable) {
+                                                  Navigator.pop(context);
+                                                  syncManager.performSync();
+                                                } else {
+                                                  final hasUpdate =
+                                                      await syncManager
+                                                          .forceCheckUpdates();
+                                                  if (mounted) {
+                                                    if (!hasUpdate) {
                                                       setState(() {
-                                                        _successFeedback =
-                                                            false;
+                                                        _successFeedback = true;
                                                       });
+                                                      Future.delayed(
+                                                        const Duration(
+                                                          seconds: 3,
+                                                        ),
+                                                        () {
+                                                          if (mounted) {
+                                                            setState(() {
+                                                              _successFeedback =
+                                                                  false;
+                                                            });
+                                                          }
+                                                        },
+                                                      );
+                                                    } else {
+                                                      Navigator.pop(context);
                                                     }
-                                                  },
-                                                );
-                                              } else {
-                                                Navigator.pop(context);
-                                              }
-                                            }
-                                          }
-                                        },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: isDark
-                                          ? AppColors.primary.withValues(
-                                              alpha: 0.1,
-                                            )
-                                          : AppColors.primary.withValues(
-                                              alpha: 0.05,
+                                                  }
+                                                }
+                                              },
+                                        child: Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            color: isDark
+                                                ? AppColors.primary.withValues(
+                                                    alpha: 0.1,
+                                                  )
+                                                : AppColors.primary.withValues(
+                                                    alpha: 0.05,
+                                                  ),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
                                             ),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: showUpdateAvailable
-                                          ? Border.all(
-                                              color: AppColors.primary
-                                                  .withAlpha(100),
-                                            )
-                                          : null,
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.all(10),
-                                              decoration: BoxDecoration(
-                                                color: showSuccess
-                                                    ? Colors.green.withValues(
-                                                        alpha: 0.1,
-                                                      )
-                                                    : AppColors.primary
-                                                          .withValues(
-                                                            alpha: 0.1,
-                                                          ),
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                              ),
-                                              child: isBusy
-                                                  ? const SizedBox(
-                                                      width: 20,
-                                                      height: 20,
-                                                      child:
-                                                          CircularProgressIndicator(
-                                                            strokeWidth: 2,
-                                                          ),
-                                                    )
-                                                  : Icon(
-                                                      showSuccess
-                                                          ? Icons.check_circle
-                                                          : (showUpdateAvailable
-                                                                ? Icons
-                                                                      .system_update
-                                                                : Icons
-                                                                      .sync_rounded),
-                                                      color: showSuccess
-                                                          ? AppColors.success
-                                                          : AppColors.primary,
-                                                      size: 20,
-                                                    ),
-                                            ),
-                                            const SizedBox(width: 16),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
+                                            border: showUpdateAvailable
+                                                ? Border.all(
+                                                    color: AppColors.primary
+                                                        .withAlpha(100),
+                                                  )
+                                                : null,
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
                                                 children: [
-                                                  Text(
-                                                    showSuccess
-                                                        ? 'Data Sudah Terbaru'
-                                                        : (isChecking
-                                                              ? 'Memeriksa...'
-                                                              : (isSyncing
-                                                                    ? 'Sinkronisasi...'
-                                                                    : (showUpdateAvailable
-                                                                          ? 'Update Tersedia'
-                                                                          : 'Periksa Update'))),
-                                                    style: TextStyle(
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.w600,
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                          10,
+                                                        ),
+                                                    decoration: BoxDecoration(
                                                       color: showSuccess
-                                                          ? AppColors.success
-                                                          : AppColors.textPrimary(
-                                                              isDark,
-                                                            ),
+                                                          ? Colors.green
+                                                                .withValues(
+                                                                  alpha: 0.1,
+                                                                )
+                                                          : AppColors.primary
+                                                                .withValues(
+                                                                  alpha: 0.1,
+                                                                ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            10,
+                                                          ),
+                                                    ),
+                                                    child: isBusy
+                                                        ? const SizedBox(
+                                                            width: 20,
+                                                            height: 20,
+                                                            child:
+                                                                CircularProgressIndicator(
+                                                                  strokeWidth:
+                                                                      2,
+                                                                ),
+                                                          )
+                                                        : Icon(
+                                                            showSuccess
+                                                                ? Icons
+                                                                      .check_circle
+                                                                : (showUpdateAvailable
+                                                                      ? Icons
+                                                                            .system_update
+                                                                      : Icons
+                                                                            .sync_rounded),
+                                                            color: showSuccess
+                                                                ? AppColors
+                                                                      .success
+                                                                : AppColors
+                                                                      .primary,
+                                                            size: 20,
+                                                          ),
+                                                  ),
+                                                  const SizedBox(width: 16),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text(
+                                                          showSuccess
+                                                              ? 'Data Sudah Terbaru'
+                                                              : (isChecking
+                                                                    ? 'Memeriksa...'
+                                                                    : (isSyncing
+                                                                          ? 'Sinkronisasi...'
+                                                                          : (showUpdateAvailable
+                                                                                ? 'Update Tersedia'
+                                                                                : 'Periksa Update'))),
+                                                          style: TextStyle(
+                                                            fontSize: 14,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            color:
+                                                                AppColors.textPrimary(
+                                                                  isDark,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                          height: 2,
+                                                        ),
+                                                        Text(
+                                                          isSyncing
+                                                              ? (progress
+                                                                        ?.currentOperation ??
+                                                                    'Memproses...')
+                                                              : (syncManager.lastSyncTime !=
+                                                                        null
+                                                                    ? 'Terakhir: ${syncManager.lastSyncText}'
+                                                                    : 'Belum pernah sync'),
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                            color: isDark
+                                                                ? Colors
+                                                                      .grey[500]
+                                                                : Colors
+                                                                      .grey[600],
+                                                          ),
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                        ),
+                                                      ],
                                                     ),
                                                   ),
-                                                  const SizedBox(height: 2),
-                                                  Text(
-                                                    isSyncing
-                                                        ? (progress
-                                                                  ?.currentOperation ??
-                                                              'Memproses...')
-                                                        : (syncManager.lastSyncTime !=
-                                                                  null
-                                                              ? 'Terakhir: ${syncManager.lastSyncText}'
-                                                              : 'Belum pernah sync'),
-                                                    style: TextStyle(
-                                                      fontSize: 12,
+                                                  if (isSyncing)
+                                                    IconButton(
+                                                      icon: Icon(
+                                                        Icons.close_rounded,
+                                                        color: isDark
+                                                            ? Colors.grey[500]
+                                                            : Colors.grey[400],
+                                                        size: 20,
+                                                      ),
+                                                      onPressed: () =>
+                                                          syncManager
+                                                              .cancelSync(),
+                                                      tooltip: 'Batalkan',
+                                                      padding: EdgeInsets.zero,
+                                                      constraints:
+                                                          const BoxConstraints(),
+                                                    )
+                                                  else if (!isChecking &&
+                                                      !showSuccess)
+                                                    Icon(
+                                                      Icons.chevron_right,
                                                       color: isDark
-                                                          ? Colors.grey[500]
-                                                          : Colors.grey[600],
+                                                          ? Colors.grey[600]
+                                                          : Colors.grey[400],
                                                     ),
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
                                                 ],
                                               ),
-                                            ),
-                                            if (isSyncing)
-                                              IconButton(
-                                                icon: Icon(
-                                                  Icons.close_rounded,
-                                                  color: isDark
-                                                      ? Colors.grey[500]
-                                                      : Colors.grey[400],
-                                                  size: 20,
-                                                ),
-                                                onPressed: () =>
-                                                    syncManager.cancelSync(),
-                                                tooltip: 'Batalkan',
-                                                padding: EdgeInsets.zero,
-                                                constraints:
-                                                    const BoxConstraints(),
-                                              )
-                                            else if (!isChecking &&
-                                                !showSuccess)
-                                              Icon(
-                                                Icons.chevron_right,
-                                                color: isDark
-                                                    ? Colors.grey[600]
-                                                    : Colors.grey[400],
-                                              ),
-                                          ],
-                                        ),
-                                        if (isSyncing && progress != null) ...[
-                                          const SizedBox(height: 12),
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                            child: LinearProgressIndicator(
-                                              value: progress.progress,
-                                              minHeight: 6,
-                                              backgroundColor: isDark
-                                                  ? Colors.grey[700]
-                                                  : Colors.grey[300],
-                                              valueColor:
-                                                  const AlwaysStoppedAnimation<
-                                                    Color
-                                                  >(AppColors.primary),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Text(
-                                                "${progress.progressPercent}%",
-                                                style: TextStyle(
-                                                  color: AppColors.primary,
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              if (progress
-                                                      .estimatedRemainingFormatted !=
-                                                  null)
-                                                Text(
-                                                  progress
-                                                      .estimatedRemainingFormatted!,
-                                                  style: TextStyle(
-                                                    color: isDark
-                                                        ? Colors.grey[500]
-                                                        : Colors.grey[600],
-                                                    fontSize: 11,
+                                              if (isSyncing &&
+                                                  progress != null) ...[
+                                                const SizedBox(height: 12),
+                                                ClipRRect(
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                  child: LinearProgressIndicator(
+                                                    value: progress.progress,
+                                                    minHeight: 6,
+                                                    backgroundColor: isDark
+                                                        ? Colors.grey[700]
+                                                        : Colors.grey[300],
+                                                    valueColor:
+                                                        const AlwaysStoppedAnimation<
+                                                          Color
+                                                        >(AppColors.primary),
                                                   ),
                                                 ),
+                                                const SizedBox(height: 8),
+                                                Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
+                                                  children: [
+                                                    Text(
+                                                      "${progress.progressPercent}%",
+                                                      style: TextStyle(
+                                                        color:
+                                                            AppColors.primary,
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                    if (progress
+                                                            .estimatedRemainingFormatted !=
+                                                        null)
+                                                      Text(
+                                                        progress
+                                                            .estimatedRemainingFormatted!,
+                                                        style: TextStyle(
+                                                          color: isDark
+                                                              ? Colors.grey[500]
+                                                              : Colors
+                                                                    .grey[600],
+                                                          fontSize: 11,
+                                                        ),
+                                                      ),
+                                                  ],
+                                                ),
+                                              ],
                                             ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Storage Info section (only show on native platforms, not web)
+                    if (!kIsWeb) ...[
+                      const SizedBox(height: 24),
+
+                      Text(
+                        'Penyimpanan Lokal',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary(isDark),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      FutureBuilder<StorageInfo>(
+                        future: storageInfoService.getStorageInfo(),
+                        builder: (context, snapshot) {
+                          final isLoading =
+                              snapshot.connectionState ==
+                              ConnectionState.waiting;
+                          final info = snapshot.data;
+
+                          return Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.inputFill(isDark),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(
+                                        kIsWeb
+                                            ? Icons.storage_rounded
+                                            : Icons.folder_rounded,
+                                        color: AppColors.primary,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            isLoading
+                                                ? 'Memuat...'
+                                                : (info?.summary ??
+                                                      'Tidak tersedia'),
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.textPrimary(
+                                                isDark,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            isLoading
+                                                ? 'Menghitung ukuran...'
+                                                : (info?.storageType ??
+                                                      'Tidak tersedia'),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: isDark
+                                                  ? Colors.grey[500]
+                                                  : Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (!isLoading &&
+                                    info != null &&
+                                    info.isAvailable) ...[
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? AppColors.bottomNav(isDark)
+                                          : AppColors.scaffold(isDark),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        _buildStorageInfoItem(
+                                          icon: Icons.article_rounded,
+                                          label: 'Pasal',
+                                          value: '${info.pasalCount}',
+                                          isDark: isDark,
+                                        ),
+                                        Container(
+                                          width: 1,
+                                          height: 30,
+                                          color: isDark
+                                              ? Colors.grey[700]
+                                              : Colors.grey[300],
+                                        ),
+                                        _buildStorageInfoItem(
+                                          icon: Icons.auto_stories_rounded,
+                                          label: 'UU',
+                                          value: '${info.uuCount}',
+                                          isDark: isDark,
+                                        ),
+                                        if (!kIsWeb) ...[
+                                          Container(
+                                            width: 1,
+                                            height: 30,
+                                            color: isDark
+                                                ? Colors.grey[700]
+                                                : Colors.grey[300],
+                                          ),
+                                          _buildStorageInfoItem(
+                                            icon: Icons.data_usage_rounded,
+                                            label: 'Ukuran',
+                                            value: info.formattedSize,
+                                            isDark: isDark,
                                           ),
                                         ],
                                       ],
                                     ),
                                   ),
-                                );
-                              },
-                            );
-                          },
-                        );
-                      },
-                    ),
+                                ],
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ], // end of if (!kIsWeb)
                   ],
                 ),
               ),
@@ -573,8 +793,8 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(dialogContext); // Close dialog only
-              // Navigator.pop(context); // Temporarily disabled for testing
+              Navigator.pop(dialogContext);
+              Navigator.pop(context);
 
               try {
                 await Supabase.instance.client.auth.resetPasswordForEmail(
@@ -592,7 +812,6 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                 }
               } on AuthException catch (e) {
                 String message;
-                // Check for rate limit error
                 if (e.message.toLowerCase().contains('rate') ||
                     e.message.toLowerCase().contains('limit') ||
                     e.message.toLowerCase().contains('too many')) {
@@ -654,15 +873,12 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
           ),
           TextButton(
             onPressed: () async {
-              // First, complete the logout process before any navigation
+              await TutorialService.resetAll();
               await authService.logout();
 
               if (!dialogContext.mounted) return;
 
-              // Close dialog first, then navigate using the root navigator
               Navigator.pop(dialogContext);
-
-              // Use pushAndRemoveUntil from the dialog context to clear entire stack
               Navigator.pushAndRemoveUntil(
                 dialogContext,
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -724,6 +940,42 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildStorageInfoItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    required bool isDark,
+  }) {
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color: isDark ? Colors.grey[400] : Colors.grey[600],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary(isDark),
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: isDark ? Colors.grey[500] : Colors.grey[600],
+            ),
+          ),
+        ],
       ),
     );
   }

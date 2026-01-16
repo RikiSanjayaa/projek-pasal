@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../core/config/app_colors.dart';
 import '../../core/services/sync_manager.dart';
@@ -5,7 +7,7 @@ import '../../core/services/sync_progress.dart';
 import 'app_notification.dart';
 
 /// Banner widget that shows when updates are available
-/// Now with detailed progress tracking during sync
+/// Modern, glass-like design with auto-dismiss functionality
 class UpdateBanner extends StatefulWidget {
   final VoidCallback? onSyncComplete;
 
@@ -16,84 +18,148 @@ class UpdateBanner extends StatefulWidget {
 }
 
 class _UpdateBannerState extends State<UpdateBanner>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _animationController;
+  late AnimationController _syncController; // Controller for rotation animation
   late Animation<double> _fadeAnimation;
+  Timer? _autoDismissTimer;
+
+  // Track state locally to avoid rebuilding conflicts
+  bool _isDismissedByTimer = false;
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 600),
     );
+
+    _syncController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
     );
+
+    // Initial check
+    _checkVisibility();
+
+    // Listeners
+    syncManager.updateAvailable.addListener(_checkVisibility);
+    syncManager.state.addListener(_checkVisibility);
   }
 
   @override
   void dispose() {
+    syncManager.updateAvailable.removeListener(_checkVisibility);
+    syncManager.state.removeListener(_checkVisibility);
     _animationController.dispose();
+    _syncController.dispose();
+    _cancelTimer();
     super.dispose();
   }
 
+  void _checkVisibility() {
+    final hasUpdate = syncManager.updateAvailable.value;
+    final isSyncing = syncManager.state.value == SyncState.syncing;
+    final shouldShow = hasUpdate || isSyncing;
+
+    if (shouldShow) {
+      if (_animationController.status != AnimationStatus.completed &&
+          _animationController.status != AnimationStatus.forward) {
+        _animationController.forward();
+      }
+
+      if (hasUpdate && !isSyncing && !_isDismissedByTimer) {
+        _startAutoDismissTimer();
+      } else if (isSyncing) {
+        _cancelTimer();
+      }
+    } else {
+      if (_animationController.status != AnimationStatus.dismissed &&
+          _animationController.status != AnimationStatus.reverse) {
+        _animationController.reverse();
+      }
+      _cancelTimer();
+    }
+  }
+
+  void _startAutoDismissTimer() {
+    // Prevent stacking timers
+    if (_autoDismissTimer != null) return;
+
+    _autoDismissTimer = Timer(const Duration(seconds: 10), () {
+      if (mounted) {
+        _isDismissedByTimer = true;
+        // Functionally dismiss in manager, which triggers listeners to close UI
+        syncManager.dismissUpdate();
+      }
+    });
+  }
+
+  void _cancelTimer() {
+    _autoDismissTimer?.cancel();
+    _autoDismissTimer = null;
+  }
+
   void _handleSync() async {
+    _cancelTimer();
     final result = await syncManager.performSync();
 
     if (mounted) {
       if (result.success) {
         AppNotification.show(
           context,
-          "Sinkronisasi selesai",
+          "Update berhasil!",
           color: AppColors.success,
-          icon: Icons.check_circle,
+          icon: Icons.check_circle_rounded,
         );
         widget.onSyncComplete?.call();
       } else if (syncManager.progress.value?.phase == SyncPhase.cancelled) {
         AppNotification.show(
           context,
-          "Sinkronisasi dibatalkan",
+          "Update dibatalkan",
           color: AppColors.warning,
-          icon: Icons.cancel,
+          icon: Icons.close_rounded,
         );
       } else {
         AppNotification.show(
           context,
           result.message,
           color: AppColors.error,
-          icon: Icons.error_outline,
+          icon: Icons.error_rounded,
         );
       }
     }
   }
 
   void _confirmCancel() {
+    _cancelTimer();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.card(isDark),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          "Batalkan Sinkronisasi?",
-          style: TextStyle(
-            color: AppColors.textPrimary(isDark),
-            fontWeight: FontWeight.bold,
-          ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          "Batalkan?",
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        content: Text(
-          "Sinkronisasi akan dihentikan. Anda dapat mencoba lagi nanti.",
-          style: TextStyle(color: AppColors.textSecondary(isDark)),
-        ),
+        content: const Text("Proses download akan dihentikan."),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.textSecondary(isDark),
+            onPressed: () {
+              Navigator.pop(context);
+              if (syncManager.updateAvailable.value) _startAutoDismissTimer();
+            },
+            child: Text(
+              "Lanjut Download",
+              style: TextStyle(color: AppColors.primary),
             ),
-            child: const Text("Lanjutkan"),
           ),
           TextButton(
             onPressed: () {
@@ -110,135 +176,124 @@ class _UpdateBannerState extends State<UpdateBanner>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        if (_animationController.value == 0) return const SizedBox.shrink();
 
-    return ValueListenableBuilder<bool>(
-      valueListenable: syncManager.updateAvailable,
-      builder: (context, updateAvailable, child) {
-        return ValueListenableBuilder<SyncState>(
-          valueListenable: syncManager.state,
-          builder: (context, syncState, child) {
-            final shouldShow =
-                updateAvailable || syncState == SyncState.syncing;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final isSyncing = syncManager.state.value == SyncState.syncing;
 
-            if (shouldShow) {
-              _animationController.forward();
-            } else {
-              _animationController.reverse();
-            }
-
-            return AnimatedBuilder(
-              animation: _animationController,
-              builder: (context, child) {
-                if (_animationController.value == 0) {
-                  return const SizedBox.shrink();
-                }
-
-                return SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, -1),
-                    end: Offset.zero,
-                  ).animate(_animationController),
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Container(
-                      margin: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: isDark
-                              ? [
-                                  AppColors.primary.withValues(alpha: 0.8),
-                                  AppColors.primary.withValues(alpha: 0.6),
-                                ]
-                              : [
-                                  AppColors.primary.withValues(alpha: 0.8),
-                                  AppColors.primary.withValues(alpha: 0.6),
-                                ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: syncState == SyncState.syncing
-                            ? _buildSyncingContent()
-                            : _buildUpdateAvailableContent(),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            );
-          },
+        return SlideTransition(
+          position:
+              Tween<Offset>(
+                begin: const Offset(0, -0.5),
+                end: Offset.zero,
+              ).animate(
+                CurvedAnimation(
+                  parent: _animationController,
+                  curve: Curves.easeOutBack,
+                ),
+              ),
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                border: Border.all(
+                  color: isDark ? Colors.white10 : Colors.grey[200]!,
+                  width: 1,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: isSyncing
+                    ? _buildSyncingContent(isDark)
+                    : _buildUpdateAvailableContent(isDark),
+              ),
+            ),
+          ),
         );
       },
     );
   }
 
-  Widget _buildUpdateAvailableContent() {
+  Widget _buildUpdateAvailableContent(bool isDark) {
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subTextColor = isDark ? Colors.white70 : Colors.black54;
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withAlpha(51),
-              borderRadius: BorderRadius.circular(8),
+              color: AppColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.system_update,
-              color: Colors.white,
-              size: 24,
+            child: Icon(
+              Icons.system_update_rounded,
+              color: AppColors.primary,
+              size: 20,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  "Update Tersedia",
+                Text(
+                  "Update Baru",
                   style: TextStyle(
-                    color: Colors.white,
+                    color: textColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  "Data terakhir: ${syncManager.lastSyncText}",
-                  style: TextStyle(
-                    color: Colors.white.withAlpha(204),
-                    fontSize: 12,
-                  ),
+                  "Tersedia data terbaru",
+                  style: TextStyle(color: subTextColor, fontSize: 12),
                 ),
               ],
             ),
           ),
           TextButton(
-            onPressed: () => syncManager.dismissUpdate(),
+            onPressed: () {
+              _cancelTimer();
+              syncManager.dismissUpdate();
+            },
             style: TextButton.styleFrom(
-              foregroundColor: Colors.white.withAlpha(179),
+              foregroundColor: subTextColor,
               padding: const EdgeInsets.symmetric(horizontal: 12),
+              minimumSize: const Size(0, 0),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
             ),
-            child: const Text("Nanti"),
+            child: const Text("Nanti", style: TextStyle(fontSize: 13)),
           ),
-          const SizedBox(width: 4),
-          FilledButton(
-            onPressed: _handleSync,
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: AppColors.primary,
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: () {
+              _cancelTimer();
+              _handleSync();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
               elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+              shape: const StadiumBorder(),
+              visualDensity: VisualDensity.compact,
+              minimumSize: const Size(0, 36),
             ),
             child: const Text(
               "Update",
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             ),
           ),
         ],
@@ -246,29 +301,32 @@ class _UpdateBannerState extends State<UpdateBanner>
     );
   }
 
-  Widget _buildSyncingContent() {
+  Widget _buildSyncingContent(bool isDark) {
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subTextColor = isDark ? Colors.white70 : Colors.black54;
+
     return ValueListenableBuilder<SyncProgress?>(
       valueListenable: syncManager.progress,
       builder: (context, progress, child) {
         return Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(51),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  RotationTransition(
+                    turns: _syncController,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.sync,
+                        color: AppColors.primary,
+                        size: 20,
                       ),
                     ),
                   ),
@@ -280,78 +338,70 @@ class _UpdateBannerState extends State<UpdateBanner>
                       children: [
                         Text(
                           progress?.isIncremental == true
-                              ? "Memperbarui Data..."
-                              : "Mengunduh Data...",
-                          style: const TextStyle(
-                            color: Colors.white,
+                              ? "Memperbarui..."
+                              : "Mengunduh...",
+                          style: TextStyle(
+                            color: textColor,
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          progress?.currentOperation ?? "Mempersiapkan...",
-                          style: TextStyle(
-                            color: Colors.white.withAlpha(204),
-                            fontSize: 12,
+                        if (progress?.currentOperation != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              progress!.currentOperation,
+                              style: TextStyle(
+                                color: subTextColor,
+                                fontSize: 11,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
                       ],
                     ),
                   ),
-                  // Cancel button
                   IconButton(
                     onPressed: _confirmCancel,
                     icon: Icon(
-                      Icons.close,
-                      color: Colors.white.withAlpha(179),
+                      Icons.close_rounded,
+                      color: subTextColor,
                       size: 20,
                     ),
                     tooltip: "Batalkan",
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    visualDensity: VisualDensity.compact,
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              // Progress bar
               ClipRRect(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(10),
                 child: LinearProgressIndicator(
                   value: progress?.progress,
-                  minHeight: 6,
-                  backgroundColor: Colors.white.withAlpha(51),
-                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                  minHeight: 4,
+                  backgroundColor: isDark ? Colors.white10 : Colors.grey[200],
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                 ),
               ),
-              const SizedBox(height: 8),
-              // Stats row
+              const SizedBox(height: 6),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     "${progress?.progressPercent ?? 0}%",
                     style: TextStyle(
-                      color: Colors.white.withAlpha(204),
-                      fontSize: 12,
+                      color: AppColors.primary,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   if (progress?.downloadedBytesFormatted != null)
                     Text(
                       progress!.downloadedBytesFormatted,
-                      style: TextStyle(
-                        color: Colors.white.withAlpha(179),
-                        fontSize: 11,
-                      ),
-                    ),
-                  if (progress?.estimatedRemainingFormatted != null)
-                    Text(
-                      progress!.estimatedRemainingFormatted!,
-                      style: TextStyle(
-                        color: Colors.white.withAlpha(179),
-                        fontSize: 11,
-                      ),
+                      style: TextStyle(color: subTextColor, fontSize: 10),
                     ),
                 ],
               ),
@@ -374,26 +424,22 @@ class SyncStatusIndicator extends StatelessWidget {
       builder: (context, state, child) {
         switch (state) {
           case SyncState.checking:
-            return const Tooltip(
-              message: "Memeriksa update...",
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            );
+            return const SizedBox.shrink();
           case SyncState.syncing:
             return ValueListenableBuilder<SyncProgress?>(
               valueListenable: syncManager.progress,
               builder: (context, progress, child) {
                 return Tooltip(
                   message: "Sinkronisasi ${progress?.progressPercent ?? 0}%",
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      value: progress?.progress,
+                  child: Center(
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        value: progress?.progress,
+                        color: AppColors.primary,
+                      ),
                     ),
                   ),
                 );
@@ -403,7 +449,7 @@ class SyncStatusIndicator extends StatelessWidget {
             return const Tooltip(
               message: "Gagal sinkronisasi",
               child: Icon(
-                Icons.sync_problem,
+                Icons.sync_problem_rounded,
                 color: AppColors.warning,
                 size: 20,
               ),
@@ -413,11 +459,11 @@ class SyncStatusIndicator extends StatelessWidget {
               valueListenable: syncManager.updateAvailable,
               builder: (context, hasUpdate, child) {
                 if (hasUpdate) {
-                  return const Tooltip(
+                  return Tooltip(
                     message: "Update tersedia",
                     child: Icon(
-                      Icons.system_update,
-                      color: AppColors.info,
+                      Icons.system_update_rounded,
+                      color: AppColors.primary,
                       size: 20,
                     ),
                   );

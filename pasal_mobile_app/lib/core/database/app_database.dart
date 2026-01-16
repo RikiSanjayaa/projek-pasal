@@ -1,8 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
+import 'package:drift_flutter/drift_flutter.dart';
 
 part 'app_database.g.dart';
 
@@ -330,30 +327,30 @@ class AppDatabase extends _$AppDatabase {
 
   // Delete all pasal by undang-undang ID
   Future<int> deletePasalByUndangUndangId(String undangUndangId) {
-    return (delete(pasalTable)
-          ..where((tbl) => tbl.undangUndangId.equals(undangUndangId)))
-        .go();
+    return (delete(
+      pasalTable,
+    )..where((tbl) => tbl.undangUndangId.equals(undangUndangId))).go();
   }
 
   // Delete pasal links by source pasal ID
   Future<int> deletePasalLinksBySourcePasalId(String sourcePasalId) {
-    return (delete(pasalLinksTable)
-          ..where((tbl) => tbl.sourcePasalId.equals(sourcePasalId)))
-        .go();
+    return (delete(
+      pasalLinksTable,
+    )..where((tbl) => tbl.sourcePasalId.equals(sourcePasalId))).go();
   }
 
   // Delete pasal links by target pasal ID
   Future<int> deletePasalLinksByTargetPasalId(String targetPasalId) {
-    return (delete(pasalLinksTable)
-          ..where((tbl) => tbl.targetPasalId.equals(targetPasalId)))
-        .go();
+    return (delete(
+      pasalLinksTable,
+    )..where((tbl) => tbl.targetPasalId.equals(targetPasalId))).go();
   }
 
   // Delete inactive undang-undang and their related data
   Future<void> deleteInactiveUndangUndang() async {
-    final inactiveUU = await (select(undangUndangTable)
-          ..where((tbl) => tbl.isActive.equals(false)))
-        .get();
+    final inactiveUU = await (select(
+      undangUndangTable,
+    )..where((tbl) => tbl.isActive.equals(false))).get();
 
     for (final uu in inactiveUU) {
       // Get all pasal for this UU to delete their links
@@ -385,9 +382,9 @@ class AppDatabase extends _$AppDatabase {
 
   // Delete inactive pasal and their links
   Future<void> deleteInactivePasal() async {
-    final inactivePasal = await (select(pasalTable)
-          ..where((tbl) => tbl.isActive.equals(false)))
-        .get();
+    final inactivePasal = await (select(
+      pasalTable,
+    )..where((tbl) => tbl.isActive.equals(false))).get();
 
     for (final pasal in inactivePasal) {
       await deletePasalLinksBySourcePasalId(pasal.id);
@@ -397,10 +394,13 @@ class AppDatabase extends _$AppDatabase {
   }
 }
 
-LazyDatabase _openConnection() {
-  return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'pasal_database.db'));
-    return NativeDatabase(file, logStatements: true);
-  });
+QueryExecutor _openConnection() {
+  return driftDatabase(
+    name: 'pasal_database',
+    native: const DriftNativeOptions(shareAcrossIsolates: false),
+    web: DriftWebOptions(
+      sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+      driftWorker: Uri.parse('drift_worker.dart.js'),
+    ),
+  );
 }

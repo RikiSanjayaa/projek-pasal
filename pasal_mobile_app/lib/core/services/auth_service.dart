@@ -1,10 +1,16 @@
-import 'dart:io';
 import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
+
+import '../utils/platform_utils.dart';
+
+// Platform detection helper
+bool get isAndroid => !kIsWeb && Platform.isAndroid;
+bool get isIOS => !kIsWeb && Platform.isIOS;
+bool get isWeb => kIsWeb;
 
 /// Authentication state enum
 enum AuthState { unknown, authenticated, unauthenticated, expired }
@@ -16,7 +22,12 @@ enum ExpiryCheckResult { valid, expired, noData }
 enum ActiveStatusResult { active, inactive, expired, error }
 
 /// Reason for forced logout/deactivation
-enum DeactivationReason { none, accountInactive, accountExpired, accountDeleted }
+enum DeactivationReason {
+  none,
+  accountInactive,
+  accountExpired,
+  accountDeleted,
+}
 
 /// Result type for login
 enum LoginResultType { success, successAdmin, failure, expired, deviceConflict }
@@ -63,8 +74,9 @@ class AuthService {
   final ValueNotifier<int?> daysUntilExpiry = ValueNotifier(null);
   final ValueNotifier<String?> userName = ValueNotifier(null);
   final ValueNotifier<bool> isAdmin = ValueNotifier(false);
-  final ValueNotifier<DeactivationReason> deactivationReason =
-      ValueNotifier(DeactivationReason.none);
+  final ValueNotifier<DeactivationReason> deactivationReason = ValueNotifier(
+    DeactivationReason.none,
+  );
 
   /// Initialize auth service - call on app startup
   Future<void> initialize() async {
@@ -75,14 +87,40 @@ class AuthService {
     isAdmin.value = adminFlag == 'true';
   }
 
-  /// Generate or retrieve device ID
-  /// Generates a UUID on first call and stores it securely
+  /// Get hardware-based device ID
+  /// Uses Android ID or iOS identifierForVendor for consistency across app reinstalls/data clears
+  /// Falls back to generated UUID only if hardware ID is unavailable
   Future<String> getDeviceId() async {
+    // First check if we have a cached device ID
     String? deviceId = await _secureStorage.read(key: _deviceIdKey);
-    if (deviceId == null) {
-      deviceId = const Uuid().v4();
-      await _secureStorage.write(key: _deviceIdKey, value: deviceId);
+    if (deviceId != null) {
+      return deviceId;
     }
+
+    // Get hardware-based device ID
+    final deviceInfo = DeviceInfoPlugin();
+    try {
+      if (isWeb) {
+        // For web, use browser fingerprinting via device_info_plus
+        final info = await deviceInfo.webBrowserInfo;
+        deviceId = '${info.browserName.name}_${info.userAgent?.hashCode ?? 0}';
+      } else if (isAndroid) {
+        final info = await deviceInfo.androidInfo;
+        deviceId = info.id; // Android ID - persists across app data clears
+      } else if (isIOS) {
+        final info = await deviceInfo.iosInfo;
+        deviceId = info
+            .identifierForVendor; // Vendor ID - persists while app is installed
+      }
+    } catch (e) {
+      print('Error getting hardware device ID: $e');
+    }
+
+    // Fallback to UUID if hardware ID is unavailable
+    deviceId ??= const Uuid().v4();
+
+    // Cache the device ID for faster access
+    await _secureStorage.write(key: _deviceIdKey, value: deviceId);
     return deviceId;
   }
 
@@ -90,10 +128,13 @@ class AuthService {
   Future<String> getDeviceName() async {
     final deviceInfo = DeviceInfoPlugin();
     try {
-      if (Platform.isAndroid) {
+      if (isWeb) {
+        final info = await deviceInfo.webBrowserInfo;
+        return 'Web Browser (${info.browserName.name})';
+      } else if (isAndroid) {
         final info = await deviceInfo.androidInfo;
         return '${info.brand} ${info.model}';
-      } else if (Platform.isIOS) {
+      } else if (isIOS) {
         final info = await deviceInfo.iosInfo;
         return '${info.name} (${info.model})';
       }
@@ -138,14 +179,16 @@ class AuthService {
           // Not in either table
           await _supabase.auth.signOut();
           return LoginResult.failure(
-              'Akun tidak ditemukan. Hubungi administrator.');
+            'Akun tidak ditemukan. Hubungi administrator.',
+          );
         }
 
         // Check if admin is active
         if (adminProfile['is_active'] != true) {
           await _supabase.auth.signOut();
           return LoginResult.failure(
-              'Akun admin tidak aktif. Hubungi super administrator.');
+            'Akun admin tidak aktif. Hubungi super administrator.',
+          );
         }
 
         // Admin login successful - no device binding or expiry for admins
@@ -167,8 +210,7 @@ class AuthService {
       // 3. Check if user is active
       if (userProfile['is_active'] != true) {
         await _supabase.auth.signOut();
-        return LoginResult.failure(
-            'Akun tidak aktif. Hubungi administrator.');
+        return LoginResult.failure('Akun tidak aktif. Hubungi administrator.');
       }
 
       // 4. Check if user is expired
@@ -176,7 +218,8 @@ class AuthService {
       if (expiresAt.isBefore(clock.now())) {
         await _supabase.auth.signOut();
         return LoginResult.expired(
-            'Akun telah kadaluarsa. Hubungi administrator untuk memperpanjang.');
+          'Akun telah kadaluarsa. Hubungi administrator untuk memperpanjang.',
+        );
       }
 
       // 5. Check device binding
@@ -193,24 +236,22 @@ class AuthService {
           await _supabase.auth.signOut();
           final otherDeviceName = device['device_name'] ?? 'perangkat lain';
           return LoginResult.deviceConflict(
-              'Akun sedang aktif di $otherDeviceName. '
-              'Logout dari perangkat tersebut terlebih dahulu, '
-              'atau hubungi administrator jika perangkat hilang.');
+            'Akun sedang aktif di $otherDeviceName. '
+            'Logout dari perangkat tersebut terlebih dahulu, '
+            'atau hubungi administrator jika perangkat hilang.',
+          );
         }
       }
 
       // 6. Register/update this device
       final deviceName = await getDeviceName();
-      await _supabase.from('user_devices').upsert(
-        {
-          'user_id': userId,
-          'device_id': deviceId,
-          'device_name': deviceName,
-          'is_active': true,
-          'last_active_at': clock.now().toUtc().toIso8601String(),
-        },
-        onConflict: 'user_id,device_id',
-      );
+      await _supabase.from('user_devices').upsert({
+        'user_id': userId,
+        'device_id': deviceId,
+        'device_name': deviceName,
+        'is_active': true,
+        'last_active_at': clock.now().toUtc().toIso8601String(),
+      }, onConflict: 'user_id,device_id');
 
       // 7. Store expiry and user info locally for offline check
       await _secureStorage.write(
@@ -233,9 +274,10 @@ class AuthService {
       return LoginResult.success();
     } on AuthException catch (e) {
       return LoginResult.failure(
-          e.message.contains('Invalid login')
-              ? 'Email atau password salah.'
-              : e.message);
+        e.message.contains('Invalid login')
+            ? 'Email atau password salah.'
+            : e.message,
+      );
     } catch (e) {
       print('Login error: $e');
       return LoginResult.failure('Terjadi kesalahan. Coba lagi nanti.');
@@ -343,9 +385,7 @@ class AuthService {
       if (userId != null) {
         await _supabase
             .from('user_devices')
-            .update({
-              'last_active_at': clock.now().toUtc().toIso8601String(),
-            })
+            .update({'last_active_at': clock.now().toUtc().toIso8601String()})
             .eq('user_id', userId)
             .eq('device_id', deviceId);
       }

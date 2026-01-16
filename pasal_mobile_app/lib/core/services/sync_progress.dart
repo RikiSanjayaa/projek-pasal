@@ -1,32 +1,35 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
+
+import '../utils/platform_utils.dart'
+    if (dart.library.html) '../utils/platform_stub_web.dart';
 
 /// Phases of the sync process
 enum SyncPhase {
   /// Initial phase - preparing to sync
   preparing,
-  
+
   /// Checking for updates on server
   checking,
-  
+
   /// Downloading undang-undang list
   downloadingUU,
-  
+
   /// Downloading pasal for each UU
   downloadingPasal,
-  
+
   /// Downloading pasal links
   downloadingLinks,
-  
+
   /// Saving data to local database
   saving,
-  
+
   /// Sync completed successfully
   complete,
-  
+
   /// Sync was cancelled by user
   cancelled,
-  
+
   /// Sync failed with error
   error,
 }
@@ -35,46 +38,46 @@ enum SyncPhase {
 class SyncProgress {
   /// Current phase of sync
   final SyncPhase phase;
-  
+
   /// Human-readable description of current operation
   final String currentOperation;
-  
+
   /// Whether this is an incremental sync (vs full sync)
   final bool isIncremental;
-  
+
   /// Total number of UU to process
   final int totalUU;
-  
+
   /// Current UU index being processed (1-based for display)
   final int currentUUIndex;
-  
+
   /// Name of current UU being processed
   final String? currentUUName;
-  
+
   /// Total pasal count across all UU
   final int totalPasal;
-  
+
   /// Pasal downloaded so far
   final int downloadedPasal;
-  
+
   /// Estimated total bytes to download
   final int estimatedTotalBytes;
-  
+
   /// Bytes downloaded so far
   final int downloadedBytes;
-  
+
   /// Timestamp when sync started (for time estimation)
   final DateTime startTime;
-  
+
   /// Number of new records (for incremental sync summary)
   final int newRecords;
-  
+
   /// Number of updated records (for incremental sync summary)
   final int updatedRecords;
-  
+
   /// Number of deleted/deactivated records
   final int deletedRecords;
-  
+
   /// Error message if phase is error
   final String? errorMessage;
 
@@ -115,7 +118,7 @@ class SyncProgress {
     if (progress <= 0 || progress >= 1) return null;
     final elapsedMs = elapsed.inMilliseconds;
     if (elapsedMs < 1000) return null; // Need at least 1 second of data
-    
+
     final estimatedTotalMs = elapsedMs / progress;
     final remainingMs = estimatedTotalMs - elapsedMs;
     return Duration(milliseconds: remainingMs.round());
@@ -123,7 +126,7 @@ class SyncProgress {
 
   /// Format bytes to human readable string
   String get downloadedBytesFormatted => formatBytes(downloadedBytes);
-  
+
   /// Format estimated total bytes
   String get estimatedTotalBytesFormatted => formatBytes(estimatedTotalBytes);
 
@@ -131,7 +134,7 @@ class SyncProgress {
   String? get estimatedRemainingFormatted {
     final remaining = estimatedRemaining;
     if (remaining == null) return null;
-    
+
     if (remaining.inSeconds < 5) return "Hampir selesai";
     if (remaining.inSeconds < 60) return "${remaining.inSeconds} detik lagi";
     if (remaining.inMinutes < 60) {
@@ -204,7 +207,7 @@ class SyncProgress {
   factory SyncProgress.initial({bool isIncremental = false}) {
     return SyncProgress(
       phase: SyncPhase.preparing,
-      currentOperation: isIncremental 
+      currentOperation: isIncremental
           ? "Memeriksa pembaruan..."
           : "Mempersiapkan unduhan...",
       isIncremental: isIncremental,
@@ -227,7 +230,13 @@ String formatBytes(int bytes) {
 }
 
 /// Get database file size in bytes
+/// Note: On web platform, database is stored in IndexedDB and size is not easily accessible
 Future<int> getDatabaseSize() async {
+  // On web, database is stored in IndexedDB, size not easily accessible
+  if (kIsWeb) {
+    return 0;
+  }
+
   try {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File('${dbFolder.path}/pasal_database.db');
@@ -243,5 +252,8 @@ Future<int> getDatabaseSize() async {
 /// Get formatted database size string
 Future<String> getDatabaseSizeFormatted() async {
   final size = await getDatabaseSize();
+  if (kIsWeb && size == 0) {
+    return 'N/A (Web)';
+  }
   return formatBytes(size);
 }

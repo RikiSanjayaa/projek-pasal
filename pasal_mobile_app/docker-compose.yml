@@ -1,0 +1,24 @@
+services:
+  pasal-mobile-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pasal-mobile-web
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Optional: Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M

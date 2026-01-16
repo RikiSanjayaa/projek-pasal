@@ -16,19 +16,55 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+
   @override
   void initState() {
     super.initState();
+
+    // Animation setup
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
+      ),
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOutBack),
+      ),
+    );
+
+    _controller.forward();
     _checkDataAndNavigate();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   Future<void> _checkDataAndNavigate() async {
     // Initialize services
     await syncManager.initialize();
+    // Allow animation to play a bit before heavy lifting
+    await Future.delayed(const Duration(milliseconds: 500));
     await authService.initialize();
 
-    await Future.delayed(const Duration(seconds: 2));
+    // Ensure splash stays for at least 3 seconds total for branding visibility
+    await Future.delayed(const Duration(seconds: 3));
 
     if (!mounted) return;
 
@@ -84,70 +120,128 @@ class _SplashScreenState extends State<SplashScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AppColors.scaffold(isDark),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Logo container with glow effect
-            Container(
-              width: 120,
-              height: 120,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: isDark
-                    ? Image.asset(
-                        'assets/images/logo-dark.png',
-                        fit: BoxFit.contain,
-                      )
-                    : Image.asset(
-                        'assets/images/logo.png',
-                        fit: BoxFit.contain,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark
+                ? [
+                    const Color(0xFF0F172A), // Slate 900
+                    const Color(0xFF1E293B), // Slate 800
+                  ]
+                : [
+                    const Color(0xFFFFFFFF),
+                    const Color(0xFFF8FAFC), // Slate 50
+                  ],
+          ),
+        ),
+        child: SafeArea(
+          child: Stack(
+            children: [
+              // 1. University Logo - Top Center
+              Positioned(
+                top: 50,
+                left: 0,
+                right: 0,
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Center(
+                    child: Image.asset(
+                      isDark
+                          ? 'assets/images/logo-ubg putih.png'
+                          : 'assets/images/logo-ubg hitam.png',
+                      height: 80,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ),
+
+              // 2. Main Content - Center
+              Center(
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // App Logo - Floating with Glow
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            // Removed shadow/glow as requested
+                          ),
+                          child: Image.asset(
+                            isDark
+                                ? 'assets/images/logo-dark.png'
+                                : 'assets/images/logo.png',
+                            height: 130,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        // Title
+                        Text(
+                          "CariPasal",
+                          style: TextStyle(
+                            fontSize: 34,
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF1E293B),
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        // Subtitle - Elegant & Thin
+                        Text(
+                          "PENCARIAN PASAL HUKUM INDONESIA",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white70 : Colors.grey[700],
+                            letterSpacing: 2.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // 3. Loading - Bottom
+              Positioned(
+                bottom: 60,
+                left: 0,
+                right: 0,
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          isDark
+                              ? Colors.white54
+                              : AppColors.primary.withValues(alpha: 0.8),
+                        ),
                       ),
+                    ),
+                  ),
+                ),
               ),
-            ),
-
-            const SizedBox(height: 24),
-
-            Text(
-              "CariPasal",
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: isDark ? AppColors.textPrimaryDark : AppColors.primary,
-                letterSpacing: 1.2,
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            Text(
-              "Pencarian Pasal Hukum Indonesia",
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary(isDark),
-              ),
-            ),
-
-            const SizedBox(height: 48),
-
-            SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              "Menyiapkan data hukum...",
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary(isDark),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

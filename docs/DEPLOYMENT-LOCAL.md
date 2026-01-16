@@ -167,6 +167,12 @@ docker exec -i supabase-db psql -U supabase_admin -d postgres < supabase/migrati
 docker exec -i supabase-db psql -U supabase_admin -d postgres < supabase/migrations/006_fix_get_download_data.sql
 docker exec -i supabase-db psql -U supabase_admin -d postgres < supabase/migrations/007_fix_pasal_links_rls.sql
 docker exec -i supabase-db psql -U supabase_admin -d postgres < supabase/migrations/008_audit_logs_retention.sql
+docker exec -i supabase-db psql -U supabase_admin -d postgres < supabase/migrations/009_cascade_uu_is_active.sql
+docker exec -i supabase-db psql -U supabase_admin -d postgres < supabase/migrations/010_sync_check_function.sql
+docker exec -i supabase-db psql -U supabase_admin -d postgres < supabase/migrations/011_user_auth_schema.sql
+docker exec -i supabase-db psql -U supabase_admin -d postgres < supabase/migrations/012_update_rls_for_user_auth.sql
+docker exec -i supabase-db psql -U supabase_admin -d postgres < supabase/migrations/013_fix_cascade_uu_is_active.sql
+docker exec -i supabase-db psql -U supabase_admin -d postgres < supabase/migrations/014_audit_improvements.sql
 
 # Seed data (opsional)
 docker exec -i supabase-db psql -U supabase_admin -d postgres < supabase/seed.sql
@@ -248,13 +254,25 @@ http://localhost:5173
 
 ---
 
-### 2.5 Create Admin (Edge Function Lokal)
+### 2.5 Deploy Edge Functions (Lokal)
 
-copy isi folder yang ada pada repo: `supabase/functions/` ke directory supabase docker yang di copy tadi `volumes/functions`.
+Copy semua edge functions dari repo ke directory supabase docker volumes.
 
 ```bash
+# Copy semua edge functions
 cp -r ~/projek-pasal/supabase/functions/create-admin ~/projek-pasal/volumes/functions/
+cp -r ~/projek-pasal/supabase/functions/create-user ~/projek-pasal/volumes/functions/
+cp -r ~/projek-pasal/supabase/functions/create-users-batch ~/projek-pasal/volumes/functions/
+cp -r ~/projek-pasal/supabase/functions/delete-user ~/projek-pasal/volumes/functions/
 ```
+
+**Daftar Edge Functions:**
+| Function | Deskripsi |
+|----------|-----------|
+| `create-admin` | Membuat akun admin baru |
+| `create-user` | Membuat akun pengguna mobile baru dengan masa aktif 3 tahun |
+| `create-users-batch` | Import batch pengguna mobile dari XLSX |
+| `delete-user` | Menghapus akun pengguna mobile |
 
 ---
 

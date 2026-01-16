@@ -11,6 +11,9 @@ import '../utils/uu_color_helper.dart';
 import '../../core/services/archive_service.dart';
 import '../widgets/app_notification.dart';
 import '../widgets/pasal_sections.dart';
+import 'package:showcaseview/showcaseview.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/app_showcase.dart';
 
 class ReadPasalScreen extends StatefulWidget {
   final PasalModel pasal;
@@ -29,6 +32,9 @@ class ReadPasalScreen extends StatefulWidget {
 }
 
 class _ReadPasalScreenState extends State<ReadPasalScreen> {
+  final GlobalKey _searchKey = GlobalKey();
+  final GlobalKey _archiveKey = GlobalKey();
+  final GlobalKey _copyKey = GlobalKey();
   String? _kodeUU;
   late PasalModel _currentPasal;
   final ScrollController _scrollController = ScrollController();
@@ -40,6 +46,23 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final prefs = await SharedPreferences.getInstance();
+      bool hasShown = prefs.getBool('has_shown_read_pasal_showcase') ?? false;
+
+      if (!hasShown && mounted) {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            ShowcaseView.get().startShowCase([
+              _searchKey,
+              _archiveKey,
+              _copyKey,
+            ]);
+            prefs.setBool('has_shown_read_pasal_showcase', true);
+          }
+        });
+      }
+    });
     _currentPasal = widget.pasal;
     _localSearchQuery = widget.searchQuery;
     _searchController = TextEditingController(text: widget.searchQuery);
@@ -109,21 +132,27 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: Icon(
-              _isSearching ? Icons.search_off : Icons.search,
-              color: isDark ? Colors.grey[300] : Colors.grey[700],
+          AppShowcase(
+            showcaseKey: _searchKey,
+            title: 'Cari di Pasal',
+            description:
+                'Temukan kata atau frasa tertentu dalam pasal ini.\n\nKetik kata yang dicari dan teks yang cocok akan otomatis ditandai.\n\nTekan lagi untuk menutup pencarian.',
+            child: IconButton(
+              icon: Icon(
+                _isSearching ? Icons.search_off : Icons.search,
+                color: isDark ? Colors.grey[300] : Colors.grey[700],
+              ),
+              onPressed: () {
+                setState(() {
+                  _isSearching = !_isSearching;
+                  if (!_isSearching) {
+                    _localSearchQuery = '';
+                    _searchController.clear();
+                  }
+                });
+              },
+              tooltip: _isSearching ? 'Tutup Pencarian' : 'Cari di Pasal',
             ),
-            onPressed: () {
-              setState(() {
-                _isSearching = !_isSearching;
-                if (!_isSearching) {
-                  _localSearchQuery = '';
-                  _searchController.clear();
-                }
-              });
-            },
-            tooltip: _isSearching ? 'Tutup Pencarian' : 'Cari di Pasal',
           ),
           Builder(
             builder: (ctx) => IconButton(
@@ -362,119 +391,138 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   // Archive Button
-                                  ValueListenableBuilder<List<String>>(
-                                    valueListenable: archiveService.archivedIds,
-                                    builder: (context, ids, _) {
-                                      final isArchived = ids.contains(
-                                        _currentPasal.id,
-                                      );
-                                      return InkWell(
-                                        onTap: () {
-                                          archiveService.toggleArchive(
-                                            _currentPasal.id,
-                                          );
+                                  AppShowcase(
+                                    showcaseKey: _archiveKey,
+                                    title: 'Simpan Pasal',
+                                    description:
+                                        'Tandai pasal ini sebagai favorit untuk akses cepat.\n\nPasal tersimpan dapat dilihat di halaman Tersimpan pada menu navigasi.\n\nTekan lagi untuk menghapus dari daftar simpan.',
+                                    child: ValueListenableBuilder<List<String>>(
+                                      valueListenable:
+                                          archiveService.archivedIds,
+                                      builder: (context, ids, _) {
+                                        final isArchived = ids.contains(
+                                          _currentPasal.id,
+                                        );
+                                        return InkWell(
+                                          onTap: () {
+                                            archiveService.toggleArchive(
+                                              _currentPasal.id,
+                                            );
 
-                                          AppNotification.show(
-                                            context,
-                                            isArchived
-                                                ? "Dihapus dari Tersimpan"
-                                                : "Berhasil Disimpan",
-                                            color: isArchived
-                                                ? Colors.grey[700]
-                                                : AppColors.primary,
-                                            icon: isArchived
-                                                ? Icons.delete_outline_rounded
-                                                : Icons.bookmark_rounded,
-                                          );
-                                        },
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Container(
-                                          padding: const EdgeInsets.all(8.0),
-                                          decoration: BoxDecoration(
-                                            color: isDark
-                                                ? Colors.grey.withValues(
-                                                    alpha: 0.1,
-                                                  )
-                                                : Colors.grey.withValues(
-                                                    alpha: 0.05,
-                                                  ),
-                                            borderRadius: BorderRadius.circular(
-                                              8,
+                                            AppNotification.show(
+                                              context,
+                                              isArchived
+                                                  ? "Dihapus dari Tersimpan"
+                                                  : "Berhasil Disimpan",
+                                              color: isArchived
+                                                  ? Colors.grey[700]
+                                                  : AppColors.primary,
+                                              icon: isArchived
+                                                  ? Icons.delete_outline_rounded
+                                                  : Icons.bookmark_rounded,
+                                            );
+                                          },
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(8.0),
+                                            decoration: BoxDecoration(
+                                              color: isDark
+                                                  ? Colors.grey.withValues(
+                                                      alpha: 0.1,
+                                                    )
+                                                  : Colors.grey.withValues(
+                                                      alpha: 0.05,
+                                                    ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: Icon(
+                                              isArchived
+                                                  ? Icons.bookmark_rounded
+                                                  : Icons
+                                                        .bookmark_border_rounded,
+                                              size: 18,
+                                              color: isArchived
+                                                  ? AppColors.primary
+                                                  : (isDark
+                                                        ? Colors.grey[400]
+                                                        : Colors.grey[600]),
                                             ),
                                           ),
-                                          child: Icon(
-                                            isArchived
-                                                ? Icons.bookmark_rounded
-                                                : Icons.bookmark_border_rounded,
-                                            size: 18,
-                                            color: isArchived
-                                                ? AppColors.primary
-                                                : (isDark
-                                                      ? Colors.grey[400]
-                                                      : Colors.grey[600]),
-                                          ),
-                                        ),
-                                      );
-                                    },
+                                        );
+                                      },
+                                    ),
                                   ),
                                   const SizedBox(width: 8),
 
                                   // Copy Button
-                                  InkWell(
-                                    onTap: () async {
-                                      final sb = StringBuffer();
-                                      sb.writeln(_kodeUU ?? "UU");
-                                      sb.writeln(
-                                        "Pasal ${_currentPasal.nomor}",
-                                      );
-                                      if (_currentPasal.judul != null &&
-                                          _currentPasal.judul!
-                                              .trim()
-                                              .isNotEmpty) {
+                                  AppShowcase(
+                                    showcaseKey: _copyKey,
+                                    title: 'Salin Pasal',
+                                    description:
+                                        'Salin seluruh isi pasal ke clipboard.\n\nTeks yang disalin mencakup:\n• Sumber Undang-Undang\n• Nomor dan judul pasal\n• Isi lengkap pasal\n• Penjelasan (jika ada)\n\nGunakan untuk berbagi atau referensi.',
+                                    child: InkWell(
+                                      onTap: () async {
+                                        final sb = StringBuffer();
+                                        sb.writeln(_kodeUU ?? "UU");
                                         sb.writeln(
-                                          _currentPasal.judul!.toUpperCase(),
+                                          "Pasal ${_currentPasal.nomor}",
                                         );
-                                      }
-                                      sb.writeln();
-                                      sb.writeln(_currentPasal.isi);
-                                      if (_currentPasal.penjelasan != null &&
-                                          _currentPasal
-                                              .penjelasan!
-                                              .isNotEmpty) {
+                                        if (_currentPasal.judul != null &&
+                                            _currentPasal.judul!
+                                                .trim()
+                                                .isNotEmpty) {
+                                          sb.writeln(
+                                            _currentPasal.judul!.toUpperCase(),
+                                          );
+                                        }
                                         sb.writeln();
-                                        sb.writeln("PENJELASAN");
-                                        sb.writeln(_currentPasal.penjelasan);
-                                      }
+                                        sb.writeln(_currentPasal.isi);
+                                        if (_currentPasal.penjelasan != null &&
+                                            _currentPasal
+                                                .penjelasan!
+                                                .isNotEmpty) {
+                                          sb.writeln();
+                                          sb.writeln("PENJELASAN");
+                                          sb.writeln(_currentPasal.penjelasan);
+                                        }
 
-                                      await Clipboard.setData(
-                                        ClipboardData(text: sb.toString()),
-                                      );
-                                      if (context.mounted) {
-                                        AppNotification.show(
-                                          context,
-                                          "Pasal berhasil disalin",
-                                          color: Colors.green,
-                                          icon: Icons.copy_rounded,
+                                        await Clipboard.setData(
+                                          ClipboardData(text: sb.toString()),
                                         );
-                                      }
-                                    },
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(8.0),
-                                      decoration: BoxDecoration(
-                                        color: isDark
-                                            ? Colors.grey.withValues(alpha: 0.1)
-                                            : Colors.grey.withValues(
-                                                alpha: 0.05,
-                                              ),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Icon(
-                                        Icons.copy_rounded,
-                                        size: 18,
-                                        color: isDark
-                                            ? Colors.grey[400]
-                                            : Colors.grey[600],
+                                        if (context.mounted) {
+                                          AppNotification.show(
+                                            context,
+                                            "Pasal berhasil disalin",
+                                            color: Colors.green,
+                                            icon: Icons.copy_rounded,
+                                          );
+                                        }
+                                      },
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(8.0),
+                                        decoration: BoxDecoration(
+                                          color: isDark
+                                              ? Colors.grey.withValues(
+                                                  alpha: 0.1,
+                                                )
+                                              : Colors.grey.withValues(
+                                                  alpha: 0.05,
+                                                ),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.copy_rounded,
+                                          size: 18,
+                                          color: isDark
+                                              ? Colors.grey[400]
+                                              : Colors.grey[600],
+                                        ),
                                       ),
                                     ),
                                   ),
