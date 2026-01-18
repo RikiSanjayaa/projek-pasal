@@ -60,7 +60,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _initData();
     _searchFocusNode.addListener(_onSearchFocusChange);
-
   }
 
   @override
@@ -451,11 +450,29 @@ class _HomeScreenState extends State<HomeScreen> {
                                 : const SizedBox(height: 20);
                           }
 
+                          final pasal = _paginatedData[index];
+
+                          List<String> matches = [];
+                          if (_selectedKeywords.isNotEmpty) {
+                            matches =
+                                pasal.keywords
+                                    .where(
+                                      (k) => _selectedKeywords.any(
+                                        (selected) =>
+                                            selected.toLowerCase() ==
+                                            k.toLowerCase(),
+                                      ),
+                                    )
+                                    .toList();
+                          }
+
                           return PasalCard(
-                            pasal: _paginatedData[index],
+                            pasal: pasal,
                             contextList: _filteredData,
                             searchQuery: _searchQuery,
                             showUULabel: true,
+                            matchedKeywords:
+                                matches, 
                           );
                         },
                       ),
