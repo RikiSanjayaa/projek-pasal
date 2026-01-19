@@ -414,140 +414,137 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 10),
 
             Expanded(
-              child: _selectedKeywords.isNotEmpty
-                  ? Builder(
-                      builder: (context) {
-                        List<PasalModel> mostRelevant = [];
-                        if (_selectedKeywords.length > 1) {
-                          mostRelevant = _filteredData.where((p) {
-                            int matchCount = 0;
-                            for (var k in _selectedKeywords) {
-                              if (p.keywords.any((pk) => pk.toLowerCase() == k.toLowerCase())) {
-                                matchCount++;
-                              }
-                            }
-                            return matchCount > 1;
-                          }).toList();
-                        }
-
-                        Map<String, List<PasalModel>> keywordGroups = {};
-                        for (var keyword in _selectedKeywords) {
-                          final matches = _filteredData.where((p) {
-                            bool hasKeyword = p.keywords
-                                .any((pk) => pk.toLowerCase() == keyword.toLowerCase());
-                            bool alreadyInTop = mostRelevant.contains(p);
-                            return hasKeyword && !alreadyInTop;
-                          }).toList();
-
-                          if (matches.isNotEmpty) {
-                            keywordGroups[keyword] = matches;
-                          }
-                        }
-
-                        if (_filteredData.isEmpty) {
-                          return const Center(child: Text("Tidak ada pasal yang cocok."));
-                        }
-
-                        return ListView(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
-                          children: [
-                            if (mostRelevant.isNotEmpty) ...[
-                              Builder(
-                                builder: (context) {
-                                  final Set<String> containedKeywords = {};
-                                  for (var p in mostRelevant) {
-                                    for (var k in _selectedKeywords) {
-                                      if (p.keywords.any((pk) => pk.toLowerCase() == k.toLowerCase())) {
-                                        containedKeywords.add(k);
-                                      }
+              child:
+                  _selectedKeywords.isNotEmpty
+                      ? Builder(
+                        builder: (context) {
+                          List<PasalModel> mostRelevant = [];
+                          if (_selectedKeywords.length > 1) {
+                            mostRelevant =
+                                _filteredData.where((p) {
+                                  int matchCount = 0;
+                                  for (var k in _selectedKeywords) {
+                                    if (p.keywords.any(
+                                      (pk) =>
+                                          pk.toLowerCase() == k.toLowerCase(),
+                                    )) {
+                                      matchCount++;
                                     }
                                   }
-                                  final subtitleStr = containedKeywords.join(", ");
+                                  return matchCount > 1;
+                                }).toList();
+                          }
 
-                                  return _buildSimpleHeader(
-                                    "Paling Relevan",
-                                    "Memuat: $subtitleStr",
-                                    isDark,
+                          Map<String, List<PasalModel>> keywordGroups = {};
+                          for (var keyword in _selectedKeywords) {
+                            final matches =
+                                _filteredData.where((p) {
+                                  bool hasKeyword = p.keywords.any(
+                                    (pk) =>
+                                        pk.toLowerCase() ==
+                                        keyword.toLowerCase(),
                                   );
-                                },
-                              ),
-                              
-                              ...mostRelevant.map((p) => PasalCard(
+                                  bool alreadyInTop = mostRelevant.contains(p);
+                                  return hasKeyword && !alreadyInTop;
+                                }).toList();
+
+                            if (matches.isNotEmpty) {
+                              keywordGroups[keyword] = matches;
+                            }
+                          }
+
+                          if (_filteredData.isEmpty) {
+                            return const Center(
+                              child: Text("Tidak ada pasal yang cocok."),
+                            );
+                          }
+
+                          return ListView(
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                            children: [
+                              if (mostRelevant.isNotEmpty) ...[
+                                _buildSimpleHeader("Paling Relevan", isDark),
+
+                                ...mostRelevant.map(
+                                  (p) => PasalCard(
                                     pasal: p,
                                     contextList: _filteredData,
                                     searchQuery: _searchQuery,
                                     showUULabel: true,
                                     matchedKeywords: const [],
-                                  )),
-                              const SizedBox(height: 24),
-                            ],
-
-                            //SECTION PER KEYWORD
-                            ...keywordGroups.entries.map((entry) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildSimpleHeader(
-                                    "Terkait ${entry.key}",
-                                    "Pasal yang mengandung topik ini",
-                                    isDark,
                                   ),
-                                  ...entry.value.map((p) => PasalCard(
+                                ),
+                                const SizedBox(height: 4),
+                              ],
+                              ...keywordGroups.entries.map((entry) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildSimpleHeader(
+                                      "Terkait ${entry.key}",
+                                      isDark,
+                                    ),
+
+                                    ...entry.value.map(
+                                      (p) => PasalCard(
                                         pasal: p,
                                         contextList: _filteredData,
                                         searchQuery: _searchQuery,
                                         showUULabel: true,
                                         matchedKeywords: const [],
-                                      )),
-                                  const SizedBox(height: 24),
-                                ],
-                              );
-                            }),
-                          ],
-                        );
-                      },
-                    )
-                  : _paginatedData.isEmpty
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                  ],
+                                );
+                              }),
+                            ],
+                          );
+                        },
+                      )
+                      : _paginatedData.isEmpty
                       ? const Center(child: Text("Data tidak ditemukan."))
                       : ListView.builder(
-                          controller: _listScrollController,
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          itemCount: _paginatedData.length + 1,
-                          itemBuilder: (context, index) {
-                            if (index == _paginatedData.length) {
-                              return _totalPages > 1
-                                  ? Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 20),
-                                      child: PaginationFooter(
-                                        currentPage: _currentPage,
-                                        totalPages: _totalPages,
-                                        onPrevious: () {
-                                          setState(() {
-                                            _currentPage--;
-                                            _updatePagination();
-                                          });
-                                          _listScrollController.jumpTo(0);
-                                        },
-                                        onNext: () {
-                                          setState(() {
-                                            _currentPage++;
-                                            _updatePagination();
-                                          });
-                                          _listScrollController.jumpTo(0);
-                                        },
-                                      ),
-                                    )
-                                  : const SizedBox(height: 20);
-                            }
-                            return PasalCard(
-                              pasal: _paginatedData[index],
-                              contextList: _filteredData,
-                              searchQuery: _searchQuery,
-                              showUULabel: true,
-                              matchedKeywords: const [],
-                            );
-                          },
-                        ),
+                        controller: _listScrollController,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: _paginatedData.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index == _paginatedData.length) {
+                            return _totalPages > 1
+                                ? Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 20,
+                                  ),
+                                  child: PaginationFooter(
+                                    currentPage: _currentPage,
+                                    totalPages: _totalPages,
+                                    onPrevious: () {
+                                      setState(() {
+                                        _currentPage--;
+                                        _updatePagination();
+                                      });
+                                      _listScrollController.jumpTo(0);
+                                    },
+                                    onNext: () {
+                                      setState(() {
+                                        _currentPage++;
+                                        _updatePagination();
+                                      });
+                                      _listScrollController.jumpTo(0);
+                                    },
+                                  ),
+                                )
+                                : const SizedBox(height: 20);
+                          }
+                          return PasalCard(
+                            pasal: _paginatedData[index],
+                            contextList: _filteredData,
+                            searchQuery: _searchQuery,
+                            showUULabel: true,
+                            matchedKeywords: const [],
+                          );
+                        },
+                      ),
             ),
           ],
         ),
@@ -983,40 +980,17 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
-  Widget _buildSimpleHeader(String title, String subtitle, bool isDark) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12, top: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(Icons.label_important_sharp, size: 18, color: AppColors.primary),
-          const SizedBox(width: 10),
-          
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary(isDark),
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary(isDark),
-                  ),
-                  maxLines: 1, 
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
+
+  Widget _buildSimpleHeader(String title, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 1, top: 1),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: AppColors.textPrimary(isDark),
+        ),
       ),
     );
   }
