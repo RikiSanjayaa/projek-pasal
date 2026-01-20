@@ -100,63 +100,6 @@ void main() {
         expect(link.isActive, isFalse);
       });
     });
-
-    group('toJson', () {
-      test('serializes to JSON correctly', () {
-        final createdAt = DateTime.utc(2025, 1, 15, 10, 0, 0);
-
-        final link = PasalLinkModel(
-          id: 'link-1',
-          sourcePasalId: 'pasal-1',
-          targetPasalId: 'pasal-2',
-          keterangan: 'Related',
-          isActive: true,
-          createdAt: createdAt,
-        );
-
-        final json = link.toJson();
-
-        expect(json['id'], 'link-1');
-        expect(json['source_pasal_id'], 'pasal-1');
-        expect(json['target_pasal_id'], 'pasal-2');
-        expect(json['keterangan'], 'Related');
-        expect(json['is_active'], isTrue);
-        expect(json['created_at'], '2025-01-15T10:00:00.000Z');
-      });
-
-      test('handles null values in toJson', () {
-        final link = PasalLinkModel(
-          id: 'link-1',
-          sourcePasalId: 'pasal-1',
-          targetPasalId: 'pasal-2',
-        );
-
-        final json = link.toJson();
-
-        expect(json['keterangan'], isNull);
-        expect(json['created_at'], isNull);
-      });
-
-      test('roundtrip fromJson -> toJson preserves data', () {
-        final originalJson = {
-          'id': 'link-roundtrip',
-          'source_pasal_id': 'pasal-source',
-          'target_pasal_id': 'pasal-target',
-          'keterangan': 'Test keterangan',
-          'is_active': true,
-          'created_at': '2025-01-15T10:00:00.000Z',
-        };
-
-        final link = PasalLinkModel.fromJson(originalJson);
-        final resultJson = link.toJson();
-
-        expect(resultJson['id'], originalJson['id']);
-        expect(resultJson['source_pasal_id'], originalJson['source_pasal_id']);
-        expect(resultJson['target_pasal_id'], originalJson['target_pasal_id']);
-        expect(resultJson['keterangan'], originalJson['keterangan']);
-        expect(resultJson['is_active'], originalJson['is_active']);
-      });
-    });
   });
 
   group('PasalLinkWithTarget', () {

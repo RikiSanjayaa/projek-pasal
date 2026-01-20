@@ -30,17 +30,6 @@ class PasalLinkModel {
           : null,
     );
   }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'source_pasal_id': sourcePasalId,
-      'target_pasal_id': targetPasalId,
-      'keterangan': keterangan,
-      'is_active': isActive,
-      'created_at': createdAt?.toIso8601String(),
-    };
-  }
 }
 
 /// Helper class that combines a target pasal with its link keterangan

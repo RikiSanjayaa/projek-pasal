@@ -6,7 +6,6 @@ import '../../core/services/query_service.dart';
 import '../../core/utils/search_utils.dart';
 import '../widgets/pasal_card.dart';
 import '../widgets/main_layout.dart';
-// import '../widgets/update_banner.dart';
 import '../widgets/keyword_bottom_sheet.dart';
 import '../widgets/pagination_footer.dart';
 import '../widgets/filter_widgets.dart';
@@ -404,7 +403,89 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 10),
 
             Expanded(
-              child: _paginatedData.isEmpty
+              child: _selectedKeywords.isNotEmpty
+                  ? Builder(
+                      builder: (context) {
+                        List<PasalModel> mostRelevant = [];
+                        if (_selectedKeywords.length > 1) {
+                          mostRelevant = _filteredData.where((p) {
+                            int matchCount = 0;
+                            for (var k in _selectedKeywords) {
+                              if (p.keywords.any(
+                                (pk) => pk.toLowerCase() == k.toLowerCase(),
+                              )) {
+                                matchCount++;
+                              }
+                            }
+                            return matchCount > 1;
+                          }).toList();
+                        }
+
+                        Map<String, List<PasalModel>> keywordGroups = {};
+                        for (var keyword in _selectedKeywords) {
+                          final matches = _filteredData.where((p) {
+                            bool hasKeyword = p.keywords.any(
+                              (pk) => pk.toLowerCase() == keyword.toLowerCase(),
+                            );
+                            bool alreadyInTop = mostRelevant.contains(p);
+                            return hasKeyword && !alreadyInTop;
+                          }).toList();
+
+                          if (matches.isNotEmpty) {
+                            keywordGroups[keyword] = matches;
+                          }
+                        }
+
+                        if (_filteredData.isEmpty) {
+                          return const Center(
+                            child: Text("Tidak ada pasal yang cocok."),
+                          );
+                        }
+
+                        return ListView(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                          children: [
+                            if (mostRelevant.isNotEmpty) ...[
+                              _buildSimpleHeader("Paling Relevan", isDark),
+
+                              ...mostRelevant.map(
+                                (p) => PasalCard(
+                                  pasal: p,
+                                  contextList: _filteredData,
+                                  searchQuery: _searchQuery,
+                                  showUULabel: true,
+                                  matchedKeywords: const [],
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                            ],
+                            ...keywordGroups.entries.map((entry) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildSimpleHeader(
+                                    "Terkait ${entry.key}",
+                                    isDark,
+                                  ),
+
+                                  ...entry.value.map(
+                                    (p) => PasalCard(
+                                      pasal: p,
+                                      contextList: _filteredData,
+                                      searchQuery: _searchQuery,
+                                      showUULabel: true,
+                                      matchedKeywords: const [],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                ],
+                              );
+                            }),
+                          ],
+                        );
+                      },
+                    )
+                  : _paginatedData.isEmpty
                   ? const Center(child: Text("Data tidak ditemukan."))
                   : ListView.builder(
                       controller: _listScrollController,
@@ -444,6 +525,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           contextList: _filteredData,
                           searchQuery: _searchQuery,
                           showUULabel: true,
+                          matchedKeywords: const [],
                         );
                       },
                     ),
@@ -843,6 +925,20 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.of(context).pop();
         _showKeywordBottomSheet(autoFocus: autoFocus);
       },
+    );
+  }
+
+  Widget _buildSimpleHeader(String title, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 1, top: 1),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: AppColors.textPrimary(isDark),
+        ),
+      ),
     );
   }
 }

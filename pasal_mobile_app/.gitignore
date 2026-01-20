@@ -70,3 +70,9 @@ lib/core/config/env.dart
 /linux/
 /macos/
 /web/
+# Allow custom web assets (required for Docker builds)
+!/web/sqlite3.wasm
+!/web/drift_worker.dart.js
+!/web/favicon.png
+!/web/icons/
+!/web/manifest.json

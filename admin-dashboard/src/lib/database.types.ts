@@ -255,6 +255,35 @@ export interface Database {
           created_at?: string
         }
       }
+      admin_devices: {
+        Row: {
+          id: string
+          admin_id: string
+          device_id: string
+          device_name: string | null
+          is_active: boolean
+          last_active_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          admin_id: string
+          device_id: string
+          device_name?: string | null
+          is_active?: boolean
+          last_active_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          admin_id?: string
+          device_id?: string
+          device_name?: string | null
+          is_active?: boolean
+          last_active_at?: string
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -320,6 +349,10 @@ export type UserDevice = Database['public']['Tables']['user_devices']['Row']
 export type UserDeviceInsert = Database['public']['Tables']['user_devices']['Insert']
 export type UserDeviceUpdate = Database['public']['Tables']['user_devices']['Update']
 
+export type AdminDevice = Database['public']['Tables']['admin_devices']['Row']
+export type AdminDeviceInsert = Database['public']['Tables']['admin_devices']['Insert']
+export type AdminDeviceUpdate = Database['public']['Tables']['admin_devices']['Update']
+
 // Extended types with relations
 export interface PasalWithUndangUndang extends Pasal {
   undang_undang: UndangUndang
@@ -333,3 +366,8 @@ export interface UserWithDevices extends User {
   user_devices: UserDevice[]
   created_by_admin?: AdminUser | null
 }
+
+export interface AdminWithDevices extends AdminUser {
+  admin_devices: AdminDevice[]
+}
+
