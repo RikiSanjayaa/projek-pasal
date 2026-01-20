@@ -6,7 +6,6 @@ import '../../core/services/query_service.dart';
 import '../../core/utils/search_utils.dart';
 import '../widgets/pasal_card.dart';
 import '../widgets/main_layout.dart';
-// import '../widgets/update_banner.dart';
 import '../widgets/keyword_bottom_sheet.dart';
 import '../widgets/pagination_footer.dart';
 import '../widgets/filter_widgets.dart';
@@ -22,11 +21,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final GlobalKey _menuKey = GlobalKey();
   final GlobalKey _searchKey = GlobalKey();
   final GlobalKey _filterKey = GlobalKey();
-  final GlobalKey _keywordFilterKey = GlobalKey();
-  final GlobalKey _uuFilterKey = GlobalKey();
 
   List<PasalModel> _allPasalCache = [];
   List<PasalModel> _filteredData = [];
@@ -120,13 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
           Future.delayed(const Duration(milliseconds: 400), () {
             if (mounted) {
-              ShowcaseView.get().startShowCase([
-                _menuKey,
-                _searchKey,
-                _filterKey,
-                _keywordFilterKey,
-                _uuFilterKey,
-              ]);
+              ShowcaseView.get().startShowCase([_searchKey, _filterKey]);
               prefs.setBool('has_shown_home_showcase', true);
             }
           });
@@ -303,8 +293,9 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
               child: AppShowcase(
                 showcaseKey: _searchKey,
-                title: 'Pencarian',
-                description: 'Ketik nomor atau topik pasal di sini.',
+                title: 'Cari Pasal',
+                description:
+                    'Ketik untuk mencari pasal berdasarkan:\n\n• Nomor pasal (contoh: "Pasal 1")\n• Judul pasal\n• Isi konten pasal\n\nHasil akan langsung ditampilkan saat Anda mengetik.',
                 shapeBorder: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -379,8 +370,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             AppShowcase(
               showcaseKey: _filterKey,
-              title: 'Filter Cepat',
-              description: 'Gunakan filter ini untuk memilih UU spesifik.',
+              title: 'Filter Pencarian',
+              description:
+                  'Persempit hasil pencarian dengan memilih:\n\n• Keywords - topik spesifik yang Anda cari\n• Undang-Undang - sumber hukum tertentu\n\nKombinasi filter menghasilkan pencarian lebih akurat.',
               shapeBorder: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -527,6 +519,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 )
                               : const SizedBox(height: 20);
                         }
+
                         return PasalCard(
                           pasal: _paginatedData[index],
                           contextList: _filteredData,
@@ -558,18 +551,13 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           // Hamburger menu button
-          AppShowcase(
-            showcaseKey: _menuKey,
-            title: 'Menu',
-            description: 'Buka menu pengaturan',
-            child: IconButton(
-              onPressed: () => Scaffold.of(context).openEndDrawer(),
-              icon: Icon(
-                Icons.menu,
-                color: isDark ? Colors.grey[300] : Colors.grey[700],
-              ),
-              tooltip: 'Pengaturan',
+          IconButton(
+            onPressed: () => Scaffold.of(context).openEndDrawer(),
+            icon: Icon(
+              Icons.menu,
+              color: isDark ? Colors.grey[300] : Colors.grey[700],
             ),
+            tooltip: 'Pengaturan',
           ),
         ],
       ),
@@ -694,74 +682,54 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const SizedBox(height: 12),
                       // Keywords section
-                      AppShowcase(
-                        showcaseKey: _keywordFilterKey,
-                        title: 'Filter Topik',
-                        description:
-                            'Pilih topik spesifik untuk hasil lebih akurat.',
-                        shapeBorder: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: _buildKeywordChipsRow(isDark),
-                      ),
+                      _buildKeywordChipsRow(isDark),
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 10),
                       ),
 
                       // UU section
-                      AppShowcase(
-                        showcaseKey: _uuFilterKey,
-                        title: 'Pilih Undang-Undang',
-                        description: 'Batasi pencarian hanya pada UU tertentu.',
-                        shapeBorder: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.menu_book_outlined,
-                                    size: 13,
-                                    color: blueColor,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.menu_book_outlined,
+                                  size: 13,
+                                  color: blueColor,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Undang-Undang',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark
+                                        ? Colors.grey[400]
+                                        : Colors.grey[700],
+                                    letterSpacing: 0.3,
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Undang-Undang',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark
-                                          ? Colors.grey[400]
-                                          : Colors.grey[700],
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: [
-                                  _buildUUChip("Semua", 'ALL', isDark),
-                                  ..._listUU
-                                      .map(
-                                        (uu) => _buildUUChip(
-                                          uu.kode,
-                                          uu.id,
-                                          isDark,
-                                        ),
-                                      )
-                                      .toList(),
-                                ],
-                              ),
+                          ),
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                _buildUUChip("Semua", 'ALL', isDark),
+                                ..._listUU
+                                    .map(
+                                      (uu) =>
+                                          _buildUUChip(uu.kode, uu.id, isDark),
+                                    )
+                                    .toList(),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

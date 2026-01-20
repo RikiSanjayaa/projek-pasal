@@ -1,11 +1,24 @@
 import React from 'react'
-import { Button, Card, Group, Modal, Text, Title, Stack, CopyButton, ActionIcon, Badge, TextInput, Alert, Menu, Table, ScrollArea } from '@mantine/core'
+import { Button, Card, Group, Modal, Text, Title, Stack, CopyButton, ActionIcon, Badge, TextInput, Alert, Menu, Table, ScrollArea, Tooltip } from '@mantine/core'
 import { showNotification } from '@mantine/notifications'
-import { IconCopy, IconEdit } from '@tabler/icons-react'
+import { IconCopy, IconEdit, IconDevices } from '@tabler/icons-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { requestPasswordRecovery } from '@/lib/auth'
 import { SearchablePaginatedList } from '@/components/SearchablePaginatedList'
+import type { AdminWithDevices } from '@/lib/database.types'
+
+// Helper to format date in Indonesian locale
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
 
 
 export function ManageAdminPage() {
@@ -17,7 +30,9 @@ export function ManageAdminPage() {
   const [confirmOpen, setConfirmOpen] = React.useState(false)
   const [pendingBody, setPendingBody] = React.useState<{ email: string; nama: string } | null>(null)
   const [creds, setCreds] = React.useState<{ email: string; password: string } | null>(null)
-  const [admins, setAdmins] = React.useState<Array<{ id: string; email: string; nama: string; role: string; is_active: boolean }>>([])
+
+  // Updated state type to include devices
+  const [admins, setAdmins] = React.useState<AdminWithDevices[]>([])
   const [emailInput, setEmailInput] = React.useState<string>('')
   const [emailError, setEmailError] = React.useState<string | null>(null)
   const [namaInput, setNamaInput] = React.useState<string>('')
@@ -26,18 +41,71 @@ export function ManageAdminPage() {
   const [resetConfirmOpen, setResetConfirmOpen] = React.useState(false)
   const [resetTarget, setResetTarget] = React.useState<{ id: string; email: string } | null>(null)
 
+  // Device management state
+  const [devicesModalOpen, setDevicesModalOpen] = React.useState(false)
+  const [devicesTarget, setDevicesTarget] = React.useState<{ admin: AdminWithDevices } | null>(null)
+  const [forceLogoutLoading, setForceLogoutLoading] = React.useState(false)
+
   const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-admin`
 
   React.useEffect(() => {
     if (!adminUser) return
       ; (async () => {
         try {
-          const { data } = await supabase.from('admin_users').select('id,email,nama,role,is_active').order('created_at', { ascending: false })
-          if (data) setAdmins(data as any)
+          // Fetch admins with their devices
+          const { data } = await supabase
+            .from('admin_users')
+            .select(`
+              *,
+              admin_devices(*)
+            `)
+            .order('created_at', { ascending: false })
+          if (data) setAdmins(data as AdminWithDevices[])
         } catch {
         }
       })()
   }, [adminUser])
+
+  // Force logout a specific device
+  const forceLogoutDevice = async (deviceId: string, adminId: string) => {
+    setForceLogoutLoading(true)
+    try {
+      const { error } = await supabase
+        .from('admin_devices')
+        .update({ is_active: false } as never)
+        .eq('id', deviceId)
+
+      if (error) throw error
+
+      // Update local state
+      setAdmins((prev) => prev.map((a) => {
+        if (a.id === adminId) {
+          const devices = a.admin_devices || []
+          return {
+            ...a,
+            admin_devices: devices.map((d) => d.id === deviceId ? { ...d, is_active: false } : d)
+          }
+        }
+        return a
+      }))
+
+      // Update devices modal target
+      if (devicesTarget) {
+        setDevicesTarget({
+          admin: {
+            ...devicesTarget.admin,
+            admin_devices: devicesTarget.admin.admin_devices.map((d) => d.id === deviceId ? { ...d, is_active: false } : d)
+          }
+        })
+      }
+
+      showNotification({ title: 'Berhasil', message: 'Perangkat berhasil dilogout', color: 'green' })
+    } catch (err: any) {
+      showNotification({ title: 'Error', message: String(err?.message || err), color: 'red' })
+    } finally {
+      setForceLogoutLoading(false)
+    }
+  }
 
   // toggle admin active state
   const toggleActiveAdmin = async (adminId: string, targetActive: boolean) => {
@@ -106,8 +174,14 @@ export function ManageAdminPage() {
       setModalOpen(true)
 
       // refresh admin list
-      const { data } = await supabase.from('admin_users').select('id,email,nama,role,is_active').order('created_at', { ascending: false })
-      if (data) setAdmins(data as any)
+      const { data } = await supabase
+        .from('admin_users')
+        .select(`
+          *,
+          admin_devices(*)
+        `)
+        .order('created_at', { ascending: false })
+      if (data) setAdmins(data as AdminWithDevices[])
       // clear inputs after successful creation
       setEmailInput('')
       setNamaInput('')
@@ -193,24 +267,44 @@ export function ManageAdminPage() {
                       <Table.Th>Nama</Table.Th>
                       <Table.Th>Email</Table.Th>
                       <Table.Th>Role</Table.Th>
+                      <Table.Th>Perangkat</Table.Th>
                       <Table.Th>Aktif</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
-                    {admins.filter(a => a.role === 'super_admin').map((a) => (
-                      <Table.Tr key={a.id}>
-                        <Table.Td>
-                          <Text fw={600}>{a.nama || a.email}</Text>
-                        </Table.Td>
-                        <Table.Td>{a.email}</Table.Td>
-                        <Table.Td>
-                          <Badge color="teal" variant="filled">{a.role}</Badge>
-                        </Table.Td>
-                        <Table.Td>
-                          <Badge color={a.is_active ? 'green' : 'gray'} variant="light">{a.is_active ? 'Aktif' : 'Nonaktif'}</Badge>
-                        </Table.Td>
-                      </Table.Tr>
-                    ))}
+                    {admins.filter(a => a.role === 'super_admin').map((a) => {
+                      const activeDevices = a.admin_devices?.filter(d => d.is_active).length || 0
+                      return (
+                        <Table.Tr key={a.id}>
+                          <Table.Td>
+                            <Text fw={600}>{a.nama || a.email}</Text>
+                          </Table.Td>
+                          <Table.Td>{a.email}</Table.Td>
+                          <Table.Td>
+                            <Badge color="teal" variant="filled">{a.role}</Badge>
+                          </Table.Td>
+                          <Table.Td>
+                            <Tooltip label="Lihat perangkat">
+                              <Badge
+                                color={activeDevices > 0 ? 'blue' : 'gray'}
+                                variant="light"
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => {
+                                  setDevicesTarget({ admin: a })
+                                  setDevicesModalOpen(true)
+                                }}
+                                leftSection={<IconDevices size={12} />}
+                              >
+                                {activeDevices} aktif
+                              </Badge>
+                            </Tooltip>
+                          </Table.Td>
+                          <Table.Td>
+                            <Badge color={a.is_active ? 'green' : 'gray'} variant="light">{a.is_active ? 'Aktif' : 'Nonaktif'}</Badge>
+                          </Table.Td>
+                        </Table.Tr>
+                      )
+                    })}
                   </Table.Tbody>
                 </Table>
               </div>
@@ -239,47 +333,77 @@ export function ManageAdminPage() {
                         <Table.Th>Email</Table.Th>
                         <Table.Th>Role</Table.Th>
                         <Table.Th>Status</Table.Th>
+                        <Table.Th>Perangkat</Table.Th>
                         <Table.Th>Aksi</Table.Th>
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                      {items.map((record) => (
-                        <Table.Tr key={record.id}>
-                          <Table.Td><Text fw={600}>{record.nama || record.email}</Text></Table.Td>
-                          <Table.Td>{record.email}</Table.Td>
-                          <Table.Td><Badge color="blue" variant="filled">{record.role}</Badge></Table.Td>
-                          <Table.Td><Badge color="green" variant="light">Aktif</Badge></Table.Td>
-                          <Table.Td onClick={(e) => e.stopPropagation()}>
-                            <Menu withArrow position="left" shadow="sm">
-                              <Menu.Target>
-                                <ActionIcon variant="subtle" color="blue">
-                                  <IconEdit size={16} />
-                                </ActionIcon>
-                              </Menu.Target>
-                              <Menu.Dropdown>
-                                <Menu.Item
-                                  color="yellow"
+                      {items.map((record) => {
+                        const activeDevices = record.admin_devices?.filter(d => d.is_active).length || 0
+                        return (
+                          <Table.Tr key={record.id}>
+                            <Table.Td><Text fw={600}>{record.nama || record.email}</Text></Table.Td>
+                            <Table.Td>{record.email}</Table.Td>
+                            <Table.Td><Badge color="blue" variant="filled">{record.role}</Badge></Table.Td>
+                            <Table.Td><Badge color="green" variant="light">Aktif</Badge></Table.Td>
+                            <Table.Td>
+                              <Tooltip label="Lihat perangkat">
+                                <Badge
+                                  color={activeDevices > 0 ? 'blue' : 'gray'}
+                                  variant="light"
+                                  style={{ cursor: 'pointer' }}
                                   onClick={() => {
-                                    setResetTarget({ id: record.id, email: record.email })
-                                    setResetConfirmOpen(true)
+                                    setDevicesTarget({ admin: record })
+                                    setDevicesModalOpen(true)
                                   }}
+                                  leftSection={<IconDevices size={12} />}
                                 >
-                                  Kirim email Reset Password
-                                </Menu.Item>
-                                <Menu.Item
-                                  color="red"
-                                  onClick={() => {
-                                    setToggleTarget({ id: record.id, email: record.email, targetActive: false })
-                                    setToggleModalOpen(true)
-                                  }}
-                                >
-                                  Nonaktifkan Admin
-                                </Menu.Item>
-                              </Menu.Dropdown>
-                            </Menu>
-                          </Table.Td>
-                        </Table.Tr>
-                      ))}
+                                  {activeDevices} aktif
+                                </Badge>
+                              </Tooltip>
+                            </Table.Td>
+                            <Table.Td onClick={(e) => e.stopPropagation()}>
+                              <Menu withArrow position="left" shadow="sm">
+                                <Menu.Target>
+                                  <ActionIcon variant="subtle" color="blue">
+                                    <IconEdit size={16} />
+                                  </ActionIcon>
+                                </Menu.Target>
+                                <Menu.Dropdown>
+                                  <Menu.Item
+                                    color="blue"
+                                    onClick={() => {
+                                      setDevicesTarget({ admin: record })
+                                      setDevicesModalOpen(true)
+                                    }}
+                                    leftSection={<IconDevices size={14} />}
+                                  >
+                                    Kelola Perangkat
+                                  </Menu.Item>
+                                  <Menu.Item
+                                    color="yellow"
+                                    onClick={() => {
+                                      setResetTarget({ id: record.id, email: record.email })
+                                      setResetConfirmOpen(true)
+                                    }}
+                                  >
+                                    Kirim email Reset Password
+                                  </Menu.Item>
+                                  <Menu.Item
+                                    color="red"
+                                    onClick={() => {
+                                      setToggleTarget({ id: record.id, email: record.email, targetActive: false })
+                                      setToggleModalOpen(true)
+                                    }}
+                                  >
+                                    Nonaktifkan Admin
+                                  </Menu.Item>
+                                </Menu.Dropdown>
+                              </Menu>
+                            </Table.Td>
+                          </Table.Tr>
+                        )
+                      })}
                     </Table.Tbody>
                   </Table>
                 </div>
@@ -297,47 +421,77 @@ export function ManageAdminPage() {
                         <Table.Th>Email</Table.Th>
                         <Table.Th>Role</Table.Th>
                         <Table.Th>Status</Table.Th>
+                        <Table.Th>Perangkat</Table.Th>
                         <Table.Th>Aksi</Table.Th>
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                      {items.map((record) => (
-                        <Table.Tr key={record.id}>
-                          <Table.Td><Text fw={600}>{record.nama || record.email}</Text></Table.Td>
-                          <Table.Td>{record.email}</Table.Td>
-                          <Table.Td><Badge color="blue" variant="filled">{record.role}</Badge></Table.Td>
-                          <Table.Td><Badge color="gray" variant="light">Nonaktif</Badge></Table.Td>
-                          <Table.Td onClick={(e) => e.stopPropagation()}>
-                            <Menu withArrow position="left" shadow="sm">
-                              <Menu.Target>
-                                <ActionIcon variant="subtle" color="blue">
-                                  <IconEdit size={16} />
-                                </ActionIcon>
-                              </Menu.Target>
-                              <Menu.Dropdown>
-                                <Menu.Item
-                                  color="yellow"
+                      {items.map((record) => {
+                        const activeDevices = record.admin_devices?.filter(d => d.is_active).length || 0
+                        return (
+                          <Table.Tr key={record.id}>
+                            <Table.Td><Text fw={600}>{record.nama || record.email}</Text></Table.Td>
+                            <Table.Td>{record.email}</Table.Td>
+                            <Table.Td><Badge color="blue" variant="filled">{record.role}</Badge></Table.Td>
+                            <Table.Td><Badge color="gray" variant="light">Nonaktif</Badge></Table.Td>
+                            <Table.Td>
+                              <Tooltip label="Lihat perangkat">
+                                <Badge
+                                  color={activeDevices > 0 ? 'blue' : 'gray'}
+                                  variant="light"
+                                  style={{ cursor: 'pointer' }}
                                   onClick={() => {
-                                    setResetTarget({ id: record.id, email: record.email })
-                                    setResetConfirmOpen(true)
+                                    setDevicesTarget({ admin: record })
+                                    setDevicesModalOpen(true)
                                   }}
+                                  leftSection={<IconDevices size={12} />}
                                 >
-                                  Kirim email Reset Password
-                                </Menu.Item>
-                                <Menu.Item
-                                  color="green"
-                                  onClick={() => {
-                                    setToggleTarget({ id: record.id, email: record.email, targetActive: true })
-                                    setToggleModalOpen(true)
-                                  }}
-                                >
-                                  Aktifkan Admin
-                                </Menu.Item>
-                              </Menu.Dropdown>
-                            </Menu>
-                          </Table.Td>
-                        </Table.Tr>
-                      ))}
+                                  {activeDevices} aktif
+                                </Badge>
+                              </Tooltip>
+                            </Table.Td>
+                            <Table.Td onClick={(e) => e.stopPropagation()}>
+                              <Menu withArrow position="left" shadow="sm">
+                                <Menu.Target>
+                                  <ActionIcon variant="subtle" color="blue">
+                                    <IconEdit size={16} />
+                                  </ActionIcon>
+                                </Menu.Target>
+                                <Menu.Dropdown>
+                                  <Menu.Item
+                                    color="blue"
+                                    onClick={() => {
+                                      setDevicesTarget({ admin: record })
+                                      setDevicesModalOpen(true)
+                                    }}
+                                    leftSection={<IconDevices size={14} />}
+                                  >
+                                    Kelola Perangkat
+                                  </Menu.Item>
+                                  <Menu.Item
+                                    color="yellow"
+                                    onClick={() => {
+                                      setResetTarget({ id: record.id, email: record.email })
+                                      setResetConfirmOpen(true)
+                                    }}
+                                  >
+                                    Kirim email Reset Password
+                                  </Menu.Item>
+                                  <Menu.Item
+                                    color="green"
+                                    onClick={() => {
+                                      setToggleTarget({ id: record.id, email: record.email, targetActive: true })
+                                      setToggleModalOpen(true)
+                                    }}
+                                  >
+                                    Aktifkan Admin
+                                  </Menu.Item>
+                                </Menu.Dropdown>
+                              </Menu>
+                            </Table.Td>
+                          </Table.Tr>
+                        )
+                      })}
                     </Table.Tbody>
                   </Table>
                 </div>
@@ -456,6 +610,78 @@ export function ManageAdminPage() {
                 setResetTarget(null)
               }
             }}>Kirim</Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={devicesModalOpen}
+        onClose={() => {
+          setDevicesModalOpen(false)
+          setDevicesTarget(null)
+        }}
+        title={`Perangkat: ${devicesTarget?.admin.nama || devicesTarget?.admin.email}`}
+        size="lg"
+      >
+        <Stack>
+          <Text size="sm" c="dimmed">
+            Daftar perangkat yang terhubung dengan akun ini. Maksimal 3 perangkat aktif.
+          </Text>
+
+          <Table striped highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Nama Perangkat</Table.Th>
+                <Table.Th>Terakhir Aktif</Table.Th>
+                <Table.Th>Status</Table.Th>
+                <Table.Th>Aksi</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {devicesTarget?.admin.admin_devices && devicesTarget.admin.admin_devices.length > 0 ? (
+                devicesTarget.admin.admin_devices.map((device) => (
+                  <Table.Tr key={device.id}>
+                    <Table.Td>
+                      <Text fw={500}>{device.device_name || 'Unknown Device'}</Text>
+                      <Text size="xs" c="dimmed" style={{ fontFamily: 'monospace' }}>{device.device_id.substring(0, 8)}...</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      {formatDate(device.last_active_at)}
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge color={device.is_active ? 'green' : 'gray'} variant="light">
+                        {device.is_active ? 'Aktif' : 'Nonaktif'}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      {device.is_active && (
+                        <Button
+                          color="red"
+                          variant="light"
+                          size="xs"
+                          loading={forceLogoutLoading}
+                          onClick={() => forceLogoutDevice(device.id, devicesTarget.admin.id)}
+                        >
+                          Force Logout
+                        </Button>
+                      )}
+                    </Table.Td>
+                  </Table.Tr>
+                ))
+              ) : (
+                <Table.Tr>
+                  <Table.Td colSpan={4}>
+                    <Text ta="center" c="dimmed" py="sm">Belum ada perangkat terhubung</Text>
+                  </Table.Td>
+                </Table.Tr>
+              )}
+            </Table.Tbody>
+          </Table>
+
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={() => { setDevicesModalOpen(false); setDevicesTarget(null) }}>
+              Tutup
+            </Button>
           </Group>
         </Stack>
       </Modal>

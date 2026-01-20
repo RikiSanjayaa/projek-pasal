@@ -191,7 +191,43 @@ class AuthService {
           );
         }
 
-        // Admin login successful - no device binding or expiry for admins
+        // Admin login - check device binding (max 3 devices)
+        final deviceId = await getDeviceId();
+        final existingDevices = await _supabase
+            .from('admin_devices')
+            .select()
+            .eq('admin_id', userId)
+            .eq('is_active', true);
+
+        // Check if this device is already registered
+        final isCurrentDeviceRegistered = existingDevices.any(
+          (device) => device['device_id'] == deviceId,
+        );
+
+        // If not registered and already have 3 active devices, block login
+        if (!isCurrentDeviceRegistered && existingDevices.length >= 3) {
+          await _supabase.auth.signOut();
+          final deviceNames = existingDevices
+              .map((d) => d['device_name'] ?? 'Unknown')
+              .take(3)
+              .join(', ');
+          return LoginResult.deviceConflict(
+            'Akun admin sudah aktif di 3 perangkat: $deviceNames. '
+            'Logout dari salah satu perangkat atau hubungi super administrator.',
+          );
+        }
+
+        // Register/update this device
+        final deviceName = await getDeviceName();
+        await _supabase.from('admin_devices').upsert({
+          'admin_id': userId,
+          'device_id': deviceId,
+          'device_name': deviceName,
+          'is_active': true,
+          'last_active_at': clock.now().toUtc().toIso8601String(),
+        }, onConflict: 'admin_id,device_id');
+
+        // Admin login successful
         await _secureStorage.write(key: _userEmailKey, value: email);
         await _secureStorage.write(
           key: _userNameKey,
@@ -338,15 +374,24 @@ class AuthService {
   Future<void> logout() async {
     try {
       final userId = _supabase.auth.currentUser?.id;
+      final deviceId = await getDeviceId();
 
-      // Deactivate device on server (only for regular users, not admins)
-      if (userId != null && !isAdmin.value) {
-        final deviceId = await getDeviceId();
-        await _supabase
-            .from('user_devices')
-            .update({'is_active': false})
-            .eq('user_id', userId)
-            .eq('device_id', deviceId);
+      if (userId != null) {
+        if (isAdmin.value) {
+          // Deactivate admin device
+          await _supabase
+              .from('admin_devices')
+              .update({'is_active': false})
+              .eq('admin_id', userId)
+              .eq('device_id', deviceId);
+        } else {
+          // Deactivate user device
+          await _supabase
+              .from('user_devices')
+              .update({'is_active': false})
+              .eq('user_id', userId)
+              .eq('device_id', deviceId);
+        }
       }
 
       // Sign out from Supabase
@@ -373,21 +418,27 @@ class AuthService {
   }
 
   /// Update last active timestamp (call periodically or on app resume)
-  /// Skipped for admins since they don't have device records
   Future<void> updateLastActive() async {
-    // Skip for admins - they don't have device records
-    if (isAdmin.value) return;
-
     try {
       final userId = _supabase.auth.currentUser?.id;
       final deviceId = await getDeviceId();
 
       if (userId != null) {
-        await _supabase
-            .from('user_devices')
-            .update({'last_active_at': clock.now().toUtc().toIso8601String()})
-            .eq('user_id', userId)
-            .eq('device_id', deviceId);
+        if (isAdmin.value) {
+          // Update admin device last active
+          await _supabase
+              .from('admin_devices')
+              .update({'last_active_at': clock.now().toUtc().toIso8601String()})
+              .eq('admin_id', userId)
+              .eq('device_id', deviceId);
+        } else {
+          // Update user device last active
+          await _supabase
+              .from('user_devices')
+              .update({'last_active_at': clock.now().toUtc().toIso8601String()})
+              .eq('user_id', userId)
+              .eq('device_id', deviceId);
+        }
       }
     } catch (e) {
       // Silently fail - this is not critical
