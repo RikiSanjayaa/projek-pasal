@@ -120,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
           Future.delayed(const Duration(milliseconds: 400), () {
             if (mounted) {
-              ShowCaseWidget.of(context).startShowCase([
+              ShowcaseView.get().startShowCase([
                 _menuKey,
                 _searchKey,
                 _filterKey,
