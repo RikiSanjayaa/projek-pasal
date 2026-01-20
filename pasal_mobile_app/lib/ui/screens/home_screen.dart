@@ -22,8 +22,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final GlobalKey _menuKey = GlobalKey();
   final GlobalKey _searchKey = GlobalKey();
   final GlobalKey _filterKey = GlobalKey();
+  final GlobalKey _keywordFilterKey = GlobalKey();
+  final GlobalKey _uuFilterKey = GlobalKey();
 
   List<PasalModel> _allPasalCache = [];
   List<PasalModel> _filteredData = [];
@@ -117,7 +120,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
           Future.delayed(const Duration(milliseconds: 400), () {
             if (mounted) {
-              ShowcaseView.get().startShowCase([_searchKey, _filterKey]);
+              ShowCaseWidget.of(context).startShowCase([
+                _menuKey,
+                _searchKey,
+                _filterKey,
+                _keywordFilterKey,
+                _uuFilterKey,
+              ]);
               prefs.setBool('has_shown_home_showcase', true);
             }
           });
@@ -294,9 +303,8 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
               child: AppShowcase(
                 showcaseKey: _searchKey,
-                title: 'Cari Pasal',
-                description:
-                    'Ketik untuk mencari pasal berdasarkan:\n\n• Nomor pasal (contoh: "Pasal 1")\n• Judul pasal\n• Isi konten pasal\n\nHasil akan langsung ditampilkan saat Anda mengetik.',
+                title: 'Pencarian',
+                description: 'Ketik nomor atau topik pasal di sini.',
                 shapeBorder: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -371,9 +379,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             AppShowcase(
               showcaseKey: _filterKey,
-              title: 'Filter Pencarian',
-              description:
-                  'Persempit hasil pencarian dengan memilih:\n\n• Keywords - topik spesifik yang Anda cari\n• Undang-Undang - sumber hukum tertentu\n\nKombinasi filter menghasilkan pencarian lebih akurat.',
+              title: 'Filter Cepat',
+              description: 'Gunakan filter ini untuk memilih UU spesifik.',
               shapeBorder: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -404,7 +411,89 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 10),
 
             Expanded(
-              child: _paginatedData.isEmpty
+              child: _selectedKeywords.isNotEmpty
+                  ? Builder(
+                      builder: (context) {
+                        List<PasalModel> mostRelevant = [];
+                        if (_selectedKeywords.length > 1) {
+                          mostRelevant = _filteredData.where((p) {
+                            int matchCount = 0;
+                            for (var k in _selectedKeywords) {
+                              if (p.keywords.any(
+                                (pk) => pk.toLowerCase() == k.toLowerCase(),
+                              )) {
+                                matchCount++;
+                              }
+                            }
+                            return matchCount > 1;
+                          }).toList();
+                        }
+
+                        Map<String, List<PasalModel>> keywordGroups = {};
+                        for (var keyword in _selectedKeywords) {
+                          final matches = _filteredData.where((p) {
+                            bool hasKeyword = p.keywords.any(
+                              (pk) => pk.toLowerCase() == keyword.toLowerCase(),
+                            );
+                            bool alreadyInTop = mostRelevant.contains(p);
+                            return hasKeyword && !alreadyInTop;
+                          }).toList();
+
+                          if (matches.isNotEmpty) {
+                            keywordGroups[keyword] = matches;
+                          }
+                        }
+
+                        if (_filteredData.isEmpty) {
+                          return const Center(
+                            child: Text("Tidak ada pasal yang cocok."),
+                          );
+                        }
+
+                        return ListView(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                          children: [
+                            if (mostRelevant.isNotEmpty) ...[
+                              _buildSimpleHeader("Paling Relevan", isDark),
+
+                              ...mostRelevant.map(
+                                (p) => PasalCard(
+                                  pasal: p,
+                                  contextList: _filteredData,
+                                  searchQuery: _searchQuery,
+                                  showUULabel: true,
+                                  matchedKeywords: const [],
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                            ],
+                            ...keywordGroups.entries.map((entry) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildSimpleHeader(
+                                    "Terkait ${entry.key}",
+                                    isDark,
+                                  ),
+
+                                  ...entry.value.map(
+                                    (p) => PasalCard(
+                                      pasal: p,
+                                      contextList: _filteredData,
+                                      searchQuery: _searchQuery,
+                                      showUULabel: true,
+                                      matchedKeywords: const [],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                ],
+                              );
+                            }),
+                          ],
+                        );
+                      },
+                    )
+                  : _paginatedData.isEmpty
                   ? const Center(child: Text("Data tidak ditemukan."))
                   : ListView.builder(
                       controller: _listScrollController,
@@ -438,12 +527,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                 )
                               : const SizedBox(height: 20);
                         }
-
                         return PasalCard(
                           pasal: _paginatedData[index],
                           contextList: _filteredData,
                           searchQuery: _searchQuery,
                           showUULabel: true,
+                          matchedKeywords: const [],
                         );
                       },
                     ),
@@ -469,13 +558,18 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           // Hamburger menu button
-          IconButton(
-            onPressed: () => Scaffold.of(context).openEndDrawer(),
-            icon: Icon(
-              Icons.menu,
-              color: isDark ? Colors.grey[300] : Colors.grey[700],
+          AppShowcase(
+            showcaseKey: _menuKey,
+            title: 'Menu',
+            description: 'Buka menu pengaturan',
+            child: IconButton(
+              onPressed: () => Scaffold.of(context).openEndDrawer(),
+              icon: Icon(
+                Icons.menu,
+                color: isDark ? Colors.grey[300] : Colors.grey[700],
+              ),
+              tooltip: 'Pengaturan',
             ),
-            tooltip: 'Pengaturan',
           ),
         ],
       ),
@@ -600,54 +694,74 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const SizedBox(height: 12),
                       // Keywords section
-                      _buildKeywordChipsRow(isDark),
+                      AppShowcase(
+                        showcaseKey: _keywordFilterKey,
+                        title: 'Filter Topik',
+                        description:
+                            'Pilih topik spesifik untuk hasil lebih akurat.',
+                        shapeBorder: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: _buildKeywordChipsRow(isDark),
+                      ),
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 10),
                       ),
 
                       // UU section
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.menu_book_outlined,
-                                  size: 13,
-                                  color: blueColor,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Undang-Undang',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark
-                                        ? Colors.grey[400]
-                                        : Colors.grey[700],
-                                    letterSpacing: 0.3,
+                      AppShowcase(
+                        showcaseKey: _uuFilterKey,
+                        title: 'Pilih Undang-Undang',
+                        description: 'Batasi pencarian hanya pada UU tertentu.',
+                        shapeBorder: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.menu_book_outlined,
+                                    size: 13,
+                                    color: blueColor,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Undang-Undang',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark
+                                          ? Colors.grey[400]
+                                          : Colors.grey[700],
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                _buildUUChip("Semua", 'ALL', isDark),
-                                ..._listUU
-                                    .map(
-                                      (uu) =>
-                                          _buildUUChip(uu.kode, uu.id, isDark),
-                                    )
-                                    .toList(),
-                              ],
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  _buildUUChip("Semua", 'ALL', isDark),
+                                  ..._listUU
+                                      .map(
+                                        (uu) => _buildUUChip(
+                                          uu.kode,
+                                          uu.id,
+                                          isDark,
+                                        ),
+                                      )
+                                      .toList(),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -843,6 +957,20 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.of(context).pop();
         _showKeywordBottomSheet(autoFocus: autoFocus);
       },
+    );
+  }
+
+  Widget _buildSimpleHeader(String title, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 1, top: 1),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: AppColors.textPrimary(isDark),
+        ),
+      ),
     );
   }
 }
