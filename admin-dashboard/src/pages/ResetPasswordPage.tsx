@@ -101,8 +101,12 @@ export function ResetPasswordPage() {
   }
 
   const handleChangePassword = async () => {
-    if (password.length < 8) {
-      setMessage('Password harus minimal 8 karakter')
+    if (password.length < 6) {
+      setMessage('Password harus minimal 6 karakter')
+      return
+    }
+    if (!/\d/.test(password)) {
+      setMessage('Password harus mengandung minimal 1 angka')
       return
     }
     if (password !== confirm) {
@@ -273,11 +277,8 @@ export function ResetPasswordPage() {
                       mb="sm"
                     />
                     <Stack gap={4}>
-                      <RequirementItem met={password.length >= 8} label="Minimal 8 karakter" />
-                      <RequirementItem met={/[a-z]/.test(password)} label="Huruf kecil (a-z)" />
-                      <RequirementItem met={/[A-Z]/.test(password)} label="Huruf besar (A-Z)" />
-                      <RequirementItem met={/[0-9]/.test(password)} label="Angka (0-9)" />
-                      <RequirementItem met={/[^A-Za-z0-9]/.test(password)} label="Karakter spesial" />
+                      <RequirementItem met={password.length >= 6} label="Minimal 6 karakter" />
+                      <RequirementItem met={/[0-9]/.test(password)} label="Mengandung angka (0-9)" />
                     </Stack>
                   </Box>
                 )}

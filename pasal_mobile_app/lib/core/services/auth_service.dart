@@ -27,6 +27,7 @@ enum DeactivationReason {
   accountInactive,
   accountExpired,
   accountDeleted,
+  yearlyPasswordCheck,
 }
 
 /// Result type for login
@@ -68,6 +69,8 @@ class AuthService {
   static const String _userEmailKey = 'user_email';
   static const String _userNameKey = 'user_name';
   static const String _isAdminKey = 'is_admin';
+  static const String _lastPasswordVerificationKey =
+      'last_password_verification';
 
   // Notifiers for UI
   final ValueNotifier<AuthState> state = ValueNotifier(AuthState.unknown);
@@ -234,6 +237,10 @@ class AuthService {
           value: adminProfile['nama'] ?? email,
         );
         await _secureStorage.write(key: _isAdminKey, value: 'true');
+        await _secureStorage.write(
+          key: _lastPasswordVerificationKey,
+          value: clock.now().toUtc().toIso8601String(),
+        );
 
         userName.value = adminProfile['nama'] ?? email;
         isAdmin.value = true;
@@ -300,6 +307,10 @@ class AuthService {
         value: userProfile['nama'] ?? email,
       );
       await _secureStorage.write(key: _isAdminKey, value: 'false');
+      await _secureStorage.write(
+        key: _lastPasswordVerificationKey,
+        value: clock.now().toUtc().toIso8601String(),
+      );
 
       // 8. Update state
       userName.value = userProfile['nama'] ?? email;
@@ -317,6 +328,17 @@ class AuthService {
     } catch (e) {
       print('Login error: $e');
       return LoginResult.failure('Terjadi kesalahan. Coba lagi nanti.');
+    }
+  }
+
+  /// Send password reset email
+  Future<bool> resetPassword(String email) async {
+    try {
+      await _supabase.auth.resetPasswordForEmail(email);
+      return true;
+    } catch (e) {
+      print('Reset password error: $e');
+      return false;
     }
   }
 
@@ -354,6 +376,21 @@ class AuthService {
       if (expiresAt.isBefore(clock.now())) {
         state.value = AuthState.expired;
         return ExpiryCheckResult.expired;
+      }
+
+      // Check yearly password verification
+      final lastVerificationStr = await _secureStorage.read(
+        key: _lastPasswordVerificationKey,
+      );
+      if (lastVerificationStr != null) {
+        final lastVerification = DateTime.parse(lastVerificationStr);
+        final difference = clock.now().difference(lastVerification);
+        if (difference.inDays > 365) {
+          // We signal validity issue but don't force logout here immediately
+          // active status check handles the forced logout
+          state.value = AuthState.expired;
+          return ExpiryCheckResult.expired;
+        }
       }
 
       state.value = AuthState.authenticated;
@@ -415,6 +452,8 @@ class AuthService {
     await _secureStorage.delete(key: _userNameKey);
     await _secureStorage.delete(key: _isAdminKey);
     // Note: We keep device_id as it's device-specific, not user-specific
+    // We also delete last verification to force fresh login
+    await _secureStorage.delete(key: _lastPasswordVerificationKey);
   }
 
   /// Update last active timestamp (call periodically or on app resume)
@@ -468,6 +507,8 @@ class AuthService {
         return 'Akun Anda telah kadaluarsa. Silakan hubungi administrator untuk memperpanjang.';
       case DeactivationReason.accountDeleted:
         return 'Akun Anda tidak ditemukan. Silakan hubungi administrator.';
+      case DeactivationReason.yearlyPasswordCheck:
+        return 'Demi keamanan, silakan login ulang untuk memverifikasi password setiap 1 tahun.';
     }
   }
 
@@ -540,6 +581,20 @@ class AuthService {
           value: expiresAt.toIso8601String(),
         );
         _updateExpiryState(expiresAt);
+
+        // Check yearly password verification (Client Side Logic)
+        final lastVerificationStr = await _secureStorage.read(
+          key: _lastPasswordVerificationKey,
+        );
+        if (lastVerificationStr != null) {
+          final lastVerification = DateTime.parse(lastVerificationStr);
+          final difference = clock.now().difference(lastVerification);
+          if (difference.inDays > 365) {
+            deactivationReason.value = DeactivationReason.yearlyPasswordCheck;
+            await logout();
+            return ActiveStatusResult.expired;
+          }
+        }
 
         return ActiveStatusResult.active;
       }

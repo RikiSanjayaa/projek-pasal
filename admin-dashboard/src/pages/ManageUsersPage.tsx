@@ -116,7 +116,8 @@ export function ManageUsersPage() {
       if (!email) throw new Error(`Baris ${rowNum}: email wajib diisi`)
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error(`Baris ${rowNum}: format email tidak valid`)
       if (!password) throw new Error(`Baris ${rowNum}: password wajib diisi`)
-      if (password.length < 8) throw new Error(`Baris ${rowNum}: password minimal 8 karakter`)
+      if (password.length < 6) throw new Error(`Baris ${rowNum}: password minimal 6 karakter`)
+      if (!/\d/.test(password)) throw new Error(`Baris ${rowNum}: password harus ada angka`)
 
       return { email, nama, password }
     })
@@ -422,9 +423,15 @@ export function ManageUsersPage() {
       showNotification({ title: 'Validasi', message: 'Email diperlukan', color: 'yellow' })
       return
     }
-    if (useCustomPassword && passwordInput.length < 8) {
-      showNotification({ title: 'Validasi', message: 'Password minimal 8 karakter', color: 'yellow' })
-      return
+    if (useCustomPassword) {
+      if (passwordInput.length < 6) {
+        showNotification({ title: 'Validasi', message: 'Password minimal 6 karakter', color: 'yellow' })
+        return
+      }
+      if (!/\d/.test(passwordInput)) {
+        showNotification({ title: 'Validasi', message: 'Password harus ada angka', color: 'yellow' })
+        return
+      }
     }
     const body: { email: string; nama: string; password?: string } = {
       email: emailInput.trim(),
@@ -580,7 +587,7 @@ export function ManageUsersPage() {
                 placeholder="Min 8 karakter"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.currentTarget.value)}
-                error={passwordInput && passwordInput.length < 8 ? 'Min 8 karakter' : null}
+                error={passwordInput && (passwordInput.length < 6 || !/\d/.test(passwordInput)) ? 'Min 6 karakter + Angka' : null}
               />
             )}
 
@@ -596,7 +603,7 @@ export function ManageUsersPage() {
                 color="blue"
                 onClick={handleCreateClick}
                 loading={createLoading}
-                disabled={!emailInput.trim() || !!emailError || (useCustomPassword && passwordInput.length < 8)}
+                disabled={!emailInput.trim() || !!emailError || (useCustomPassword && (passwordInput.length < 6 || !/\d/.test(passwordInput)))}
               >
                 Tambah
               </Button>
