@@ -334,7 +334,17 @@ class AuthService {
   /// Send password reset email
   Future<bool> resetPassword(String email) async {
     try {
-      await _supabase.auth.resetPasswordForEmail(email);
+      // We append ?source=mobile to the redirect URL so the web page knows
+      // not to redirect to admin login after success
+      final redirectUrl = isWeb
+          ? null // Let Supabase handle it for web
+          : 'https://cari-pasal-admin.vercel.app/reset-password?source=mobile';
+      // Note: Replace with your actual domain if different from Vercel default or local
+
+      await _supabase.auth.resetPasswordForEmail(
+        email,
+        redirectTo: redirectUrl,
+      );
       return true;
     } catch (e) {
       print('Reset password error: $e');

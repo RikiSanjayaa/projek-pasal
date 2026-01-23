@@ -30,13 +30,24 @@ export function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
+  // Determine validation mode
+  const searchParams = new URLSearchParams(location.search)
+  const isMobileUser = searchParams.get('source') === 'mobile'
+
   const getPasswordStrength = (pwd: string) => {
     let strength = 0
-    if (pwd.length >= 8) strength += 25
-    if (/[a-z]/.test(pwd)) strength += 25
-    if (/[A-Z]/.test(pwd)) strength += 25
-    if (/[0-9]/.test(pwd)) strength += 12.5
-    if (/[^A-Za-z0-9]/.test(pwd)) strength += 12.5
+    if (isMobileUser) {
+      // Simple scoring for mobile users
+      if (pwd.length >= 6) strength += 50
+      if (/[0-9]/.test(pwd)) strength += 50
+    } else {
+      // Strict scoring for admins
+      if (pwd.length >= 8) strength += 25
+      if (/[a-z]/.test(pwd)) strength += 25
+      if (/[A-Z]/.test(pwd)) strength += 25
+      if (/[0-9]/.test(pwd)) strength += 12.5
+      if (/[^A-Za-z0-9]/.test(pwd)) strength += 12.5
+    }
     return Math.min(strength, 100)
   }
 
@@ -101,14 +112,29 @@ export function ResetPasswordPage() {
   }
 
   const handleChangePassword = async () => {
-    if (password.length < 6) {
-      setMessage('Password harus minimal 6 karakter')
-      return
+    if (isMobileUser) {
+        // Simple Validation for Mobile Users
+        if (password.length < 6) {
+          setMessage('Password harus minimal 6 karakter')
+          return
+        }
+        if (!/\d/.test(password)) {
+          setMessage('Password harus mengandung minimal 1 angka')
+          return
+        }
+    } else {
+        // Strict Validation for Admins
+        if (password.length < 8) {
+          setMessage('Password harus minimal 8 karakter')
+          return
+        }
+        // Strict complexity check
+        if (!(/[a-z]/.test(password) && /[A-Z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password))) {
+           setMessage('Password harus mengandung huruf besar, huruf kecil, angka, dan karakter spesial')
+           return
+        }
     }
-    if (!/\d/.test(password)) {
-      setMessage('Password harus mengandung minimal 1 angka')
-      return
-    }
+
     if (password !== confirm) {
       setMessage('Password tidak cocok')
       return
@@ -142,6 +168,12 @@ export function ResetPasswordPage() {
         setTimeout(() => {
           navigate('/login')
         }, 2000)
+      } else {
+         // Force logout session in browser so they don't stay logged in as admin by mistake
+         // Wait a bit to let the update settle
+         setTimeout(async () => {
+            await supabase.auth.signOut()
+         }, 1000)
       }
 
     } catch (err: any) {
@@ -277,8 +309,20 @@ export function ResetPasswordPage() {
                       mb="sm"
                     />
                     <Stack gap={4}>
-                      <RequirementItem met={password.length >= 6} label="Minimal 6 karakter" />
-                      <RequirementItem met={/[0-9]/.test(password)} label="Mengandung angka (0-9)" />
+                      {isMobileUser ? (
+                          <>
+                            <RequirementItem met={password.length >= 6} label="Minimal 6 karakter" />
+                            <RequirementItem met={/[0-9]/.test(password)} label="Mengandung angka (0-9)" />
+                          </>
+                      ) : (
+                          <>
+                              <RequirementItem met={password.length >= 8} label="Minimal 8 karakter" />
+                              <RequirementItem met={/[a-z]/.test(password)} label="Huruf kecil (a-z)" />
+                              <RequirementItem met={/[A-Z]/.test(password)} label="Huruf besar (A-Z)" />
+                              <RequirementItem met={/[0-9]/.test(password)} label="Angka (0-9)" />
+                              <RequirementItem met={/[^A-Za-z0-9]/.test(password)} label="Karakter spesial" />
+                          </>
+                      )}
                     </Stack>
                   </Box>
                 )}
