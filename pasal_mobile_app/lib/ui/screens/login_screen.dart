@@ -281,7 +281,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.card(isDark),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
@@ -317,7 +317,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: Text(
               "Batal",
               style: TextStyle(color: AppColors.textSecondary(isDark)),
@@ -328,9 +328,10 @@ class _LoginScreenState extends State<LoginScreen> {
               final email = emailController.text.trim();
               if (email.isEmpty) return;
 
-              Navigator.pop(context); // Close dialog
+              Navigator.pop(dialogContext);
 
-              // Show loading or immediate feedback
+              if (!mounted) return;
+
               AppNotification.show(
                 context,
                 'Mengirim link reset password...',
@@ -343,33 +344,12 @@ class _LoginScreenState extends State<LoginScreen> {
               if (!mounted) return;
 
               if (success) {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    backgroundColor: AppColors.card(isDark),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    title: const Icon(
-                      Icons.check_circle,
-                      color: Colors.green,
-                      size: 50,
-                    ),
-                    content: Text(
-                      "Link reset password telah dikirim ke $email.\nSilakan cek inbox atau folder spam Anda.",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: AppColors.textPrimary(isDark)),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text(
-                          "OK",
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
+                AppNotification.show(
+                  context,
+                  "Link reset password berhasil dikirim ke $email.\nSilakan cek inbox atau folder spam Anda.",
+                  color: AppColors.success,
+                  icon: Icons.check_circle,
+                  duration: const Duration(seconds: 5),
                 );
               } else {
                 AppNotification.show(

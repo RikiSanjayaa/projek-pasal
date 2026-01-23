@@ -11,6 +11,7 @@ class AppNotification {
     String message, {
     Color? color,
     IconData? icon,
+    Duration? duration,
   }) {
     // Remove existing overlay immediately if pending
     if (_currentEntry != null) {
@@ -20,12 +21,14 @@ class AppNotification {
 
     final bgColor = color ?? AppColors.primary;
     final iconData = icon ?? Icons.check_circle_outline_rounded;
+    final displayDuration = duration ?? const Duration(milliseconds: 2500);
 
     _currentEntry = OverlayEntry(
       builder: (context) => _AnimatedNotification(
         message: message,
         bgColor: bgColor,
         iconData: iconData,
+        duration: displayDuration,
         onDismiss: () {
           _currentEntry?.remove();
           _currentEntry = null;
@@ -41,12 +44,14 @@ class _AnimatedNotification extends StatefulWidget {
   final String message;
   final Color bgColor;
   final IconData iconData;
+  final Duration duration;
   final VoidCallback onDismiss;
 
   const _AnimatedNotification({
     required this.message,
     required this.bgColor,
     required this.iconData,
+    required this.duration,
     required this.onDismiss,
   });
 
@@ -76,7 +81,7 @@ class _AnimatedNotificationState extends State<_AnimatedNotification>
 
     _controller.forward();
 
-    _dismissTimer = Timer(const Duration(milliseconds: 2500), _handleDismiss);
+    _dismissTimer = Timer(widget.duration, _handleDismiss);
   }
 
   void _handleDismiss() {
