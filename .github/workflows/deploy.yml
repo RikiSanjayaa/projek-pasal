@@ -96,6 +96,7 @@ jobs:
             set -e
             cd ${{ secrets.PROJECT_PATH }}/admin-dashboard
             echo "Building admin dashboard..."
+            docker compose down || true
             docker compose build --no-cache web-admin
             docker compose up -d web-admin
             echo "✓ Admin dashboard deployed"
@@ -107,6 +108,7 @@ jobs:
             set -e
             cd ${{ secrets.PROJECT_PATH }}/pasal_mobile_app
             echo "Building mobile web..."
+            docker compose down || true
             docker compose build --no-cache pasal-mobile-web
             docker compose up -d pasal-mobile-web
             echo "✓ Mobile web deployed"
