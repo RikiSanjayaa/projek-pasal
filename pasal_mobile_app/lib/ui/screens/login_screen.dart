@@ -275,6 +275,105 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  Future<void> _handleForgotPassword() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final emailController = TextEditingController(text: _emailController.text);
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.card(isDark),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          "Reset Password",
+          style: TextStyle(
+            color: AppColors.textPrimary(isDark),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Masukkan email Anda untuk menerima link reset password.",
+              style: TextStyle(color: AppColors.textSecondary(isDark)),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                labelText: "Email",
+                filled: true,
+                fillColor: AppColors.inputFill(isDark),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppColors.border(isDark)),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(
+              "Batal",
+              style: TextStyle(color: AppColors.textSecondary(isDark)),
+            ),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final email = emailController.text.trim();
+              if (email.isEmpty) return;
+
+              Navigator.pop(dialogContext);
+
+              if (!mounted) return;
+
+              AppNotification.show(
+                context,
+                'Mengirim link reset password...',
+                color: AppColors.primary,
+                icon: Icons.send,
+              );
+
+              final success = await authService.resetPassword(email);
+
+              if (!mounted) return;
+
+              if (success) {
+                AppNotification.show(
+                  context,
+                  "Link reset password berhasil dikirim ke $email.\nSilakan cek inbox atau folder spam Anda.",
+                  color: AppColors.success,
+                  icon: Icons.check_circle,
+                  duration: const Duration(seconds: 5),
+                );
+              } else {
+                AppNotification.show(
+                  context,
+                  'Gagal mengirim link. Pastikan email terdaftar.',
+                  color: AppColors.error,
+                  icon: Icons.error,
+                );
+              }
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text("Kirim"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -427,6 +526,29 @@ class _LoginScreenState extends State<LoginScreen> {
                       return null;
                     },
                   ),
+                  const SizedBox(height: 12),
+
+                  // Forgot Password
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _handleForgotPassword,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text(
+                        "Lupa Password?",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+
                   const SizedBox(height: 32),
 
                   // Error message
@@ -511,7 +633,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   // Help text
                   Text(
-                    "Hubungi administrator jika Anda\nbelum memiliki akun atau lupa password",
+                    "Hubungi administrator jika Anda\nbelum memiliki akun",
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,

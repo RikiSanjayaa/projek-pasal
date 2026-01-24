@@ -1,0 +1,100 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Setup SSH known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Sync repository to server
+        run: |
+          rsync -avz --delete \
+            --exclude '.git' \
+            --exclude 'node_modules' \
+            --exclude '.dart_tool' \
+            --exclude 'build' \
+            --exclude 'volumes' \
+            --exclude 'backups' \
+            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.PROJECT_PATH }}/
+
+      - name: Backup database
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            cd ${{ secrets.PROJECT_PATH }}
+            BACKUP_FILE="backups/db_$(date +%Y%m%d_%H%M%S).sql"
+            mkdir -p backups
+            docker exec supabase-db pg_dump -U supabase_admin postgres > "$BACKUP_FILE"
+            echo "✓ Backup created: $BACKUP_FILE"
+            # Keep only last 10 backups
+            ls -t backups/*.sql 2>/dev/null | tail -n +11 | xargs -r rm
+          EOF
+
+      - name: Run migrations
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            cd ${{ secrets.PROJECT_PATH }}
+            echo "Running database migrations..."
+            for file in $(ls -v supabase/migrations/*.sql 2>/dev/null); do
+              echo "  → $(basename $file)"
+              docker exec -i supabase-db psql -U supabase_admin -d postgres < "$file" 2>&1 || true
+            done
+            echo "✓ Migrations completed"
+          EOF
+
+      - name: Deploy Edge Functions
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            cd ${{ secrets.PROJECT_PATH }}
+            echo "Deploying edge functions..."
+            cp -r supabase/functions/* volumes/functions/
+            echo "✓ Edge functions deployed"
+          EOF
+
+      - name: Rebuild Admin Dashboard
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            cd ${{ secrets.PROJECT_PATH }}
+            echo "Building admin dashboard..."
+            docker compose build --no-cache web-admin
+            docker compose up -d web-admin
+            echo "✓ Admin dashboard deployed"
+          EOF
+
+      - name: Rebuild Mobile Web
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            cd ${{ secrets.PROJECT_PATH }}
+            echo "Building mobile web..."
+            docker compose build --no-cache mobile-web
+            docker compose up -d mobile-web
+            echo "✓ Mobile web deployed"
+          EOF
+
+      - name: Health check
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            echo "Container status:"
+            docker ps --format "table {{.Names}}\t{{.Status}}" | grep -E "web-admin|mobile-web|supabase" || echo "Some containers may not be running"
+          EOF

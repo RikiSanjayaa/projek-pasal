@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import type { AdminUser } from '@/lib/database.types'
@@ -35,6 +36,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null)
   const [serverDown, setServerDown] = useState(false)
   const [loading, setLoading] = useState(true)
+
+  const navigate = useNavigate()
+  const location = useLocation()
 
   useEffect(() => {
     let isMounted = true
@@ -92,30 +96,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // redirect to the reset UI so the app can prompt for new password.
       if (event === 'PASSWORD_RECOVERY') {
         try {
-          // Mark that this session was created via a recovery flow so the UI
-          // can distinguish it from a normal logged-in session.
-          try {
-            sessionStorage.setItem('recovery_session', Date.now().toString())
-          } catch (e) {
-            /* ignore sessionStorage errors */
-          }
+          sessionStorage.setItem('recovery_session', Date.now().toString())
+        } catch {}
 
-          // If we are already on the reset password page, do NOTHING.
-          // Reloading the page will strip the hash fragment (access_token)
-          // and kill the session Supabase just established.
-          if (window.location.pathname === '/reset-password') {
-            return
-          }
-
-          window.location.href = `${window.location.origin}/reset-password`
-          return
-        } catch {
+        if (location.pathname !== '/reset-password') {
+             navigate('/reset-password' + location.hash)
+             return
         }
       }
+
       if (!isMounted) return;
+
+      const isRecoveryFlow = location.hash.includes('type=recovery');
+      if (isRecoveryFlow && location.pathname !== '/reset-password') {
+          navigate('/reset-password' + location.hash)
+          return;
+      }
 
       setSession(session);
       setUser(session?.user ?? null);
+      
       setLoading(false)
 
       if (session?.user) {

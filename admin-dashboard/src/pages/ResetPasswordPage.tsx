@@ -30,24 +30,52 @@ export function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
+  /* State for Admin Check */
+  const [isAdmin, setIsAdmin] = useState(false)
+  
   const getPasswordStrength = (pwd: string) => {
     let strength = 0
-    if (pwd.length >= 8) strength += 25
-    if (/[a-z]/.test(pwd)) strength += 25
-    if (/[A-Z]/.test(pwd)) strength += 25
-    if (/[0-9]/.test(pwd)) strength += 12.5
-    if (/[^A-Za-z0-9]/.test(pwd)) strength += 12.5
+
+    if (!isAdmin) {
+      // Simple scoring for mobile users
+      if (pwd.length >= 6) strength += 50
+      if (/[0-9]/.test(pwd)) strength += 50
+    } else {
+      // Strict scoring for admins or web users
+      if (pwd.length >= 8) strength += 25
+      if (/[a-z]/.test(pwd)) strength += 25
+      if (/[A-Z]/.test(pwd)) strength += 25
+      if (/[0-9]/.test(pwd)) strength += 12.5
+      if (/[^A-Za-z0-9]/.test(pwd)) strength += 12.5
+    }
     return Math.min(strength, 100)
   }
 
   const passwordStrength = getPasswordStrength(password)
+
+  const checkAdminRole = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('id', userId)
+        .single()
+      
+      if (data) {
+        setIsAdmin(true)
+        console.log("Security Check: User identified as Admin.")
+      }
+    } catch (e) {
+      // Not an admin or error checking
+    }
+  }
 
   useEffect(() => {
     let checkTimer: NodeJS.Timeout
 
     const checkSession = async () => {
       // 1. Cek apakah ada error di URL (misal link expired)
-      const hash = location.hash.substring(1) // remove #
+      const hash = location.hash.startsWith('#') ? location.hash.substring(1) : location.hash
       const params = new URLSearchParams(hash)
       const errorDescription = params.get('error_description')
       const errorCode = params.get('error')
@@ -62,6 +90,7 @@ export function ResetPasswordPage() {
       const { data: { session } } = await supabase.auth.getSession()
 
       if (session) {
+        await checkAdminRole(session.user.id)
         setVerifying(false)
         return
       }
@@ -70,6 +99,7 @@ export function ResetPasswordPage() {
       checkTimer = setTimeout(async () => {
         const { data: { session: retrySession } } = await supabase.auth.getSession()
         if (retrySession) {
+          await checkAdminRole(retrySession.user.id)
           setVerifying(false)
         } else {
           setError('Sesi tidak terdeteksi otomatis. Pastikan Anda membuka link dari email.')
@@ -81,8 +111,16 @@ export function ResetPasswordPage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
         if (checkTimer) clearTimeout(checkTimer)
-        setError(null)
-        setVerifying(false)
+        // Perform admin check immediately upon event
+        if (session) {
+             checkAdminRole(session.user.id).then(() => {
+                 setError(null)
+                 setVerifying(false)
+             })
+        } else {
+            setError(null)
+            setVerifying(false)
+        }
       }
     })
 
@@ -101,10 +139,29 @@ export function ResetPasswordPage() {
   }
 
   const handleChangePassword = async () => {
-    if (password.length < 8) {
-      setMessage('Password harus minimal 8 karakter')
-      return
+    if (!isAdmin) {
+        // Simple Validation for Regular/Mobile Users
+        if (password.length < 6) {
+          setMessage('Password harus minimal 6 karakter')
+          return
+        }
+        if (!/\d/.test(password)) {
+          setMessage('Password harus mengandung minimal 1 angka')
+          return
+        }
+    } else {
+        // Strict Validation for Admins
+        if (password.length < 8) {
+          setMessage('Password harus minimal 8 karakter')
+          return
+        }
+        // Strict complexity check
+        if (!(/[a-z]/.test(password) && /[A-Z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password))) {
+           setMessage('Password harus mengandung huruf besar, huruf kecil, angka, dan karakter spesial')
+           return
+        }
     }
+
     if (password !== confirm) {
       setMessage('Password tidak cocok')
       return
@@ -129,19 +186,33 @@ export function ResetPasswordPage() {
 
       setSuccess(true)
 
-      // Cek apakah request dari mobile atau web
-      const searchParams = new URLSearchParams(location.search)
-      const source = searchParams.get('source')
-
-      // Jika BUKAN dari mobile (artinya dari Web/Admin), redirect ke login
-      if (source !== 'mobile') {
+      if (!isAdmin) {
+         // Force logout for regular users so they don't get stuck in a web session
+         setTimeout(async () => {
+            await supabase.auth.signOut()
+         }, 1000)
+      } else {
         setTimeout(() => {
           navigate('/login')
         }, 2000)
       }
 
     } catch (err: any) {
-      setMessage(String(err?.message || err))
+      // Translate Supabase error messages to Indonesian
+      let msg = String(err?.message || err).toLowerCase()
+      
+      if (msg.includes('different from the old password')) {
+        msg = 'Password baru harus berbeda dengan password lama. Harap gunakan password yang belum pernah dipakai.'
+      } else if (msg.includes('password should be at least')) {
+        msg = 'Password terlalu pendek.'
+      } else if (msg.includes('weak_password')) {
+        msg = 'Password terlalu lemah. Gunakan kombinasi huruf, angka, dan simbol.'
+      } else {
+        msg = String(err?.message || err)
+      }
+
+      setMessage(msg)
+
     } finally {
       setLoading(false)
     }
@@ -207,7 +278,7 @@ export function ResetPasswordPage() {
               Password Anda telah berhasil diperbarui. Anda sekarang dapat login dengan password baru.
             </Text>
 
-            {location.search.includes('source=mobile') ? (
+            {!isAdmin ? (
               <Box p="md" bg="var(--mantine-color-gray-light)" style={{ borderRadius: 'var(--mantine-radius-md)', width: '100%' }}>
                 <Text size="xs" c="var(--mantine-color-gray-light-color)">
                   Anda dapat menutup halaman ini dan login melalui aplikasi CariPasal di perangkat Anda.
@@ -273,11 +344,20 @@ export function ResetPasswordPage() {
                       mb="sm"
                     />
                     <Stack gap={4}>
-                      <RequirementItem met={password.length >= 8} label="Minimal 8 karakter" />
-                      <RequirementItem met={/[a-z]/.test(password)} label="Huruf kecil (a-z)" />
-                      <RequirementItem met={/[A-Z]/.test(password)} label="Huruf besar (A-Z)" />
-                      <RequirementItem met={/[0-9]/.test(password)} label="Angka (0-9)" />
-                      <RequirementItem met={/[^A-Za-z0-9]/.test(password)} label="Karakter spesial" />
+                      {!isAdmin ? (
+                          <>
+                            <RequirementItem met={password.length >= 6} label="Minimal 6 karakter" />
+                            <RequirementItem met={/[0-9]/.test(password)} label="Mengandung angka (0-9)" />
+                          </>
+                      ) : (
+                          <>
+                              <RequirementItem met={password.length >= 8} label="Minimal 8 karakter" />
+                              <RequirementItem met={/[a-z]/.test(password)} label="Huruf kecil (a-z)" />
+                              <RequirementItem met={/[A-Z]/.test(password)} label="Huruf besar (A-Z)" />
+                              <RequirementItem met={/[0-9]/.test(password)} label="Angka (0-9)" />
+                              <RequirementItem met={/[^A-Za-z0-9]/.test(password)} label="Karakter spesial" />
+                          </>
+                      )}
                     </Stack>
                   </Box>
                 )}

@@ -147,8 +147,11 @@ serve(async (req) => {
         continue;
       }
 
-      if (user.password.length < 8) {
-        validationErrors.push(`Row ${rowNum}: Password must be at least 8 characters`);
+      if (user.password.length < 6) {
+        validationErrors.push(`Row ${rowNum}: Password must be at least 6 characters`);
+      }
+      if (!/\d/.test(user.password)) {
+        validationErrors.push(`Row ${rowNum}: Password must contain at least 1 number`);
       }
 
       if (user.nama && user.nama.length > 255) {

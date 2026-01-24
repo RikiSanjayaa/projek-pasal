@@ -103,8 +103,9 @@ serve(async (req) => {
     if (nama.length > 255) return json({ error: 'Nama too long' }, 400)
 
     // Validate password if provided
-    if (customPassword && customPassword.length < 8) {
-      return json({ error: 'Password harus minimal 8 karakter' }, 400)
+    if (customPassword) {
+      if (customPassword.length < 6) return json({ error: 'Password harus minimal 6 karakter' }, 400)
+      if (!/\d/.test(customPassword)) return json({ error: 'Password harus mengandung minimal 1 angka' }, 400)
     }
 
     // Generate temporary password or use custom
