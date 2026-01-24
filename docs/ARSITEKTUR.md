@@ -82,7 +82,22 @@ User Input → Login Screen → Supabase Auth → Verify User Table
    Login Success          Device Conflict Error
         │
         ▼
-   Store expiry locally
+   Store expiry & last_verification locally
+        │
+        ▼
+   (On subsequent app open)
+        │
+        ▼
+   Check: last_verification > 365 days?
+        │
+   ┌────┴────┐
+   │         │
+   ▼         ▼
+  [No]     [Yes]
+   │         │
+   ▼         ▼
+ Continue  Force Logout
+           (Yearly re-auth)
 ```
 
 ### 2. User Search Flow
@@ -174,6 +189,8 @@ Admin Login → Auth Check → Dashboard → API Call → RLS Check → Database
 - Akun pengguna mobile dibuat oleh admin dengan masa aktif 3 tahun
 - Kebijakan satu perangkat per akun (device binding)
 - Expiry check saat login dan sebelum sync
+- **Yearly re-authentication**: User wajib login ulang jika tidak login selama 1 tahun (keamanan)
+- **Forgot password**: User dapat reset password via email tanpa bantuan admin
 - Admin dapat memperpanjang masa aktif atau menonaktifkan pengguna
 
 ### Authorization (Row Level Security)
