@@ -340,7 +340,6 @@ class AuthService {
       final redirectUrl = isWeb
           ? null // Let Supabase handle it for web
           : '${Env.webAppUrl}/reset-password?source=mobile';
-      // Note: This uses the base URL from env.dart
 
       await _supabase.auth.resetPasswordForEmail(
         email,
