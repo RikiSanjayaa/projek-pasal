@@ -1,0 +1,46 @@
+name: CI - Build Verification
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-admin:
+    name: Build Admin Dashboard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: admin-dashboard/package-lock.json
+      
+      - name: Install dependencies
+        run: cd admin-dashboard && npm ci
+      
+      - name: Build
+        run: cd admin-dashboard && npm run build
+
+  build-mobile:
+    name: Build Mobile Web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.2'
+          channel: 'stable'
+      
+      - name: Create env.dart
+        run: |
+          cd pasal_mobile_app
+          cp lib/core/config/env-example.dart lib/core/config/env.dart
+      
+      - name: Install dependencies
+        run: cd pasal_mobile_app && flutter pub get
+      
+      - name: Build web
+        run: cd pasal_mobile_app && flutter build web --release
