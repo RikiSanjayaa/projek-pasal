@@ -2,14 +2,15 @@ import { Alert, Text } from '@mantine/core'
 import { IconAlertCircle } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 
 export function AdminActiveAlert() {
-  const { data: adminReadCheck } = useQuery({
-    queryKey: ['admin', 'can-read-self-email'],
+  const { user, loading } = useAuth()
+
+  const { data: adminReadCheck, isLoading: isQueryLoading } = useQuery({
+    queryKey: ['admin', 'can-read-self-email', user?.id],
     queryFn: async () => {
-      const { data: userData } = await supabase.auth.getUser()
-      const user = userData?.user
-      if (!user) return { canRead: false }
+      if (!user) return { canRead: true } // Fallback aman, harusnya tidak terpanggil karena enabled: !!user
 
       const { data, error } = await supabase
         .from('admin_users')
@@ -19,8 +20,13 @@ export function AdminActiveAlert() {
 
       return { canRead: !!data && !error }
     },
+    // Query hanya jalan jika user sudah ada
+    enabled: !!user,
     staleTime: 30 * 1000,
   })
+
+
+  if (loading || !user || isQueryLoading) return null
 
   const isAdminInactive = adminReadCheck ? !adminReadCheck.canRead : false
 
