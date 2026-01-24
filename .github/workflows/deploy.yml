@@ -47,6 +47,12 @@ jobs:
             --exclude 'build' \
             --exclude 'volumes' \
             --exclude 'backups' \
+            --exclude '.env' \
+            --exclude '.env.*' \
+            --exclude 'storage' \
+            --exclude 'public/uploads' \
+            --exclude '*.log' \
+            --exclude 'lib/core/config/env.dart' \
             ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.PROJECT_PATH }}
 
       - name: Backup database
