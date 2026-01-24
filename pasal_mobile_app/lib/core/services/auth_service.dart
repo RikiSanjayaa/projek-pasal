@@ -5,6 +5,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import '../config/env.dart';
 import '../utils/platform_utils.dart';
 
 // Platform detection helper
@@ -338,8 +339,8 @@ class AuthService {
       // not to redirect to admin login after success
       final redirectUrl = isWeb
           ? null // Let Supabase handle it for web
-          : 'https://cari-pasal-admin.vercel.app/reset-password?source=mobile';
-      // Note: Replace with your actual domain if different from Vercel default or local
+          : '${Env.webAppUrl}/reset-password?source=mobile';
+      // Note: This uses the base URL from env.dart
 
       await _supabase.auth.resetPasswordForEmail(
         email,
