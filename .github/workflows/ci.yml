@@ -39,6 +39,9 @@ jobs:
           cd pasal_mobile_app
           cp lib/core/config/env-example.dart lib/core/config/env.dart
       
+      - name: Configure web platform
+        run: cd pasal_mobile_app && flutter create . --platforms web
+      
       - name: Install dependencies
         run: cd pasal_mobile_app && flutter pub get
       
