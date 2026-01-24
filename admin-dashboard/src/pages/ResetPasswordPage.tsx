@@ -199,17 +199,20 @@ export function ResetPasswordPage() {
 
     } catch (err: any) {
       // Translate Supabase error messages to Indonesian
-      let msg = String(err?.message || err)
+      let msg = String(err?.message || err).toLowerCase()
       
-      if (msg.includes('New password should be different from the old password')) {
+      if (msg.includes('different from the old password')) {
         msg = 'Password baru harus berbeda dengan password lama. Harap gunakan password yang belum pernah dipakai.'
-      } else if (msg.includes('Password should be at least')) {
+      } else if (msg.includes('password should be at least')) {
         msg = 'Password terlalu pendek.'
       } else if (msg.includes('weak_password')) {
         msg = 'Password terlalu lemah. Gunakan kombinasi huruf, angka, dan simbol.'
+      } else {
+        msg = String(err?.message || err)
       }
 
       setMessage(msg)
+
     } finally {
       setLoading(false)
     }
