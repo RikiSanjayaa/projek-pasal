@@ -34,6 +34,10 @@ jobs:
           EOF
           chmod 600 ~/.ssh/config
 
+      - name: Install rsync on server
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "command -v rsync >/dev/null 2>&1 || (apt-get update && apt-get install -y rsync)"
+
       - name: Sync repository to server
         run: |
           rsync -avz --delete \
