@@ -36,12 +36,14 @@ jobs:
 
       - name: Sync repository to server
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            cd ${{ secrets.PROJECT_PATH }}
-            git fetch origin
-            git reset --hard origin/main
-            echo "✓ Repository synced"
-          EOF
+          rsync -avz --delete \
+            --exclude '.git' \
+            --exclude 'node_modules' \
+            --exclude '.dart_tool' \
+            --exclude 'build' \
+            --exclude 'volumes' \
+            --exclude 'backups' \
+            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.PROJECT_PATH }}
 
       - name: Backup database
         run: |
@@ -70,16 +72,19 @@ jobs:
       - name: Deploy Edge Functions
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            cd ${{ secrets.PROJECT_PATH }}
+            set -e
             echo "Deploying edge functions..."
-            cp -r supabase/functions/* volumes/functions/
+            mkdir -p ~/supabase/docker/volumes/functions
+            cp -r ${{ secrets.PROJECT_PATH }}/supabase/functions/* ~/supabase/docker/volumes/functions/
+            docker restart supabase-edge-functions
             echo "✓ Edge functions deployed"
           EOF
 
       - name: Rebuild Admin Dashboard
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            cd ${{ secrets.PROJECT_PATH }}
+            set -e
+            cd ${{ secrets.PROJECT_PATH }}/admin-dashboard
             echo "Building admin dashboard..."
             docker compose build --no-cache web-admin
             docker compose up -d web-admin
@@ -89,10 +94,11 @@ jobs:
       - name: Rebuild Mobile Web
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            cd ${{ secrets.PROJECT_PATH }}
+            set -e
+            cd ${{ secrets.PROJECT_PATH }}/pasal_mobile_app
             echo "Building mobile web..."
-            docker compose build --no-cache mobile-web
-            docker compose up -d mobile-web
+            docker compose build --no-cache pasal-mobile-web
+            docker compose up -d pasal-mobile-web
             echo "✓ Mobile web deployed"
           EOF
 
