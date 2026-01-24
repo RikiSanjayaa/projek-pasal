@@ -36,14 +36,12 @@ jobs:
 
       - name: Sync repository to server
         run: |
-          rsync -avz --delete \
-            --exclude '.git' \
-            --exclude 'node_modules' \
-            --exclude '.dart_tool' \
-            --exclude 'build' \
-            --exclude 'volumes' \
-            --exclude 'backups' \
-            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.PROJECT_PATH }}/
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            cd ${{ secrets.PROJECT_PATH }}
+            git fetch origin
+            git reset --hard origin/main
+            echo "✓ Repository synced"
+          EOF
 
       - name: Backup database
         run: |
