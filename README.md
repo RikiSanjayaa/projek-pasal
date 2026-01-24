@@ -16,7 +16,7 @@ Aplikasi untuk mencari dan mengelola pasal-pasal dari:
 │  Mobile App             │  Admin Dashboard                  │
 │  (Flutter)              │  (React + Mantine)                │
 │  - User biasa           │  - CRUD pasal                     │
-│  - Tanpa login          │  - Bulk import JSON               │
+│  - Login dengan email   │  - Bulk import XLSX               │
 │  - Offline support      │  - Audit log                      │
 └─────────────────────────┴───────────────────────────────────┘
                           │
