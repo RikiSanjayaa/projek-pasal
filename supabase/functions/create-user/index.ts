@@ -5,8 +5,7 @@
 // deno-lint-ignore-file no-explicit-any
 // @ts-nocheck
 
-import { serve } from 'https://deno.land/std/http/server.ts';
-import { createClient } from 'jsr:@supabase/supabase-js';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // Security: Get allowed origins from environment or use restrictive default
 const getAllowedOrigin = (requestOrigin: string | null): string => {
@@ -35,7 +34,7 @@ const getAllowedOrigin = (requestOrigin: string | null): string => {
   return '';
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const requestOrigin = req.headers.get('origin');
   const allowedOrigin = getAllowedOrigin(requestOrigin);
 
@@ -58,24 +57,26 @@ serve(async (req) => {
     const SERVICE_ROLE = Deno.env.get('SERVICE_ROLE') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!SUPABASE_URL || !SERVICE_ROLE) {
-      const missing: string[] = []
-      if (!SUPABASE_URL) missing.push('SUPABASE_URL')
-      if (!SERVICE_ROLE) missing.push('SERVICE_ROLE')
-      return json({ error: `Missing environment secrets: ${missing.join(', ')}` }, 500)
+      return json({ error: 'Missing environment secrets' }, 500)
     }
 
     const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
 
     if (req.method !== 'POST') return new Response(null, { status: 405, headers: CORS_HEADERS });
 
-    // Validate authorization header
     const authHeader = req.headers.get('authorization') || '';
     const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-    if (!token) return json({ error: 'Unauthorized' }, 401)
+    
+    if (!token) {
+      return json({ error: 'Unauthorized' }, 401)
+    }
 
-    // Verify the caller is an authenticated user
     const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(token);
-    if (userErr || !userData?.user) return json({ error: 'Unauthorized' }, 401)
+    
+    if (userErr || !userData?.user) {
+        return json({ error: 'Unauthorized' }, 401)
+    }
+
     const callerId = userData.user.id;
 
     // Verify the caller is an active admin (any admin, not just super_admin)
@@ -144,7 +145,11 @@ serve(async (req) => {
 
     if (userInsertErr) {
       // Rollback: delete the auth user if users record creation fails
-      await supabaseAdmin.auth.admin.deleteUser(userId).catch(() => { });
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+      } catch (e) {
+        console.error('Rollback failed:', e);
+      }
       return json({ error: userInsertErr.message || 'Failed to create user record' }, 500)
     }
 
@@ -174,7 +179,11 @@ serve(async (req) => {
     }
 
     return json({ email, password, expires_at: expiresAt.toISOString() }, 200)
-  } catch (err) {
-    return json({ error: 'Internal server error' }, 500)
+  } catch (err: any) {
+    console.error('Create user error:', err);
+    return json({ 
+      error: 'Internal server error',
+      details: err.message || String(err)
+    }, 500)
   }
 });

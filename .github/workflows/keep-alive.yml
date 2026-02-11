@@ -1,0 +1,29 @@
+name: Supabase Keep Alive
+
+on:
+  schedule:
+    - cron: '0 0,12 * * *' # Run twice daily at 00:00 and 12:00 UTC
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase (Keep Project Active)
+        run: |
+          # Query the 'pasal' table, selecting just 1 record to minimize load.
+          # We use the anon key which is standard for client-side queries.
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/pasal?select=id&limit=1" \
+          -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+          
+          echo "Status Code: $RESPONSE"
+          
+          if [ "$RESPONSE" -ge 200 ] && [ "$RESPONSE" -lt 300 ]; then
+            echo "Success: Project is active."
+          else
+            echo "Warning: Received status $RESPONSE. Check if project is paused or secrets are incorrect."
+            # We don't fail the build to avoid spamming error emails if it's just a temporary glitch, 
+            # but you can remove the '|| true' if you want alerts.
+            exit 0 
+          fi

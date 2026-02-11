@@ -4,8 +4,8 @@
 // deno-lint-ignore-file no-explicit-any
 // @ts-nocheck
 
-import { serve } from 'https://deno.land/std/http/server.ts';
-import { createClient } from 'jsr:@supabase/supabase-js';
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // Security: Get allowed origins from environment or use restrictive default
 const getAllowedOrigin = (requestOrigin: string | null): string => {
@@ -34,7 +34,7 @@ const getAllowedOrigin = (requestOrigin: string | null): string => {
   return '';
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const requestOrigin = req.headers.get('origin');
   const allowedOrigin = getAllowedOrigin(requestOrigin);
 
@@ -128,8 +128,11 @@ serve(async (req) => {
     }
 
     return json({ success: true, email: targetUser.email }, 200)
-  } catch (err) {
+  } catch (err: any) {
     console.error('Delete user error:', err);
-    return json({ error: 'Internal server error' }, 500)
+    return json({ 
+      error: 'Internal server error',
+      details: err.message || String(err)
+    }, 500)
   }
 });

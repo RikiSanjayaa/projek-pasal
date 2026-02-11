@@ -4,8 +4,8 @@
 // deno-lint-ignore-file no-explicit-any
 // @ts-nocheck
 
-import { serve } from 'https://deno.land/std/http/server.ts';
-import { createClient } from 'jsr:@supabase/supabase-js';
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // Security: Get allowed origins from environment or use restrictive default
 const getAllowedOrigin = (requestOrigin: string | null): string => {
@@ -34,7 +34,7 @@ const getAllowedOrigin = (requestOrigin: string | null): string => {
   return '';
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const requestOrigin = req.headers.get('origin');
   const allowedOrigin = getAllowedOrigin(requestOrigin);
 
@@ -110,20 +110,37 @@ serve(async (req) => {
     const { error: adminInsertErr } = await supabaseAdmin.from('admin_users').insert({
       id: userId,
       email,
-      nama: nama ?? null,
+      nama: nama || email.split('@')[0], // Fallback if name is missing
       role: 'admin',
       is_active: true
     });
 
     if (adminInsertErr) {
-      await supabaseAdmin.auth.admin.deleteUser(userId).catch(() => { });
-      return json({ error: adminInsertErr.message || 'Failed to create admin record' }, 500)
+      console.error('Failed to insert admin record:', adminInsertErr);
+      await supabaseAdmin.auth.admin.deleteUser(userId).catch(e => console.error('Rollback failed:', e));
+      return json({ 
+        error: 'Database Insert Failed', 
+        details: adminInsertErr.message 
+      }, 500)
     }
 
-    await supabaseAdmin.from('profiles').upsert({ id: userId, must_change_password: true }, { onConflict: 'id' }).catch(() => { });
+    // Fix: catch error properly by awaiting the promise, not the result
+    try {
+      await supabaseAdmin.from('profiles').upsert({ id: userId, must_change_password: true }, { onConflict: 'id' });
+    } catch (e) {
+      console.error('Profile upsert failed (non-critical):', e);
+    }
 
     return json({ email, password }, 200)
-  } catch (err) {
-    return json({ error: 'Internal server error' }, 500)
+  } catch (err: any) {
+    console.error('Unexpected error in create-admin:', err);
+    
+    // Attempt rollback if userId is defined (might not be if error happened early)
+    // Note: this catch block catches errors from the main execution flow
+    
+    return json({ 
+      error: 'Internal Server Error (Caught)', 
+      details: err.message || String(err) 
+    }, 500)
   }
 });
