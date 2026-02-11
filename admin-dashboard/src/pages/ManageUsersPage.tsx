@@ -295,32 +295,60 @@ export function ManageUsersPage() {
 
       if (error) throw error
 
-      // Update local state
-      setUsers((prev) => prev.map((u) => {
-        if (u.id === userId) {
-          return {
-            ...u,
-            user_devices: u.user_devices.map((d) => d.id === deviceId ? { ...d, is_active: false } : d)
-          }
-        }
-        return u
-      }))
-
-      // Update devices modal target
-      if (devicesTarget) {
-        setDevicesTarget({
-          user: {
-            ...devicesTarget.user,
-            user_devices: devicesTarget.user.user_devices.map((d) => d.id === deviceId ? { ...d, is_active: false } : d)
-          }
-        })
-      }
-
+      updateLocalDeviceState(userId, deviceId, { is_active: false })
       showNotification({ title: 'Berhasil', message: 'Perangkat berhasil dilogout', color: 'green' })
     } catch (err: any) {
       showNotification({ title: 'Error', message: String(err?.message || err), color: 'red' })
     } finally {
       setForceLogoutLoading(false)
+    }
+  }
+
+  // Device Alias Editing
+  const [editingDeviceId, setEditingDeviceId] = React.useState<string | null>(null)
+  const [tempAlias, setTempAlias] = React.useState('')
+  const [updateAliasLoading, setUpdateAliasLoading] = React.useState(false)
+
+  const saveAlias = async (deviceId: string, userId: string) => {
+    setUpdateAliasLoading(true)
+    try {
+      const { error } = await supabase
+        .from('user_devices')
+        .update({ device_alias: tempAlias.trim() || null } as never)
+        .eq('id', deviceId)
+
+      if (error) throw error
+
+      updateLocalDeviceState(userId, deviceId, { device_alias: tempAlias.trim() || null })
+      setEditingDeviceId(null)
+      setTempAlias('')
+      showNotification({ title: 'Berhasil', message: 'Alias perangkat diperbarui', color: 'green' })
+    } catch (err: any) {
+      showNotification({ title: 'Error', message: String(err?.message || err), color: 'red' })
+    } finally {
+      setUpdateAliasLoading(false)
+    }
+  }
+
+  // Helper to update local state avoiding code duplication
+  const updateLocalDeviceState = (userId: string, deviceId: string, updates: Partial<any>) => {
+    setUsers((prev) => prev.map((u) => {
+      if (u.id === userId) {
+        return {
+          ...u,
+          user_devices: u.user_devices.map((d) => d.id === deviceId ? { ...d, ...updates } : d)
+        }
+      }
+      return u
+    }))
+
+    if (devicesTarget && devicesTarget.user.id === userId) {
+      setDevicesTarget(prev => prev ? {
+        user: {
+          ...prev.user,
+          user_devices: prev.user.user_devices.map((d) => d.id === deviceId ? { ...d, ...updates } : d)
+        }
+      } : null)
     }
   }
 
@@ -1141,7 +1169,57 @@ export function ManageUsersPage() {
               <Table.Tbody>
                 {devicesTarget.user.user_devices.map((device) => (
                   <Table.Tr key={device.id}>
-                    <Table.Td>{device.device_name || 'Unknown Device'}</Table.Td>
+                    <Table.Td>
+                      {editingDeviceId === device.id ? (
+                        <Group gap="xs">
+                          <TextInput
+                            size="xs"
+                            value={tempAlias}
+                            onChange={(e) => setTempAlias(e.currentTarget.value)}
+                            placeholder="Alias perangkat"
+                            style={{ flex: 1 }}
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') saveAlias(device.id, devicesTarget.user.id);
+                              if (e.key === 'Escape') {
+                                setEditingDeviceId(null);
+                                setTempAlias('');
+                              }
+                            }}
+                          />
+                          <ActionIcon color="green" size="sm" loading={updateAliasLoading} onClick={() => saveAlias(device.id, devicesTarget.user.id)}>
+                            <IconCheck size={14} />
+                          </ActionIcon>
+                          <ActionIcon color="red" size="sm" onClick={() => { setEditingDeviceId(null); setTempAlias(''); }}>
+                            <IconX size={14} />
+                          </ActionIcon>
+                        </Group>
+                      ) : (
+                        <Group gap="xs">
+                          <div>
+                            {device.device_alias ? (
+                              <>
+                                <Text size="sm" fw={500}>{device.device_alias}</Text>
+                                <Text size="xs" c="dimmed">{device.device_name || 'Unknown Device'}</Text>
+                              </>
+                            ) : (
+                              <Text size="sm">{device.device_name || 'Unknown Device'}</Text>
+                            )}
+                          </div>
+                          <ActionIcon 
+                            variant="subtle" 
+                            size="xs" 
+                            color="gray"
+                            onClick={() => {
+                              setEditingDeviceId(device.id);
+                              setTempAlias(device.device_alias || device.device_name || '');
+                            }}
+                          >
+                            <IconEdit size={12} />
+                          </ActionIcon>
+                        </Group>
+                      )}
+                    </Table.Td>
                     <Table.Td>
                       <Badge color={device.is_active ? 'green' : 'gray'} variant="light">
                         {device.is_active ? 'Aktif' : 'Tidak Aktif'}

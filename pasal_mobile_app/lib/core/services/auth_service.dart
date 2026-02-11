@@ -274,17 +274,22 @@ class AuthService {
           .eq('user_id', userId)
           .eq('is_active', true);
 
-      // Check if another device is active
-      for (var device in existingDevices) {
-        if (device['device_id'] != deviceId) {
-          await _supabase.auth.signOut();
-          final otherDeviceName = device['device_name'] ?? 'perangkat lain';
-          return LoginResult.deviceConflict(
-            'Akun sedang aktif di $otherDeviceName. '
-            'Logout dari perangkat tersebut terlebih dahulu, '
-            'atau hubungi administrator jika perangkat hilang.',
-          );
-        }
+      // Check if this device is already registered
+      final isCurrentDeviceRegistered = existingDevices.any(
+        (device) => device['device_id'] == deviceId,
+      );
+
+      // If not registered and already have 3 active devices, block login
+      if (!isCurrentDeviceRegistered && existingDevices.length >= 3) {
+        await _supabase.auth.signOut();
+        final deviceNames = existingDevices
+            .map((d) => d['device_name'] ?? 'Unknown')
+            .take(3)
+            .join(', ');
+        return LoginResult.deviceConflict(
+          'Akun sudah aktif di 3 perangkat: $deviceNames. '
+          'Logout dari salah satu perangkat atau hubungi administrator.',
+        );
       }
 
       // 6. Register/update this device

@@ -232,6 +232,7 @@ export interface Database {
           user_id: string
           device_id: string
           device_name: string | null
+          device_alias: string | null
           is_active: boolean
           last_active_at: string
           created_at: string
@@ -241,6 +242,7 @@ export interface Database {
           user_id: string
           device_id: string
           device_name?: string | null
+          device_alias?: string | null
           is_active?: boolean
           last_active_at?: string
           created_at?: string
@@ -250,6 +252,7 @@ export interface Database {
           user_id?: string
           device_id?: string
           device_name?: string | null
+          device_alias?: string | null
           is_active?: boolean
           last_active_at?: string
           created_at?: string
@@ -261,6 +264,7 @@ export interface Database {
           admin_id: string
           device_id: string
           device_name: string | null
+          device_alias: string | null
           is_active: boolean
           last_active_at: string
           created_at: string
@@ -270,6 +274,7 @@ export interface Database {
           admin_id: string
           device_id: string
           device_name?: string | null
+          device_alias?: string | null
           is_active?: boolean
           last_active_at?: string
           created_at?: string
@@ -279,6 +284,7 @@ export interface Database {
           admin_id?: string
           device_id?: string
           device_name?: string | null
+          device_alias?: string | null
           is_active?: boolean
           last_active_at?: string
           created_at?: string
