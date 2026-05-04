@@ -38,7 +38,7 @@ createRoot(document.getElementById('root')!).render(
       <MantineProvider theme={theme} defaultColorScheme="light">
         <Notifications position="top-right" />
         <ModalsProvider>
-          <BrowserRouter>
+          <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
             <AuthProvider>
               <DataMappingProvider>
                 <App />
