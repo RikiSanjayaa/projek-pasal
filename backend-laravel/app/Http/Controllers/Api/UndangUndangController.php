@@ -23,7 +23,11 @@ class UndangUndangController extends Controller
             $query->where('is_active', filter_var($request->query('is_active'), FILTER_VALIDATE_BOOLEAN));
         }
 
-        return response()->json($query->orderByDesc('tahun')->paginate((int) $request->query('per_page', 20)));
+        if ($request->boolean('with_pasal')) {
+            $query->with(['pasal' => fn ($query) => $query->select('id', 'undang_undang_id', 'nomor')->orderBy('nomor')]);
+        }
+
+        return response()->json($query->orderBy('kode')->paginate((int) $request->query('per_page', 100)));
     }
 
     public function store(Request $request, AuditService $audit): JsonResponse
