@@ -27,10 +27,8 @@ import {
 } from '@tabler/icons-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/contexts/AuthContext'
+import { api, type PaginatedResponse } from '@/lib/api'
 import { XlsxImportGuide } from '@/components/bulk-import/XlsxImportGuide'
-import type { PasalInsert } from '@/lib/database.types'
 
 
 
@@ -66,7 +64,6 @@ interface ImportResult {
 
 export function BulkImportPage() {
   const queryClient = useQueryClient()
-  const { user } = useAuth()
   const [selectedUU, setSelectedUU] = useState<string | null>(null)
   const [jsonData, setJsonData] = useState<ImportPasal[] | null>(null)
   const [fileName, setFileName] = useState<string>('')
@@ -78,14 +75,10 @@ export function BulkImportPage() {
   const { data: undangUndangList } = useQuery({
     queryKey: ['undang_undang', 'list'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('undang_undang')
-        .select('id, kode, nama')
-        .eq('is_active', true)
-        .order('kode')
-
-      if (error) throw error
-      return data as { id: string; kode: string; nama: string }[]
+      const response = await api.get<PaginatedResponse<{ id: string; kode: string; nama: string }>>(
+        '/admin/undang-undang?is_active=1&per_page=200'
+      )
+      return response.data
     },
   })
 
@@ -196,143 +189,39 @@ export function BulkImportPage() {
         throw new Error('Pilih undang-undang dan upload file terlebih dahulu')
       }
 
-      const result: ImportResult = {
+      setCurrentPhase('pasal')
+      setProgress(40)
+      const response = await api.post<{
+        created: number
+        updated: number
+        errors: { row: number; message: string }[]
+        links?: { created: number; errors: { source: string; target: string; message: string }[] }
+      }>('/admin/pasal/bulk-import', {
+        rows: jsonData.map((item) => ({
+          ...item,
+          undang_undang_id: selectedUU,
+        })),
+      })
+
+      setCurrentPhase('links')
+      setProgress(100)
+
+      return {
         pasal: {
-          success: 0,
-          failed: 0,
-          errors: [],
+          success: response.created + response.updated,
+          failed: response.errors.length,
+          errors: response.errors.map((error) => ({ nomor: `Baris ${error.row}`, error: error.message })),
         },
         links: {
-          success: 0,
-          failed: 0,
-          errors: [],
+          success: response.links?.created || 0,
+          failed: response.links?.errors.length || 0,
+          errors: response.links?.errors.map((error) => ({
+            source: error.source,
+            target: error.target,
+            error: error.message,
+          })) || [],
         },
       }
-
-      // ===== PHASE 1: Create Pasal =====
-      setCurrentPhase('pasal')
-      const pasalIdMap = new Map<string, string>() // Map of "UU_kode|nomor" -> pasal_id
-      const total = jsonData.length
-
-      // Fetch all active undang-undang to build lookup
-      const { data: allUU, error: uuError } = await supabase
-        .from('undang_undang')
-        .select('id, kode')
-        .eq('is_active', true)
-
-      if (uuError) throw uuError
-
-      const uuMap = new Map(allUU?.map((uu: any) => [uu.kode, uu.id]) || [])
-
-      for (let i = 0; i < jsonData.length; i++) {
-        const item = jsonData[i]
-        setProgress(Math.round(((i + 1) / total) * 100))
-
-        const pasalData: PasalInsert = {
-          undang_undang_id: selectedUU,
-          nomor: item.nomor,
-          judul: item.judul || null,
-          isi: item.isi,
-          penjelasan: item.penjelasan || null,
-          keywords: item.keywords || [],
-          created_by: user?.id,
-          updated_by: user?.id,
-        }
-
-        const { data: insertedPasal, error } = await supabase
-          .from('pasal')
-          .insert(pasalData as never)
-          .select('id')
-          .single()
-
-        if (error) {
-          result.pasal.failed++
-          result.pasal.errors.push({
-            nomor: item.nomor,
-            error: error.message,
-          })
-        } else if (insertedPasal) {
-          result.pasal.success++
-          pasalIdMap.set(`${selectedUU}|${item.nomor}`, (insertedPasal as any).id)
-        }
-      }
-
-      // ===== PHASE 2: Create Links =====
-      setCurrentPhase('links')
-      const linksToCreate: Array<{ source_pasal_id: string; target_pasal_id: string; keterangan: string | null; created_by: string | undefined }> = []
-
-      for (const item of jsonData) {
-        if (!item.links || item.links.length === 0) continue
-
-        const sourcePasalId = pasalIdMap.get(`${selectedUU}|${item.nomor}`)
-        if (!sourcePasalId) continue // Skip if source pasal wasn't created
-
-        for (const link of item.links) {
-          const targetUUID = uuMap.get(link.targetUU)
-          if (!targetUUID) {
-            result.links.failed++
-            result.links.errors.push({
-              source: `${item.nomor}`,
-              target: `${link.targetUU}|${link.targetNomor}`,
-              error: `Undang-undang "${link.targetUU}" tidak ditemukan atau tidak aktif`,
-            })
-            continue
-          }
-
-          // Try to find target pasal in database
-          const { data: targetPasal, error: findError } = await supabase
-            .from('pasal')
-            .select('id')
-            .eq('undang_undang_id', targetUUID)
-            .eq('nomor', link.targetNomor)
-            .single()
-
-          if (findError || !targetPasal) {
-            result.links.failed++
-            result.links.errors.push({
-              source: `${item.nomor}`,
-              target: `${link.targetUU}|${link.targetNomor}`,
-              error: `Pasal "${link.targetNomor}" di ${link.targetUU} tidak ditemukan`,
-            })
-            continue
-          }
-
-          linksToCreate.push({
-            source_pasal_id: sourcePasalId,
-            target_pasal_id: (targetPasal as any).id as any,
-            keterangan: link.keterangan || null,
-            created_by: user?.id,
-          })
-        }
-      }
-
-      // Insert all resolved links in batches
-      const linkBatchSize = 50
-      for (let i = 0; i < linksToCreate.length; i += linkBatchSize) {
-        const batch = linksToCreate.slice(i, i + linkBatchSize)
-        setProgress(Math.round((i / linksToCreate.length) * 100))
-
-        const { error: insertError } = await supabase.from('pasal_links').insert(batch as never)
-
-        if (insertError) {
-          result.links.failed += batch.length
-          batch.forEach(() => {
-            result.links.errors.push({
-              source: '',
-              target: '',
-              error: insertError.message,
-            })
-          })
-        } else {
-          result.links.success += batch.length
-        }
-      }
-
-      if (linksToCreate.length > 0) {
-        setProgress(100)
-      }
-
-      return result
     },
     onSuccess: (result) => {
       setImportResult(result)

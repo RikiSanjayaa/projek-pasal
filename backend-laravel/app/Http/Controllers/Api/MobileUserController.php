@@ -8,6 +8,7 @@ use App\Models\UserDevice;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class MobileUserController extends Controller
 {
@@ -27,6 +28,8 @@ class MobileUserController extends Controller
     public function store(Request $request, AuditService $audit): JsonResponse
     {
         $payload = $this->validated($request);
+        $plainPassword = $payload['password'] ?? $this->temporaryPassword();
+        $payload['password'] = $plainPassword;
         $payload['created_by_admin_id'] = $request->user()?->id;
         $payload['expires_at'] = $payload['expires_at'] ?? now()->addYears(3);
         $payload['is_active'] = true;
@@ -34,17 +37,18 @@ class MobileUserController extends Controller
         $user = MobileUser::create($payload);
         $audit->log($request, 'CREATE', 'mobile_users', $user->id, null, $user);
 
-        return response()->json($user, 201);
+        return response()->json($user->toArray() + ['temporary_password' => $plainPassword], 201);
     }
 
     public function bulkCreate(Request $request, AuditService $audit): JsonResponse
     {
-        $payload = $request->validate(['users' => ['required', 'array'], 'users.*.email' => ['required', 'email'], 'users.*.nama' => ['required', 'string'], 'users.*.password' => ['required', 'string', 'min:8']]);
+        $payload = $request->validate(['users' => ['required', 'array'], 'users.*.email' => ['required', 'email'], 'users.*.nama' => ['required', 'string'], 'users.*.password' => ['nullable', 'string', 'min:8']]);
         $created = [];
         $errors = [];
 
         foreach ($payload['users'] as $index => $row) {
             try {
+                $row['password'] = $row['password'] ?? $this->temporaryPassword();
                 $created[] = MobileUser::create($row + [
                     'created_by_admin_id' => $request->user()?->id,
                     'expires_at' => now()->addYears(3),
@@ -98,6 +102,18 @@ class MobileUserController extends Controller
         return response()->json(['message' => 'Device dinonaktifkan.']);
     }
 
+    public function destroy(Request $request, string $id, AuditService $audit): JsonResponse
+    {
+        $user = MobileUser::findOrFail($id);
+        $old = $user->replicate();
+        $user->tokens()->delete();
+        $user->devices()->update(['is_active' => false]);
+        $user->delete();
+        $audit->log($request, 'DELETE', 'mobile_users', $user->id, $old, null);
+
+        return response()->json(['message' => 'Pengguna dihapus.']);
+    }
+
     private function toggle(Request $request, string $id, bool $active, AuditService $audit): JsonResponse
     {
         $user = MobileUser::findOrFail($id);
@@ -112,9 +128,14 @@ class MobileUserController extends Controller
     {
         return $request->validate([
             'email' => ['required', 'email', 'unique:mobile_users,email'],
-            'password' => ['required', 'string', 'min:8'],
+            'password' => ['nullable', 'string', 'min:8'],
             'nama' => ['required', 'string', 'max:255'],
             'expires_at' => ['nullable', 'date'],
         ]);
+    }
+
+    private function temporaryPassword(): string
+    {
+        return Str::random(10).'1a';
     }
 }

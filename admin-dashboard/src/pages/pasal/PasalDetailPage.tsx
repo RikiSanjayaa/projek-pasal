@@ -13,7 +13,7 @@ import {
 } from '@mantine/core'
 import { useQuery } from '@tanstack/react-query'
 import { IconArrowLeft, IconEdit, IconTrash, IconAlertCircle } from '@tabler/icons-react'
-import { supabase } from '@/lib/supabase'
+import { api } from '@/lib/api'
 import { PasalLinksSidebar } from '@/components/PasalLinksSidebar'
 import type { PasalWithUndangUndang } from '@/lib/database.types'
 
@@ -44,14 +44,7 @@ export function PasalDetailPage() {
   const { data: pasal, isLoading } = useQuery({
     queryKey: ['pasal', 'detail', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pasal')
-        .select('*, undang_undang(*)')
-        .eq('id', id)
-        .single()
-
-      if (error) throw error
-      return data as PasalWithUndangUndang
+      return api.get<PasalWithUndangUndang>(`/admin/pasal/${id}`)
     },
   })
 

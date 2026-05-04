@@ -17,10 +17,9 @@ import { useForm } from '@mantine/form'
 import { notifications } from '@mantine/notifications'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { api, type PaginatedResponse } from '@/lib/api'
 import { PasalLinksSidebar } from '@/components/PasalLinksSidebar'
-import { useAuth } from '@/contexts/AuthContext'
-import type { PasalInsert } from '@/lib/database.types'
+import type { PasalInsert, PasalWithUndangUndang } from '@/lib/database.types'
 
 // Type for pending link (before pasal is created)
 interface PendingLink {
@@ -32,7 +31,6 @@ interface PendingLink {
 export function PasalCreatePage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { user } = useAuth()
 
   // State for pending links (will be created after pasal is saved)
   const [pendingLinks, setPendingLinks] = useState<PendingLink[]>([])
@@ -41,14 +39,10 @@ export function PasalCreatePage() {
   const { data: undangUndangList } = useQuery({
     queryKey: ['undang_undang', 'list'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('undang_undang')
-        .select('id, kode, nama')
-        .eq('is_active', true)
-        .order('kode')
-
-      if (error) throw error
-      return data as { id: string; kode: string; nama: string }[]
+      const response = await api.get<PaginatedResponse<{ id: string; kode: string; nama: string }>>(
+        '/admin/undang-undang?is_active=1&per_page=200'
+      )
+      return response.data
     },
   })
 
@@ -56,15 +50,10 @@ export function PasalCreatePage() {
   const { data: allPasalList } = useQuery({
     queryKey: ['pasal', 'all_for_link'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pasal')
-        .select('id, nomor, judul, undang_undang(kode)')
-        .eq('is_active', true)
-        .order('nomor')
-        .limit(500)
-
-      if (error) throw error
-      return data as { id: string; nomor: string; judul: string | null; undang_undang: { kode: string } }[]
+      const response = await api.get<PaginatedResponse<PasalWithUndangUndang>>(
+        '/admin/pasal?is_active=1&per_page=500'
+      )
+      return response.data
     },
   })
 
@@ -87,37 +76,21 @@ export function PasalCreatePage() {
   const createMutation = useMutation({
     mutationFn: async (data: PasalInsert) => {
       // 1. Create pasal
-      const { data: result, error } = await supabase
-        .from('pasal')
-        .insert({
-          ...data,
-          created_by: user?.id,
-          updated_by: user?.id,
-        } as never)
-        .select('id')
-        .single()
-
-      if (error) throw error
-      if (!result) {
-        throw new Error('Gagal membuat pasal. Pastikan Anda terdaftar sebagai admin.')
-      }
-
-      const newPasalId = (result as { id: string }).id
+      const result = await api.post<{ id: string }>('/admin/pasal', data)
+      const newPasalId = result.id
 
       // 2. Create pending links if any
       if (pendingLinks.length > 0) {
-        const linksToInsert = pendingLinks.map((link) => ({
-          source_pasal_id: newPasalId,
-          target_pasal_id: link.targetPasalId,
-          keterangan: link.keterangan || null,
-          created_by: user?.id,
-        }))
-
-        const { error: linkError } = await supabase
-          .from('pasal_links')
-          .insert(linksToInsert as never)
-
-        if (linkError) {
+        try {
+          await Promise.all(
+            pendingLinks.map((link) =>
+              api.post(`/admin/pasal/${newPasalId}/links`, {
+                target_pasal_id: link.targetPasalId,
+                keterangan: link.keterangan || null,
+              })
+            )
+          )
+        } catch {
           notifications.show({
             title: 'Peringatan',
             message: 'Pasal berhasil dibuat, tetapi gagal membuat beberapa link pasal terkait.',

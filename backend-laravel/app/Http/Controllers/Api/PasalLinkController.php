@@ -12,7 +12,7 @@ class PasalLinkController extends Controller
 {
     public function index(string $pasalId): JsonResponse
     {
-        return response()->json(PasalLink::with(['sourcePasal', 'targetPasal'])
+        return response()->json(PasalLink::with(['sourcePasal.undangUndang', 'targetPasal.undangUndang'])
             ->where('source_pasal_id', $pasalId)
             ->where('is_active', true)
             ->get());
@@ -34,7 +34,7 @@ class PasalLinkController extends Controller
         );
         $audit->log($request, 'CREATE', 'pasal_links', $link->id, null, $link);
 
-        return response()->json($link, 201);
+        return response()->json($link->load(['sourcePasal.undangUndang', 'targetPasal.undangUndang']), 201);
     }
 
     public function destroy(Request $request, string $id, AuditService $audit): JsonResponse

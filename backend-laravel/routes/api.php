@@ -25,6 +25,10 @@ Route::middleware(['auth:sanctum', 'role:admin,super_admin'])->prefix('admin')->
     Route::patch('/undang-undang/{id}/restore', [UndangUndangController::class, 'restore']);
 
     Route::post('/pasal/bulk-import', [PasalController::class, 'bulkImport']);
+    Route::post('/pasal/bulk-delete', [PasalController::class, 'bulkDelete']);
+    Route::post('/pasal/bulk-restore', [PasalController::class, 'bulkRestore']);
+    Route::post('/pasal/bulk-force-delete', [PasalController::class, 'bulkForceDelete']);
+    Route::delete('/pasal/{id}/force', [PasalController::class, 'forceDelete']);
     Route::apiResource('/pasal', PasalController::class);
     Route::patch('/pasal/{id}/restore', [PasalController::class, 'restore']);
     Route::get('/pasal/{id}/links', [PasalLinkController::class, 'index']);
@@ -39,12 +43,14 @@ Route::middleware(['auth:sanctum', 'role:admin,super_admin'])->prefix('admin')->
     Route::patch('/mobile-users/{id}/extend', [MobileUserController::class, 'extend']);
     Route::get('/mobile-users/{id}/devices', [MobileUserController::class, 'devices']);
     Route::delete('/mobile-users/{id}/devices/{deviceId}', [MobileUserController::class, 'deleteDevice']);
+    Route::delete('/mobile-users/{id}', [MobileUserController::class, 'destroy']);
 
     Route::middleware('role:super_admin')->group(function () {
         Route::get('/admin-users', [AdminUserController::class, 'index']);
         Route::post('/admin-users', [AdminUserController::class, 'store']);
         Route::patch('/admin-users/{id}/activate', [AdminUserController::class, 'activate']);
         Route::patch('/admin-users/{id}/deactivate', [AdminUserController::class, 'deactivate']);
+        Route::delete('/admin-users/{id}/devices/{deviceId}', [AdminUserController::class, 'deleteDevice']);
     });
 
     Route::get('/audit-logs', [AuditLogController::class, 'index']);

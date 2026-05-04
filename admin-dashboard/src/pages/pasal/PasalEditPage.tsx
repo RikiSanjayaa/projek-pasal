@@ -18,8 +18,7 @@ import { useForm } from '@mantine/form'
 import { notifications } from '@mantine/notifications'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/contexts/AuthContext'
+import { api, type PaginatedResponse } from '@/lib/api'
 import { PasalLinksSidebar } from '@/components/PasalLinksSidebar'
 import type { PasalUpdate, Pasal } from '@/lib/database.types'
 
@@ -27,20 +26,12 @@ export function PasalEditPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { user } = useAuth()
 
   // Fetch pasal data
   const { data: pasal, isLoading: loadingPasal } = useQuery({
     queryKey: ['pasal', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pasal')
-        .select('*')
-        .eq('id', id!)
-        .single()
-
-      if (error) throw error
-      return data as Pasal
+      return api.get<Pasal>(`/admin/pasal/${id}`)
     },
     enabled: !!id,
   })
@@ -49,14 +40,10 @@ export function PasalEditPage() {
   const { data: undangUndangList } = useQuery({
     queryKey: ['undang_undang', 'list'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('undang_undang')
-        .select('id, kode, nama')
-        .eq('is_active', true)
-        .order('kode')
-
-      if (error) throw error
-      return data as { id: string; kode: string; nama: string }[]
+      const response = await api.get<PaginatedResponse<{ id: string; kode: string; nama: string }>>(
+        '/admin/undang-undang?is_active=1&per_page=200'
+      )
+      return response.data
     },
   })
 
@@ -92,21 +79,7 @@ export function PasalEditPage() {
 
   const updateMutation = useMutation({
     mutationFn: async (data: PasalUpdate) => {
-      const { data: result, error } = await supabase
-        .from('pasal')
-        .update({
-          ...data,
-          updated_by: user?.id,
-        } as never)
-        .eq('id', id!)
-        .select()
-
-      if (error) throw error
-
-      // Check if update actually happened (RLS might silently block)
-      if (!result || result.length === 0) {
-        throw new Error('Gagal memperbarui. Pastikan Anda terdaftar sebagai admin di database.')
-      }
+      await api.put(`/admin/pasal/${id}`, data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pasal'] })

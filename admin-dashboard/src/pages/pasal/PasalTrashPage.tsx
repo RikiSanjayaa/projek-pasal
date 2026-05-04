@@ -26,7 +26,7 @@ import {
 } from '@tabler/icons-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DataTable, type Column } from '@/components/DataTable'
-import { supabase } from '@/lib/supabase'
+import { api, toQueryString, type PaginatedResponse } from '@/lib/api'
 
 // Type for deleted pasal
 interface DeletedPasal {
@@ -34,6 +34,7 @@ interface DeletedPasal {
   nomor: string
   judul: string | null
   isi: string
+  keywords: string[]
   deleted_at: string
   undang_undang: {
     id: string
@@ -165,14 +166,10 @@ export function PasalTrashPage() {
   const { data: undangUndangList } = useQuery({
     queryKey: ['undang_undang', 'list'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('undang_undang')
-        .select('id, kode, nama')
-        .eq('is_active', true)
-        .order('kode')
-
-      if (error) throw error
-      return data as { id: string; kode: string; nama: string }[]
+      const response = await api.get<PaginatedResponse<{ id: string; kode: string; nama: string }>>(
+        '/admin/undang-undang?is_active=1&per_page=200'
+      )
+      return response.data
     },
   })
 
@@ -180,45 +177,23 @@ export function PasalTrashPage() {
   const { data: pasalData, isLoading } = useQuery({
     queryKey: ['pasal', 'trash', page, debouncedSearch, filterUU],
     queryFn: async () => {
-      let query = supabase
-        .from('pasal')
-        .select('id, nomor, judul, isi, deleted_at, undang_undang(id, kode, nama)', { count: 'exact' })
-        .eq('is_active', false)
-        .not('deleted_at', 'is', null)
-        .order('deleted_at', { ascending: false })
-        .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
-
-      if (debouncedSearch) {
-        query = query.or(`nomor.ilike.%${debouncedSearch}%,judul.ilike.%${debouncedSearch}%,isi.ilike.%${debouncedSearch}%`)
-      }
-
-      if (filterUU) {
-        query = query.eq('undang_undang_id', filterUU)
-      }
-
-      const { data, error, count } = await query
-
-      if (error) throw error
-      return { data: data as unknown as DeletedPasal[], count: count || 0 }
+      const response = await api.get<PaginatedResponse<DeletedPasal>>(
+        `/admin/pasal${toQueryString({
+          trash: 1,
+          page,
+          per_page: PAGE_SIZE,
+          search: debouncedSearch,
+          undang_undang_id: filterUU,
+        })}`
+      )
+      return { data: response.data, count: response.total }
     },
   })
 
   // Restore mutation
   const restoreMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { data, error } = await supabase
-        .from('pasal')
-        .update({
-          is_active: true,
-          deleted_at: null,
-        } as never)
-        .eq('id', id)
-        .select()
-
-      if (error) throw error
-      if (!data || data.length === 0) {
-        throw new Error('Gagal restore. Pastikan Anda terdaftar sebagai admin.')
-      }
+      await api.patch(`/admin/pasal/${id}/restore`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pasal'] })
@@ -241,19 +216,7 @@ export function PasalTrashPage() {
   // Permanent delete mutation
   const permanentDeleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      // First delete related links
-      await supabase
-        .from('pasal_links')
-        .delete()
-        .or(`source_pasal_id.eq.${id},target_pasal_id.eq.${id}`)
-
-      // Then delete the pasal
-      const { error } = await supabase
-        .from('pasal')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
+      await api.delete(`/admin/pasal/${id}/force`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pasal'] })
@@ -276,19 +239,7 @@ export function PasalTrashPage() {
   // Bulk restore mutation
   const bulkRestoreMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      const { data, error } = await supabase
-        .from('pasal')
-        .update({
-          is_active: true,
-          deleted_at: null,
-        } as never)
-        .in('id', ids)
-        .select()
-
-      if (error) throw error
-      if (!data || data.length === 0) {
-        throw new Error('Gagal restore. Pastikan Anda terdaftar sebagai admin.')
-      }
+      await api.post('/admin/pasal/bulk-restore', { ids })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pasal'] })
@@ -312,21 +263,7 @@ export function PasalTrashPage() {
   // Bulk permanent delete mutation
   const bulkPermanentDeleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      // Delete related links for all pasal
-      for (const id of ids) {
-        await supabase
-          .from('pasal_links')
-          .delete()
-          .or(`source_pasal_id.eq.${id},target_pasal_id.eq.${id}`)
-      }
-
-      // Delete all pasal
-      const { error } = await supabase
-        .from('pasal')
-        .delete()
-        .in('id', ids)
-
-      if (error) throw error
+      await api.post('/admin/pasal/bulk-force-delete', { ids })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pasal'] })

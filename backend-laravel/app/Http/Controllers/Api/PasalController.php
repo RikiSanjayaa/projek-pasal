@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Pasal;
+use App\Models\PasalLink;
 use App\Services\AuditService;
 use App\Services\ImportPasalService;
 use Illuminate\Http\JsonResponse;
@@ -14,8 +15,11 @@ class PasalController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Pasal::query()->with('undangUndang');
-        if ($request->boolean('with_trashed')) {
+        if ($request->boolean('with_trashed') || $request->boolean('trash')) {
             $query->withTrashed();
+        }
+        if ($request->boolean('trash')) {
+            $query->onlyTrashed();
         }
         if ($request->filled('undang_undang_id')) {
             $query->where('undang_undang_id', $request->query('undang_undang_id'));
@@ -29,8 +33,22 @@ class PasalController extends Controller
                 ->orWhere('judul', 'ilike', "%{$search}%")
                 ->orWhere('isi', 'ilike', "%{$search}%"));
         }
+        $keywords = $request->query('keywords', []);
+        if (is_string($keywords)) {
+            $keywords = array_filter(explode(',', $keywords));
+        }
+        if (is_array($keywords) && count($keywords) > 0) {
+            $query->where(function ($q) use ($keywords) {
+                foreach ($keywords as $keyword) {
+                    $q->orWhereRaw('? = ANY(keywords)', [$keyword]);
+                }
+            });
+        }
 
-        return response()->json($query->orderBy('nomor')->paginate((int) $request->query('per_page', 20)));
+        $sort = $request->boolean('trash') ? 'deleted_at' : 'nomor';
+        $direction = $request->boolean('trash') ? 'desc' : 'asc';
+
+        return response()->json($query->orderBy($sort, $direction)->paginate((int) $request->query('per_page', 20)));
     }
 
     public function store(Request $request, AuditService $audit): JsonResponse
@@ -80,6 +98,82 @@ class PasalController extends Controller
         $audit->log($request, 'RESTORE', 'pasal', $pasal->id, null, $pasal);
 
         return response()->json($pasal);
+    }
+
+    public function bulkDelete(Request $request, AuditService $audit): JsonResponse
+    {
+        $payload = $request->validate(['ids' => ['required', 'array'], 'ids.*' => ['uuid']]);
+        $deleted = 0;
+
+        foreach ($payload['ids'] as $id) {
+            $pasal = Pasal::find($id);
+            if (! $pasal) {
+                continue;
+            }
+            $old = $pasal->replicate();
+            $pasal->update(['is_active' => false, 'updated_by' => $request->user()?->id]);
+            $pasal->delete();
+            $audit->log($request, 'DELETE', 'pasal', $pasal->id, $old, $pasal);
+            $deleted++;
+        }
+
+        return response()->json(['deleted' => $deleted]);
+    }
+
+    public function bulkRestore(Request $request, AuditService $audit): JsonResponse
+    {
+        $payload = $request->validate(['ids' => ['required', 'array'], 'ids.*' => ['uuid']]);
+        $restored = 0;
+
+        foreach ($payload['ids'] as $id) {
+            $pasal = Pasal::withTrashed()->find($id);
+            if (! $pasal) {
+                continue;
+            }
+            $pasal->restore();
+            $pasal->update(['is_active' => true, 'updated_by' => $request->user()?->id]);
+            $audit->log($request, 'RESTORE', 'pasal', $pasal->id, null, $pasal);
+            $restored++;
+        }
+
+        return response()->json(['restored' => $restored]);
+    }
+
+    public function forceDelete(Request $request, string $id, AuditService $audit): JsonResponse
+    {
+        $pasal = Pasal::withTrashed()->findOrFail($id);
+        $old = $pasal->replicate();
+        PasalLink::withTrashed()
+            ->where('source_pasal_id', $id)
+            ->orWhere('target_pasal_id', $id)
+            ->forceDelete();
+        $pasal->forceDelete();
+        $audit->log($request, 'DELETE', 'pasal', $id, $old, null, ['force' => true]);
+
+        return response()->json(['message' => 'Pasal dihapus permanen.']);
+    }
+
+    public function bulkForceDelete(Request $request, AuditService $audit): JsonResponse
+    {
+        $payload = $request->validate(['ids' => ['required', 'array'], 'ids.*' => ['uuid']]);
+        $deleted = 0;
+
+        foreach ($payload['ids'] as $id) {
+            $pasal = Pasal::withTrashed()->find($id);
+            if (! $pasal) {
+                continue;
+            }
+            $old = $pasal->replicate();
+            PasalLink::withTrashed()
+                ->where('source_pasal_id', $id)
+                ->orWhere('target_pasal_id', $id)
+                ->forceDelete();
+            $pasal->forceDelete();
+            $audit->log($request, 'DELETE', 'pasal', $id, $old, null, ['force' => true]);
+            $deleted++;
+        }
+
+        return response()->json(['deleted' => $deleted]);
     }
 
     public function bulkImport(Request $request, ImportPasalService $importer, AuditService $audit): JsonResponse

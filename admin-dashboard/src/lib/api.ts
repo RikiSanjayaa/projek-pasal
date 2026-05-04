@@ -76,3 +76,28 @@ export const api = {
     apiRequest<T>(path, { ...options, method: 'PATCH', body: body === undefined ? undefined : JSON.stringify(body) }),
   delete: <T>(path: string, options?: ApiOptions) => apiRequest<T>(path, { ...options, method: 'DELETE' }),
 }
+
+export interface PaginatedResponse<T> {
+  current_page: number
+  data: T[]
+  per_page: number
+  total: number
+}
+
+export function toQueryString(params: Record<string, unknown>) {
+  const search = new URLSearchParams()
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return
+    if (Array.isArray(value)) {
+      value.forEach((item) => {
+        if (item !== undefined && item !== null && item !== '') search.append(`${key}[]`, String(item))
+      })
+      return
+    }
+    search.set(key, String(value))
+  })
+
+  const query = search.toString()
+  return query ? `?${query}` : ''
+}

@@ -18,8 +18,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { IconLink, IconChevronDown, IconChevronUp, IconPlus, IconX, IconArrowRight } from '@tabler/icons-react'
 import { notifications } from '@mantine/notifications'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/contexts/AuthContext'
+import { api, type PaginatedResponse } from '@/lib/api'
 import type { PasalWithUndangUndang } from '@/lib/database.types'
 
 // Type for pasal link with relations
@@ -41,14 +40,7 @@ function LinkedPasalDetail({ pasalId, excludePasalId }: { pasalId: string; exclu
   const { data: pasal, isLoading } = useQuery({
     queryKey: ['pasal', 'detail', pasalId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pasal')
-        .select('*, undang_undang(*)')
-        .eq('id', pasalId)
-        .single()
-
-      if (error) throw error
-      return data as PasalWithUndangUndang
+      return api.get<PasalWithUndangUndang>(`/admin/pasal/${pasalId}`)
     },
     enabled: !!pasalId,
   })
@@ -57,22 +49,9 @@ function LinkedPasalDetail({ pasalId, excludePasalId }: { pasalId: string; exclu
   const { data: relatedLinks } = useQuery({
     queryKey: ['pasal_links', 'related', pasalId, excludePasalId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pasal_links')
-        .select(`
-          id,
-          source_pasal_id,
-          target_pasal_id,
-          keterangan,
-          target_pasal:pasal!pasal_links_target_pasal_id_fkey(id, nomor, judul, undang_undang(kode))
-        `)
-        .eq('source_pasal_id', pasalId)
-        .eq('is_active', true)
-
-      if (error) throw error
-
+      const data = await api.get<PasalLinkWithRelations[]>(`/admin/pasal/${pasalId}/links`)
       // Filter out the link to the excluded pasal (to prevent loop)
-      const filtered = (data as unknown as PasalLinkWithRelations[]).filter((link) => {
+      const filtered = data.filter((link) => {
         return link.target_pasal_id !== excludePasalId
       })
 
@@ -187,7 +166,6 @@ export function PasalLinksSidebar({
 }: PasalLinksSidebarProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { user } = useAuth()
   const [expandedLinkId, setExpandedLinkId] = useState<string | null>(null)
   const [linkSearchValue, setLinkSearchValue] = useState('')
   const [linkKeterangan, setLinkKeterangan] = useState('')
@@ -198,20 +176,7 @@ export function PasalLinksSidebar({
     queryFn: async () => {
       if (!pasalId) return [] as PasalLinkWithRelations[]
 
-      const { data, error } = await supabase
-        .from('pasal_links')
-        .select(`
-          id,
-          source_pasal_id,
-          target_pasal_id,
-          keterangan,
-          target_pasal:pasal!pasal_links_target_pasal_id_fkey(id, nomor, judul, undang_undang(kode))
-        `)
-        .eq('source_pasal_id', pasalId)
-        .eq('is_active', true)
-
-      if (error) throw error
-      return data as unknown as PasalLinkWithRelations[]
+      return api.get<PasalLinkWithRelations[]>(`/admin/pasal/${pasalId}/links`)
     },
     enabled: !!pasalId && !isCreateMode,
   })
@@ -220,15 +185,8 @@ export function PasalLinksSidebar({
   const { data: fetchedAllPasalList } = useQuery({
     queryKey: ['pasal', 'all_for_link'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pasal')
-        .select('id, nomor, judul, undang_undang(kode)')
-        .eq('is_active', true)
-        .order('nomor')
-        .limit(500)
-
-      if (error) throw error
-      return data as { id: string; nomor: string; judul: string | null; undang_undang: { kode: string } }[]
+      const response = await api.get<PaginatedResponse<PasalWithUndangUndang>>('/admin/pasal?is_active=1&per_page=500')
+      return response.data
     },
     enabled: (isEditMode || isCreateMode) && allPasalList.length === 0,
   })
@@ -241,20 +199,10 @@ export function PasalLinksSidebar({
   // Add link mutation
   const addLinkMutation = useMutation({
     mutationFn: async ({ targetPasalId, keterangan }: { targetPasalId: string; keterangan?: string }) => {
-      const { data, error } = await supabase
-        .from('pasal_links')
-        .insert({
-          source_pasal_id: pasalId,
-          target_pasal_id: targetPasalId,
-          keterangan: keterangan || null,
-          created_by: user?.id,
-        } as never)
-        .select()
-
-      if (error) throw error
-      if (!data || data.length === 0) {
-        throw new Error('Gagal menambah link. Pastikan Anda terdaftar sebagai admin.')
-      }
+      await api.post(`/admin/pasal/${pasalId}/links`, {
+        target_pasal_id: targetPasalId,
+        keterangan: keterangan || null,
+      })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pasal_links', pasalId] })
@@ -278,19 +226,7 @@ export function PasalLinksSidebar({
   // Delete link mutation (soft delete)
   const deleteLinkMutation = useMutation({
     mutationFn: async (linkId: string) => {
-      const { data, error } = await supabase
-        .from('pasal_links')
-        .update({
-          is_active: false,
-          deleted_at: new Date().toISOString(),
-        } as never)
-        .eq('id', linkId)
-        .select()
-
-      if (error) throw error
-      if (!data || data.length === 0) {
-        throw new Error('Gagal menghapus link. Pastikan Anda terdaftar sebagai admin.')
-      }
+      await api.delete(`/admin/pasal-links/${linkId}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pasal_links', pasalId] })

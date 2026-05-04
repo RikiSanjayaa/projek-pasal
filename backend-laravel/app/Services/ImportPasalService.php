@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Pasal;
+use App\Models\PasalLink;
 use App\Models\UndangUndang;
 use Illuminate\Http\UploadedFile;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -14,6 +15,9 @@ class ImportPasalService
         $created = 0;
         $updated = 0;
         $errors = [];
+        $pasalByRow = [];
+        $linkCreated = 0;
+        $linkErrors = [];
 
         foreach ($rows as $index => $row) {
             try {
@@ -45,12 +49,53 @@ class ImportPasalService
                 );
 
                 $pasal->wasRecentlyCreated ? $created++ : $updated++;
+                $pasalByRow[$index] = $pasal;
             } catch (\Throwable $e) {
                 $errors[] = ['row' => $index + 1, 'message' => $e->getMessage()];
             }
         }
 
-        return compact('created', 'updated', 'errors');
+        foreach ($rows as $index => $row) {
+            $sourcePasal = $pasalByRow[$index] ?? null;
+            if (! $sourcePasal || empty($row['links']) || ! is_array($row['links'])) {
+                continue;
+            }
+
+            foreach ($row['links'] as $link) {
+                try {
+                    $targetKode = $link['targetUU'] ?? $link['target_uu'] ?? $link['kode_uu'] ?? null;
+                    $targetNomor = $link['targetNomor'] ?? $link['target_nomor'] ?? $link['nomor'] ?? null;
+                    $targetUu = UndangUndang::where('kode', $targetKode)->first();
+                    if (! $targetUu || ! $targetNomor) {
+                        throw new \RuntimeException('Target link tidak lengkap atau UU target tidak ditemukan.');
+                    }
+
+                    $targetPasal = Pasal::where('undang_undang_id', $targetUu->id)->where('nomor', (string) $targetNomor)->first();
+                    if (! $targetPasal) {
+                        throw new \RuntimeException('Pasal target tidak ditemukan.');
+                    }
+
+                    PasalLink::updateOrCreate(
+                        ['source_pasal_id' => $sourcePasal->id, 'target_pasal_id' => $targetPasal->id],
+                        [
+                            'keterangan' => $link['keterangan'] ?? null,
+                            'is_active' => true,
+                            'created_by' => $adminId,
+                        ],
+                    );
+                    $linkCreated++;
+                } catch (\Throwable $e) {
+                    $linkErrors[] = [
+                        'row' => $index + 1,
+                        'source' => $sourcePasal->nomor,
+                        'target' => ($link['targetUU'] ?? $link['target_uu'] ?? '-').'|'.($link['targetNomor'] ?? $link['target_nomor'] ?? '-'),
+                        'message' => $e->getMessage(),
+                    ];
+                }
+            }
+        }
+
+        return compact('created', 'updated', 'errors') + ['links' => ['created' => $linkCreated, 'errors' => $linkErrors]];
     }
 
     public function importFile(UploadedFile $file, ?string $adminId = null): array

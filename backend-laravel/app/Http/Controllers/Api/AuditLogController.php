@@ -17,6 +17,18 @@ class AuditLogController extends Controller
                 $query->where($field, $request->query($field));
             }
         }
+        if ($search = $request->query('search')) {
+            $query->where(fn ($q) => $q
+                ->where('admin_email', 'ilike', "%{$search}%")
+                ->orWhere('table_name', 'ilike', "%{$search}%")
+                ->orWhere('record_id', 'ilike', "%{$search}%"));
+        }
+        if ($request->filled('start_date')) {
+            $query->where('created_at', '>=', $request->query('start_date'));
+        }
+        if ($request->filled('end_date')) {
+            $query->where('created_at', '<=', $request->query('end_date'));
+        }
 
         return response()->json($query->orderByDesc('created_at')->paginate((int) $request->query('per_page', 20)));
     }
