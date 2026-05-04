@@ -32,13 +32,15 @@ const theme = createTheme({
   },
 })
 
+const routerBasename = import.meta.env.VITE_APP_BASE_PATH?.replace(/\/$/, '') || '/'
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <MantineProvider theme={theme} defaultColorScheme="light">
         <Notifications position="top-right" />
         <ModalsProvider>
-          <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+          <BrowserRouter basename={routerBasename} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
             <AuthProvider>
               <DataMappingProvider>
                 <App />
