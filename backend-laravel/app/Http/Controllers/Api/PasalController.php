@@ -9,6 +9,7 @@ use App\Services\AuditService;
 use App\Services\ImportPasalService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class PasalController extends Controller
 {
@@ -71,7 +72,7 @@ class PasalController extends Controller
     {
         $pasal = Pasal::withTrashed()->findOrFail($id);
         $old = $pasal->replicate();
-        $payload = $this->validated($request, true);
+        $payload = $this->validated($request, true, $pasal);
         $payload['updated_by'] = $request->user()?->id;
         $pasal->update($payload);
         $audit->log($request, 'UPDATE', 'pasal', $pasal->id, $old, $pasal);
@@ -192,19 +193,29 @@ class PasalController extends Controller
         return response()->json($result);
     }
 
-    private function validated(Request $request, bool $partial = false): array
+    private function validated(Request $request, bool $partial = false, ?Pasal $pasal = null): array
     {
         $required = $partial ? 'sometimes' : 'required';
+        $undangUndangId = $request->input('undang_undang_id', $pasal?->undang_undang_id);
 
         return $request->validate([
             'undang_undang_id' => [$required, 'uuid', 'exists:undang_undang,id'],
-            'nomor' => [$required, 'string', 'max:100'],
+            'nomor' => [
+                $required,
+                'string',
+                'max:100',
+                Rule::unique('pasal', 'nomor')
+                    ->where(fn ($query) => $query->where('undang_undang_id', $undangUndangId))
+                    ->ignore($pasal?->id),
+            ],
             'judul' => ['nullable', 'string', 'max:500'],
             'isi' => [$required, 'string'],
             'penjelasan' => ['nullable', 'string'],
             'keywords' => ['sometimes', 'array'],
             'keywords.*' => ['string'],
             'is_active' => ['sometimes', 'boolean'],
+        ], [
+            'nomor.unique' => 'Nomor pasal ini sudah ada pada undang-undang yang dipilih.',
         ]);
     }
 }

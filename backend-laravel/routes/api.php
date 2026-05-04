@@ -41,6 +41,7 @@ Route::middleware(['auth:sanctum', 'role:admin,super_admin'])->prefix('admin')->
     Route::patch('/mobile-users/{id}/activate', [MobileUserController::class, 'activate']);
     Route::patch('/mobile-users/{id}/deactivate', [MobileUserController::class, 'deactivate']);
     Route::patch('/mobile-users/{id}/extend', [MobileUserController::class, 'extend']);
+    Route::patch('/mobile-users/{id}/password', [MobileUserController::class, 'resetPassword']);
     Route::get('/mobile-users/{id}/devices', [MobileUserController::class, 'devices']);
     Route::delete('/mobile-users/{id}/devices/{deviceId}', [MobileUserController::class, 'deleteDevice']);
     Route::delete('/mobile-users/{id}', [MobileUserController::class, 'destroy']);

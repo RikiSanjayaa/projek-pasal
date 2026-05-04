@@ -112,6 +112,16 @@ export function ManageUsersPage() {
     onError: (error: Error) => showNotification({ title: 'Gagal', message: error.message, color: 'red' }),
   })
 
+  const resetPasswordMutation = useMutation({
+    mutationFn: (id: string) => api.patch<MobileUser & { temporary_password: string }>(`/admin/mobile-users/${id}/password`),
+    onSuccess: (user) => {
+      queryClient.invalidateQueries({ queryKey: ['mobile_users'] })
+      setCredentials({ email: user.email, password: user.temporary_password, expires_at: user.expires_at })
+      showNotification({ title: 'Berhasil', message: 'Password baru berhasil dibuat', color: 'green' })
+    },
+    onError: (error: Error) => showNotification({ title: 'Gagal', message: error.message, color: 'red' }),
+  })
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/admin/mobile-users/${id}`),
     onSuccess: () => {
@@ -124,7 +134,19 @@ export function ManageUsersPage() {
   const deviceMutation = useMutation({
     mutationFn: ({ userId, deviceId }: { userId: string; deviceId: string }) =>
       api.delete(`/admin/mobile-users/${userId}/devices/${deviceId}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['mobile_users'] }),
+    onSuccess: (_, variables) => {
+      setSelectedUser((user) =>
+        user
+          ? {
+              ...user,
+              devices: user.devices?.map((device) =>
+                device.id === variables.deviceId ? { ...device, is_active: false } : device
+              ),
+            }
+          : user
+      )
+      queryClient.invalidateQueries({ queryKey: ['mobile_users'] })
+    },
     onError: (error: Error) => showNotification({ title: 'Gagal', message: error.message, color: 'red' }),
   })
 
@@ -154,6 +176,11 @@ export function ManageUsersPage() {
 
   const renderRows = (items: MobileUser[]) => items.map((user) => {
     const activeDevices = user.devices?.filter((device) => device.is_active).length || 0
+    const isExtending = extendMutation.isPending && extendMutation.variables === user.id
+    const isResettingPassword = resetPasswordMutation.isPending && resetPasswordMutation.variables === user.id
+    const isToggling = toggleMutation.isPending && toggleMutation.variables?.id === user.id
+    const isDeleting = deleteMutation.isPending && deleteMutation.variables === user.id
+
     return (
       <Table.Tr key={user.id}>
         <Table.Td><Text fw={600}>{user.nama}</Text></Table.Td>
@@ -180,19 +207,22 @@ export function ManageUsersPage() {
         </Table.Td>
         <Table.Td>
           <Group gap={4}>
-            <Button size="xs" variant="light" onClick={() => extendMutation.mutate(user.id)} loading={extendMutation.isPending}>
+            <Button size="xs" variant="light" onClick={() => extendMutation.mutate(user.id)} loading={isExtending}>
               Perpanjang
+            </Button>
+            <Button size="xs" variant="light" onClick={() => resetPasswordMutation.mutate(user.id)} loading={isResettingPassword}>
+              Reset Password
             </Button>
             <Button
               size="xs"
               color={user.is_active ? 'orange' : 'green'}
               variant="light"
               onClick={() => toggleMutation.mutate({ id: user.id, active: !user.is_active })}
-              loading={toggleMutation.isPending}
+              loading={isToggling}
             >
               {user.is_active ? 'Nonaktifkan' : 'Aktifkan'}
             </Button>
-            <ActionIcon color="red" variant="subtle" onClick={() => deleteMutation.mutate(user.id)} loading={deleteMutation.isPending}>
+            <ActionIcon color="red" variant="subtle" onClick={() => deleteMutation.mutate(user.id)} loading={isDeleting}>
               <IconTrash size={16} />
             </ActionIcon>
           </Group>
@@ -288,7 +318,13 @@ export function ManageUsersPage() {
                 <Table.Td><Badge color={device.is_active ? 'green' : 'gray'}>{device.is_active ? 'Aktif' : 'Nonaktif'}</Badge></Table.Td>
                 <Table.Td>
                   {device.is_active && (
-                    <Button size="xs" color="red" variant="light" onClick={() => selectedUser && deviceMutation.mutate({ userId: selectedUser.id, deviceId: device.id })}>
+                    <Button
+                      size="xs"
+                      color="red"
+                      variant="light"
+                      loading={deviceMutation.isPending && deviceMutation.variables?.deviceId === device.id}
+                      onClick={() => selectedUser && deviceMutation.mutate({ userId: selectedUser.id, deviceId: device.id })}
+                    >
                       Force Logout
                     </Button>
                   )}

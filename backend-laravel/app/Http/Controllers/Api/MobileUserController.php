@@ -28,6 +28,11 @@ class MobileUserController extends Controller
     public function store(Request $request, AuditService $audit): JsonResponse
     {
         $payload = $this->validated($request);
+        MobileUser::withTrashed()
+            ->where('email', $payload['email'])
+            ->whereNotNull('deleted_at')
+            ->forceDelete();
+
         $plainPassword = $payload['password'] ?? $this->temporaryPassword();
         $payload['password'] = $plainPassword;
         $payload['created_by_admin_id'] = $request->user()?->id;
@@ -85,6 +90,21 @@ class MobileUserController extends Controller
         return response()->json($user);
     }
 
+    public function resetPassword(Request $request, string $id, AuditService $audit): JsonResponse
+    {
+        $payload = $request->validate(['password' => ['nullable', 'string', 'min:8']]);
+        $user = MobileUser::findOrFail($id);
+        $old = $user->replicate();
+        $plainPassword = $payload['password'] ?? $this->temporaryPassword();
+
+        $user->update(['password' => $plainPassword]);
+        $user->tokens()->delete();
+        $user->devices()->update(['is_active' => false]);
+        $audit->log($request, 'UPDATE', 'mobile_users', $user->id, $old, $user, ['password_reset' => true]);
+
+        return response()->json($user->toArray() + ['temporary_password' => $plainPassword]);
+    }
+
     public function devices(string $id): JsonResponse
     {
         $user = MobileUser::with('devices')->findOrFail($id);
@@ -108,7 +128,7 @@ class MobileUserController extends Controller
         $old = $user->replicate();
         $user->tokens()->delete();
         $user->devices()->update(['is_active' => false]);
-        $user->delete();
+        $user->forceDelete();
         $audit->log($request, 'DELETE', 'mobile_users', $user->id, $old, null);
 
         return response()->json(['message' => 'Pengguna dihapus.']);
@@ -119,6 +139,10 @@ class MobileUserController extends Controller
         $user = MobileUser::findOrFail($id);
         $old = $user->replicate();
         $user->update(['is_active' => $active]);
+        if (! $active) {
+            $user->tokens()->delete();
+            $user->devices()->update(['is_active' => false]);
+        }
         $audit->log($request, 'UPDATE', 'mobile_users', $user->id, $old, $user);
 
         return response()->json($user);

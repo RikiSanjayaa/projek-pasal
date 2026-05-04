@@ -52,10 +52,17 @@ export async function apiRequest<T>(path: string, options: ApiOptions = {}): Pro
   const data = contentType.includes('application/json') ? await response.json() : await response.text()
 
   if (!response.ok) {
+    const validationMessage =
+      typeof data === 'object' && data && 'errors' in data
+        ? Object.values((data as { errors?: Record<string, unknown[]> }).errors ?? {})
+            .flat()
+            .find((item): item is string => typeof item === 'string')
+        : null
     const message =
-      typeof data === 'object' && data && 'message' in data
+      validationMessage ||
+      (typeof data === 'object' && data && 'message' in data
         ? String((data as { message?: unknown }).message)
-        : `Request gagal dengan status ${response.status}`
+        : `Request gagal dengan status ${response.status}`)
     throw new ApiError(message, response.status, data)
   }
 

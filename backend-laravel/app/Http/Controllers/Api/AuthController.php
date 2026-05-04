@@ -55,8 +55,16 @@ class AuthController extends Controller
         ]);
 
         $user = MobileUser::where('email', $payload['email'])->first();
-        if (! $user || ! $user->is_active || ($user->expires_at && $user->expires_at->isPast()) || ! Hash::check($payload['password'], $user->password)) {
-            throw ValidationException::withMessages(['email' => 'Email atau password salah, akun tidak aktif, atau akun sudah expired.']);
+        if (! $user || ! Hash::check($payload['password'], $user->password)) {
+            throw ValidationException::withMessages(['email' => 'Email atau password salah.']);
+        }
+
+        if (! $user->is_active) {
+            throw ValidationException::withMessages(['email' => 'Akun tidak aktif.']);
+        }
+
+        if ($user->expires_at && $user->expires_at->isPast()) {
+            throw ValidationException::withMessages(['email' => 'Masa aktif akun sudah berakhir.']);
         }
 
         $device = $devices->registerOrTouch($user, $payload['device_id'], $payload['device_name'] ?? null, $payload['platform'] ?? null);
@@ -71,9 +79,17 @@ class AuthController extends Controller
         return response()->json(['user' => $request->user()]);
     }
 
-    public function mobileLogout(Request $request): JsonResponse
+    public function mobileLogout(Request $request, UserDeviceService $devices): JsonResponse
     {
-        $request->user()?->currentAccessToken()?->delete();
+        $payload = $request->validate(['device_id' => ['nullable', 'string', 'max:255']]);
+        $user = $request->user();
+        $deviceId = $payload['device_id'] ?? $request->header('X-Device-ID');
+
+        if ($user instanceof MobileUser && $deviceId) {
+            $devices->deactivate($user, $deviceId);
+        }
+
+        $user?->currentAccessToken()?->delete();
 
         return response()->json(['message' => 'Logout berhasil.']);
     }
