@@ -198,8 +198,16 @@ class AuthService {
   }
 
   Future<bool> resetPassword(String email) async {
-    print('Reset password belum tersedia di backend Laravel: $email');
-    return false;
+    try {
+      await ApiService.dio.post(
+        '/password/forgot',
+        data: {'email': email, 'user_type': 'mobile'},
+      );
+      return true;
+    } catch (e) {
+      print('Reset password error: $e');
+      return false;
+    }
   }
 
   Future<bool> hasValidSession() async {

@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\MobileUserController;
 use App\Http\Controllers\Api\PasalController;
 use App\Http\Controllers\Api\PasalLinkController;
+use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\SyncController;
 use App\Http\Controllers\Api\UndangUndangController;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +16,8 @@ Route::get('/health', fn () => ['status' => 'ok', 'time' => now()->toISOString()
 
 Route::post('/admin/login', [AuthController::class, 'adminLogin']);
 Route::post('/mobile/login', [AuthController::class, 'mobileLogin']);
+Route::post('/password/forgot', [PasswordResetController::class, 'request']);
+Route::post('/password/reset', [PasswordResetController::class, 'reset']);
 
 Route::middleware(['auth:sanctum', 'role:admin,super_admin'])->prefix('admin')->group(function () {
     Route::post('/logout', [AuthController::class, 'adminLogout']);
