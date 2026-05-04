@@ -1,7 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../../core/config/env.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
@@ -780,7 +778,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
           ),
         ),
         content: Text(
-          "Kami akan mengirim email berisi link untuk mengatur password baru ke ${authService.currentUserEmail}",
+          "Reset password email belum tersedia di backend Laravel lokal. Hubungi admin untuk dibuatkan password awal baru.",
           style: TextStyle(color: AppColors.textSecondary(isDark)),
         ),
         actions: [
@@ -792,54 +790,21 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
             child: const Text("Batal"),
           ),
           TextButton(
-            onPressed: () async {
+            onPressed: () {
               Navigator.pop(dialogContext);
               Navigator.pop(context);
 
-              try {
-                await Supabase.instance.client.auth.resetPasswordForEmail(
-                  authService.currentUserEmail!,
-                  redirectTo: '${Env.webAppUrl}/reset-password?source=mobile',
+              if (context.mounted) {
+                AppNotification.show(
+                  context,
+                  'Reset password belum tersedia di backend Laravel.',
+                  color: AppColors.warning,
+                  icon: Icons.info_outline_rounded,
                 );
-
-                if (context.mounted) {
-                  AppNotification.show(
-                    context,
-                    'Email reset password telah dikirim',
-                    color: AppColors.success,
-                    icon: Icons.mark_email_read_rounded,
-                  );
-                }
-              } on AuthException catch (e) {
-                String message;
-                if (e.message.toLowerCase().contains('rate') ||
-                    e.message.toLowerCase().contains('limit') ||
-                    e.message.toLowerCase().contains('too many')) {
-                  message = 'Terlalu banyak permintaan. Coba lagi nanti.';
-                } else {
-                  message = 'Gagal: ${e.message}';
-                }
-                if (context.mounted) {
-                  AppNotification.show(
-                    context,
-                    message,
-                    color: AppColors.error,
-                    icon: Icons.error_outline_rounded,
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  AppNotification.show(
-                    context,
-                    'Gagal mengirim email. Periksa koneksi.',
-                    color: AppColors.error,
-                    icon: Icons.wifi_off_rounded,
-                  );
-                }
               }
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.primary),
-            child: const Text("Kirim Email"),
+            child: const Text("Mengerti"),
           ),
         ],
       ),
