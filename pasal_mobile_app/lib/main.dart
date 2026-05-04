@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'core/config/env.dart';
 import 'core/config/app_colors.dart';
 import 'core/services/data_service.dart';
 import 'ui/screens/splash_screen.dart';
@@ -18,14 +16,6 @@ void main() async {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
   );
-  await Supabase.initialize(
-    url: Env.supabaseUrl,
-    anonKey: Env.supabaseAnonKey,
-    authOptions: const FlutterAuthClientOptions(
-      authFlowType: AuthFlowType.implicit,
-    ),
-  );
-
   await DataService.initialize();
 
   // Register ShowcaseView globally (v5.0.0+ API)

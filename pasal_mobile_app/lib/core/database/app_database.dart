@@ -346,6 +346,10 @@ class AppDatabase extends _$AppDatabase {
     )..where((tbl) => tbl.targetPasalId.equals(targetPasalId))).go();
   }
 
+  Future<int> deletePasalLinksById(String id) {
+    return (delete(pasalLinksTable)..where((tbl) => tbl.id.equals(id))).go();
+  }
+
   // Delete inactive undang-undang and their related data
   Future<void> deleteInactiveUndangUndang() async {
     final inactiveUU = await (select(

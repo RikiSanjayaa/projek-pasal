@@ -7,11 +7,11 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
 } from 'recharts'
 import { useState, useMemo } from 'react'
 import { subDays, startOfDay, format } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
+import { useElementSize } from '@mantine/hooks'
 
 interface CombinedAnalyticsChartProps {
   logs: any[]
@@ -22,6 +22,7 @@ export function CombinedAnalyticsChart({ logs, loading }: CombinedAnalyticsChart
   const { colorScheme } = useMantineColorScheme()
   const isDark = colorScheme === 'dark'
   const navigate = useNavigate()
+  const { ref: chartRef, width: chartWidth } = useElementSize()
 
   const [range, setRange] = useState<string>('30')
 
@@ -121,9 +122,9 @@ export function CombinedAnalyticsChart({ logs, loading }: CombinedAnalyticsChart
         </Group>
       </div>
 
-      <div style={{ flex: 1, minHeight: 400 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} onClick={handleClick}>
+      <div ref={chartRef} style={{ flex: '1 1 auto', width: '100%', height: 400, minWidth: 1, minHeight: 400 }}>
+        {chartWidth > 0 && (
+          <ComposedChart width={chartWidth} height={400} data={data} onClick={handleClick}>
             <defs>
               <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
@@ -161,7 +162,7 @@ export function CombinedAnalyticsChart({ logs, loading }: CombinedAnalyticsChart
             <Bar dataKey="UPDATE" name="Diubah" stackId="a" fill="#228BE6" />
             <Bar dataKey="DELETE" name="Dihapus" stackId="a" fill="#FA5252" radius={[4, 4, 0, 0]} />
           </ComposedChart>
-        </ResponsiveContainer>
+        )}
       </div>
     </Card>
   )

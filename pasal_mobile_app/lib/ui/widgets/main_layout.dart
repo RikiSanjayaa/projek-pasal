@@ -5,6 +5,7 @@ import 'update_banner.dart';
 
 class MainLayout extends StatelessWidget {
   final Widget child;
+  final VoidCallback? onSyncComplete;
   final Widget? floatingActionButton;
   final Widget? bottomNavigationBar;
   final PreferredSizeWidget? appBar;
@@ -14,6 +15,7 @@ class MainLayout extends StatelessWidget {
   const MainLayout({
     super.key,
     required this.child,
+    this.onSyncComplete,
     this.floatingActionButton,
     this.bottomNavigationBar,
     this.appBar,
@@ -35,8 +37,8 @@ class MainLayout extends StatelessWidget {
           body: SafeArea(
             child: Column(
               children: [
-                const UpdateBanner(), 
-                
+                UpdateBanner(onSyncComplete: onSyncComplete),
+
                 Expanded(child: child),
               ],
             ),

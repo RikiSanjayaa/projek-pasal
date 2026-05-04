@@ -13,7 +13,7 @@ import {
 } from '@mantine/core'
 import { useQuery } from '@tanstack/react-query'
 import { IconArrowLeft } from '@tabler/icons-react'
-import { supabase } from '@/lib/supabase'
+import { api } from '@/lib/api'
 import { useDataMapping } from '@/contexts/DataMappingContext'
 import { AuditLogHint } from '@/components/AuditLogHint'
 import type { AuditLog } from '@/lib/database.types'
@@ -84,14 +84,7 @@ export function AuditLogDetailPage() {
   const { data: log, isLoading } = useQuery({
     queryKey: ['audit_log', 'detail', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('audit_logs')
-        .select('*')
-        .eq('id', id)
-        .single()
-
-      if (error) throw error
-      return data as AuditLog
+      return api.get<AuditLog>(`/admin/audit-logs/${id}`)
     },
   })
 

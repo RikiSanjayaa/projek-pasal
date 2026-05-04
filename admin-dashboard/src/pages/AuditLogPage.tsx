@@ -17,7 +17,7 @@ import { IconSearch, IconRefresh } from '@tabler/icons-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { DataTable, type Column } from '@/components/DataTable'
 import { AuditLogHint } from '@/components/AuditLogHint'
-import { supabase } from '@/lib/supabase'
+import { api, toQueryString, type PaginatedResponse } from '@/lib/api'
 import { useDataMapping } from '@/contexts/DataMappingContext'
 import type { AuditLog } from '@/lib/database.types'
 
@@ -99,38 +99,21 @@ export function AuditLogPage() {
   const { data: logsData, isLoading } = useQuery({
     queryKey: ['audit_logs', page, pageSize, debouncedSearch, filterAction, filterTable, dateRange],
     queryFn: async () => {
-      let query = supabase
-        .from('audit_logs')
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range((page - 1) * pageSize, page * pageSize - 1)
+      const endDate = dateRange[1] ? new Date(dateRange[1]) : null
+      if (endDate) endDate.setHours(23, 59, 59, 999)
 
-      if (debouncedSearch) {
-        query = query.or(`admin_email.ilike.%${debouncedSearch}%`)
-      }
-
-      if (filterAction) {
-        query = query.eq('action', filterAction)
-      }
-
-      if (filterTable) {
-        query = query.eq('table_name', filterTable)
-      }
-
-      if (dateRange[0]) {
-        query = query.gte('created_at', dateRange[0].toISOString())
-      }
-
-      if (dateRange[1]) {
-        const endDate = new Date(dateRange[1])
-        endDate.setHours(23, 59, 59, 999)
-        query = query.lte('created_at', endDate.toISOString())
-      }
-
-      const { data, error, count } = await query
-
-      if (error) throw error
-      return { data: data as AuditLog[], count: count || 0 }
+      const response = await api.get<PaginatedResponse<AuditLog>>(
+        `/admin/audit-logs${toQueryString({
+          page,
+          per_page: pageSize,
+          search: debouncedSearch,
+          action: filterAction,
+          table_name: filterTable,
+          start_date: dateRange[0]?.toISOString(),
+          end_date: endDate?.toISOString(),
+        })}`
+      )
+      return { data: response.data, count: response.total }
     },
   })
 
@@ -235,6 +218,8 @@ export function AuditLogPage() {
               { value: 'CREATE', label: 'CREATE' },
               { value: 'UPDATE', label: 'UPDATE' },
               { value: 'DELETE', label: 'DELETE' },
+              { value: 'RESTORE', label: 'RESTORE' },
+              { value: 'IMPORT', label: 'IMPORT' },
             ]}
             value={filterAction}
             onChange={setFilterAction}
@@ -246,7 +231,8 @@ export function AuditLogPage() {
               { value: 'pasal', label: 'Pasal' },
               { value: 'undang_undang', label: 'Undang-Undang' },
               { value: 'pasal_links', label: 'Pasal Links' },
-              { value: 'users', label: 'Users' },
+              { value: 'mobile_users', label: 'Mobile Users' },
+              { value: 'admin_users', label: 'Admin Users' },
             ]}
             value={filterTable}
             onChange={setFilterTable}

@@ -26,7 +26,7 @@ import {
 } from '@tabler/icons-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DataTable, type Column } from '@/components/DataTable'
-import { supabase } from '@/lib/supabase'
+import { api, toQueryString, type PaginatedResponse } from '@/lib/api'
 import type { PasalWithUndangUndang } from '@/lib/database.types'
 
 const PAGE_SIZE_OPTIONS = [
@@ -181,13 +181,10 @@ export function PasalListPage() {
   const { data: undangUndangList } = useQuery({
     queryKey: ['undang_undang', 'list', 'all'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('undang_undang')
-        .select('id, kode, nama, is_active')
-        .order('kode')
-
-      if (error) throw error
-      return data as { id: string; kode: string; nama: string; is_active: boolean }[]
+      const response = await api.get<PaginatedResponse<{ id: string; kode: string; nama: string; is_active: boolean }>>(
+        '/admin/undang-undang?with_trashed=1&per_page=200'
+      )
+      return response.data
     },
   })
 
@@ -195,14 +192,8 @@ export function PasalListPage() {
   const { data: keywordsList } = useQuery({
     queryKey: ['keywords', 'list'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pasal')
-        .select('keywords')
-        .eq('is_active', true)
-
-      if (error) throw error
-
-      const allKeywords = (data as { keywords: string[] | null }[]).flatMap(p => p.keywords || []).filter(Boolean)
+      const response = await api.get<PaginatedResponse<{ keywords: string[] | null }>>('/admin/pasal?is_active=1&per_page=500')
+      const allKeywords = response.data.flatMap(p => p.keywords || []).filter(Boolean)
       return [...new Set(allKeywords)].sort()
     },
   })
@@ -238,33 +229,18 @@ export function PasalListPage() {
         searchTerm = searchTerm.substring(6).trim()
       }
 
-      // Show active pasal AND pasal inactive due to UU (not soft-deleted)
-      // Soft-deleted pasal (deleted_at IS NOT NULL) are shown in the Trash page
-      let query = supabase
-        .from('pasal')
-        .select('*, undang_undang!inner(*)', { count: 'exact' })
-        .is('deleted_at', null)
-        .order('nomor')
-        .range((page - 1) * pageSize, page * pageSize - 1)
-
-      if (searchTerm) {
-        query = query.or(`nomor.ilike.%${searchTerm}%,judul.ilike.%${searchTerm}%,isi.ilike.%${searchTerm}%`)
-      }
-
-      if (filterUU) {
-        query = query.eq('undang_undang_id', filterUU)
-      }
-
-      if (selectedKeywords.length > 0) {
-        query = query.overlaps('keywords', selectedKeywords)
-      }
-
-      const { data, error, count } = await query
-
-      if (error) throw error
+      const response = await api.get<PaginatedResponse<PasalWithUndangUndang>>(
+        `/admin/pasal${toQueryString({
+          page,
+          per_page: pageSize,
+          search: searchTerm,
+          undang_undang_id: filterUU,
+          keywords: selectedKeywords,
+        })}`
+      )
 
       // Sort results by numeric relevance when searching by number
-      let sortedData = data as PasalWithUndangUndang[]
+      let sortedData = response.data
       if (searchTerm && /^\d/.test(searchTerm)) {
         sortedData = [...sortedData].sort((a, b) => {
           const aNomor = a.nomor.toLowerCase()
@@ -287,28 +263,14 @@ export function PasalListPage() {
         })
       }
 
-      return { data: sortedData, count: count || 0 }
+      return { data: sortedData, count: response.total }
     },
   })
 
   // Delete mutation (soft delete with deleted_at timestamp)
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { data, error } = await supabase
-        .from('pasal')
-        .update({
-          is_active: false,
-          deleted_at: new Date().toISOString(),
-        } as never)
-        .eq('id', id)
-        .select()
-
-      if (error) throw error
-
-      // Check if update actually happened (RLS might silently block)
-      if (!data || data.length === 0) {
-        throw new Error('Gagal menghapus. Pastikan Anda terdaftar sebagai admin di database.')
-      }
+      await api.delete(`/admin/pasal/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pasal'] })
@@ -331,20 +293,7 @@ export function PasalListPage() {
   // Bulk delete mutation (soft delete with deleted_at timestamp)
   const bulkDeleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      const { data, error } = await supabase
-        .from('pasal')
-        .update({
-          is_active: false,
-          deleted_at: new Date().toISOString(),
-        } as never)
-        .in('id', ids)
-        .select()
-
-      if (error) throw error
-
-      if (!data || data.length === 0) {
-        throw new Error('Gagal menghapus. Pastikan Anda terdaftar sebagai admin di database.')
-      }
+      await api.post('/admin/pasal/bulk-delete', { ids })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pasal'] })

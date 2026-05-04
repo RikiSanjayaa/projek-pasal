@@ -77,35 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _initData() async {
-    final rawUU = await QueryService.getAllUU();
-    final uniqueIds = <String>{};
-    _listUU = rawUU.where((uu) => uniqueIds.add(uu.id)).toList();
-
-    _allPasalCache = await QueryService.getAllPasal();
-    _allPasalCache.sort((a, b) {
-      final timeA = a.updatedAt ?? a.createdAt ?? DateTime(2000);
-      final timeB = b.updatedAt ?? b.createdAt ?? DateTime(2000);
-      return timeB.compareTo(timeA);
-    });
-
-    final Map<String, int> keywordCount = {};
-    for (var p in _allPasalCache) {
-      for (var k in p.keywords) {
-        final trimmed = k.trim();
-        if (trimmed.isNotEmpty) {
-          keywordCount[trimmed] = (keywordCount[trimmed] ?? 0) + 1;
-        }
-      }
-    }
-
-    _allAvailableKeywords = keywordCount.keys.toList()
-      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-
-    final sortedByUsage = keywordCount.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    _popularKeywords = sortedByUsage.take(15).map((e) => e.key).toList();
-
-    _applyFilterAndSearch();
+    await _loadPasalData();
 
     final prefs = await SharedPreferences.getInstance();
     bool hasShownShowcase = prefs.getBool('has_shown_home_showcase') ?? false;
@@ -123,6 +95,45 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       });
     }
+  }
+
+  Future<void> _loadPasalData() async {
+    final rawUU = await QueryService.getAllUU();
+    final uniqueIds = <String>{};
+    final listUU = rawUU.where((uu) => uniqueIds.add(uu.id)).toList();
+
+    final allPasal = await QueryService.getAllPasal();
+    allPasal.sort((a, b) {
+      final timeA = a.updatedAt ?? a.createdAt ?? DateTime(2000);
+      final timeB = b.updatedAt ?? b.createdAt ?? DateTime(2000);
+      return timeB.compareTo(timeA);
+    });
+
+    final Map<String, int> keywordCount = {};
+    for (var p in allPasal) {
+      for (var k in p.keywords) {
+        final trimmed = k.trim();
+        if (trimmed.isNotEmpty) {
+          keywordCount[trimmed] = (keywordCount[trimmed] ?? 0) + 1;
+        }
+      }
+    }
+
+    final allAvailableKeywords = keywordCount.keys.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+    final sortedByUsage = keywordCount.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    if (!mounted) return;
+    setState(() {
+      _listUU = listUU;
+      _allPasalCache = allPasal;
+      _allAvailableKeywords = allAvailableKeywords;
+      _popularKeywords = sortedByUsage.take(15).map((e) => e.key).toList();
+    });
+
+    _applyFilterAndSearch();
   }
 
   void _toggleKeyword(String keyword) {
@@ -280,6 +291,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return MainLayout(
+      onSyncComplete: _loadPasalData,
       child: GestureDetector(
         onTap: () {
           _searchFocusNode.unfocus();

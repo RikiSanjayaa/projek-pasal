@@ -24,8 +24,12 @@ import { useDisclosure } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { IconPlus, IconEdit, IconAlertCircle } from '@tabler/icons-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { api } from '@/lib/api'
 import type { UndangUndang, UndangUndangInsert, UndangUndangUpdate } from '@/lib/database.types'
+
+interface PaginatedResponse<T> {
+  data: T[]
+}
 
 export function UndangUndangListPage() {
   const navigate = useNavigate()
@@ -43,20 +47,11 @@ export function UndangUndangListPage() {
   const { data: undangUndangList, isLoading } = useQuery({
     queryKey: ['undang_undang', 'all'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('undang_undang')
-        .select(`
-          *,
-          pasal (
-            id,
-            nomor
-          )
-        `)
-        .order('kode')
-
-      if (error) throw error
+      const response = await api.get<PaginatedResponse<UndangUndang & { pasal: { id: string; nomor: string }[] }>>(
+        '/admin/undang-undang?with_pasal=1&per_page=200'
+      )
       // Manually sorting pasal by nomor numeric if possible, or string
-      const sortedData = data?.map((uu: any) => ({
+      const sortedData = response.data?.map((uu: any) => ({
         ...uu,
         pasal: uu.pasal?.sort((a: any, b: any) => {
           // Try to sort numerically if it looks like a number
@@ -101,8 +96,7 @@ export function UndangUndangListPage() {
   // Create mutation
   const createMutation = useMutation({
     mutationFn: async (data: UndangUndangInsert) => {
-      const { error } = await supabase.from('undang_undang').insert(data as never)
-      if (error) throw error
+      await api.post('/admin/undang-undang', data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['undang_undang'] })
@@ -126,18 +120,7 @@ export function UndangUndangListPage() {
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UndangUndangUpdate }) => {
-      const { data: result, error } = await supabase
-        .from('undang_undang')
-        .update(data as never)
-        .eq('id', id)
-        .select()
-
-      if (error) throw error
-
-      // Check if update actually happened (RLS might silently block)
-      if (!result || result.length === 0) {
-        throw new Error('Gagal memperbarui. Pastikan Anda terdaftar sebagai admin di database.')
-      }
+      await api.put(`/admin/undang-undang/${id}`, data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['undang_undang'] })

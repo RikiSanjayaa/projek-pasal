@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/app_colors.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/query_service.dart';
@@ -69,8 +68,8 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     // 1. Check if user is logged in
-    final session = Supabase.instance.client.auth.currentSession;
-    if (session == null) {
+    final hasSession = await authService.hasValidSession();
+    if (!hasSession) {
       // Not logged in - go to login
       Navigator.pushReplacement(
         context,

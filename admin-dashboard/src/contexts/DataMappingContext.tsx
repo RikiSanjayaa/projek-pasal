@@ -1,6 +1,6 @@
 import { createContext, useContext, ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { api } from '@/lib/api'
 
 interface DataMappingContextType {
   undangUndangData: { id: string; nama: string }[] | undefined
@@ -11,6 +11,10 @@ interface DataMappingContextType {
 
 const DataMappingContext = createContext<DataMappingContextType | undefined>(undefined)
 
+interface PaginatedResponse<T> {
+  data: T[]
+}
+
 interface DataMappingProviderProps {
   children: ReactNode
 }
@@ -20,12 +24,10 @@ export function DataMappingProvider({ children }: DataMappingProviderProps) {
   const { data: undangUndangData, isLoading: loadingUU, error: errorUU } = useQuery({
     queryKey: ['data_mapping', 'undang_undang'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('undang_undang')
-        .select('id, nama')
-        .eq('is_active', true)
-      if (error) throw error
-      return data as { id: string; nama: string }[]
+      const response = await api.get<PaginatedResponse<{ id: string; nama: string }>>(
+        '/admin/undang-undang?is_active=1&per_page=500'
+      )
+      return response.data
     },
     staleTime: 30 * 1000, // 30 seconds - more frequent for dashboard usage
     gcTime: 5 * 60 * 1000, // 5 minutes
@@ -36,12 +38,10 @@ export function DataMappingProvider({ children }: DataMappingProviderProps) {
   const { data: pasalData, isLoading: loadingPasal, error: errorPasal } = useQuery({
     queryKey: ['data_mapping', 'pasal'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pasal')
-        .select('id, nomor, undang_undang_id')
-        .is('deleted_at', null)
-      if (error) throw error
-      return data as { id: string; nomor: string; undang_undang_id: string }[]
+      const response = await api.get<PaginatedResponse<{ id: string; nomor: string; undang_undang_id: string }>>(
+        '/admin/pasal?is_active=1&per_page=1000'
+      )
+      return response.data
     },
     staleTime: 30 * 1000, // 30 seconds - more frequent for dashboard usage
     gcTime: 5 * 60 * 1000, // 5 minutes

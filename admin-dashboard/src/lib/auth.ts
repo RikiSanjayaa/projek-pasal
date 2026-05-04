@@ -1,21 +1,27 @@
-export async function requestPasswordRecovery(email: string, redirectTo?: string) {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY
-  if (!supabaseUrl || !anonKey) throw new Error('Missing Supabase env vars')
+import { api } from './api'
 
-  const target = (redirectTo || `${window.location.origin}/reset-password`).replace(/\/$/, '')
-  const res = await fetch(`${supabaseUrl.replace(/\/$/, '')}/auth/v1/recover`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      apikey: anonKey,
-    },
-    body: JSON.stringify({ email, redirect_to: target }),
-  })
+export async function requestPasswordRecovery(email: string, redirectTo?: string, userType: 'admin' | 'mobile' = 'admin') {
+  return api.post<{ message: string }>('/password/forgot', {
+    email,
+    user_type: userType,
+    reset_url: redirectTo || `${window.location.origin}/reset-password`,
+  }, { auth: false })
+}
 
-  const text = await res.text()
-  if (!res.ok) throw new Error(text || `Request failed with status ${res.status}`)
-  return
+export async function resetPasswordWithToken(payload: {
+  email: string
+  token: string
+  password: string
+  password_confirmation: string
+  user_type?: 'admin' | 'mobile'
+}) {
+  return api.post<{ message: string }>('/password/reset', {
+    email: payload.email,
+    token: payload.token,
+    password: payload.password,
+    password_confirmation: payload.password_confirmation,
+    user_type: payload.user_type || 'admin',
+  }, { auth: false })
 }
 
 export default requestPasswordRecovery
