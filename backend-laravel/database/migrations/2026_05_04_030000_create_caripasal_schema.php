@@ -7,14 +7,12 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
-        DB::statement('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
         DB::statement("DO $$ BEGIN CREATE TYPE admin_role AS ENUM ('admin', 'super_admin'); EXCEPTION WHEN duplicate_object THEN NULL; END $$");
         DB::statement("DO $$ BEGIN CREATE TYPE audit_action AS ENUM ('CREATE', 'UPDATE', 'DELETE', 'RESTORE', 'LOGIN', 'LOGOUT', 'IMPORT', 'SYNC'); EXCEPTION WHEN duplicate_object THEN NULL; END $$");
 
         DB::statement(<<<'SQL'
             CREATE TABLE admin_users (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                id UUID PRIMARY KEY,
                 email VARCHAR(255) UNIQUE NOT NULL,
                 password VARCHAR(255) NOT NULL,
                 nama VARCHAR(255) NOT NULL,
@@ -29,7 +27,7 @@ return new class extends Migration
 
         DB::statement(<<<'SQL'
             CREATE TABLE undang_undang (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                id UUID PRIMARY KEY,
                 kode VARCHAR(50) UNIQUE NOT NULL,
                 nama VARCHAR(255) NOT NULL,
                 nama_lengkap TEXT,
@@ -44,7 +42,7 @@ return new class extends Migration
 
         DB::statement(<<<'SQL'
             CREATE TABLE pasal (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                id UUID PRIMARY KEY,
                 undang_undang_id UUID NOT NULL REFERENCES undang_undang(id) ON DELETE CASCADE,
                 nomor VARCHAR(100) NOT NULL,
                 judul VARCHAR(500),
@@ -64,7 +62,7 @@ return new class extends Migration
 
         DB::statement(<<<'SQL'
             CREATE TABLE pasal_links (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                id UUID PRIMARY KEY,
                 source_pasal_id UUID NOT NULL REFERENCES pasal(id) ON DELETE CASCADE,
                 target_pasal_id UUID NOT NULL REFERENCES pasal(id) ON DELETE CASCADE,
                 keterangan TEXT,
@@ -80,7 +78,7 @@ return new class extends Migration
 
         DB::statement(<<<'SQL'
             CREATE TABLE mobile_users (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                id UUID PRIMARY KEY,
                 email VARCHAR(255) UNIQUE NOT NULL,
                 password VARCHAR(255) NOT NULL,
                 nama VARCHAR(255) NOT NULL,
@@ -96,7 +94,7 @@ return new class extends Migration
 
         DB::statement(<<<'SQL'
             CREATE TABLE user_devices (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                id UUID PRIMARY KEY,
                 mobile_user_id UUID NOT NULL REFERENCES mobile_users(id) ON DELETE CASCADE,
                 device_id VARCHAR(255) NOT NULL,
                 device_name VARCHAR(255),
@@ -111,7 +109,7 @@ return new class extends Migration
 
         DB::statement(<<<'SQL'
             CREATE TABLE admin_devices (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                id UUID PRIMARY KEY,
                 admin_user_id UUID NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
                 device_id VARCHAR(255) NOT NULL,
                 device_alias VARCHAR(255),
@@ -128,7 +126,7 @@ return new class extends Migration
 
         DB::statement(<<<'SQL'
             CREATE TABLE audit_logs (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                id UUID PRIMARY KEY,
                 admin_id UUID REFERENCES admin_users(id),
                 admin_email VARCHAR(255),
                 actor_type VARCHAR(50),

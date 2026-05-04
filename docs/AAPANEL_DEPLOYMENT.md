@@ -41,6 +41,40 @@ cd /www/wwwroot/pasal
 git checkout main
 ```
 
+## 2.1 Deploy Otomatis Setelah Prasyarat Siap
+
+Setelah PHP 8.4, Composer, Node.js, PostgreSQL, dan Nginx site sudah siap, deploy berikutnya cukup memakai script:
+
+```bash
+cd /www/wwwroot/pasal
+bash deploy/aapanel-doctor.sh
+DOMAIN=pasal.ikydev.site bash deploy/aapanel-deploy.sh
+```
+
+Script `aapanel-doctor.sh` mengecek runtime server:
+
+- PHP 8.4
+- extension `pdo_pgsql` dan `pgsql`
+- fungsi PHP `putenv` dan `proc_open`
+- Composer
+- Node/NPM
+- socket PHP aaPanel
+- migration tidak bergantung pada `pgcrypto/uuid-ossp`
+
+Script `aapanel-deploy.sh` akan:
+
+- pull branch `main`
+- install dependency Laravel
+- menjalankan migration dan seeder
+- cache config/route/view Laravel
+- membuat `.env.production` admin
+- build React admin dengan base path `/admin/`
+- publish hasil build ke `/www/wwwroot/pasal/admin`
+- memperbaiki permission `storage` dan `bootstrap/cache`
+- reload Nginx
+
+Jika `.env` backend belum ada, script akan membuatnya dari `.env.production.example`, lalu berhenti agar nilai database, mail, dan super admin bisa diedit dulu.
+
 ## 3. Setup Database PostgreSQL
 
 Buat database dan user:
@@ -199,21 +233,10 @@ Setiap pull update baru:
 
 ```bash
 cd /www/wwwroot/pasal
-git pull origin main
-
-cd backend-laravel
-composer install --no-dev --optimize-autoloader
-php artisan migrate --force
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-
-cd ../admin-dashboard
-npm ci
-npm run build
-rm -rf /www/wwwroot/pasal/admin/*
-cp -r dist/* /www/wwwroot/pasal/admin/
+DOMAIN=pasal.ikydev.site bash deploy/aapanel-deploy.sh
 ```
+
+Gunakan perintah manual hanya jika script deploy gagal dan perlu debugging.
 
 ## 10. Catatan Keamanan
 
