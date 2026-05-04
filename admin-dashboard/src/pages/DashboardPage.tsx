@@ -13,12 +13,25 @@ import {
 } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '@/lib/supabase'
+import { api } from '@/lib/api'
 import { CombinedAnalyticsChart } from '@/components/charts/CombinedAnalyticsChart'
 import { TopContributors } from '@/components/dashboard/TopContributors'
 import { AktivitasPasalWidget } from '@/components/charts/AktivitasPasalWidget'
-import { subDays } from 'date-fns'
 
+interface DashboardSummary {
+  total_pasal_active: number
+  total_undang_undang: number
+  total_changes_today: number
+  undang_undang_list: any[]
+  pasal_counts: Record<string, number>
+  admin_active_count: number
+  all_pasal: any[]
+  all_links: any[]
+  audit_logs_analytics: any[]
+  trashed_pasal: any[]
+  recent_audit_logs: any[]
+  new_pasal_this_week: number
+}
 
 export function DashboardPage() {
   const navigate = useNavigate()
@@ -27,145 +40,22 @@ export function DashboardPage() {
   const { data: dashboardData, isLoading: loadingDashboard } = useQuery({
     queryKey: ['dashboard', 'stats'],
     queryFn: async () => {
-      // Fetch all stats in parallel
-      const [
-        pasalResult,
-        uuResult,
-        recentLogsResult,
-        totalChangesTodayResult,
-        undangUndangListResult,
-        pasalCountsResult,
-        adminActiveResult,
-        allPasalResult,
-        allLinksResult,
-        auditLogsForAnalyticsResult,
-        trashedPasalResult,
-        recentAuditLogsResult,
-        newPasalThisWeekResult,
-      ] = await Promise.all([
-        // Total pasal count
-        supabase
-          .from('pasal')
-          .select('*', { count: 'exact', head: true })
-          .eq('is_active', true),
-
-        // Total undang-undang count
-        supabase
-          .from('undang_undang')
-          .select('*', { count: 'exact', head: true })
-          .eq('is_active', true),
-
-        // Recent audit logs (limited to 10 for display in old section)
-        supabase
-          .from('audit_logs')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(10),
-
-        // Total changes today count (unlimited for stats)
-        supabase
-          .from('audit_logs')
-          .select('*', { count: 'exact', head: true })
-          .gte('created_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString()),
-
-        // Undang-undang list for cards
-        supabase
-          .from('undang_undang')
-          .select('*')
-          .eq('is_active', true)
-          .order('kode'),
-
-        // Pasal counts per undang-undang
-        supabase
-          .from('pasal')
-          .select('undang_undang_id')
-          .eq('is_active', true)
-          .is('deleted_at', null),
-
-        // Active admin users count
-        supabase
-          .from('admin_users')
-          .select('*', { count: 'exact', head: true })
-          .eq('is_active', true),
-
-        // All pasal for analytics (not just count)
-        supabase
-          .from('pasal')
-          .select('id, nomor, judul, isi, penjelasan, keywords, created_at, updated_at, undang_undang_id')
-          .eq('is_active', true)
-          .is('deleted_at', null),
-
-        // All pasal links for analytics
-        supabase
-          .from('pasal_links')
-          .select('*')
-          .eq('is_active', true),
-
-        // Audit logs for analytics (last 90 days)
-        supabase
-          .from('audit_logs')
-          .select('*')
-          .gte('created_at', new Date(new Date().setDate(new Date().getDate() - 90)).toISOString())
-          .order('created_at', { ascending: false }),
-
-        // Trashed pasal (soft-deleted)
-        supabase
-          .from('pasal')
-          .select('id, nomor, judul, deleted_at')
-          .eq('is_active', false)
-          .not('deleted_at', 'is', null)
-          .order('deleted_at', { ascending: false })
-          .limit(10),
-
-        // Recent audit logs for temporal insights tab
-        supabase
-          .from('audit_logs')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(10),
-
-        // New Pasal This Week
-        supabase
-          .from('pasal')
-          .select('*', { count: 'exact', head: true })
-          .gte('created_at', subDays(new Date(), 7).toISOString())
-          .eq('is_active', true),
-      ])
-
-      // Check for errors
-      if (pasalResult.error) throw pasalResult.error
-      if (uuResult.error) throw uuResult.error
-      if (recentLogsResult.error) throw recentLogsResult.error
-      if (totalChangesTodayResult.error) throw totalChangesTodayResult.error
-      if (undangUndangListResult.error) throw undangUndangListResult.error
-      if (pasalCountsResult.error) throw pasalCountsResult.error
-      if (allPasalResult.error) throw allPasalResult.error
-      if (allLinksResult.error) throw allLinksResult.error
-      if (auditLogsForAnalyticsResult.error) throw auditLogsForAnalyticsResult.error
-      if (trashedPasalResult.error) throw trashedPasalResult.error
-      if (recentAuditLogsResult.error) throw recentAuditLogsResult.error
-      if (newPasalThisWeekResult.error) throw newPasalThisWeekResult.error
-
-      // Count pasal per undang_undang_id
-      const counts: Record<string, number> = {}
-      pasalCountsResult.data.forEach((pasal: any) => {
-        counts[pasal.undang_undang_id] = (counts[pasal.undang_undang_id] || 0) + 1
-      })
+      const result = await api.get<DashboardSummary>('/admin/dashboard/summary')
 
       return {
-        pasalCount: pasalResult.count || 0,
-        uuCount: uuResult.count || 0,
-        recentLogs: recentLogsResult.data || [],
-        totalChangesToday: totalChangesTodayResult.count || 0,
-        undangUndangList: undangUndangListResult.data || [],
-        pasalCounts: counts,
-        adminActiveCount: adminActiveResult.count || 0,
-        allPasal: allPasalResult.data || [],
-        allLinks: allLinksResult.data || [],
-        auditLogsAnalytics: auditLogsForAnalyticsResult.data || [],
-        trashedPasal: trashedPasalResult.data || [],
-        recentAuditLogs: recentAuditLogsResult.data || [],
-        newPasalThisWeek: newPasalThisWeekResult.count || 0,
+        pasalCount: result.total_pasal_active || 0,
+        uuCount: result.total_undang_undang || 0,
+        recentLogs: result.recent_audit_logs || [],
+        totalChangesToday: result.total_changes_today || 0,
+        undangUndangList: result.undang_undang_list || [],
+        pasalCounts: result.pasal_counts || {},
+        adminActiveCount: result.admin_active_count || 0,
+        allPasal: result.all_pasal || [],
+        allLinks: result.all_links || [],
+        auditLogsAnalytics: result.audit_logs_analytics || [],
+        trashedPasal: result.trashed_pasal || [],
+        recentAuditLogs: result.recent_audit_logs || [],
+        newPasalThisWeek: result.new_pasal_this_week || 0,
       }
     },
     staleTime: 30 * 1000,
