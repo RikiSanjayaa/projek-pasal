@@ -4,6 +4,7 @@ set -u
 APP_ROOT="${APP_ROOT:-/www/wwwroot/pasal}"
 PHP_BIN="${PHP_BIN:-/www/server/php/84/bin/php}"
 COMPOSER_BIN="${COMPOSER_BIN:-}"
+PHP_FPM_SERVICE="${PHP_FPM_SERVICE:-/etc/init.d/php-fpm-84}"
 
 if [[ -z "$COMPOSER_BIN" ]]; then
   if [[ -x /usr/local/bin/composer ]]; then
@@ -36,6 +37,7 @@ check_command "PHP" "$PHP_BIN" -v
 check_command "Composer" "$PHP_BIN" "$COMPOSER_BIN" -V
 check_command "Node" node -v
 check_command "NPM" npm -v
+check_command "Git" git --version
 
 section "PHP Extensions"
 for ext in pdo_pgsql pgsql fileinfo mbstring openssl curl zip xml gd; do
@@ -75,3 +77,13 @@ fi
 section "Nginx Socket"
 ls /tmp/php-cgi-*.sock 2>/dev/null || printf "No aaPanel PHP socket found in /tmp\n"
 
+section "PHP-FPM Service"
+if [[ -x "$PHP_FPM_SERVICE" ]]; then
+  printf "[OK] %s\n" "$PHP_FPM_SERVICE"
+else
+  printf "[WARN] %s not found or not executable\n" "$PHP_FPM_SERVICE"
+  printf "Set PHP_FPM_SERVICE=/etc/init.d/php-fpm-83 if the server uses PHP 8.3.\n"
+fi
+
+section "Deploy Command"
+printf "DOMAIN=pasal.kampus.ac.id bash deploy/aapanel-deploy.sh\n"

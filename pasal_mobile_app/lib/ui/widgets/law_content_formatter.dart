@@ -1,6 +1,48 @@
 import 'package:flutter/material.dart';
 import '../utils/highlight_text.dart';
 
+String normalizeLegalDisplayText(String value) {
+  final lines = value
+      .replaceAll('\r\n', '\n')
+      .replaceAll('\r', '\n')
+      .replaceAllMapped(
+        RegExp(r'\b[a-z]\s+(?=[0-9]+[a-z]?\.\s+)', caseSensitive: false),
+        (_) => '',
+      )
+      .replaceAllMapped(
+        RegExp(
+          r'[ \t]+((?:\([0-9ivxlcdm]+[a-z]?\)|[0-9]+[a-z]?\.|\([a-z]\)|[a-z]\.)\s+)',
+          caseSensitive: false,
+        ),
+        (match) => '\n${match.group(1)}',
+      )
+      .split('\n')
+      .map((line) => line.replaceAll(RegExp(r'[ \t]+'), ' ').trim())
+      .where((line) => line.isNotEmpty)
+      .toList();
+
+  final blocks = <String>[];
+
+  bool startsNewBlock(String line) {
+    return RegExp(
+      r'^(Pasal|Nom[oe]r)\s+[0-9]|^(Penjelasan|Pendapat\s+Ahli|Catatan\s+Ahli)\s*:?|^(\([0-9ivxlcdm]+[a-z]?\)|[0-9]+[a-z]?\.|\([a-z]\)|[a-z]\.)\s+',
+      caseSensitive: false,
+    ).hasMatch(line);
+  }
+
+  for (final line in lines) {
+    if (blocks.isEmpty || startsNewBlock(line)) {
+      blocks.add(line);
+    } else {
+      blocks[blocks.length - 1] = '${blocks.last} $line'
+          .replaceAll(RegExp(r'[ \t]+'), ' ')
+          .trim();
+    }
+  }
+
+  return blocks.join('\n').trim();
+}
+
 class LawContentFormatter extends StatelessWidget {
   final String content;
   final String searchQuery;
@@ -18,15 +60,15 @@ class LawContentFormatter extends StatelessWidget {
     this.color,
     this.height = 1.5,
     this.textAlign = TextAlign.justify,
-    this.letterSpacing = -0.3,
+    this.letterSpacing = 0,
   });
 
   @override
   Widget build(BuildContext context) {
     if (content.isEmpty) return const SizedBox.shrink();
 
-    // Normalize newlines
-    final normalizedContent = content.replaceAll('\r\n', '\n');
+    final normalizedContent = normalizeLegalDisplayText(content);
+    if (normalizedContent.isEmpty) return const SizedBox.shrink();
 
     // Regex matches markers like: (1), 1., a., (a), (2a), 2a.
     final RegExp pattern = RegExp(

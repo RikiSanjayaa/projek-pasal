@@ -92,17 +92,17 @@ export function AdminLayout() {
 
   return (
     <AppShell
-      header={{ height: 60 }}
+      header={{ height: isMobile ? 56 : 60 }}
       navbar={{
         width: sidebarCollapsed ? 70 : 280,
         breakpoint: 'sm',
         collapsed: { mobile: true },
       }}
-      padding="md"
+      padding={isMobile ? 'xs' : 'md'}
     >
       <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between">
-          <Group>
+        <Group h="100%" px={isMobile ? 'sm' : 'md'} justify="space-between" wrap="nowrap">
+          <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
             <ActionIcon
               variant="subtle"
@@ -113,12 +113,12 @@ export function AdminLayout() {
             >
               {sidebarCollapsed ? <IconChevronRight size={18} /> : <IconChevronLeft size={18} />}
             </ActionIcon>
-            <Title order={3} c="blue">
+            <Title order={isMobile ? 4 : 3} c="blue" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               CariPasal Admin
             </Title>
           </Group>
 
-          <Group>
+          <Group gap="xs" wrap="nowrap">
             <ActionIcon
               variant="default"
               size="lg"
@@ -336,7 +336,7 @@ export function AdminLayout() {
       {opened && isMobile && (
         <Drawer
           opened={opened}
-          onClose={toggle}
+          onClose={close}
           size="280px"
           padding="md"
           title="Menu"

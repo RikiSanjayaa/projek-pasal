@@ -1,36 +1,44 @@
-import { useState, useCallback } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
-  Title,
-  Text,
-  Stack,
+  ActionIcon,
+  Alert,
+  Badge,
+  Box,
+  Button,
   Card,
   Group,
-  Button,
-  Select,
-  Table,
-  Badge,
-  Alert,
   Progress,
-  ScrollArea,
-  Accordion,
+  Select,
+  SimpleGrid,
+  Stack,
+  Tabs,
+  TagsInput,
+  Text,
+  Textarea,
+  TextInput,
+  Title,
 } from '@mantine/core'
 import { Dropzone } from '@mantine/dropzone'
 import { notifications } from '@mantine/notifications'
+import { useMediaQuery } from '@mantine/hooks'
 import {
-  IconUpload,
-
-  IconX,
-  IconCheck,
   IconAlertCircle,
+  IconCamera,
+  IconCheck,
   IconDownload,
   IconFileSpreadsheet,
+  IconListCheck,
+  IconPhotoScan,
+  IconTrash,
+  IconUpload,
+  IconWand,
+  IconX,
 } from '@tabler/icons-react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { recognize } from 'tesseract.js'
 import * as XLSX from 'xlsx'
-import { api, type PaginatedResponse } from '@/lib/api'
 import { XlsxImportGuide } from '@/components/bulk-import/XlsxImportGuide'
-
-
+import { api, type PaginatedResponse } from '@/lib/api'
 
 const MAX_LINKS_PER_PASAL = 5
 
@@ -49,6 +57,11 @@ interface ImportPasal {
   links?: PasalLink[]
 }
 
+interface OcrDraft extends ImportPasal {
+  id: string
+  source: string
+}
+
 interface ImportResult {
   pasal: {
     success: number
@@ -62,16 +75,236 @@ interface ImportResult {
   }
 }
 
+function cleanOcrText(text: string) {
+  return text
+    .replace(/\r/g, '')
+    .split('\n')
+    .map((line) => line
+      .replace(/\|/g, ' ')
+      .replace(/[¢•·]/g, ' ')
+      .replace(/\(\s*[Il]\s*\)/g, '(1)')
+      .replace(/^®\s+(?=[A-Z])/g, '(3) ')
+      .replace(/^[A-Za-z]\s*\)\s+(?=[A-Z])/g, '(2) ')
+      .replace(/^[^\w(]*(?=\(\s*[0-9IVXLCDM]+\))/i, '')
+      .replace(/[ \t]+/g, ' ')
+      .replace(/^[\s.,;:_!Il-]+(?=(Pasal|Nom[oe]r)\b)/i, '')
+      .replace(/^(?:[0-9A-Za-z]|il)\s+(?=(\([0-9IVXIl]+\)|[a-z]))/i, '')
+      .replace(/^[A-Za-z]\.\s+(?=[a-z])/i, '')
+      .replace(/^[a-z]{1,2}\s+(?=[A-Z])/i, '')
+      .replace(/\s+$/g, '')
+      .trim()
+    )
+    .filter((line) => !/^---.*---$/.test(line) && !/KUHP\s*\(/i.test(line) && !/\*{2,}/.test(line))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+function normalizeLegalTextForStorage(text?: string | null) {
+  const lines = String(text || '')
+    .replace(/\r/g, '')
+    .replace(/\b[a-z]\s+(?=[0-9]+[a-z]?\.\s+)/gi, '')
+    .replace(/[ \t]+((?:\([0-9ivxlcdm]+[a-z]?\)|[0-9]+[a-z]?\.|\([a-z]\)|[a-z]\.)\s+)/gi, '\n$1')
+    .split('\n')
+    .map((line) => line.replace(/[ \t]+/g, ' ').trim())
+    .filter(Boolean)
+
+  const blocks: string[] = []
+  const startsNewBlock = (line: string) => (
+    /^(Pasal|Nom[oe]r)\s+[0-9]/i.test(line) ||
+    /^(Penjelasan|Pendapat\s+Ahli|Catatan\s+Ahli)\s*:?/i.test(line) ||
+    /^(\([0-9ivxlcdm]+[a-z]?\)|[0-9]+[a-z]?\.|\([a-z]\)|[a-z]\.)\s+/i.test(line)
+  )
+
+  for (const line of lines) {
+    if (blocks.length === 0 || startsNewBlock(line)) {
+      blocks.push(line)
+    } else {
+      blocks[blocks.length - 1] = `${blocks[blocks.length - 1]} ${line}`.replace(/[ \t]+/g, ' ')
+    }
+  }
+
+  return blocks.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+function normalizeImportPasal(row: ImportPasal): ImportPasal {
+  return {
+    ...row,
+    nomor: row.nomor.trim(),
+    judul: row.judul?.trim() || undefined,
+    isi: normalizeLegalTextForStorage(row.isi),
+    penjelasan: normalizeLegalTextForStorage(row.penjelasan) || undefined,
+    keywords: row.keywords?.map((keyword) => keyword.trim()).filter(Boolean) || [],
+  }
+}
+
+function createDraftId() {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID()
+  }
+
+  return `draft-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+function splitExplanation(content: string) {
+  const marker = content.match(/\n\s*(Penjelasan|Pendapat\s+Ahli|Catatan\s+Ahli)\s*:?\s*/i)
+  if (!marker || marker.index === undefined) {
+    return { isi: content.trim(), penjelasan: '' }
+  }
+
+  const isi = content.slice(0, marker.index).trim()
+  const label = marker[1].replace(/\s+/g, ' ')
+  const note = content.slice(marker.index + marker[0].length).trim()
+
+  return {
+    isi,
+    penjelasan: note ? `${label}:\n${note}` : '',
+  }
+}
+
+function parsePasalHeader(header: string) {
+  const normalized = header
+    .replace(/\|/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/^(Pasal|Nom[oe]r)\s+/i, '')
+    .trim()
+  const [nomorPart, ...titleParts] = normalized.split(/\s[-–—:]\s|[-–—:]\s/)
+  return {
+    nomor: nomorPart.trim(),
+    judul: titleParts.join(' - ').trim(),
+  }
+}
+
+function parseInlinePasalHeader(header: string) {
+  const normalized = header
+    .replace(/\|/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/^(Pasal|Nom[oe]r)\s+/i, '')
+    .trim()
+  const match = normalized.match(/^([0-9]{1,4}(?:[a-z]|\s+(?:bis|ter))?)\b\s*(.*)$/i)
+
+  if (!match) {
+    return { ...parsePasalHeader(header), trailingText: '' }
+  }
+
+  return {
+    nomor: match[1].replace(/\s+/g, ' ').trim(),
+    judul: '',
+    trailingText: match[2].replace(/^[-:.,\s]+/, '').trim(),
+  }
+}
+
+function parseOcrTextToDrafts(text: string, source = 'Teks manual'): OcrDraft[] {
+  const cleaned = cleanOcrText(text)
+  if (!cleaned) return []
+
+  const pasalHeaderPattern = /(^|[\n.;:!?]\s*)(Pasal\s+[0-9]{1,4}(?:[a-z]|\s+(?:bis|ter))?\b\s*[-:.,]?\s*)/gi
+  let matches = [...cleaned.matchAll(pasalHeaderPattern)]
+
+  if (matches.length === 0) {
+    matches = [...cleaned.matchAll(/(?:^|\n)\s*(?:(?:Pasal|Nom[oe]r)\s+)?([0-9]{1,4}(?:[a-z]|\s+(?:bis|ter))?(?:\s[-:]\s[^\n]+)?)\s*(?=\n|$)/gi)]
+  }
+
+  if (matches.length === 0) {
+    return [{
+      id: createDraftId(),
+      source,
+      nomor: '',
+      judul: '',
+      isi: normalizeLegalTextForStorage(cleaned),
+      penjelasan: '',
+      keywords: [],
+    }]
+  }
+
+  return matches.map((match, index) => {
+    const next = matches[index + 1]
+    const segmentStart = (match.index ?? 0) + match[0].length
+    const segmentEnd = next?.index ?? cleaned.length
+    const rawHeader = match[2] || match[1] || ''
+    const { nomor, judul, trailingText } = parseInlinePasalHeader(rawHeader)
+    const segmentText = [trailingText, cleaned.slice(segmentStart, segmentEnd)]
+      .filter(Boolean)
+      .join(' ')
+      .replace(/^\s*[a-z]\s+(?=(Diancam|Barangsiapa|Setiap|Perbuatan|Dengan|Dalam|Jika|Ketentuan)\b)/i, '')
+      .replace(/^\s*[A-Za-z]{1,8}\s*:\s+(?=(Diancam|Barangsiapa|Setiap|Perbuatan|Dengan|Dalam|Jika|Ketentuan)\b)/i, '')
+      .replace(/\s+[!;:\s&.,-]*BAB\s+[IVXLCDM0-9]+.*$/i, '')
+    const { isi, penjelasan } = splitExplanation(segmentText)
+
+    return {
+      id: createDraftId(),
+      source,
+      nomor,
+      judul,
+      isi: normalizeLegalTextForStorage(isi),
+      penjelasan: normalizeLegalTextForStorage(penjelasan),
+      keywords: [],
+    }
+  })
+}
+
+function draftErrors(draft: OcrDraft, drafts: OcrDraft[]) {
+  const errors: string[] = []
+  if (!draft.nomor.trim()) errors.push('Nomor wajib diisi')
+  if (!draft.isi.trim()) errors.push('Isi wajib diisi')
+  if (draft.nomor.trim() && drafts.filter((item) => item.nomor.trim().toLowerCase() === draft.nomor.trim().toLowerCase()).length > 1) {
+    errors.push('Nomor duplikat dalam batch')
+  }
+  return errors
+}
+
+async function prepareImageForOcr(file: File): Promise<File | Blob> {
+  const image = await createImageBitmap(file)
+  const longestSide = Math.max(image.width, image.height)
+  const scale = longestSide > 2400 ? 2400 / longestSide : Math.max(1, 1400 / Math.max(1, image.width))
+  const width = Math.round(image.width * scale)
+  const height = Math.round(image.height * scale)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+
+  const context = canvas.getContext('2d')
+  if (!context) return file
+
+  context.drawImage(image, 0, 0, width, height)
+  image.close()
+
+  const imageData = context.getImageData(0, 0, width, height)
+  const pixels = imageData.data
+
+  for (let i = 0; i < pixels.length; i += 4) {
+    const luminance = pixels[i] * 0.299 + pixels[i + 1] * 0.587 + pixels[i + 2] * 0.114
+    const contrasted = Math.max(0, Math.min(255, (luminance - 128) * 1.45 + 128))
+    pixels[i] = contrasted
+    pixels[i + 1] = contrasted
+    pixels[i + 2] = contrasted
+  }
+
+  context.putImageData(imageData, 0, 0)
+
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob || file), 'image/png')
+  })
+}
+
 export function BulkImportPage() {
   const queryClient = useQueryClient()
+  const isMobile = useMediaQuery('(max-width: 48em)')
+  const [mode, setMode] = useState<string | null>('ocr')
   const [selectedUU, setSelectedUU] = useState<string | null>(null)
-  const [jsonData, setJsonData] = useState<ImportPasal[] | null>(null)
+  const [excelRows, setExcelRows] = useState<ImportPasal[] | null>(null)
   const [fileName, setFileName] = useState<string>('')
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const [progress, setProgress] = useState(0)
   const [currentPhase, setCurrentPhase] = useState<'pasal' | 'links'>('pasal')
+  const [ocrDrafts, setOcrDrafts] = useState<OcrDraft[]>([])
+  const [ocrRawText, setOcrRawText] = useState('')
+  const [ocrProgress, setOcrProgress] = useState(0)
+  const [ocrPhase, setOcrPhase] = useState('')
+  const [isOcrProcessing, setIsOcrProcessing] = useState(false)
+  const [showOcrRawText, setShowOcrRawText] = useState(false)
 
-  // Fetch undang-undang
   const { data: undangUndangList } = useQuery({
     queryKey: ['undang_undang', 'list'],
     queryFn: async () => {
@@ -82,50 +315,41 @@ export function BulkImportPage() {
     },
   })
 
-  // Parse XLSX file to ImportPasal array
+  const ocrInvalidCount = useMemo(
+    () => ocrDrafts.filter((draft) => draftErrors(draft, ocrDrafts).length > 0).length,
+    [ocrDrafts]
+  )
+
   const parseXlsxFile = useCallback((data: ArrayBuffer): ImportPasal[] => {
     const workbook = XLSX.read(data, { type: 'array' })
-    const sheetName = workbook.SheetNames[0]
-    const worksheet = workbook.Sheets[sheetName]
-
-    // Convert to JSON with header row
-    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '' })
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]]
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: '' })
 
     if (rows.length === 0) {
       throw new Error('File XLSX kosong atau tidak memiliki data')
     }
 
-    const validated: ImportPasal[] = rows.map((row, index) => {
-      const rowNum = index + 2 // +2 because row 1 is header, data starts at row 2
+    return rows.map((row, index) => {
+      const rowNum = index + 2
+      const nomor = String(row.nomor || '').trim()
+      const judul = String(row.judul || '').trim() || undefined
+      const isi = String(row.isi || '').trim()
+      const penjelasan = String(row.penjelasan || '').trim() || undefined
+      const keywordsRaw = String(row.keywords || '').trim()
 
-      // Get basic fields (trim whitespace)
-      const nomor = String(row['nomor'] || '').trim()
-      const judul = String(row['judul'] || '').trim() || undefined
-      const isi = String(row['isi'] || '').trim()
-      const penjelasan = String(row['penjelasan'] || '').trim() || undefined
-      const keywordsRaw = String(row['keywords'] || '').trim()
+      if (!nomor) throw new Error(`Baris ${rowNum}: kolom "nomor" wajib diisi`)
+      if (!isi) throw new Error(`Baris ${rowNum}: kolom "isi" wajib diisi`)
 
-      // Validate required fields
-      if (!nomor) {
-        throw new Error(`Baris ${rowNum}: kolom "nomor" wajib diisi`)
-      }
-      if (!isi) {
-        throw new Error(`Baris ${rowNum}: kolom "isi" wajib diisi`)
-      }
-
-      // Parse keywords (comma-separated)
       const keywords = keywordsRaw
-        ? keywordsRaw.split(',').map((k: string) => k.trim()).filter((k: string) => k.length > 0)
+        ? keywordsRaw.split(',').map((keyword) => keyword.trim()).filter(Boolean)
         : []
 
-      // Parse links from columns link1_targetUU, link1_targetNomor, link1_keterangan, etc.
       const links: PasalLink[] = []
       for (let i = 1; i <= MAX_LINKS_PER_PASAL; i++) {
         const targetUU = String(row[`link${i}_targetUU`] || '').trim()
         const targetNomor = String(row[`link${i}_targetNomor`] || '').trim()
         const keterangan = String(row[`link${i}_keterangan`] || '').trim() || undefined
 
-        // Only add if both targetUU and targetNomor are provided
         if (targetUU && targetNomor) {
           links.push({ targetUU, targetNomor, keterangan })
         } else if (targetUU && !targetNomor) {
@@ -135,20 +359,9 @@ export function BulkImportPage() {
         }
       }
 
-      return {
-        nomor,
-        judul,
-        isi,
-        penjelasan,
-        keywords,
-        links: links.length > 0 ? links : undefined,
-      }
+      return normalizeImportPasal({ nomor, judul, isi, penjelasan, keywords, links: links.length > 0 ? links : undefined })
     })
-
-    return validated
   }, [])
-
-
 
   const handleFileDrop = useCallback((files: File[]) => {
     const file = files[0]
@@ -157,38 +370,114 @@ export function BulkImportPage() {
     setFileName(file.name)
     setImportResult(null)
 
-    // Read as ArrayBuffer for XLSX
     const reader = new FileReader()
-    reader.onload = (e) => {
+    reader.onload = (event) => {
       try {
-        const data = e.target?.result as ArrayBuffer
-        const validated = parseXlsxFile(data)
-
-        setJsonData(validated)
+        const validated = parseXlsxFile(event.target?.result as ArrayBuffer)
+        setExcelRows(validated)
         notifications.show({
           title: 'File berhasil dibaca',
           message: `${validated.length} pasal siap diimport`,
           color: 'green',
         })
-      } catch (error: any) {
+      } catch (error) {
         notifications.show({
           title: 'Format XLSX tidak valid',
-          message: error.message,
+          message: error instanceof Error ? error.message : 'File tidak bisa dibaca',
           color: 'red',
         })
-        setJsonData(null)
+        setExcelRows(null)
       }
     }
     reader.readAsArrayBuffer(file)
   }, [parseXlsxFile])
 
-  // Import mutation
-  const importMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedUU || !jsonData) {
-        throw new Error('Pilih undang-undang dan upload file terlebih dahulu')
+  const processOcrFiles = async (files: FileList | File[]) => {
+    const images = Array.from(files).filter((file) => file.type.startsWith('image/'))
+    if (images.length === 0) return
+
+    setIsOcrProcessing(true)
+    setOcrProgress(0)
+    setOcrPhase('Menyiapkan pembaca teks')
+    setImportResult(null)
+
+    try {
+      const pageTexts: string[] = []
+
+      for (const [index, file] of images.entries()) {
+        setOcrPhase(`Menyiapkan foto ${index + 1}/${images.length}: ${file.name}`)
+        const preparedImage = await prepareImageForOcr(file)
+        setOcrPhase(`Membaca foto ${index + 1}/${images.length}: ${file.name}`)
+        const result = await recognize(preparedImage, 'ind+eng', {
+          logger: (message) => {
+            if (message.status === 'recognizing text') {
+              const pageProgress = message.progress || 0
+              setOcrProgress(Math.round(((index + pageProgress) / images.length) * 100))
+            }
+          },
+        })
+        pageTexts.push(`--- ${file.name} ---\n${result.data.text}`)
       }
 
+      const rawText = cleanOcrText(pageTexts.join('\n\n'))
+      const drafts = parseOcrTextToDrafts(rawText, images.length > 1 ? `${images.length} foto` : images[0].name)
+      setOcrRawText(rawText)
+      setOcrDrafts(drafts)
+      setShowOcrRawText(false)
+      setOcrProgress(100)
+      notifications.show({
+        title: 'OCR selesai',
+        message: `${drafts.length} draft pasal ditemukan. Periksa dulu sebelum import.`,
+        color: 'green',
+      })
+    } catch (error) {
+      notifications.show({
+        title: 'OCR gagal',
+        message: error instanceof Error ? error.message : 'Foto tidak bisa dibaca.',
+        color: 'red',
+      })
+    } finally {
+      setIsOcrProcessing(false)
+      setOcrPhase('')
+    }
+  }
+
+  const reparseOcrText = () => {
+    const cleaned = cleanOcrText(ocrRawText)
+    const drafts = parseOcrTextToDrafts(cleaned)
+    setOcrRawText(cleaned)
+    setOcrDrafts(drafts)
+    notifications.show({
+      title: 'Teks diparse ulang',
+      message: `${drafts.length} draft pasal ditemukan.`,
+      color: drafts.length ? 'blue' : 'orange',
+    })
+  }
+
+  const updateDraft = (id: string, patch: Partial<OcrDraft>) => {
+    setOcrDrafts((drafts) => drafts.map((draft) => (draft.id === id ? { ...draft, ...patch } : draft)))
+  }
+
+  const removeDraft = (id: string) => {
+    setOcrDrafts((drafts) => drafts.filter((draft) => draft.id !== id))
+  }
+
+  const rowsForImport = () => {
+    if (mode === 'ocr') {
+      if (ocrDrafts.length === 0) throw new Error('Belum ada draft OCR untuk diimport')
+      if (ocrInvalidCount > 0) throw new Error('Perbaiki draft OCR yang masih invalid sebelum import')
+      return ocrDrafts.map(({ id: _id, source: _source, ...draft }) => normalizeImportPasal(draft))
+    }
+
+    if (!excelRows || excelRows.length === 0) throw new Error('Upload file Excel terlebih dahulu')
+    return excelRows.map(normalizeImportPasal)
+  }
+
+  const importMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedUU) throw new Error('Pilih undang-undang terlebih dahulu')
+
+      const sourceRows = rowsForImport()
       setCurrentPhase('pasal')
       setProgress(40)
       const response = await api.post<{
@@ -197,10 +486,7 @@ export function BulkImportPage() {
         errors: { row: number; message: string }[]
         links?: { created: number; errors: { source: string; target: string; message: string }[] }
       }>('/admin/pasal/bulk-import', {
-        rows: jsonData.map((item) => ({
-          ...item,
-          undang_undang_id: selectedUU,
-        })),
+        rows: sourceRows.map((item) => ({ ...item, undang_undang_id: selectedUU })),
       })
 
       setCurrentPhase('links')
@@ -229,27 +515,16 @@ export function BulkImportPage() {
 
       const totalFailed = result.pasal.failed + result.links.failed
       const totalSuccess = result.pasal.success + result.links.success
-
-      if (totalFailed === 0) {
-        notifications.show({
-          title: 'Import Berhasil',
-          message: `${result.pasal.success} pasal dan ${result.links.success} link berhasil diimport`,
-          color: 'green',
-        })
-      } else {
-        notifications.show({
-          title: 'Import Selesai dengan Error',
-          message: `${totalSuccess} berhasil, ${totalFailed} gagal`,
-          color: 'orange',
-        })
-      }
+      notifications.show({
+        title: totalFailed === 0 ? 'Import Berhasil' : 'Import Selesai dengan Error',
+        message: totalFailed === 0
+          ? `${result.pasal.success} pasal dan ${result.links.success} link berhasil diimport`
+          : `${totalSuccess} berhasil, ${totalFailed} gagal`,
+        color: totalFailed === 0 ? 'green' : 'orange',
+      })
     },
     onError: (error: Error) => {
-      notifications.show({
-        title: 'Import Gagal',
-        message: error.message,
-        color: 'red',
-      })
+      notifications.show({ title: 'Import Gagal', message: error.message, color: 'red' })
     },
   })
 
@@ -260,247 +535,337 @@ export function BulkImportPage() {
     importMutation.mutate()
   }
 
-
-
   const downloadXlsxTemplate = () => {
-    // Create template data with example rows
     const templateData = [
       {
         nomor: '1',
         judul: 'Contoh Judul Pasal',
         isi: 'Isi lengkap pasal. Tuliskan seluruh isi pasal di kolom ini.',
-        penjelasan: 'Penjelasan atau tafsir pasal (opsional)',
+        penjelasan: 'Penjelasan, tafsir, atau pendapat ahli (opsional)',
         keywords: 'keyword1, keyword2, keyword3',
         link1_targetUU: 'KUHAP',
         link1_targetNomor: '21',
         link1_keterangan: 'Lihat prosedur penyidikan',
-        link2_targetUU: '',
-        link2_targetNomor: '',
-        link2_keterangan: '',
-        link3_targetUU: '',
-        link3_targetNomor: '',
-        link3_keterangan: '',
-        link4_targetUU: '',
-        link4_targetNomor: '',
-        link4_keterangan: '',
-        link5_targetUU: '',
-        link5_targetNomor: '',
-        link5_keterangan: '',
-      },
-      {
-        nomor: '2',
-        judul: '',
-        isi: 'Pasal tanpa judul. Kolom judul boleh dikosongkan.',
-        penjelasan: '',
-        keywords: 'pidana, hukum',
-        link1_targetUU: 'KUHP',
-        link1_targetNomor: '340',
-        link1_keterangan: 'Pasal terkait',
-        link2_targetUU: 'KUHAP',
-        link2_targetNomor: '1',
-        link2_keterangan: 'Definisi umum',
-        link3_targetUU: '',
-        link3_targetNomor: '',
-        link3_keterangan: '',
-        link4_targetUU: '',
-        link4_targetNomor: '',
-        link4_keterangan: '',
-        link5_targetUU: '',
-        link5_targetNomor: '',
-        link5_keterangan: '',
-      },
-      {
-        nomor: '3',
-        judul: 'Pasal Tanpa Link',
-        isi: 'Pasal ini tidak memiliki link ke pasal lain. Kosongkan semua kolom link.',
-        penjelasan: 'Penjelasan singkat',
-        keywords: '',
-        link1_targetUU: '',
-        link1_targetNomor: '',
-        link1_keterangan: '',
-        link2_targetUU: '',
-        link2_targetNomor: '',
-        link2_keterangan: '',
-        link3_targetUU: '',
-        link3_targetNomor: '',
-        link3_keterangan: '',
-        link4_targetUU: '',
-        link4_targetNomor: '',
-        link4_keterangan: '',
-        link5_targetUU: '',
-        link5_targetNomor: '',
-        link5_keterangan: '',
       },
     ]
 
-    // Create worksheet
     const ws = XLSX.utils.json_to_sheet(templateData)
-
-    // Set column widths for better readability
     ws['!cols'] = [
-      { wch: 10 },  // nomor
-      { wch: 25 },  // judul
-      { wch: 50 },  // isi
-      { wch: 30 },  // penjelasan
-      { wch: 25 },  // keywords
-      { wch: 12 },  // link1_targetUU
-      { wch: 15 },  // link1_targetNomor
-      { wch: 25 },  // link1_keterangan
-      { wch: 12 },  // link2_targetUU
-      { wch: 15 },  // link2_targetNomor
-      { wch: 25 },  // link2_keterangan
-      { wch: 12 },  // link3_targetUU
-      { wch: 15 },  // link3_targetNomor
-      { wch: 25 },  // link3_keterangan
-      { wch: 12 },  // link4_targetUU
-      { wch: 15 },  // link4_targetNomor
-      { wch: 25 },  // link4_keterangan
-      { wch: 12 },  // link5_targetUU
-      { wch: 15 },  // link5_targetNomor
-      { wch: 25 },  // link5_keterangan
+      { wch: 10 },
+      { wch: 25 },
+      { wch: 50 },
+      { wch: 35 },
+      { wch: 25 },
+      { wch: 12 },
+      { wch: 15 },
+      { wch: 25 },
     ]
-
-    // Create workbook
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Data Pasal')
-
-    // Download file
     XLSX.writeFile(wb, 'template-import-pasal.xlsx')
   }
 
+  const canImport = selectedUU && (mode === 'ocr' ? ocrDrafts.length > 0 && ocrInvalidCount === 0 : Boolean(excelRows?.length))
+  const ocrValidCount = Math.max(0, ocrDrafts.length - ocrInvalidCount)
+  const hasOcrSession = mode === 'ocr' && (isOcrProcessing || ocrRawText.trim().length > 0 || ocrDrafts.length > 0)
+  const selectedUULabel = selectedUU
+    ? undangUndangList?.find((uu) => uu.id === selectedUU)
+    : null
+
   return (
     <Stack gap="lg">
-      <Group justify="space-between" align="flex-end">
+      <Group justify="space-between" align="flex-end" wrap="wrap">
         <div>
           <Title order={2}>Import Data Pasal</Title>
-          <Text c="dimmed">Import banyak pasal sekaligus menggunakan file Excel (XLSX)</Text>
+          <Text c="dimmed">Import banyak pasal dari Excel atau foto halaman buku hukum</Text>
         </div>
       </Group>
 
-      {/* Template Download */}
-      <Alert
-        icon={<IconFileSpreadsheet size={16} />}
-        title="Format File Excel (XLSX)"
-        color="blue"
-      >
-        <Text size="sm" mb="sm">
-          Download template Excel untuk melihat format kolom yang diperlukan. Buka dengan Microsoft Excel atau Google Sheets.
-        </Text>
-        <Button
-          variant="light"
-          size="xs"
-          leftSection={<IconDownload size={14} />}
-          onClick={downloadXlsxTemplate}
-        >
-          Download Template Excel
-        </Button>
-      </Alert>
+      <Card shadow="sm" padding="lg" radius="md" withBorder className="bulk-import-tool">
+        <Stack gap="lg">
+          {hasOcrSession && (
+            <Group gap="xs" wrap="wrap">
+              <Badge variant="light" color="blue">
+                Target: {selectedUULabel ? selectedUULabel.kode : 'Belum dipilih'}
+              </Badge>
+              <Badge variant="light" color="teal">
+                {ocrDrafts.length} draft pasal
+              </Badge>
+              <Badge variant="light" color={ocrInvalidCount > 0 ? 'red' : 'green'}>
+                {ocrValidCount} valid, {ocrInvalidCount} perlu dicek
+              </Badge>
+            </Group>
+          )}
 
-      <Card shadow="sm" padding="lg" radius="md" withBorder>
-        <Stack gap="md">
           <Select
             label="Pilih Undang-Undang"
-            placeholder="Pasal akan diimport ke undang-undang ini"
-            data={
-              undangUndangList?.map((uu) => ({
-                value: uu.id,
-                label: `${uu.kode} - ${uu.nama}`,
-              })) || []
-            }
+            description="Semua draft yang diimport akan masuk ke undang-undang ini."
+            placeholder="Cari kode atau nama undang-undang"
+            data={undangUndangList?.map((uu) => ({ value: uu.id, label: `${uu.kode} - ${uu.nama}` })) || []}
             value={selectedUU}
             onChange={setSelectedUU}
+            searchable
             required
           />
 
-          <Dropzone
-            onDrop={handleFileDrop}
-            accept={{
-              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-              'application/vnd.ms-excel': ['.xls'],
-            }}
-            maxSize={5 * 1024 * 1024} // 5MB
-            multiple={false}
-            style={{
-              border: '2px dashed var(--mantine-color-default-border)',
-              backgroundColor: 'var(--mantine-color-body)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center'
-            }}
-          >
-            <Group justify="center" gap="md" mih={120} style={{ pointerEvents: 'none', flexDirection: 'column' }}>
-              <Dropzone.Accept>
-                <IconCheck size={40} color="var(--mantine-color-teal-6)" />
-              </Dropzone.Accept>
-              <Dropzone.Reject>
-                <IconX size={40} color="var(--mantine-color-red-6)" />
-              </Dropzone.Reject>
-              <Dropzone.Idle>
-                <IconUpload size={40} color="var(--mantine-color-dimmed)" />
-              </Dropzone.Idle>
+          <Tabs value={mode} onChange={setMode}>
+            <Tabs.List>
+              <Tabs.Tab value="ocr" leftSection={<IconPhotoScan size={16} />}>Foto OCR</Tabs.Tab>
+              <Tabs.Tab value="excel" leftSection={<IconFileSpreadsheet size={16} />}>Excel</Tabs.Tab>
+            </Tabs.List>
 
-              <div style={{ textAlign: 'center' }}>
-                <Text size="lg" inline>
-                  Drag file Excel ke sini
-                </Text>
-                <Text size="sm" c="dimmed" inline mt={7}>
-                  atau klik untuk browse (Max 5MB)
-                </Text>
-              </div>
-            </Group>
-          </Dropzone>
+            <Tabs.Panel value="ocr" pt="md">
+              <Stack gap="lg">
+                <Card withBorder radius="md" padding="md">
+                  <Group justify="space-between" align="flex-start" mb="md" wrap="wrap">
+                    <div>
+                      <Group gap="xs" mb={4}>
+                        <IconPhotoScan size={18} />
+                        <Text fw={700}>Foto halaman buku hukum</Text>
+                      </Group>
+                      <Text c="dimmed" size="sm">
+                        Ambil foto atau upload gambar, lalu periksa draft pasal sebelum disimpan.
+                      </Text>
+                    </div>
+                    <Badge color="blue" variant="light">Utama</Badge>
+                  </Group>
 
-          {jsonData && (
-            <Alert icon={<IconCheck size={16} />} color="green">
-              <Text size="sm">
-                File <strong>{fileName}</strong> berhasil dibaca.{' '}
-                <strong>{jsonData.length}</strong> pasal siap diimport.
-              </Text>
-            </Alert>
-          )}
+                  <Group grow={isMobile}>
+                    <Button component="label" leftSection={<IconCamera size={16} />} loading={isOcrProcessing}>
+                      Ambil / Upload Foto
+                      <input
+                        hidden
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        multiple
+                        onChange={(event) => {
+                          if (event.currentTarget.files) void processOcrFiles(event.currentTarget.files)
+                          event.currentTarget.value = ''
+                        }}
+                      />
+                    </Button>
+                    <Button variant="light" leftSection={<IconWand size={16} />} onClick={reparseOcrText} disabled={!ocrRawText || isOcrProcessing}>
+                      Rapikan Teks
+                    </Button>
+                  </Group>
+                </Card>
 
-          {/* Preview Data */}
-          {jsonData && jsonData.length > 0 && (
-            <Accordion>
-              <Accordion.Item value="preview">
-                <Accordion.Control>
-                  Preview Data ({jsonData.length} pasal)
-                </Accordion.Control>
-                <Accordion.Panel>
-                  <ScrollArea h={300}>
-                    <Table striped>
-                      <Table.Thead>
-                        <Table.Tr>
-                          <Table.Th>Nomor</Table.Th>
-                          <Table.Th>Judul</Table.Th>
-                          <Table.Th>Keywords</Table.Th>
-                        </Table.Tr>
-                      </Table.Thead>
-                      <Table.Tbody>
-                        {jsonData.map((item, idx) => (
-                          <Table.Tr key={idx}>
-                            <Table.Td>{item.nomor}</Table.Td>
-                            <Table.Td>{item.judul || '-'}</Table.Td>
-                            <Table.Td>
-                              <Group gap={4}>
-                                {item.keywords?.slice(0, 3).map((kw, i) => (
-                                  <Badge key={i} size="xs" variant="outline">
-                                    {kw}
-                                  </Badge>
-                                ))}
+                {isOcrProcessing && (
+                  <Card withBorder radius="md" padding="md">
+                    <Group justify="space-between" mb="xs">
+                      <Text size="sm" fw={700}>{ocrPhase || 'Memproses OCR'}</Text>
+                      <Text size="sm" c="dimmed">{ocrProgress}%</Text>
+                    </Group>
+                    <Progress value={ocrProgress} animated />
+                  </Card>
+                )}
+
+                <SimpleGrid cols={{ base: 1, md: showOcrRawText ? 2 : 1 }} spacing="md">
+                  <Card withBorder radius="md" padding="md">
+                    <Group gap="xs" mb="sm">
+                      <IconListCheck size={16} />
+                      <Text fw={700}>Agar hasil lebih rapi</Text>
+                    </Group>
+                    <Stack gap={6}>
+                      <Text size="sm">Gunakan cahaya rata dan hindari bayangan tangan.</Text>
+                      <Text size="sm">Pastikan halaman lurus, tidak miring, dan teks memenuhi frame.</Text>
+                      <Text size="sm">Periksa kembali hasil bacaan sebelum disimpan.</Text>
+                    </Stack>
+                    <Button
+                      mt="sm"
+                      variant="subtle"
+                      size="xs"
+                      leftSection={<IconWand size={14} />}
+                      onClick={() => setShowOcrRawText((visible) => !visible)}
+                    >
+                      {showOcrRawText ? 'Sembunyikan teks mentah' : 'Tampilkan teks mentah / paste manual'}
+                    </Button>
+                  </Card>
+                  {showOcrRawText && (
+                    <Card withBorder radius="md" padding="md">
+                      <Textarea
+                        label="Teks mentah"
+                        description="Pakai ini hanya jika perlu memperbaiki hasil bacaan sebelum dibuat draft."
+                        minRows={9}
+                        autosize
+                        value={ocrRawText}
+                        onChange={(event) => setOcrRawText(event.currentTarget.value)}
+                      />
+                    </Card>
+                  )}
+                </SimpleGrid>
+
+                {ocrDrafts.length > 0 && (
+                  <Card withBorder radius="md" padding="md">
+                    <Group justify="space-between" align="center" mb="md">
+                      <div>
+                        <Text fw={800}>Periksa Draft Pasal</Text>
+                        <Text size="sm" c="dimmed">{ocrDrafts.length} pasal ditemukan. Edit teks sebelum disimpan.</Text>
+                      </div>
+                      {ocrInvalidCount > 0 && <Badge color="red">{ocrInvalidCount} perlu diperbaiki</Badge>}
+                      {ocrInvalidCount === 0 && <Badge color="green">{ocrDrafts.length} siap diimport</Badge>}
+                    </Group>
+                    <Stack gap="md" hiddenFrom="sm">
+                      {ocrDrafts.map((draft) => {
+                        const errors = draftErrors(draft, ocrDrafts)
+                        return (
+                          <Card key={draft.id} withBorder padding="sm" radius="md">
+                            <Stack gap="sm">
+                              <Group justify="space-between" align="center" wrap="nowrap">
+                                <div>
+                                  <Text size="xs" c="dimmed" tt="uppercase" fw={700}>Draft OCR</Text>
+                                  <Text size="xs" c="dimmed">{draft.source}</Text>
+                                </div>
+                                <ActionIcon color="red" variant="subtle" onClick={() => removeDraft(draft.id)}>
+                                  <IconTrash size={16} />
+                                </ActionIcon>
                               </Group>
-                            </Table.Td>
-                          </Table.Tr>
-                        ))}
-                      </Table.Tbody>
-                    </Table>
-                  </ScrollArea>
-                </Accordion.Panel>
-              </Accordion.Item>
-            </Accordion>
-          )}
 
-          {/* Progress */}
+                              <TextInput
+                                label="Nomor"
+                                value={draft.nomor}
+                                onChange={(event) => updateDraft(draft.id, { nomor: event.currentTarget.value })}
+                              />
+                              <TextInput
+                                label="Judul"
+                                value={draft.judul || ''}
+                                onChange={(event) => updateDraft(draft.id, { judul: event.currentTarget.value })}
+                              />
+                              <Textarea
+                                label="Isi"
+                                value={draft.isi}
+                                onChange={(event) => updateDraft(draft.id, { isi: event.currentTarget.value })}
+                                minRows={5}
+                                autosize
+                              />
+                              <Textarea
+                                label="Penjelasan / Pendapat Ahli"
+                                value={draft.penjelasan || ''}
+                                onChange={(event) => updateDraft(draft.id, { penjelasan: event.currentTarget.value })}
+                                minRows={4}
+                                autosize
+                              />
+                              <TagsInput
+                                label="Keywords"
+                                value={draft.keywords || []}
+                                onChange={(keywords) => updateDraft(draft.id, { keywords })}
+                              />
+                              {errors.length === 0 ? <Badge color="green">Valid</Badge> : <Badge color="red">{errors.join(', ')}</Badge>}
+                            </Stack>
+                          </Card>
+                        )
+                      })}
+                    </Stack>
+
+                    <Stack gap="md" visibleFrom="sm">
+                      {ocrDrafts.map((draft) => {
+                        const errors = draftErrors(draft, ocrDrafts)
+                        return (
+                          <Card key={draft.id} withBorder radius="md" padding="md">
+                            <Group justify="space-between" align="flex-start" mb="md" wrap="nowrap">
+                              <div>
+                                <Text size="xs" c="dimmed" tt="uppercase" fw={700}>Draft Pasal</Text>
+                                <Text size="sm" c="dimmed">{draft.source}</Text>
+                              </div>
+                              <Group gap="xs" wrap="nowrap">
+                                {errors.length === 0 ? <Badge color="green">Valid</Badge> : <Badge color="red">{errors.join(', ')}</Badge>}
+                                <ActionIcon color="red" variant="subtle" onClick={() => removeDraft(draft.id)}>
+                                  <IconTrash size={16} />
+                                </ActionIcon>
+                              </Group>
+                            </Group>
+
+                            <Box className="ocr-draft-desktop-grid">
+                              <Box className="ocr-field-number">
+                                <TextInput
+                                  label="Nomor"
+                                  value={draft.nomor}
+                                  onChange={(event) => updateDraft(draft.id, { nomor: event.currentTarget.value })}
+                                />
+                              </Box>
+                              <Box className="ocr-field-title">
+                                <TextInput
+                                  label="Judul"
+                                  value={draft.judul || ''}
+                                  onChange={(event) => updateDraft(draft.id, { judul: event.currentTarget.value })}
+                                />
+                              </Box>
+                              <Box className="ocr-field-keywords">
+                                <TagsInput
+                                  label="Keywords"
+                                  value={draft.keywords || []}
+                                  onChange={(keywords) => updateDraft(draft.id, { keywords })}
+                                />
+                              </Box>
+                              <Box className="ocr-field-body">
+                                <Textarea
+                                  label="Isi Pasal"
+                                  value={draft.isi}
+                                  onChange={(event) => updateDraft(draft.id, { isi: event.currentTarget.value })}
+                                  minRows={6}
+                                  autosize
+                                />
+                              </Box>
+                              <Box className="ocr-field-note">
+                                <Textarea
+                                  label="Penjelasan / Pendapat Ahli"
+                                  value={draft.penjelasan || ''}
+                                  onChange={(event) => updateDraft(draft.id, { penjelasan: event.currentTarget.value })}
+                                  minRows={6}
+                                  autosize
+                                />
+                              </Box>
+                            </Box>
+                          </Card>
+                        )
+                      })}
+                    </Stack>
+                  </Card>
+                )}
+              </Stack>
+            </Tabs.Panel>
+
+            <Tabs.Panel value="excel" pt="md">
+              <Stack gap="md">
+                <Alert icon={<IconFileSpreadsheet size={16} />} title="Format File Excel (XLSX)" color="blue">
+                  <Text size="sm" mb="sm">
+                    Download template Excel untuk melihat format kolom yang diperlukan.
+                  </Text>
+                  <Button variant="light" size="xs" leftSection={<IconDownload size={14} />} onClick={downloadXlsxTemplate}>
+                    Download Template Excel
+                  </Button>
+                </Alert>
+
+                <Dropzone
+                  onDrop={handleFileDrop}
+                  accept={{
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+                    'application/vnd.ms-excel': ['.xls'],
+                  }}
+                  maxSize={5 * 1024 * 1024}
+                  multiple={false}
+                >
+                  <Group justify="center" gap="md" mih={120} style={{ pointerEvents: 'none', flexDirection: 'column' }}>
+                    <Dropzone.Accept><IconCheck size={40} /></Dropzone.Accept>
+                    <Dropzone.Reject><IconX size={40} /></Dropzone.Reject>
+                    <Dropzone.Idle><IconUpload size={40} /></Dropzone.Idle>
+                    <div style={{ textAlign: 'center' }}>
+                      <Text size="lg">Drag file Excel ke sini</Text>
+                      <Text size="sm" c="dimmed">atau klik untuk browse (Max 5MB)</Text>
+                    </div>
+                  </Group>
+                </Dropzone>
+
+                {excelRows && (
+                  <Alert icon={<IconCheck size={16} />} color="green">
+                    File <strong>{fileName}</strong> berhasil dibaca. <strong>{excelRows.length}</strong> pasal siap diimport.
+                  </Alert>
+                )}
+              </Stack>
+            </Tabs.Panel>
+          </Tabs>
+
           {importMutation.isPending && (
             <div>
               <Text size="sm" mb="xs">
@@ -510,95 +875,30 @@ export function BulkImportPage() {
             </div>
           )}
 
-          {/* Results */}
           {importResult && (
-            <Stack gap="sm">
-              <Alert
-                icon={(importResult.pasal.failed === 0 && importResult.links.failed === 0) ? <IconCheck size={16} /> : <IconAlertCircle size={16} />}
-                color={(importResult.pasal.failed === 0 && importResult.links.failed === 0) ? 'green' : 'orange'}
-                title="Hasil Import"
-              >
-                <Stack gap="xs">
-                  <div>
-                    <Text size="sm" fw={600}>Pasal:</Text>
-                    <Text size="sm">
-                      Berhasil: {importResult.pasal.success}
-                      {importResult.pasal.failed > 0 && ` | Gagal: ${importResult.pasal.failed}`}
-                    </Text>
-                  </div>
-                  {(importResult.links.success > 0 || importResult.links.failed > 0) && (
-                    <div>
-                      <Text size="sm" fw={600}>Link Pasal:</Text>
-                      <Text size="sm">
-                        Berhasil: {importResult.links.success}
-                        {importResult.links.failed > 0 && ` | Gagal: ${importResult.links.failed}`}
-                      </Text>
-                    </div>
-                  )}
-                </Stack>
-              </Alert>
-
-              {importResult.pasal.errors.length > 0 && (
-                <Accordion>
-                  <Accordion.Item value="pasal-errors">
-                    <Accordion.Control>
-                      Error Pasal ({importResult.pasal.errors.length})
-                    </Accordion.Control>
-                    <Accordion.Panel>
-                      <ScrollArea h={200}>
-                        <Stack gap="xs">
-                          {importResult.pasal.errors.map((err, idx) => (
-                            <Alert key={idx} color="red" p="xs">
-                              <Text size="sm">
-                                Pasal {err.nomor}: {err.error}
-                              </Text>
-                            </Alert>
-                          ))}
-                        </Stack>
-                      </ScrollArea>
-                    </Accordion.Panel>
-                  </Accordion.Item>
-                </Accordion>
-              )}
-
-              {importResult.links.errors.length > 0 && (
-                <Accordion>
-                  <Accordion.Item value="link-errors">
-                    <Accordion.Control>
-                      Error Link ({importResult.links.errors.length})
-                    </Accordion.Control>
-                    <Accordion.Panel>
-                      <ScrollArea h={200}>
-                        <Stack gap="xs">
-                          {importResult.links.errors.map((err, idx) => (
-                            <Alert key={idx} color="red" p="xs">
-                              <Text size="sm">
-                                {err.source} {'->'} {err.target}: {err.error}
-                              </Text>
-                            </Alert>
-                          ))}
-                        </Stack>
-                      </ScrollArea>
-                    </Accordion.Panel>
-                  </Accordion.Item>
-                </Accordion>
-              )}
-            </Stack>
+            <Alert
+              icon={(importResult.pasal.failed === 0 && importResult.links.failed === 0) ? <IconCheck size={16} /> : <IconAlertCircle size={16} />}
+              color={(importResult.pasal.failed === 0 && importResult.links.failed === 0) ? 'green' : 'orange'}
+              title="Hasil Import"
+            >
+              <Text size="sm">
+                Pasal berhasil: {importResult.pasal.success}
+                {importResult.pasal.failed > 0 && ` | Pasal gagal: ${importResult.pasal.failed}`}
+                {` | Link berhasil: ${importResult.links.success}`}
+                {importResult.links.failed > 0 && ` | Link gagal: ${importResult.links.failed}`}
+              </Text>
+            </Alert>
           )}
 
           <Group justify="flex-end">
-            <Button
-              onClick={handleImport}
-              loading={importMutation.isPending}
-              disabled={!selectedUU || !jsonData}
-            >
+            <Button onClick={handleImport} loading={importMutation.isPending} disabled={!canImport} fullWidth={isMobile}>
               Import Data
             </Button>
           </Group>
         </Stack>
       </Card>
 
-      <XlsxImportGuide />
+      {mode === 'excel' && <XlsxImportGuide />}
     </Stack>
   )
 }

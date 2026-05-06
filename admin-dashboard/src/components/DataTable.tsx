@@ -9,7 +9,10 @@ import {
   Skeleton,
   Stack,
   ScrollArea,
+  Card,
+  Box,
 } from '@mantine/core'
+import { useMediaQuery } from '@mantine/hooks'
 
 export interface Column<T> {
   key: string
@@ -72,6 +75,7 @@ export function DataTable<T extends Record<string, any>>({
   skeletonCount = 5,
 }: DataTableProps<T>) {
   const totalPages = Math.ceil(total / pageSize)
+  const isMobile = useMediaQuery('(max-width: 48em)')
 
   // Determine a reasonable minimum table width so columns don't become too narrow on small screens.
   // Give each column a baseline width and add space for selectable/actions columns when present.
@@ -118,6 +122,86 @@ export function DataTable<T extends Record<string, any>>({
           <Skeleton key={i} height={50} />
         ))}
       </Stack>
+    )
+  }
+
+  if (isMobile) {
+    return (
+      <>
+        <Stack gap="sm">
+          {data.map((record, index) => {
+            const id = getRowId(record)
+            return (
+              <Card
+                key={id}
+                withBorder
+                padding="sm"
+                radius="md"
+                bg={selectedIds.includes(id) ? 'var(--mantine-color-blue-light)' : undefined}
+                style={{ cursor: onRowClick ? 'pointer' : 'default' }}
+                onClick={() => onRowClick?.(record)}
+              >
+                <Stack gap="xs">
+                  {(selectable || rowActions) && (
+                    <Group justify="space-between" align="center" wrap="nowrap">
+                      {selectable ? (
+                        <Checkbox
+                          checked={selectedIds.includes(id)}
+                          onClick={(event) => event.stopPropagation()}
+                          onChange={(event) => handleSelect(id, event.currentTarget.checked)}
+                        />
+                      ) : <Box />}
+                      {rowActions && (
+                        <Box onClick={(event) => event.stopPropagation()}>
+                          {rowActions(record)}
+                        </Box>
+                      )}
+                    </Group>
+                  )}
+
+                  {columns.map((column) => (
+                    <Box key={column.key}>
+                      <Text size="xs" c="dimmed" fw={600} tt="uppercase">
+                        {column.title}
+                      </Text>
+                      <Box style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+                        {renderCell(column, record, index)}
+                      </Box>
+                    </Box>
+                  ))}
+                </Stack>
+              </Card>
+            )
+          })}
+        </Stack>
+
+        {data.length === 0 && (
+          <Text c="dimmed" ta="center" py="xl">
+            {emptyText}
+          </Text>
+        )}
+
+        <Stack gap="sm" mt="md">
+          <Text size="sm" c="dimmed">
+            Total: {total} data
+          </Text>
+          {totalPages > 1 && (
+            <Pagination
+              value={current}
+              onChange={onPageChange}
+              total={totalPages}
+            />
+          )}
+          <Select
+            comboboxProps={{ withinPortal: true }}
+            data={pageSizeOptions}
+            value={String(pageSize)}
+            onChange={(value) => onPageSizeChange(Number(value))}
+            size="sm"
+            w="100%"
+          />
+        </Stack>
+      </>
     )
   }
 

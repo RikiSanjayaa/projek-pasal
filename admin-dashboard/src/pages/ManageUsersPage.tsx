@@ -18,7 +18,7 @@ import {
   Tooltip,
 } from '@mantine/core'
 import { Dropzone } from '@mantine/dropzone'
-import { useDisclosure } from '@mantine/hooks'
+import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import { showNotification } from '@mantine/notifications'
 import { IconCheck, IconCopy, IconDevices, IconFileSpreadsheet, IconRefresh, IconTrash, IconUpload, IconX } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -62,6 +62,7 @@ function ExpiryBadge({ expiresAt }: { expiresAt: string }) {
 
 export function ManageUsersPage() {
   const queryClient = useQueryClient()
+  const isMobile = useMediaQuery('(max-width: 48em)')
   const [email, setEmail] = useState('')
   const [nama, setNama] = useState('')
   const [password, setPassword] = useState('')
@@ -174,12 +175,76 @@ export function ManageUsersPage() {
   const activeUsers = useMemo(() => users.filter((user) => user.is_active && daysUntilExpiry(user.expires_at) >= 0), [users])
   const inactiveUsers = useMemo(() => users.filter((user) => !user.is_active || daysUntilExpiry(user.expires_at) < 0), [users])
 
-  const renderRows = (items: MobileUser[]) => items.map((user) => {
+  const renderUserActions = (user: MobileUser, includeDevices = false) => {
     const activeDevices = user.devices?.filter((device) => device.is_active).length || 0
     const isExtending = extendMutation.isPending && extendMutation.variables === user.id
     const isResettingPassword = resetPasswordMutation.isPending && resetPasswordMutation.variables === user.id
     const isToggling = toggleMutation.isPending && toggleMutation.variables?.id === user.id
     const isDeleting = deleteMutation.isPending && deleteMutation.variables === user.id
+
+    return (
+      <Group gap={4} wrap="wrap">
+        <Button size="xs" variant="light" onClick={() => extendMutation.mutate(user.id)} loading={isExtending} fullWidth={isMobile}>
+          Perpanjang
+        </Button>
+        <Button size="xs" variant="light" onClick={() => resetPasswordMutation.mutate(user.id)} loading={isResettingPassword} fullWidth={isMobile}>
+          Reset Password
+        </Button>
+        <Button
+          size="xs"
+          color={user.is_active ? 'orange' : 'green'}
+          variant="light"
+          onClick={() => toggleMutation.mutate({ id: user.id, active: !user.is_active })}
+          loading={isToggling}
+          fullWidth={isMobile}
+        >
+          {user.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+        </Button>
+        <ActionIcon color="red" variant="subtle" onClick={() => deleteMutation.mutate(user.id)} loading={isDeleting}>
+          <IconTrash size={16} />
+        </ActionIcon>
+        {includeDevices && (
+          <Tooltip label="Lihat perangkat">
+            <Badge
+              color={activeDevices ? 'blue' : 'gray'}
+              variant="light"
+              leftSection={<IconDevices size={12} />}
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                setSelectedUser(user)
+                devicesModal.open()
+              }}
+            >
+              {activeDevices} aktif
+            </Badge>
+          </Tooltip>
+        )}
+      </Group>
+    )
+  }
+
+  const renderMobileCards = (items: MobileUser[]) => (
+    <Stack gap="sm">
+      {items.map((user) => (
+        <Card key={user.id} withBorder padding="sm" radius="md">
+          <Stack gap="xs">
+            <div>
+              <Text fw={600}>{user.nama}</Text>
+              <Text size="sm" c="dimmed" style={{ overflowWrap: 'anywhere' }}>{user.email}</Text>
+            </div>
+            <Group gap="xs">
+              <Badge color={user.is_active ? 'green' : 'gray'} variant="light">{user.is_active ? 'Aktif' : 'Nonaktif'}</Badge>
+              <ExpiryBadge expiresAt={user.expires_at} />
+            </Group>
+            {renderUserActions(user, true)}
+          </Stack>
+        </Card>
+      ))}
+    </Stack>
+  )
+
+  const renderRows = (items: MobileUser[]) => items.map((user) => {
+    const activeDevices = user.devices?.filter((device) => device.is_active).length || 0
 
     return (
       <Table.Tr key={user.id}>
@@ -206,26 +271,7 @@ export function ManageUsersPage() {
           </Tooltip>
         </Table.Td>
         <Table.Td>
-          <Group gap={4}>
-            <Button size="xs" variant="light" onClick={() => extendMutation.mutate(user.id)} loading={isExtending}>
-              Perpanjang
-            </Button>
-            <Button size="xs" variant="light" onClick={() => resetPasswordMutation.mutate(user.id)} loading={isResettingPassword}>
-              Reset Password
-            </Button>
-            <Button
-              size="xs"
-              color={user.is_active ? 'orange' : 'green'}
-              variant="light"
-              onClick={() => toggleMutation.mutate({ id: user.id, active: !user.is_active })}
-              loading={isToggling}
-            >
-              {user.is_active ? 'Nonaktifkan' : 'Aktifkan'}
-            </Button>
-            <ActionIcon color="red" variant="subtle" onClick={() => deleteMutation.mutate(user.id)} loading={isDeleting}>
-              <IconTrash size={16} />
-            </ActionIcon>
-          </Group>
+          {renderUserActions(user)}
         </Table.Td>
       </Table.Tr>
     )
@@ -239,11 +285,11 @@ export function ManageUsersPage() {
       </div>
 
       <Alert title="Tambah pengguna mobile" color="blue" variant="light">
-        <Group align="flex-end">
-          <TextInput label="Email" value={email} onChange={(event) => setEmail(event.currentTarget.value)} style={{ flex: 1 }} />
-          <TextInput label="Nama" value={nama} onChange={(event) => setNama(event.currentTarget.value)} style={{ flex: 1 }} />
-          <PasswordInput label="Password awal" placeholder="Kosongkan untuk auto-generate" value={password} onChange={(event) => setPassword(event.currentTarget.value)} style={{ flex: 1 }} />
-          <Button onClick={() => createMutation.mutate()} loading={createMutation.isPending} disabled={!email || !nama}>
+        <Group align="flex-end" grow={isMobile}>
+          <TextInput label="Email" value={email} onChange={(event) => setEmail(event.currentTarget.value)} style={{ flex: 1, minWidth: isMobile ? '100%' : 0 }} />
+          <TextInput label="Nama" value={nama} onChange={(event) => setNama(event.currentTarget.value)} style={{ flex: 1, minWidth: isMobile ? '100%' : 0 }} />
+          <PasswordInput label="Password awal" placeholder="Kosongkan untuk auto-generate" value={password} onChange={(event) => setPassword(event.currentTarget.value)} style={{ flex: 1, minWidth: isMobile ? '100%' : 0 }} />
+          <Button onClick={() => createMutation.mutate()} loading={createMutation.isPending} disabled={!email || !nama} fullWidth={isMobile} style={{ minWidth: isMobile ? '100%' : undefined }}>
             Tambah
           </Button>
         </Group>
@@ -267,35 +313,35 @@ export function ManageUsersPage() {
       </Dropzone>
 
       <Card shadow="sm" padding="md" radius="md" withBorder>
-        <Group justify="space-between" mb="sm">
+        <Group justify="space-between" mb="sm" wrap="wrap">
           <Title order={4}>Pengguna Aktif</Title>
-          <Button leftSection={<IconRefresh size={16} />} variant="light" onClick={() => queryClient.invalidateQueries({ queryKey: ['mobile_users'] })}>
+          <Button leftSection={<IconRefresh size={16} />} variant="light" onClick={() => queryClient.invalidateQueries({ queryKey: ['mobile_users'] })} fullWidth={isMobile}>
             Refresh
           </Button>
         </Group>
-        <ScrollArea>
+        {isMobile ? renderMobileCards(activeUsers) : <ScrollArea>
           <Table striped highlightOnHover miw={850}>
             <Table.Thead>
               <Table.Tr><Table.Th>Nama</Table.Th><Table.Th>Email</Table.Th><Table.Th>Status</Table.Th><Table.Th>Masa Aktif</Table.Th><Table.Th>Perangkat</Table.Th><Table.Th>Aksi</Table.Th></Table.Tr>
             </Table.Thead>
             <Table.Tbody>{isLoading ? null : renderRows(activeUsers)}</Table.Tbody>
           </Table>
-        </ScrollArea>
+        </ScrollArea>}
       </Card>
 
       <Card shadow="sm" padding="md" radius="md" withBorder>
         <Title order={4} mb="sm">Pengguna Nonaktif / Kadaluarsa</Title>
-        <ScrollArea>
+        {isMobile ? renderMobileCards(inactiveUsers) : <ScrollArea>
           <Table striped highlightOnHover miw={850}>
             <Table.Thead>
               <Table.Tr><Table.Th>Nama</Table.Th><Table.Th>Email</Table.Th><Table.Th>Status</Table.Th><Table.Th>Masa Aktif</Table.Th><Table.Th>Perangkat</Table.Th><Table.Th>Aksi</Table.Th></Table.Tr>
             </Table.Thead>
             <Table.Tbody>{renderRows(inactiveUsers)}</Table.Tbody>
           </Table>
-        </ScrollArea>
+        </ScrollArea>}
       </Card>
 
-      <Modal opened={!!credentials} onClose={() => setCredentials(null)} title="Kredensial Sementara" closeOnClickOutside={false}>
+      <Modal opened={!!credentials} onClose={() => setCredentials(null)} title="Kredensial Sementara" closeOnClickOutside={false} fullScreen={isMobile}>
         {credentials && (
           <Stack>
             <Alert color="yellow">Password hanya ditampilkan sekali. Simpan sebelum menutup modal.</Alert>
@@ -306,8 +352,9 @@ export function ManageUsersPage() {
         )}
       </Modal>
 
-      <Modal opened={devicesOpen} onClose={devicesModal.close} title={`Perangkat - ${selectedUser?.nama}`} size="lg">
-        <Table striped>
+      <Modal opened={devicesOpen} onClose={devicesModal.close} title={`Perangkat - ${selectedUser?.nama}`} size="lg" fullScreen={isMobile}>
+        <ScrollArea>
+        <Table striped miw={640}>
           <Table.Thead><Table.Tr><Table.Th>Device</Table.Th><Table.Th>Platform</Table.Th><Table.Th>Terakhir Aktif</Table.Th><Table.Th>Status</Table.Th><Table.Th>Aksi</Table.Th></Table.Tr></Table.Thead>
           <Table.Tbody>
             {selectedUser?.devices?.map((device) => (
@@ -333,6 +380,7 @@ export function ManageUsersPage() {
             ))}
           </Table.Tbody>
         </Table>
+        </ScrollArea>
       </Modal>
     </Stack>
   )

@@ -12,6 +12,7 @@ import { useState, useMemo } from 'react'
 import { subDays, startOfDay, format } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { useElementSize } from '@mantine/hooks'
+import { useMediaQuery } from '@mantine/hooks'
 
 interface CombinedAnalyticsChartProps {
   logs: any[]
@@ -23,6 +24,7 @@ export function CombinedAnalyticsChart({ logs, loading }: CombinedAnalyticsChart
   const isDark = colorScheme === 'dark'
   const navigate = useNavigate()
   const { ref: chartRef, width: chartWidth } = useElementSize()
+  const isMobile = useMediaQuery('(max-width: 48em)')
 
   const [range, setRange] = useState<string>('30')
 
@@ -63,6 +65,7 @@ export function CombinedAnalyticsChart({ logs, loading }: CombinedAnalyticsChart
 
   const chartColor = isDark ? '#C1C2C5' : '#1A1B1E'
   const gridColor = isDark ? '#373A40' : '#E9ECEF'
+  const chartHeight = isMobile ? 280 : 400
 
   if (loading) {
     return (
@@ -103,7 +106,7 @@ export function CombinedAnalyticsChart({ logs, loading }: CombinedAnalyticsChart
       style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
     >
       <div style={{ marginBottom: 20 }}>
-        <Group justify="space-between" align="center">
+        <Group justify="space-between" align="center" wrap="wrap">
           <div>
             <Title order={4}>Ringkasan Analitik</Title>
             <Title order={6} c="dimmed" fw={400}>Aktivitas dan lini masa gabungan</Title>
@@ -117,14 +120,14 @@ export function CombinedAnalyticsChart({ logs, loading }: CombinedAnalyticsChart
               { value: '30', label: '30 Hari Terakhir' },
               { value: '90', label: '3 Bulan Terakhir' },
             ]}
-            w={150}
+            w={isMobile ? '100%' : 150}
           />
         </Group>
       </div>
 
-      <div ref={chartRef} style={{ flex: '1 1 auto', width: '100%', height: 400, minWidth: 1, minHeight: 400 }}>
+      <div ref={chartRef} style={{ flex: '1 1 auto', width: '100%', height: chartHeight, minWidth: 1, minHeight: chartHeight }}>
         {chartWidth > 0 && (
-          <ComposedChart width={chartWidth} height={400} data={data} onClick={handleClick}>
+          <ComposedChart width={chartWidth} height={chartHeight} data={data} onClick={handleClick}>
             <defs>
               <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />

@@ -1,102 +1,164 @@
-# CariPasal - Aplikasi Pencarian Pasal Hukum Indonesia
+# CariPasal
 
-Aplikasi untuk mencari dan mengelola pasal-pasal dari:
+CariPasal adalah aplikasi pencarian dan pengelolaan pasal hukum Indonesia.
 
-- **KUHP** (Kitab Undang-Undang Hukum Pidana)
-- **KUHPer** (Kitab Undang-Undang Hukum Perdata)
-- **KUHAP** (Kitab Undang-Undang Hukum Acara Pidana)
-- **UU ITE** (Undang-Undang Informasi dan Transaksi Elektronik)
+Arsitektur saat ini sudah diarahkan ke deployment kampus dengan satu subdomain:
 
-## Arsitektur
-
+```text
+https://pasal.kampus.ac.id/admin  -> React admin dashboard
+https://pasal.kampus.ac.id/api    -> Laravel REST API
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        CLIENTS                              │
-├─────────────────────────┬───────────────────────────────────┤
-│  Mobile App             │  Admin Dashboard                  │
-│  (Flutter)              │  (React + Mantine)                │
-│  - User biasa           │  - CRUD pasal                     │
-│  - Login dengan email   │  - Bulk import XLSX               │
-│  - Offline support      │  - Audit log                      │
-└─────────────────────────┴───────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    BACKEND (Supabase)                       │
-│  - PostgreSQL Database                                      │
-│  - Authentication                                           │
-│  - Auto-generated REST API                                  │
-│  - Row Level Security                                       │
-└─────────────────────────────────────────────────────────────┘
-```
+
+## Stack
+
+- Backend: Laravel + PostgreSQL + Sanctum
+- Admin: React + Mantine
+- Mobile: Flutter + local database/offline sync
+- Deploy target: aaPanel + Nginx + PHP-FPM
 
 ## Struktur Folder
 
-```
+```text
 projek-pasal/
-├── supabase/           # Database migrations & config edge function
-├── admin-dashboard/    # React + Mantine admin panel
-├── pasal_mobile_app/   # Flutter mobile application
-├── utils/              # Utility scripts (migrations, etc.)
-└── docs/               # Dokumentasi lengkap
+  backend-laravel/      Laravel REST API
+  admin-dashboard/      React admin dashboard
+  pasal_mobile_app/     Flutter mobile app
+  deploy/               Script dan konfigurasi aaPanel
+  docs/                 Dokumentasi teknis
+  supabase/             Arsip schema lama sampai migrasi final selesai
 ```
 
-## Quick Start
+## Fitur Utama
 
-### Prerequisites
+- Admin login dengan Laravel Sanctum
+- CRUD undang-undang dan pasal
+- Trash/restore pasal
+- Relasi antar pasal
+- Bulk import Excel
+- OCR import dari foto halaman buku hukum
+- Kelola user mobile dan admin
+- Batas 3 perangkat aktif untuk user mobile
+- Reset password via SMTP/Resend
+- Mobile sync full/incremental untuk mode offline
 
-- Node.js >= 18
-- Flutter >= 3.8
-- Supabase CLI (opsional untuk local development)
+## Local Development
 
-### Setup Supabase
+### 1. Jalankan PostgreSQL lokal
 
-1. Buat akun di [supabase.com](https://supabase.com)
-2. Buat project baru
-3. Copy URL dan key ke environment variables
-4. Jalankan migrations
-5. Jalankan Edge functions yang ada di /supabase/functions/create-admin/index.ts
-6. buat akun super_admin pertama, contoh ada di [Panduan Deployment](docs/DEPLOYMENT.md)
+```powershell
+docker compose -f docker-compose.local.yml up -d
+```
 
-### Setup Admin Dashboard
+### 2. Jalankan backend Laravel
 
-```bash
+```powershell
+cd backend-laravel
+composer install
+copy .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+php artisan serve --host=127.0.0.1 --port=8000
+```
+
+### 3. Jalankan admin dashboard
+
+```powershell
 cd admin-dashboard
 npm install
-cp .env.example .env.local
-# Edit .env.local dengan Supabase credentials
 npm run dev
 ```
 
-### Setup Mobile App
+Admin lokal:
+
+```text
+http://127.0.0.1:5173/admin
+```
+
+API lokal:
+
+```text
+http://127.0.0.1:8000/api/health
+```
+
+### 4. Jalankan mobile emulator
+
+Untuk Android emulator, mobile memakai API lokal lewat:
+
+```text
+http://10.0.2.2:8000/api
+```
+
+## Deploy aaPanel
+
+Dokumentasi utama:
+
+- [Deploy CariPasal di aaPanel](docs/AAPANEL_DEPLOYMENT.md)
+
+Setelah prasyarat server siap, update rutin cukup:
+
+```bash
+cd /www/wwwroot/pasal
+DOMAIN=pasal.kampus.ac.id bash deploy/aapanel-update.sh
+```
+
+Sebelum deploy pertama atau saat pindah server, jalankan doctor:
+
+```bash
+cd /www/wwwroot/pasal
+bash deploy/aapanel-doctor.sh
+```
+
+## Script Deploy
+
+- `deploy/aapanel-doctor.sh`: cek PHP, Composer, Node, extension PostgreSQL, fungsi PHP, socket aaPanel, dan path project.
+- `deploy/aapanel-deploy.sh`: pull kode, install dependency, migrate, cache Laravel, build admin, publish `/admin`, restart PHP-FPM, reload Nginx, dan health check.
+- `deploy/aapanel-update.sh`: wrapper pendek untuk update rutin.
+
+Variabel yang sering dipakai:
+
+```bash
+DOMAIN=pasal.kampus.ac.id
+APP_ROOT=/www/wwwroot/pasal
+BRANCH=main
+PHP_BIN=/www/server/php/84/bin/php
+PHP_FPM_SERVICE=/etc/init.d/php-fpm-84
+RUN_TESTS=1
+SKIP_GIT=1
+SKIP_NPM_CI=1
+```
+
+## Verifikasi
+
+Backend:
+
+```bash
+cd backend-laravel
+php artisan test
+```
+
+Admin:
+
+```bash
+cd admin-dashboard
+npm run build
+```
+
+Mobile:
 
 ```bash
 cd pasal_mobile_app
-flutter pub get
-# Copy dan edit env config:
-cp lib/core/config/env-example.dart lib/core/config/env.dart
-# Edit lib/core/config/env.dart dengan Supabase credentials
-flutter run
+flutter analyze
+flutter build apk --release
 ```
 
-## Dokumentasi
+## Catatan Production
 
-- [Arsitektur Sistem](docs/ARSITEKTUR.md)
-- [Database Schema](docs/DATABASE.md)
-- [Panduan Deployment](docs/DEPLOYMENT.md)
-
-## Roles & Permissions
-
-| Role            | Akses                                        |
-| --------------- | -------------------------------------------- |
-| **User Biasa**  | Read pasal, search, filter, download offline |
-| **Admin**       | CRUD pasal, bulk import, view audit log      |
-| **Super Admin** | Semua + manage admin users                   |
+- Jangan commit `.env`.
+- Pastikan `APP_DEBUG=false`.
+- PostgreSQL jangan dibuka ke publik.
+- Backup database sebelum update besar.
+- Build APK baru diperlukan jika ada perubahan di folder `pasal_mobile_app`.
 
 ## Lisensi
 
-Hak Cipta © 2025 Universitas Bumigora. Seluruh hak dilindungi.
-
----
-
-Dikembangkan oleh mahasiswa Universitas Bumigora untuk kemudahan akses informasi hukum.
+Hak Cipta 2026. Seluruh hak dilindungi.

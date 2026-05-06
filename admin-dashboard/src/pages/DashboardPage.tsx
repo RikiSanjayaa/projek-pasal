@@ -6,6 +6,7 @@ import {
   Stack,
   Button,
 } from '@mantine/core'
+import { useMediaQuery } from '@mantine/hooks'
 import {
   IconScale,
   IconBook,
@@ -35,6 +36,7 @@ interface DashboardSummary {
 
 export function DashboardPage() {
   const navigate = useNavigate()
+  const isMobile = useMediaQuery('(max-width: 48em)')
 
   // Fetch all dashboard data in one query for better performance
   const { data: dashboardData, isLoading: loadingDashboard } = useQuery({
@@ -72,19 +74,20 @@ export function DashboardPage() {
 
   return (
     <Stack gap="xl" mb="xl">
-      <Group justify="space-between" align="end">
+      <Group justify="space-between" align="end" wrap="wrap">
         <div>
           <Title order={2}>Dashboard</Title>
           <Text c="dimmed">Selamat datang di Dashboard Admin CariPasal</Text>
         </div>
 
         {/* Stats Badges - Compact & Clickable */}
-        <Group gap="md">
+        <Group gap="sm" w={isMobile ? '100%' : undefined}>
           <Button
             variant="light"
             color="blue"
             size="md"
             radius="xl"
+            fullWidth={isMobile}
             leftSection={<IconScale size={20} />}
             onClick={() => navigate('/pasal')}
           >
@@ -96,6 +99,7 @@ export function DashboardPage() {
             color="green"
             size="md"
             radius="xl"
+            fullWidth={isMobile}
             leftSection={<IconBook size={20} />}
             onClick={() => navigate('/undang-undang')}
           >
@@ -107,6 +111,7 @@ export function DashboardPage() {
             color="orange"
             size="md"
             radius="xl"
+            fullWidth={isMobile}
             leftSection={<IconHistory size={20} />}
             onClick={() => navigate('/audit-log')}
           >

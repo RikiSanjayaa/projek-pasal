@@ -17,7 +17,7 @@ import {
   Title,
   Tooltip,
 } from '@mantine/core'
-import { useDisclosure } from '@mantine/hooks'
+import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import { showNotification } from '@mantine/notifications'
 import { IconCopy, IconDevices, IconRefresh } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -55,6 +55,7 @@ function formatDate(dateStr?: string | null) {
 export function ManageAdminPage() {
   const { adminUser } = useAuth()
   const queryClient = useQueryClient()
+  const isMobile = useMediaQuery('(max-width: 48em)')
   const [email, setEmail] = useState('')
   const [nama, setNama] = useState('')
   const [password, setPassword] = useState('')
@@ -158,24 +159,72 @@ export function ManageAdminPage() {
     )
   })
 
+  const renderMobileCards = (items: AdminUser[], allowToggle: boolean) => (
+    <Stack gap="sm">
+      {items.map((admin) => {
+        const activeDevices = admin.devices?.filter((device) => device.is_active).length || 0
+        return (
+          <Card key={admin.id} withBorder padding="sm" radius="md">
+            <Stack gap="xs">
+              <div>
+                <Text fw={600}>{admin.nama}</Text>
+                <Text size="sm" c="dimmed" style={{ overflowWrap: 'anywhere' }}>{admin.email}</Text>
+              </div>
+              <Group gap="xs">
+                <Badge color={admin.role === 'super_admin' ? 'teal' : 'blue'}>{admin.role}</Badge>
+                <Badge color={admin.is_active ? 'green' : 'gray'} variant="light">{admin.is_active ? 'Aktif' : 'Nonaktif'}</Badge>
+                <Tooltip label="Lihat perangkat">
+                  <Badge
+                    color={activeDevices ? 'blue' : 'gray'}
+                    variant="light"
+                    leftSection={<IconDevices size={12} />}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      setSelectedAdmin(admin)
+                      devicesModal.open()
+                    }}
+                  >
+                    {activeDevices} aktif
+                  </Badge>
+                </Tooltip>
+              </Group>
+              {allowToggle && (
+                <Button
+                  size="xs"
+                  variant="light"
+                  color={admin.is_active ? 'orange' : 'green'}
+                  onClick={() => toggleMutation.mutate({ id: admin.id, active: !admin.is_active })}
+                  loading={toggleMutation.isPending}
+                  fullWidth
+                >
+                  {admin.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+                </Button>
+              )}
+            </Stack>
+          </Card>
+        )
+      })}
+    </Stack>
+  )
+
   return (
     <Stack gap="lg">
-      <Group justify="space-between">
+      <Group justify="space-between" wrap="wrap">
         <div>
           <Title order={2}>Manage Admin</Title>
           <Text c="dimmed">Kelola akun admin dashboard</Text>
         </div>
-        <Button leftSection={<IconRefresh size={16} />} variant="light" onClick={() => queryClient.invalidateQueries({ queryKey: ['admin_users'] })}>
+        <Button leftSection={<IconRefresh size={16} />} variant="light" onClick={() => queryClient.invalidateQueries({ queryKey: ['admin_users'] })} fullWidth={isMobile}>
           Refresh
         </Button>
       </Group>
 
       <Alert title="Tambah admin baru" color="blue" variant="light">
-        <Group align="flex-end">
-          <TextInput label="Email" value={email} onChange={(event) => setEmail(event.currentTarget.value)} style={{ flex: 1 }} />
-          <TextInput label="Nama" value={nama} onChange={(event) => setNama(event.currentTarget.value)} style={{ flex: 1 }} />
-          <PasswordInput label="Password awal" placeholder="Kosongkan untuk auto-generate" value={password} onChange={(event) => setPassword(event.currentTarget.value)} style={{ flex: 1 }} />
-          <Button onClick={() => createMutation.mutate()} loading={createMutation.isPending} disabled={!email || !nama}>
+        <Group align="flex-end" grow={isMobile}>
+          <TextInput label="Email" value={email} onChange={(event) => setEmail(event.currentTarget.value)} style={{ flex: 1, minWidth: isMobile ? '100%' : 0 }} />
+          <TextInput label="Nama" value={nama} onChange={(event) => setNama(event.currentTarget.value)} style={{ flex: 1, minWidth: isMobile ? '100%' : 0 }} />
+          <PasswordInput label="Password awal" placeholder="Kosongkan untuk auto-generate" value={password} onChange={(event) => setPassword(event.currentTarget.value)} style={{ flex: 1, minWidth: isMobile ? '100%' : 0 }} />
+          <Button onClick={() => createMutation.mutate()} loading={createMutation.isPending} disabled={!email || !nama} fullWidth={isMobile} style={{ minWidth: isMobile ? '100%' : undefined }}>
             Tambah Admin
           </Button>
         </Group>
@@ -183,25 +232,25 @@ export function ManageAdminPage() {
 
       <Card shadow="sm" padding="md" radius="md" withBorder>
         <Title order={4} mb="sm">Super Admin</Title>
-        <ScrollArea>
+        {isMobile ? renderMobileCards(superAdmins, false) : <ScrollArea>
           <Table striped highlightOnHover miw={760}>
             <Table.Thead><Table.Tr><Table.Th>Nama</Table.Th><Table.Th>Email</Table.Th><Table.Th>Role</Table.Th><Table.Th>Status</Table.Th><Table.Th>Perangkat</Table.Th><Table.Th>Aksi</Table.Th></Table.Tr></Table.Thead>
             <Table.Tbody>{isLoading ? null : renderRows(superAdmins, false)}</Table.Tbody>
           </Table>
-        </ScrollArea>
+        </ScrollArea>}
       </Card>
 
       <Card shadow="sm" padding="md" radius="md" withBorder>
         <Title order={4} mb="sm">Admin</Title>
-        <ScrollArea>
+        {isMobile ? renderMobileCards(regularAdmins, true) : <ScrollArea>
           <Table striped highlightOnHover miw={760}>
             <Table.Thead><Table.Tr><Table.Th>Nama</Table.Th><Table.Th>Email</Table.Th><Table.Th>Role</Table.Th><Table.Th>Status</Table.Th><Table.Th>Perangkat</Table.Th><Table.Th>Aksi</Table.Th></Table.Tr></Table.Thead>
             <Table.Tbody>{renderRows(regularAdmins, true)}</Table.Tbody>
           </Table>
-        </ScrollArea>
+        </ScrollArea>}
       </Card>
 
-      <Modal opened={!!credentials} onClose={() => setCredentials(null)} title="Kredensial Sementara" closeOnClickOutside={false}>
+      <Modal opened={!!credentials} onClose={() => setCredentials(null)} title="Kredensial Sementara" closeOnClickOutside={false} fullScreen={isMobile}>
         {credentials && (
           <Stack>
             <Alert color="yellow">Password hanya ditampilkan sekali. Simpan sebelum menutup modal.</Alert>
@@ -211,8 +260,9 @@ export function ManageAdminPage() {
         )}
       </Modal>
 
-      <Modal opened={devicesOpen} onClose={devicesModal.close} title={`Perangkat - ${selectedAdmin?.nama}`} size="lg">
-        <Table striped>
+      <Modal opened={devicesOpen} onClose={devicesModal.close} title={`Perangkat - ${selectedAdmin?.nama}`} size="lg" fullScreen={isMobile}>
+        <ScrollArea>
+        <Table striped miw={560}>
           <Table.Thead><Table.Tr><Table.Th>Device</Table.Th><Table.Th>Terakhir Aktif</Table.Th><Table.Th>Status</Table.Th><Table.Th>Aksi</Table.Th></Table.Tr></Table.Thead>
           <Table.Tbody>
             {selectedAdmin?.devices?.map((device) => (
@@ -231,6 +281,7 @@ export function ManageAdminPage() {
             ))}
           </Table.Tbody>
         </Table>
+        </ScrollArea>
       </Modal>
     </Stack>
   )

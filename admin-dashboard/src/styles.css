@@ -1,0 +1,75 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.bulk-import-tool {
+  background: var(--mantine-color-body);
+}
+
+.ocr-draft-desktop-grid {
+  display: grid;
+  grid-template-columns: 130px minmax(220px, 1fr) minmax(220px, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.ocr-field-body,
+.ocr-field-note {
+  grid-column: span 3;
+}
+
+.mantine-AppShell-main {
+  min-width: 0;
+}
+
+@media (min-width: 75em) {
+  .ocr-field-body {
+    grid-column: span 2;
+  }
+
+  .ocr-field-note {
+    grid-column: span 1;
+  }
+}
+
+@media (min-width: 62em) and (max-width: 74.99em) {
+  .ocr-field-body {
+    grid-column: span 2;
+  }
+
+  .ocr-field-note {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 48em) {
+  .mantine-Card-root {
+    padding: var(--mantine-spacing-sm);
+  }
+
+  .ocr-draft-desktop-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ocr-field-body,
+  .ocr-field-note {
+    grid-column: auto;
+  }
+
+  .mantine-Title-root,
+  .mantine-Text-root,
+  .mantine-Badge-label,
+  .mantine-Button-label {
+    overflow-wrap: anywhere;
+  }
+}

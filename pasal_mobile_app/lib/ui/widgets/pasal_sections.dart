@@ -5,6 +5,7 @@ import '../../models/pasal_model.dart';
 import '../../models/pasal_link_model.dart';
 import '../utils/highlight_text.dart';
 import '../utils/uu_color_helper.dart';
+import 'law_content_formatter.dart';
 
 /// Widget displaying the "Penjelasan" (explanation) section for a Pasal
 class PenjelasanSection extends StatelessWidget {
@@ -19,7 +20,8 @@ class PenjelasanSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (penjelasan.length <= 3) return const SizedBox.shrink();
+    final normalizedPenjelasan = normalizeLegalDisplayText(penjelasan);
+    if (normalizedPenjelasan.length <= 3) return const SizedBox.shrink();
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final subTextColor = AppColors.textSecondary(isDark);
@@ -57,7 +59,7 @@ class PenjelasanSection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           HighlightText(
-            text: penjelasan,
+            text: normalizedPenjelasan,
             query: searchQuery,
             textAlign: TextAlign.justify,
             style: TextStyle(fontSize: 14, height: 1.6, color: subTextColor),

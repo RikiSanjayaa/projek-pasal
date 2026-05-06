@@ -1,4 +1,5 @@
 import { Card, Title, Table, Badge, ScrollArea, Text, Skeleton, Stack } from '@mantine/core'
+import { useMediaQuery } from '@mantine/hooks'
 import { aggregateAdminContributions } from '@/lib/chartUtils'
 
 interface TopContributorsProps {
@@ -7,6 +8,8 @@ interface TopContributorsProps {
 }
 
 export function TopContributors({ logs, loading }: TopContributorsProps) {
+  const isMobile = useMediaQuery('(max-width: 48em)')
+
   if (loading) {
     return (
       <Card shadow="sm" padding="lg" radius="md" withBorder style={{ height: '100%' }}>
@@ -45,8 +48,8 @@ export function TopContributors({ logs, loading }: TopContributorsProps) {
     <Card shadow="sm" padding="lg" radius="md" withBorder style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Title order={4} mb="md">Kontributor Teratas</Title>
 
-      <ScrollArea h={400}>
-        <Table verticalSpacing="sm">
+      <ScrollArea h={isMobile ? 280 : 400} type="auto">
+        <Table verticalSpacing="sm" miw={520}>
           <Table.Thead>
             <Table.Tr>
               <Table.Th>User</Table.Th>

@@ -20,7 +20,7 @@ import {
   Alert,
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
-import { useDisclosure } from '@mantine/hooks'
+import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { IconPlus, IconEdit, IconAlertCircle } from '@tabler/icons-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -34,6 +34,7 @@ interface PaginatedResponse<T> {
 export function UndangUndangListPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const isMobile = useMediaQuery('(max-width: 48em)')
   const [createModal, { open: openCreate, close: closeCreate }] = useDisclosure(false)
   const [editModal, { open: openEdit, close: closeEdit }] = useDisclosure(false)
   const [selectedUU, setSelectedUU] = useState<(UndangUndang & { pasal?: { id: string; nomor: string }[] }) | null>(null)
@@ -156,12 +157,12 @@ export function UndangUndangListPage() {
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between">
+      <Group justify="space-between" wrap="wrap">
         <div>
           <Title order={2}>Undang-Undang</Title>
           <Text c="dimmed">Kelola daftar undang-undang</Text>
         </div>
-        <Button leftSection={<IconPlus size={18} />} onClick={openCreate}>
+        <Button leftSection={<IconPlus size={18} />} onClick={openCreate} fullWidth={isMobile}>
           Tambah UU
         </Button>
       </Group>
@@ -171,6 +172,62 @@ export function UndangUndangListPage() {
           <Stack gap="sm">
             {[...Array(4)].map((_, i) => (
               <Skeleton key={i} height={50} />
+            ))}
+          </Stack>
+        ) : isMobile ? (
+          <Stack gap="sm">
+            {undangUndangList?.map((uu) => (
+              <Card
+                key={uu.id}
+                withBorder
+                padding="sm"
+                radius="md"
+                style={{ cursor: 'pointer' }}
+                onClick={() => navigate(`/pasal?uu=${uu.id}`)}
+              >
+                <Stack gap="xs">
+                  <Group justify="space-between" align="flex-start" wrap="nowrap">
+                    <div style={{ minWidth: 0 }}>
+                      <Badge color="blue" variant="filled" mb="xs">
+                        {uu.kode}
+                      </Badge>
+                      <Text fw={600} style={{ overflowWrap: 'anywhere' }}>
+                        {uu.nama}
+                      </Text>
+                      {uu.nama_lengkap && (
+                        <Text size="xs" c="dimmed" lineClamp={2}>
+                          {uu.nama_lengkap}
+                        </Text>
+                      )}
+                    </div>
+                    <ActionIcon
+                      variant="subtle"
+                      color="blue"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        handleEdit(uu)
+                      }}
+                    >
+                      <IconEdit size={16} />
+                    </ActionIcon>
+                  </Group>
+
+                  <Text size="sm" c="dimmed" lineClamp={3}>
+                    {uu.deskripsi || '-'}
+                  </Text>
+                  <Group gap="xs">
+                    <Badge variant="light" color="gray">
+                      {uu.pasal?.length || 0} Pasal
+                    </Badge>
+                    <Badge variant="light" color="gray">
+                      {uu.tahun || '-'}
+                    </Badge>
+                    <Badge color={uu.is_active ? 'green' : 'red'} variant="light">
+                      {uu.is_active ? 'Aktif' : 'Nonaktif'}
+                    </Badge>
+                  </Group>
+                </Stack>
+              </Card>
             ))}
           </Stack>
         ) : (
@@ -249,6 +306,7 @@ export function UndangUndangListPage() {
         onClose={closeCreate}
         title="Tambah Undang-Undang Baru"
         size="lg"
+        fullScreen={isMobile}
       >
         <form onSubmit={createForm.onSubmit((values) => createMutation.mutate(values))}>
           <Stack gap="md">
@@ -280,7 +338,7 @@ export function UndangUndangListPage() {
               placeholder="Contoh: 1946"
               {...createForm.getInputProps('tahun')}
             />
-            <Group justify="flex-end" mt="md">
+            <Group justify="flex-end" mt="md" grow={isMobile}>
               <Button variant="default" onClick={closeCreate}>
                 Batal
               </Button>
@@ -298,6 +356,7 @@ export function UndangUndangListPage() {
         onClose={closeEdit}
         title={`Edit ${selectedUU?.kode}`}
         size="lg"
+        fullScreen={isMobile}
       >
         <form
           onSubmit={editForm.onSubmit((values) =>
@@ -363,7 +422,7 @@ export function UndangUndangListPage() {
                 )}
               </Alert>
             )}
-            <Group justify="flex-end" mt="md">
+            <Group justify="flex-end" mt="md" grow={isMobile}>
               <Button variant="default" onClick={closeEdit}>
                 Batal
               </Button>

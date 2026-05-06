@@ -10,6 +10,12 @@ WEB_GROUP="${WEB_GROUP:-www}"
 ADMIN_DIR="${ADMIN_DIR:-$APP_ROOT/admin}"
 ADMIN_BASE_PATH="${ADMIN_BASE_PATH:-/admin/}"
 API_BASE_URL="${API_BASE_URL:-https://$DOMAIN/api}"
+BRANCH="${BRANCH:-main}"
+SKIP_GIT="${SKIP_GIT:-0}"
+SKIP_NPM_CI="${SKIP_NPM_CI:-0}"
+RUN_TESTS="${RUN_TESTS:-0}"
+PHP_FPM_SERVICE="${PHP_FPM_SERVICE:-/etc/init.d/php-fpm-84}"
+HEALTH_URL="${HEALTH_URL:-https://$DOMAIN/api/health}"
 
 if [[ -z "$COMPOSER_BIN" ]]; then
   if [[ -x /usr/local/bin/composer ]]; then
@@ -44,11 +50,15 @@ require_dir "$APP_ROOT"
 require_dir "$APP_ROOT/backend-laravel"
 require_dir "$APP_ROOT/admin-dashboard"
 
-log "Updating source from main"
+log "Updating source"
 cd "$APP_ROOT"
-git fetch origin
-git checkout main
-git pull --ff-only origin main
+if [[ "$SKIP_GIT" != "1" ]]; then
+  git fetch origin
+  git checkout "$BRANCH"
+  git pull --ff-only origin "$BRANCH"
+else
+  printf "Skipping git update because SKIP_GIT=1\n"
+fi
 
 log "Checking PHP runtime"
 "$PHP_BIN" -v
@@ -79,9 +89,15 @@ fi
 log "Running Laravel migrations and caches"
 "$PHP_BIN" artisan migrate --force
 "$PHP_BIN" artisan db:seed --force
+"$PHP_BIN" artisan optimize:clear
 "$PHP_BIN" artisan config:cache
 "$PHP_BIN" artisan route:cache
 "$PHP_BIN" artisan view:cache
+
+if [[ "$RUN_TESTS" == "1" ]]; then
+  log "Running Laravel tests"
+  "$PHP_BIN" artisan test
+fi
 
 log "Building React admin"
 cd "$APP_ROOT/admin-dashboard"
@@ -91,7 +107,9 @@ VITE_API_BASE_URL=$API_BASE_URL
 VITE_APP_BASE_PATH=$ADMIN_BASE_PATH
 EOF
 
-if [[ -f package-lock.json ]]; then
+if [[ "$SKIP_NPM_CI" == "1" ]]; then
+  printf "Skipping npm install because SKIP_NPM_CI=1\n"
+elif [[ -f package-lock.json ]]; then
   npm ci
 else
   npm install
@@ -112,6 +130,17 @@ else
 fi
 chmod -R 775 backend-laravel/storage backend-laravel/bootstrap/cache || true
 
+log "Restarting PHP-FPM"
+if [[ -x "$PHP_FPM_SERVICE" ]]; then
+  if command -v sudo >/dev/null 2>&1; then
+    sudo "$PHP_FPM_SERVICE" restart || true
+  else
+    "$PHP_FPM_SERVICE" restart || true
+  fi
+else
+  printf "PHP-FPM service not found or not executable: %s\n" "$PHP_FPM_SERVICE"
+fi
+
 log "Reloading Nginx"
 if command -v sudo >/dev/null 2>&1; then
   sudo /etc/init.d/nginx reload || true
@@ -119,7 +148,17 @@ else
   /etc/init.d/nginx reload || true
 fi
 
-log "Deployment complete"
-printf "Open: https://%s/api/health\n" "$DOMAIN"
-printf "Open: https://%s/admin\n" "$DOMAIN"
+log "Health check"
+if command -v curl >/dev/null 2>&1; then
+  curl -fsS "$HEALTH_URL" || {
+    printf "\nHealth check failed: %s\n" "$HEALTH_URL" >&2
+    exit 1
+  }
+  printf "\n"
+else
+  printf "curl not found, skipping health check\n"
+fi
 
+log "Deployment complete"
+printf "Open: %s\n" "$HEALTH_URL"
+printf "Open: https://%s/admin\n" "$DOMAIN"

@@ -82,23 +82,7 @@ class AuthService {
     String? deviceId = await _secureStorage.read(key: _deviceIdKey);
     if (deviceId != null) return deviceId;
 
-    final deviceInfo = DeviceInfoPlugin();
-    try {
-      if (isWeb) {
-        final info = await deviceInfo.webBrowserInfo;
-        deviceId = '${info.browserName.name}_${info.userAgent?.hashCode ?? 0}';
-      } else if (isAndroid) {
-        final info = await deviceInfo.androidInfo;
-        deviceId = info.id;
-      } else if (isIOS) {
-        final info = await deviceInfo.iosInfo;
-        deviceId = info.identifierForVendor;
-      }
-    } catch (e) {
-      print('Error getting device ID: $e');
-    }
-
-    deviceId ??= const Uuid().v4();
+    deviceId = 'caripasal-device-${const Uuid().v4()}';
     await _secureStorage.write(key: _deviceIdKey, value: deviceId);
     return deviceId;
   }

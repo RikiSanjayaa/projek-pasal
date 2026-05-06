@@ -48,7 +48,7 @@ Setelah PHP 8.4, Composer, Node.js, PostgreSQL, dan Nginx site sudah siap, deplo
 ```bash
 cd /www/wwwroot/pasal
 bash deploy/aapanel-doctor.sh
-DOMAIN=pasal.ikydev.site bash deploy/aapanel-deploy.sh
+DOMAIN=pasal.kampus.ac.id bash deploy/aapanel-deploy.sh
 ```
 
 Script `aapanel-doctor.sh` mengecek runtime server:
@@ -66,14 +66,36 @@ Script `aapanel-deploy.sh` akan:
 - pull branch `main`
 - install dependency Laravel
 - menjalankan migration dan seeder
+- membersihkan cache lama Laravel
 - cache config/route/view Laravel
 - membuat `.env.production` admin
 - build React admin dengan base path `/admin/`
 - publish hasil build ke `/www/wwwroot/pasal/admin`
 - memperbaiki permission `storage` dan `bootstrap/cache`
+- restart PHP-FPM
 - reload Nginx
+- melakukan health check ke `/api/health`
 
 Jika `.env` backend belum ada, script akan membuatnya dari `.env.production.example`, lalu berhenti agar nilai database, mail, dan super admin bisa diedit dulu.
+
+Variabel opsional:
+
+```bash
+DOMAIN=pasal.kampus.ac.id
+APP_ROOT=/www/wwwroot/pasal
+BRANCH=main
+PHP_BIN=/www/server/php/84/bin/php
+PHP_FPM_SERVICE=/etc/init.d/php-fpm-84
+RUN_TESTS=1
+SKIP_GIT=1
+SKIP_NPM_CI=1
+```
+
+Jika server kampus memakai PHP 8.3:
+
+```bash
+PHP_BIN=/www/server/php/83/bin/php PHP_FPM_SERVICE=/etc/init.d/php-fpm-83 DOMAIN=pasal.kampus.ac.id bash deploy/aapanel-deploy.sh
+```
 
 ## 3. Setup Database PostgreSQL
 
@@ -233,10 +255,24 @@ Setiap pull update baru:
 
 ```bash
 cd /www/wwwroot/pasal
-DOMAIN=pasal.ikydev.site bash deploy/aapanel-deploy.sh
+DOMAIN=pasal.kampus.ac.id bash deploy/aapanel-update.sh
 ```
 
 Gunakan perintah manual hanya jika script deploy gagal dan perlu debugging.
+
+Jika ingin menjalankan test backend saat deploy:
+
+```bash
+cd /www/wwwroot/pasal
+RUN_TESTS=1 DOMAIN=pasal.kampus.ac.id bash deploy/aapanel-update.sh
+```
+
+Jika kode sudah di-copy manual dan tidak ingin `git pull`:
+
+```bash
+cd /www/wwwroot/pasal
+SKIP_GIT=1 DOMAIN=pasal.kampus.ac.id bash deploy/aapanel-deploy.sh
+```
 
 ## 10. Catatan Keamanan
 

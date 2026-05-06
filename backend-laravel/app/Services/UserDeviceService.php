@@ -14,6 +14,8 @@ class UserDeviceService
     {
         $existing = $user->devices()->where('device_id', $deviceId)->first();
         if ($existing) {
+            $this->deactivateMatchingDeviceProfile($user, $deviceName ?? $existing->device_name, $platform ?? $existing->platform, $deviceId);
+
             if (! $existing->is_active && $this->activeDeviceCount($user) >= self::MAX_ACTIVE_DEVICES) {
                 throw ValidationException::withMessages([
                     'device_id' => 'Akun ini sudah mencapai batas 3 perangkat aktif.',
@@ -29,6 +31,8 @@ class UserDeviceService
 
             return $existing;
         }
+
+        $this->deactivateMatchingDeviceProfile($user, $deviceName, $platform, $deviceId);
 
         if ($this->activeDeviceCount($user) >= self::MAX_ACTIVE_DEVICES) {
             throw ValidationException::withMessages([
@@ -75,5 +79,29 @@ class UserDeviceService
     private function activeDeviceCount(MobileUser $user): int
     {
         return $user->devices()->where('is_active', true)->count();
+    }
+
+    private function deactivateMatchingDeviceProfile(MobileUser $user, ?string $deviceName, ?string $platform, ?string $exceptDeviceId = null): void
+    {
+        if (! $deviceName) {
+            return;
+        }
+
+        $query = $user->devices()
+            ->where('is_active', true)
+            ->where('device_name', $deviceName);
+
+        if ($platform) {
+            $query->where('platform', $platform);
+        }
+
+        if ($exceptDeviceId) {
+            $query->where('device_id', '!=', $exceptDeviceId);
+        }
+
+        $query->update([
+            'is_active' => false,
+            'last_active_at' => now(),
+        ]);
     }
 }
