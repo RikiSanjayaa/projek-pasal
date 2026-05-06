@@ -49,17 +49,17 @@ require_dir() {
 }
 
 fix_laravel_permissions() {
-  cd "$APP_ROOT/backend-laravel"
-  mkdir -p storage/logs bootstrap/cache
-  touch storage/logs/laravel.log
+  local backend_dir="$APP_ROOT/backend-laravel"
+  mkdir -p "$backend_dir/storage/logs" "$backend_dir/bootstrap/cache"
+  touch "$backend_dir/storage/logs/laravel.log"
 
   if command -v sudo >/dev/null 2>&1; then
-    sudo chown -R "$WRITABLE_OWNER" storage bootstrap/cache || true
+    sudo chown -R "$WRITABLE_OWNER" "$backend_dir/storage" "$backend_dir/bootstrap/cache" || true
   else
-    chown -R "$WRITABLE_OWNER" storage bootstrap/cache || true
+    chown -R "$WRITABLE_OWNER" "$backend_dir/storage" "$backend_dir/bootstrap/cache" || true
   fi
 
-  chmod -R 775 storage bootstrap/cache || true
+  chmod -R 775 "$backend_dir/storage" "$backend_dir/bootstrap/cache" || true
 }
 
 log "Checking project"
@@ -153,7 +153,6 @@ if command -v sudo >/dev/null 2>&1; then
 else
   chown -R "$WEB_USER:$WEB_GROUP" "$ADMIN_DIR" || true
 fi
-chmod -R 775 backend-laravel/storage backend-laravel/bootstrap/cache || true
 
 log "Restarting PHP-FPM"
 if [[ -x "$PHP_FPM_SERVICE" ]]; then
