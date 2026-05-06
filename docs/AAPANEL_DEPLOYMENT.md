@@ -87,9 +87,12 @@ BRANCH=main
 PHP_BIN=/www/server/php/84/bin/php
 PHP_FPM_SERVICE=/etc/init.d/php-fpm-84
 RUN_TESTS=1
+CACHE_ROUTES=1
 SKIP_GIT=1
 SKIP_NPM_CI=1
 ```
+
+Default script tidak menjalankan `route:cache` karena beberapa kombinasi Laravel/PHP di aaPanel bisa gagal saat membuat route cache. Aplikasi tetap berjalan tanpa route cache. Jika server sudah dipastikan cocok, aktifkan dengan `CACHE_ROUTES=1`.
 
 Jika server kampus memakai PHP 8.3:
 
@@ -143,17 +146,21 @@ Jalankan migrasi:
 ```bash
 php artisan migrate --force
 php artisan db:seed --force
+php artisan optimize:clear
 php artisan config:cache
-php artisan route:cache
 php artisan view:cache
 ```
 
 Permission:
 
 ```bash
-chown -R www:www storage bootstrap/cache
+mkdir -p storage/logs bootstrap/cache
+touch storage/logs/laravel.log
+chown -R msaririzki12:www storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 ```
+
+Ganti `msaririzki12` dengan user SSH/deploy di server kampus. Format owner yang direkomendasikan adalah `user_deploy:www`, supaya user deploy bisa menjalankan Composer/Artisan dan PHP-FPM aaPanel tetap bisa menulis log/cache.
 
 ## 5. Build React Admin
 

@@ -5,6 +5,7 @@ APP_ROOT="${APP_ROOT:-/www/wwwroot/pasal}"
 PHP_BIN="${PHP_BIN:-/www/server/php/84/bin/php}"
 COMPOSER_BIN="${COMPOSER_BIN:-}"
 PHP_FPM_SERVICE="${PHP_FPM_SERVICE:-/etc/init.d/php-fpm-84}"
+DEPLOY_USER="${DEPLOY_USER:-${SUDO_USER:-$(id -un)}}"
 
 if [[ -z "$COMPOSER_BIN" ]]; then
   if [[ -x /usr/local/bin/composer ]]; then
@@ -61,6 +62,17 @@ section "Project Paths"
 for path in "$APP_ROOT" "$APP_ROOT/backend-laravel" "$APP_ROOT/admin-dashboard"; do
   if [[ -d "$path" ]]; then
     printf "[OK] %s\n" "$path"
+  else
+    printf "[FAIL] %s missing\n" "$path"
+  fi
+done
+
+section "Laravel Writable Paths"
+for path in "$APP_ROOT/backend-laravel/storage" "$APP_ROOT/backend-laravel/storage/logs" "$APP_ROOT/backend-laravel/bootstrap/cache"; do
+  if [[ -d "$path" && -w "$path" ]]; then
+    printf "[OK] %s writable by %s\n" "$path" "$DEPLOY_USER"
+  elif [[ -d "$path" ]]; then
+    printf "[FAIL] %s exists but is not writable by %s\n" "$path" "$DEPLOY_USER"
   else
     printf "[FAIL] %s missing\n" "$path"
   fi

@@ -7,6 +7,8 @@ PHP_BIN="${PHP_BIN:-/www/server/php/84/bin/php}"
 COMPOSER_BIN="${COMPOSER_BIN:-}"
 WEB_USER="${WEB_USER:-www}"
 WEB_GROUP="${WEB_GROUP:-www}"
+DEPLOY_USER="${DEPLOY_USER:-${SUDO_USER:-$(id -un)}}"
+WRITABLE_OWNER="${WRITABLE_OWNER:-$DEPLOY_USER:$WEB_GROUP}"
 ADMIN_DIR="${ADMIN_DIR:-$APP_ROOT/admin}"
 ADMIN_BASE_PATH="${ADMIN_BASE_PATH:-/admin/}"
 API_BASE_URL="${API_BASE_URL:-https://$DOMAIN/api}"
@@ -14,6 +16,7 @@ BRANCH="${BRANCH:-main}"
 SKIP_GIT="${SKIP_GIT:-0}"
 SKIP_NPM_CI="${SKIP_NPM_CI:-0}"
 RUN_TESTS="${RUN_TESTS:-0}"
+CACHE_ROUTES="${CACHE_ROUTES:-0}"
 PHP_FPM_SERVICE="${PHP_FPM_SERVICE:-/etc/init.d/php-fpm-84}"
 HEALTH_URL="${HEALTH_URL:-https://$DOMAIN/api/health}"
 
@@ -43,6 +46,20 @@ require_dir() {
     printf "Missing required directory: %s\n" "$1" >&2
     exit 1
   fi
+}
+
+fix_laravel_permissions() {
+  cd "$APP_ROOT/backend-laravel"
+  mkdir -p storage/logs bootstrap/cache
+  touch storage/logs/laravel.log
+
+  if command -v sudo >/dev/null 2>&1; then
+    sudo chown -R "$WRITABLE_OWNER" storage bootstrap/cache || true
+  else
+    chown -R "$WRITABLE_OWNER" storage bootstrap/cache || true
+  fi
+
+  chmod -R 775 storage bootstrap/cache || true
 }
 
 log "Checking project"
@@ -75,6 +92,9 @@ for fn in putenv proc_open; do
   }
 done
 
+log "Preparing Laravel writable directories"
+fix_laravel_permissions
+
 log "Installing Laravel dependencies"
 cd "$APP_ROOT/backend-laravel"
 "$PHP_BIN" "$COMPOSER_BIN" install --no-dev --optimize-autoloader --no-interaction
@@ -91,7 +111,11 @@ log "Running Laravel migrations and caches"
 "$PHP_BIN" artisan db:seed --force
 "$PHP_BIN" artisan optimize:clear
 "$PHP_BIN" artisan config:cache
-"$PHP_BIN" artisan route:cache
+if [[ "$CACHE_ROUTES" == "1" ]]; then
+  "$PHP_BIN" artisan route:cache
+else
+  printf "Skipping route cache because CACHE_ROUTES is not 1\n"
+fi
 "$PHP_BIN" artisan view:cache
 
 if [[ "$RUN_TESTS" == "1" ]]; then
@@ -123,10 +147,11 @@ cp -r dist/* "$ADMIN_DIR"/
 
 log "Fixing permissions"
 cd "$APP_ROOT"
+fix_laravel_permissions
 if command -v sudo >/dev/null 2>&1; then
-  sudo chown -R "$WEB_USER:$WEB_GROUP" backend-laravel/storage backend-laravel/bootstrap/cache "$ADMIN_DIR" || true
+  sudo chown -R "$WEB_USER:$WEB_GROUP" "$ADMIN_DIR" || true
 else
-  chown -R "$WEB_USER:$WEB_GROUP" backend-laravel/storage backend-laravel/bootstrap/cache "$ADMIN_DIR" || true
+  chown -R "$WEB_USER:$WEB_GROUP" "$ADMIN_DIR" || true
 fi
 chmod -R 775 backend-laravel/storage backend-laravel/bootstrap/cache || true
 

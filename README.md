@@ -123,9 +123,12 @@ BRANCH=main
 PHP_BIN=/www/server/php/84/bin/php
 PHP_FPM_SERVICE=/etc/init.d/php-fpm-84
 RUN_TESTS=1
+CACHE_ROUTES=1
 SKIP_GIT=1
 SKIP_NPM_CI=1
 ```
+
+Catatan aaPanel: script deploy menyiapkan permission `storage` dan `bootstrap/cache` sebelum Composer berjalan. Default `route:cache` dimatikan agar aman di aaPanel; aktifkan hanya jika server sudah teruji dengan `CACHE_ROUTES=1`.
 
 ## Verifikasi
 
