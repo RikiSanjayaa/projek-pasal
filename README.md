@@ -161,6 +161,7 @@ flutter build apk --release
 - PostgreSQL jangan dibuka ke publik.
 - Backup database sebelum update besar.
 - Build APK baru diperlukan jika ada perubahan di folder `pasal_mobile_app`.
+- Jika SMTP Gmail timeout dari aaPanel, gunakan `MAIL_MAILER=resend` karena Resend memakai HTTPS port 443.
 
 ## Lisensi
 

@@ -288,3 +288,39 @@ SKIP_GIT=1 DOMAIN=pasal.kampus.ac.id bash deploy/aapanel-deploy.sh
 - PostgreSQL jangan dibuka ke publik.
 - Gunakan password super admin yang kuat.
 - Backup PostgreSQL sebelum import data Supabase dan sebelum update besar.
+
+## 11. Email Reset Password
+
+Jika SMTP kampus tersedia, gunakan konfigurasi SMTP kampus di `.env`.
+
+Jika Gmail SMTP timeout dari server aaPanel, artinya outbound SMTP port `465/587` diblokir provider/jaringan. Dalam kondisi itu gunakan Resend karena berjalan lewat HTTPS port `443`.
+
+Contoh `.env` untuk Resend:
+
+```env
+MAIL_MAILER=resend
+RESEND_API_KEY=re_xxxxxxxxx
+MAIL_FROM_ADDRESS=onboarding@resend.dev
+MAIL_FROM_NAME="CariPasal"
+```
+
+Setelah ubah `.env`:
+
+```bash
+cd /www/wwwroot/pasal/backend-laravel
+/www/server/php/84/bin/php artisan optimize:clear
+/www/server/php/84/bin/php artisan config:cache
+sudo /etc/init.d/php-fpm-84 restart
+```
+
+Test koneksi Resend dari server:
+
+```bash
+curl -I https://api.resend.com
+```
+
+Test kirim email dari Laravel:
+
+```bash
+/www/server/php/84/bin/php artisan tinker --execute='Mail::raw("Tes email CariPasal", function ($m) { $m->to("emailtujuan@gmail.com")->subject("Tes Email CariPasal"); }); echo "sent\n";'
+```
