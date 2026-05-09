@@ -51,8 +51,8 @@ ios/.symlinks/
 # 4. ENVIRONMENT & IDE
 # =========================
 # Rahasia (Jangan di-upload)
-lib/core/config/env.dart
 .env
+.env.docker
 
 # IDE Settings (VS Code / Android Studio)
 .idea/

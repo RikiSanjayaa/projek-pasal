@@ -50,6 +50,7 @@ backend-laravel/.env.docker         -> env backend untuk container Docker
 backend-laravel/.env                -> env backend jika jalan manual
 admin-dashboard/.env.docker         -> env frontend untuk build Docker
 admin-dashboard/.env                -> env frontend jika jalan manual
+pasal_mobile_app/.env.docker        -> env Flutter web untuk build Docker
 ```
 
 ### Setup Awal
@@ -58,6 +59,7 @@ admin-dashboard/.env                -> env frontend jika jalan manual
 copy .env.example .env
 copy backend-laravel\.env.docker.example backend-laravel\.env.docker
 copy admin-dashboard\.env.docker.example admin-dashboard\.env.docker
+copy pasal_mobile_app\.env.docker.example pasal_mobile_app\.env.docker
 docker compose up -d --build
 ```
 
@@ -65,6 +67,7 @@ Stack lokal default:
 
 ```text
 Admin dashboard: http://127.0.0.1:8080
+Mobile web:      http://127.0.0.1:3001
 Laravel API:     http://127.0.0.1:8000/api
 PostgreSQL:      127.0.0.1:55432
 Mailpit:         http://127.0.0.1:8025

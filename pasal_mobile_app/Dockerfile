@@ -12,6 +12,9 @@ RUN flutter pub get
 # Copy the rest of the app
 COPY . .
 
+# Choose Docker-specific env if available, otherwise use tracked example.
+RUN if [ -f .env.docker ]; then cp .env.docker /tmp/mobile.env; else cp .env.docker.example /tmp/mobile.env; fi
+
 # Save custom web assets before flutter create overwrites them
 RUN cp -r web /tmp/web-custom
 
@@ -22,7 +25,7 @@ RUN flutter create . --platforms web
 RUN cp -r /tmp/web-custom/* web/
 
 # Build for web release
-RUN flutter build web --release
+RUN set -a && . /tmp/mobile.env && set +a && flutter build web --release --dart-define=API_BASE_URL="$API_BASE_URL" --dart-define=WEB_APP_URL="$WEB_APP_URL"
 
 # Stage 2: Serve with Nginx
 FROM nginx:alpine
