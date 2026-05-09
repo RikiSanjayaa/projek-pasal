@@ -424,10 +424,10 @@ void main() {
         expect(error.type, SyncErrorType.server);
       });
 
-      test('classifies supabase errors', () {
-        // Note: "supabase" keyword must not contain other trigger words
+      test('classifies api errors', () {
+        // Note: "api" keyword must not contain other trigger words
         // like "connection" which would match network error first
-        final error = classifyError(Exception('Supabase API key invalid'));
+        final error = classifyError(Exception('API rejected token'));
 
         expect(error.type, SyncErrorType.server);
       });

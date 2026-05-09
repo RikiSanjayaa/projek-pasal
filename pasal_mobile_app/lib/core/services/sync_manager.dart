@@ -338,7 +338,8 @@ SyncError classifyError(dynamic e) {
   }
 
   if (errorString.contains('postgresql') ||
-      errorString.contains('supabase') ||
+      errorString.contains('laravel') ||
+      errorString.contains('api') ||
       errorString.contains('500') ||
       errorString.contains('502') ||
       errorString.contains('503')) {
