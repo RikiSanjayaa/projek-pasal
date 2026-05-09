@@ -27,6 +27,12 @@ RUN cp -r /tmp/web-custom/* web/
 # Build for web release
 RUN set -a && . /tmp/mobile.env && set +a && flutter build web --release --dart-define=API_BASE_URL="$API_BASE_URL" --dart-define=WEB_APP_URL="$WEB_APP_URL"
 
+# Flutter web emits unversioned entrypoint files. Add a content-based query
+# string so browser/CDN caches do not keep serving an older main.dart.js.
+RUN BUILD_ID="$(sha256sum build/web/main.dart.js | cut -d ' ' -f 1)" && \
+    sed -i "s|src=\"flutter_bootstrap.js\"|src=\"flutter_bootstrap.js?v=${BUILD_ID}\"|" build/web/index.html && \
+    sed -i "s|\"mainJsPath\":\"main.dart.js\"|\"mainJsPath\":\"main.dart.js?v=${BUILD_ID}\"|" build/web/flutter_bootstrap.js
+
 # Stage 2: Serve with Nginx
 FROM nginx:alpine
 
