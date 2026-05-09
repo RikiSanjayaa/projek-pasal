@@ -1,5 +1,4 @@
-// Database types generated from Supabase schema
-// Jalankan: npx supabase gen types typescript --project-id YOUR_PROJECT_ID > src/lib/database.types.ts
+// Shared frontend data types for the Laravel API/database schema.
 // Atau definisikan manual seperti di bawah ini
 
 export type Json =
@@ -376,4 +375,3 @@ export interface UserWithDevices extends User {
 export interface AdminWithDevices extends AdminUser {
   admin_devices: AdminDevice[]
 }
-
