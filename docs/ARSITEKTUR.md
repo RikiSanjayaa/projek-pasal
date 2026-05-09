@@ -2,267 +2,98 @@
 
 ## Gambaran Umum
 
-CariPasal adalah aplikasi pencarian pasal hukum Indonesia yang terdiri dari:
+CariPasal terdiri dari 3 aplikasi utama:
 
-1. **Mobile App** (Flutter) - Untuk user biasa mencari pasal
-2. **Admin Dashboard** (React + Mantine) - Untuk admin mengelola data
-3. **Backend** (Supabase) - Database, Auth, dan API
+1. `admin-dashboard` untuk admin web
+2. `backend-laravel` untuk REST API, autentikasi, audit, dan business logic
+3. `pasal_mobile_app` untuk aplikasi mobile Flutter dengan penyimpanan offline
 
-## Diagram Arsitektur
+## Arsitektur Saat Ini
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                           USERS                                 │
-├───────────────────────────────┬─────────────────────────────────┤
-│                               │                                 │
-│  User Biasa (Mobile)          │  Admin (Web Dashboard)          │
-│  ────────────────────────     │  ─────────────────────────      │
-│  • Login dengan email/password│  • Login dengan email/password  │
-│  • Search pasal               │  • CRUD pasal                   │
-│  • Filter by UU               │  • Bulk import XLSX             │
-│  • Download offline           │  • View audit log               │
-│  • Bookmark lokal             │  • Manage undang-undang         │
-│  • Akses 3 tahun + 1 device   │  • Manage pengguna mobile       │
-│                               │                                 │
-│  Flutter + Drift              │  React + Mantine + Vite         │
-│                               │                                 │
-└───────────────────────────────┴─────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      SUPABASE BACKEND                           │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Supabase Auth                                                  │
-│  ─────────────────                                              │
-│  • Email/Password authentication                                │
-│  • Session management                                           │
-│  • JWT tokens                                                   │
-│                                                                 │
-│  REST API (Auto-generated)                                      │
-│  ─────────────────────────────                                  │
-│  • CRUD endpoints untuk semua tabel                             │
-│                                                                 │
-│  Row Level Security (RLS)                                       │
-│  ───────────────────────────                                    │
-│  • User: Read pasal & undang-undang yang aktif (auth required)  │
-│  • Admin: CRUD semua data                                       │
-│  • Super Admin: Manage admin users & mobile users               │
-│                                                                 │
-│  PostgreSQL Database                                            │
-│  ─────────────────────────                                      │
-│  • Full-text search dengan tsvector                             │
-│  • JSONB untuk audit log                                        │
-│  • Array untuk keywords                                         │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+```text
+Admin Dashboard (React + Mantine)  --->
+                                      Laravel API + Sanctum + PostgreSQL
+Mobile App (Flutter + Drift)      --->
 ```
 
-## Flow Diagram
+Backend menangani:
 
-### 1. User Login Flow (Mobile)
+- autentikasi admin dan mobile
+- manajemen undang-undang dan pasal
+- relasi antar pasal
+- audit log
+- manajemen perangkat user/admin
+- sinkronisasi data mobile
+- reset password via email
 
-```
-User Input → Login Screen → Supabase Auth → Verify User Table
-                                                │
-                    ┌───────────────────────────┴───────────────────────────┐
-                    │                                                       │
-                    ▼                                                       ▼
-            [User Valid & Active]                               [Invalid/Inactive/Expired]
-                    │                                                       │
-                    ▼                                                       ▼
-           Check Device Binding                                     Show Error Message
-                    │
-        ┌───────────┴───────────┐
-        │                       │
-        ▼                       ▼
-   [Same Device]          [Different Device]
-        │                       │
-        ▼                       ▼
-   Login Success          Device Conflict Error
-        │
-        ▼
-   Store expiry & last_verification locally
-        │
-        ▼
-   (On subsequent app open)
-        │
-        ▼
-   Check: last_verification > 365 days?
-        │
-   ┌────┴────┐
-   │         │
-   ▼         ▼
-  [No]     [Yes]
-   │         │
-   ▼         ▼
- Continue  Force Logout
-           (Yearly re-auth)
+## Flow Utama
+
+### Admin Login
+
+```text
+Login Form -> POST /api/admin/login -> Sanctum token -> frontend simpan token
 ```
 
-### 2. User Search Flow
+### Admin CRUD
 
-```
-User Input → Mobile App → Supabase REST API → PostgreSQL FTS → Response
-                              │
-                              ▼
-                    (Cached locally with Drift)
+```text
+Dashboard -> API Laravel -> Controller/Service -> PostgreSQL -> Audit Log
 ```
 
-### 3. Admin CRUD Flow
+### Mobile Sync
 
-```
-Admin Login → Auth Check → Dashboard → API Call → RLS Check → Database
-                              │                        │
-                              │                        ▼
-                              │              Trigger → Audit Log
-                              ▼
-                         UI Update ← Query Invalidation
+```text
+Flutter App -> /api/mobile/login
+            -> /api/mobile/sync/check
+            -> /api/mobile/sync/updates atau /api/mobile/sync/full
+            -> simpan hasil ke Drift lokal
 ```
 
-### 4. Offline Sync Flow
+### Reset Password
 
-```
-                    ┌─────────────────────────┐
-                    │     Mobile App          │
-                    └─────────────────────────┘
-                              │
-                              ▼
-                    ┌─────────────────────────┐
-                    │  Check Local Data       │
-                    └─────────────────────────┘
-                              │
-              ┌───────────────┴───────────────┐
-              │                               │
-              ▼                               ▼
-     [No Local Data]                 [Has Local Data]
-              │                               │
-              ▼                               ▼
-     Download All UU             Compare updated_at with Server
-              │                               │
-              │               ┌───────────────┴───────────────┐
-              │               │                               │
-              │               ▼                               ▼
-              │        [Same Data]                  [Different Data]
-              │               │                               │
-              │               ▼                               ▼
-              │        Use Local Data               Show Update Badge
-              │                                               │
-              │                                               ▼
-              │                                     User Clicks Update
-              │                                               │
-              └───────────────┴───────────────────────────────┘
-                              │
-                              ▼
-                    Save to Local SQLite (Drift)
+```text
+Login Page -> /api/password/forgot -> simpan token reset -> kirim email SMTP
+Reset Page -> /api/password/reset -> update password -> hapus token Sanctum lama
 ```
 
-## Technology Stack
+## Otorisasi
 
-| Layer           | Technology                 | Justification                                         |
-| --------------- | -------------------------- | ----------------------------------------------------- |
-| Mobile Frontend | Flutter                    | Cross-platform (Android & iOS), sudah dipilih         |
-| Mobile State    | setState + ValueListenable | Simple, built-in, cukup untuk local-first app         |
-| Mobile Local DB | Drift (SQLite)             | Type-safe, migration support                          |
-| Mobile HTTP     | supabase_flutter           | Built-in HTTP client, langsung integrate dengan supabase |
-| Mobile Auth     | flutter_secure_storage     | Penyimpanan kredensial aman per-device                |
-| Mobile Device   | device_info_plus           | Info perangkat untuk one-device policy                |
-| Admin Frontend  | React + TypeScript         | Ecosystem besar, Mantine compatible                   |
-| Admin UI        | Mantine v7                 | Modern, lengkap, well-documented                      |
-| Admin State     | TanStack Query             | Caching, invalidation, optimistic updates             |
-| Admin Import    | xlsx                       | Parsing file Excel untuk bulk import                  |
-| Backend         | Supabase                   | BaaS, free tier generous, PostgreSQL                  |
-| Database        | PostgreSQL                 | Full-text search, JSONB, RLS                          |
-| Auth            | Supabase Auth              | Built-in, role-based, secure                          |
+- Admin dashboard memakai tabel `admin_users`
+- Mobile app memakai tabel `mobile_users`
+- Endpoint admin dilindungi `auth:sanctum` dan middleware role
+- Endpoint mobile dilindungi `auth:sanctum`, status user, expiry, dan validasi device
 
-## Security Considerations
+## Komponen Data Inti
 
-### Authentication
+- `undang_undang`
+- `pasal`
+- `pasal_links`
+- `admin_users`
+- `mobile_users`
+- `user_devices`
+- `admin_devices`
+- `audit_logs`
+- `password_reset_tokens`
+- `personal_access_tokens`
 
-- Admin menggunakan Supabase Auth dengan email/password
-- User mobile menggunakan Supabase Auth dengan email/password (akun dibuat oleh admin)
-- Session dikelola otomatis oleh Supabase
-- Token refresh otomatis
+## Development Lokal
 
-### User Access Control (Mobile)
+Mode development default memakai Docker Compose dari root project.
 
-- Akun pengguna mobile dibuat oleh admin dengan masa aktif 3 tahun
-- Kebijakan satu perangkat per akun (device binding)
-- Expiry check saat login dan sebelum sync
-- **Yearly re-authentication**: User wajib login ulang jika tidak login selama 1 tahun (keamanan)
-- **Forgot password**: User dapat reset password via email tanpa bantuan admin
-- Admin dapat memperpanjang masa aktif atau menonaktifkan pengguna
-
-### Authorization (Row Level Security)
-
-```sql
--- Contoh RLS Policy (versi terbaru - auth required)
-CREATE POLICY "User: read active pasal"
-    ON pasal FOR SELECT
-    TO authenticated
-    USING (is_active = true AND (is_admin() OR is_valid_user()));
-
-CREATE POLICY "Admin: write pasal"
-    ON pasal FOR ALL
-    TO authenticated
-    USING (is_admin());
+```text
+/.env                           -> hanya untuk Compose/port mapping
+backend-laravel/.env.docker     -> env backend dalam container
+admin-dashboard/.env.docker     -> env build frontend dalam container
 ```
 
-### Data Protection
+Service lokal default:
 
-- Audit log untuk setiap perubahan (termasuk pasal_links dan users)
-- Soft delete dengan `is_active` dan `deleted_at` untuk restore capability
-- Cascade soft delete untuk pasal_links (otomatis mengikuti pasal)
-- Cascade is_active dari undang_undang ke semua pasal terkait
-- Auto cleanup untuk data pasal yang sudah soft delete > 30 hari
-- Trash management page untuk restore/permanent delete data pasal
-- Audit log skip saat cascade untuk mencegah log bloat
+- Admin: `http://127.0.0.1:8080`
+- API: `http://127.0.0.1:8000/api`
+- Mailpit: `http://127.0.0.1:8025`
+- PostgreSQL: `127.0.0.1:55432`
 
-## Scalability Notes
+## Catatan
 
-### Current Design (1000 users)
-
-- Supabase free tier cukup
-- Single region deployment
-- Client-side caching via local SQLite (mobile user)
-
-### Future Scaling
-
-- Upgrade ke Supabase Pro / self host supabase jika traffic tinggi
-
-## Folder Structure
-
-```
-projek-pasal/
-├── supabase/
-│   ├── functions/           # Edge functions supabase
-│   │   ├── create-admin/    # Buat admin baru
-│   │   ├── create-user/     # Buat user mobile baru
-│   │   ├── create-users-batch/  # Batch import users
-│   │   └── delete-user/     # Hapus user mobile
-│   ├── migrations/          # Database migrations (001-014)
-│   └── seed.sql             # Dummy data
-├── admin-dashboard/
-│   └── src/
-│       ├── components/      # Reusable UI components
-│       ├── contexts/        # React contexts (Auth, DataMapping)
-│       ├── layouts/         # Layout components
-│       ├── lib/             # Supabase client, types
-│       └── pages/           # Page components
-│           ├── pasal/       # CRUD pasal, trash
-│           └── undang-undang/ # List UU
-├── pasal_mobile_app/        # Flutter app
-│   └── lib/
-│       ├── core/
-│       │   ├── config/      # Theme, env, colors
-│       │   ├── database/    # Drift database
-│       │   ├── services/    # Auth, data, sync, archive
-│       │   └── utils/       # Search utilities
-│       ├── models/          # Data models
-│       └── ui/
-│           ├── screens/     # Login, home, library, dll
-│           ├── widgets/     # Reusable widgets
-│           └── utils/       # UI helpers
-├── utils/                   # Utility scripts (migrations, etc.)
-└── docs/                    # Documentation
-```
+- Dokumen lama berbasis Supabase sudah tidak merepresentasikan runtime aktif proyek.
+- Dokumen `LARAVEL_POSTGRESQL_MIGRATION_PLAN.md` dipertahankan sebagai catatan migrasi historis.

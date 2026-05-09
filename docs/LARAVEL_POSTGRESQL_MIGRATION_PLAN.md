@@ -1,5 +1,7 @@
 # Skema Migrasi Backend ke Laravel + PostgreSQL
 
+> Dokumen ini adalah catatan migrasi historis dari arsitektur lama berbasis Supabase ke implementasi Laravel + PostgreSQL yang sekarang sudah aktif. Untuk setup dan arsitektur terkini, lihat `README.md`, `docs/ARSITEKTUR.md`, dan `docs/DATABASE.md`.
+
 Dokumen ini adalah rancangan migrasi backend CariPasal dari Supabase ke Laravel + PostgreSQL untuk deployment yang lebih mudah di aaPanel dengan satu subdomain.
 
 ## Tujuan Migrasi

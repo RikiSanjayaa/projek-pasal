@@ -2,7 +2,7 @@
 
 CariPasal adalah aplikasi pencarian dan pengelolaan pasal hukum Indonesia.
 
-Arsitektur saat ini sudah diarahkan ke deployment kampus dengan satu subdomain:
+Arsitektur production diarahkan ke satu subdomain:
 
 ```text
 https://pasal.kampus.ac.id/admin  -> React admin dashboard
@@ -13,7 +13,8 @@ https://pasal.kampus.ac.id/api    -> Laravel REST API
 
 - Backend: Laravel + PostgreSQL + Sanctum
 - Admin: React + Mantine
-- Mobile: Flutter + local database/offline sync
+- Mobile: Flutter + Drift/offline sync
+- Local dev: Docker Compose
 - Deploy target: aaPanel + Nginx + PHP-FPM
 
 ## Struktur Folder
@@ -25,7 +26,6 @@ projek-pasal/
   pasal_mobile_app/     Flutter mobile app
   deploy/               Script dan konfigurasi aaPanel
   docs/                 Dokumentasi teknis
-  supabase/             Arsip schema lama sampai migrasi final selesai
 ```
 
 ## Fitur Utama
@@ -37,19 +37,55 @@ projek-pasal/
 - Bulk import Excel
 - OCR import dari foto halaman buku hukum
 - Kelola user mobile dan admin
-- Batas 3 perangkat aktif untuk user mobile
-- Reset password via SMTP/Resend
-- Mobile sync full/incremental untuk mode offline
+- Reset password via SMTP/Mailpit/Resend
+- Mobile sync full dan incremental untuk mode offline
 
-## Local Development
+## Development Dengan Docker
 
-### 1. Jalankan PostgreSQL lokal
+### Layout Env
 
-```powershell
-docker compose -f docker-compose.local.yml up -d
+```text
+/.env                               -> hanya untuk Docker Compose
+backend-laravel/.env.docker         -> env backend untuk container Docker
+backend-laravel/.env                -> env backend jika jalan manual
+admin-dashboard/.env.docker         -> env frontend untuk build Docker
+admin-dashboard/.env                -> env frontend jika jalan manual
 ```
 
-### 2. Jalankan backend Laravel
+### Setup Awal
+
+```powershell
+copy .env.example .env
+copy backend-laravel\.env.docker.example backend-laravel\.env.docker
+copy admin-dashboard\.env.docker.example admin-dashboard\.env.docker
+docker compose up -d --build
+```
+
+Stack lokal default:
+
+```text
+Admin dashboard: http://127.0.0.1:8080
+Laravel API:     http://127.0.0.1:8000/api
+PostgreSQL:      127.0.0.1:55432
+Mailpit:         http://127.0.0.1:8025
+```
+
+Seeder membuat super admin awal:
+
+```text
+email:    superadmin@caripasal.local
+password: ChangeMe123!
+```
+
+Untuk test reset password saat development:
+
+1. buka `http://127.0.0.1:8025`
+2. kirim reset password dari halaman login admin
+3. buka email di Mailpit
+
+## Alternatif Non-Docker
+
+### Backend Laravel
 
 ```powershell
 cd backend-laravel
@@ -60,7 +96,9 @@ php artisan migrate --seed
 php artisan serve --host=127.0.0.1 --port=8000
 ```
 
-### 3. Jalankan admin dashboard
+Jika backend dijalankan manual, sesuaikan `DB_*`, `MAIL_*`, dan reset URL di `backend-laravel/.env`.
+
+### Admin Dashboard
 
 ```powershell
 cd admin-dashboard
@@ -71,64 +109,45 @@ npm run dev
 Admin lokal:
 
 ```text
-http://127.0.0.1:5173/admin
+http://127.0.0.1:5173
 ```
 
-API lokal:
+Health check API lokal:
 
 ```text
 http://127.0.0.1:8000/api/health
 ```
 
-### 4. Jalankan mobile emulator
+### Mobile Emulator
 
-Untuk Android emulator, mobile memakai API lokal lewat:
+Untuk Android emulator, base URL API lokal:
 
 ```text
 http://10.0.2.2:8000/api
 ```
 
+## Dokumentasi Teknis
+
+- [Arsitektur Sistem](docs/ARSITEKTUR.md)
+- [Database Schema](docs/DATABASE.md)
+- [Deploy CariPasal di aaPanel](docs/AAPANEL_DEPLOYMENT.md)
+- [Catatan Migrasi Historis](docs/LARAVEL_POSTGRESQL_MIGRATION_PLAN.md)
+
 ## Deploy aaPanel
 
-Dokumentasi utama:
-
-- [Deploy CariPasal di aaPanel](docs/AAPANEL_DEPLOYMENT.md)
-
-Setelah prasyarat server siap, update rutin cukup:
+Update rutin:
 
 ```bash
 cd /www/wwwroot/pasal
 DOMAIN=pasal.kampus.ac.id bash deploy/aapanel-update.sh
 ```
 
-Sebelum deploy pertama atau saat pindah server, jalankan doctor:
+Cek prasyarat server:
 
 ```bash
 cd /www/wwwroot/pasal
 bash deploy/aapanel-doctor.sh
 ```
-
-## Script Deploy
-
-- `deploy/aapanel-doctor.sh`: cek PHP, Composer, Node, extension PostgreSQL, fungsi PHP, socket aaPanel, dan path project.
-- `deploy/aapanel-deploy.sh`: pull kode, install dependency, migrate, cache Laravel, build admin, publish `/admin`, restart PHP-FPM, reload Nginx, dan health check.
-- `deploy/aapanel-update.sh`: wrapper pendek untuk update rutin.
-
-Variabel yang sering dipakai:
-
-```bash
-DOMAIN=pasal.kampus.ac.id
-APP_ROOT=/www/wwwroot/pasal
-BRANCH=main
-PHP_BIN=/www/server/php/84/bin/php
-PHP_FPM_SERVICE=/etc/init.d/php-fpm-84
-RUN_TESTS=1
-CACHE_ROUTES=1
-SKIP_GIT=1
-SKIP_NPM_CI=1
-```
-
-Catatan aaPanel: script deploy menyiapkan permission `storage` dan `bootstrap/cache` sebelum Composer berjalan. Default `route:cache` dimatikan agar aman di aaPanel; aktifkan hanya jika server sudah teruji dengan `CACHE_ROUTES=1`.
 
 ## Verifikasi
 
@@ -156,11 +175,11 @@ flutter build apk --release
 
 ## Catatan Production
 
-- Jangan commit `.env`.
+- Jangan commit file env yang berisi credential production.
+- Root `.env` jangan dipakai sebagai sumber konfigurasi Laravel/frontend production.
 - Pastikan `APP_DEBUG=false`.
 - PostgreSQL jangan dibuka ke publik.
 - Backup database sebelum update besar.
-- Build APK baru diperlukan jika ada perubahan di folder `pasal_mobile_app`.
 - Jika SMTP Gmail timeout dari aaPanel, gunakan `MAIL_MAILER=resend` karena Resend memakai HTTPS port 443.
 
 ## Lisensi
