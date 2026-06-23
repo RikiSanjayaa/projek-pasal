@@ -116,7 +116,7 @@ export function LoginPage() {
           Masuk untuk mengelola data pasal
         </Text>
 
-        <Paper withBorder shadow="sm" p={30} mt={30} radius="md">
+        <Paper withBorder p={30} mt={30} radius="md">
           <form onSubmit={form.onSubmit(handleSubmit)}>
             <Stack>
               {error && (

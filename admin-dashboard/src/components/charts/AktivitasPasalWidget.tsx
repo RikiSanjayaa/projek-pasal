@@ -31,7 +31,7 @@ export function AktivitasPasalWidget({ recentLogs = [], trashedPasal = [], links
 
   if (loading) {
     return (
-      <Card shadow="sm" padding="lg" radius="md" withBorder>
+      <Card padding="lg" radius="md" withBorder>
         <Title order={4} mb="md">
           Insight Temporal
         </Title>
@@ -43,7 +43,7 @@ export function AktivitasPasalWidget({ recentLogs = [], trashedPasal = [], links
   }
 
   return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder style={{ minHeight: '400px' }}>
+    <Card padding="lg" radius="md" withBorder style={{ minHeight: '400px' }}>
       <Title order={4} mb="md">
         Aktivitas Pasal
       </Title>

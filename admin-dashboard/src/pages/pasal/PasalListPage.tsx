@@ -370,7 +370,7 @@ export function PasalListPage() {
       </Group>
 
       {/* Filters */}
-      <Card shadow="sm" padding="md" radius="md" withBorder>
+      <Card padding="md" radius="md" withBorder>
         <Stack gap="md">
           <Group wrap="wrap" align="flex-start">
             <TextInput
@@ -410,7 +410,7 @@ export function PasalListPage() {
       </Card>
 
       {/* Table */}
-      <Card shadow="sm" padding="md" radius="md" withBorder>
+      <Card padding="md" radius="md" withBorder>
         <DataTable
           columns={pasalColumns}
           data={pasalData?.data || []}

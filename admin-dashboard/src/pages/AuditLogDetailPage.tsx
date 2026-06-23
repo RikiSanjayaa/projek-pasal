@@ -73,7 +73,7 @@ export function AuditLogDetailPage() {
             Kembali
           </Button>
         </Group>
-        <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Card padding="lg" radius="md" withBorder>
           <Text ta="center" c="dimmed">ID audit log tidak valid</Text>
         </Card>
       </Stack>
@@ -119,7 +119,7 @@ export function AuditLogDetailPage() {
             Kembali
           </Button>
         </Group>
-        <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Card padding="lg" radius="md" withBorder>
           <Text ta="center" c="dimmed">Audit log tidak ditemukan</Text>
         </Card>
       </Stack>
@@ -143,7 +143,7 @@ export function AuditLogDetailPage() {
         <Title order={2}>Detail Audit</Title>
         <Text c="dimmed">Perubahan data oleh admin</Text>
       </div>
-      <Card shadow="sm" padding="lg" radius="md" withBorder>
+      <Card padding="lg" radius="md" withBorder>
         <Stack gap="md">
           <Group>
             <Text fw={500}>Admin:</Text>

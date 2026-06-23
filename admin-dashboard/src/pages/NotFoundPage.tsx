@@ -17,7 +17,7 @@ export function NotFoundPage() {
   return (
     <Container size="md" py="xl">
       <Center h="70vh">
-        <Card shadow="sm" padding="xl" radius="md" withBorder style={{ maxWidth: 500 }}>
+        <Card padding="xl" radius="md" withBorder style={{ maxWidth: 500 }}>
           <Stack gap="lg" align="center">
             <div style={{ textAlign: 'center' }}>
               <Title order={1} size={120} c="blue" style={{ lineHeight: 1 }}>

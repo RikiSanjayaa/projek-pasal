@@ -204,7 +204,7 @@ export function AuditLogPage() {
       </div>
 
       {/* Filters */}
-      <Card shadow="sm" padding="md" radius="md" withBorder>
+      <Card padding="md" radius="md" withBorder>
         <Group grow wrap="wrap">
           <TextInput
             placeholder="Cari email admin..."
@@ -250,7 +250,7 @@ export function AuditLogPage() {
       </Card>
 
       {/* Table */}
-      <Card shadow="sm" padding="md" radius="md" withBorder>
+      <Card padding="md" radius="md" withBorder>
         <DataTable
           columns={auditLogColumns}
           data={logsData?.data || []}

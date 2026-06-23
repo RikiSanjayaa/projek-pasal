@@ -167,7 +167,7 @@ export function UndangUndangListPage() {
         </Button>
       </Group>
 
-      <Card shadow="sm" padding="md" radius="md" withBorder>
+      <Card padding="md" radius="md" withBorder>
         {isLoading ? (
           <Stack gap="sm">
             {[...Array(4)].map((_, i) => (

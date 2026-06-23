@@ -67,7 +67,7 @@ export function ResetPasswordPage() {
         <Text size="sm" c="dimmed">Reset Password</Text>
       </Box>
 
-      <Card shadow="xl" padding="xl" radius="md" withBorder w="100%" maw={420}>
+      <Card padding="xl" radius="md" withBorder w="100%" maw={420}>
         {!isValidLink ? (
           <Stack>
             <Alert icon={<IconAlertCircle size={16} />} title="Link tidak valid" color="red" variant="light">

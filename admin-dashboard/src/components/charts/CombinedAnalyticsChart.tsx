@@ -69,7 +69,7 @@ export function CombinedAnalyticsChart({ logs, loading }: CombinedAnalyticsChart
 
   if (loading) {
     return (
-      <Card shadow="sm" padding="lg" radius="md" withBorder style={{ height: '100%' }}>
+      <Card padding="lg" radius="md" withBorder style={{ height: '100%' }}>
         <Group justify="space-between" mb="md">
           <Skeleton height={28} width={200} />
           <Skeleton height={36} width={150} />
@@ -99,7 +99,6 @@ export function CombinedAnalyticsChart({ logs, loading }: CombinedAnalyticsChart
 
   return (
     <Card
-      shadow="sm"
       padding="lg"
       radius="md"
       withBorder

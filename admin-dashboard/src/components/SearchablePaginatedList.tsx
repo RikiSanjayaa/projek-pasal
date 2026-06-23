@@ -27,6 +27,8 @@ interface SearchablePaginatedListProps<T> {
   activeSection: SectionConfig<T>
   inactiveSection: SectionConfig<T>
   defaultPageSize?: number
+  isLoading?: boolean
+  loadingText?: string
 }
 
 const PAGE_SIZE_OPTIONS = [
@@ -45,6 +47,8 @@ export function SearchablePaginatedList<T>({
   activeSection,
   inactiveSection,
   defaultPageSize = 10,
+  isLoading = false,
+  loadingText = 'Memuat data...',
 }: SearchablePaginatedListProps<T>) {
   const [searchQuery, setSearchQuery] = useState('')
   const [activePageSize, setActivePageSize] = useState(defaultPageSize)
@@ -135,7 +139,7 @@ export function SearchablePaginatedList<T>({
   return (
     <Stack gap="lg">
       {/* Search Input - Full Width in Card */}
-      <Card shadow="sm" padding="md" radius="md" withBorder>
+      <Card padding="md" radius="md" withBorder>
         <Stack gap="sm">
           {searchTitle && <Title order={5}>{searchTitle}</Title>}
           <TextInput
@@ -156,8 +160,12 @@ export function SearchablePaginatedList<T>({
           </Title>
           {activeSection.actionElement}
         </Group>
-        <Card shadow="sm" padding="md" radius="md" withBorder>
-          {paginatedActiveItems.length === 0 ? (
+        <Card padding="md" radius="md" withBorder>
+          {isLoading ? (
+            <Text c="dimmed" ta="center">
+              {loadingText}
+            </Text>
+          ) : paginatedActiveItems.length === 0 ? (
             <Text c="dimmed" ta="center">
               {activeSection.emptyText}
             </Text>
@@ -166,7 +174,7 @@ export function SearchablePaginatedList<T>({
               {activeSection.render(paginatedActiveItems, activePaginationInfo)}
             </ScrollArea>
           )}
-          {activeItems.length > 0 &&
+          {!isLoading && activeItems.length > 0 &&
             renderPaginationControls(
               activePaginationInfo,
               activePageSize,
@@ -187,8 +195,12 @@ export function SearchablePaginatedList<T>({
           </Title>
           {inactiveSection.actionElement}
         </Group>
-        <Card shadow="sm" padding="md" radius="md" withBorder>
-          {paginatedInactiveItems.length === 0 ? (
+        <Card padding="md" radius="md" withBorder>
+          {isLoading ? (
+            <Text c="dimmed" ta="center">
+              {loadingText}
+            </Text>
+          ) : paginatedInactiveItems.length === 0 ? (
             <Text c="dimmed" ta="center">
               {inactiveSection.emptyText}
             </Text>
@@ -197,7 +209,7 @@ export function SearchablePaginatedList<T>({
               {inactiveSection.render(paginatedInactiveItems, inactivePaginationInfo)}
             </ScrollArea>
           )}
-          {inactiveItems.length > 0 &&
+          {!isLoading && inactiveItems.length > 0 &&
             renderPaginationControls(
               inactivePaginationInfo,
               inactivePageSize,

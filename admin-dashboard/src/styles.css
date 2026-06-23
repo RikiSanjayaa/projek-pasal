@@ -16,6 +16,36 @@ body {
   background: var(--mantine-color-body);
 }
 
+.ocr-panel {
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  padding: var(--mantine-spacing-md);
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-7));
+}
+
+.ocr-panel-primary {
+  background: light-dark(var(--mantine-color-blue-0), rgba(25, 113, 194, 0.12));
+  border-color: light-dark(var(--mantine-color-blue-2), rgba(116, 192, 252, 0.28));
+}
+
+.ocr-draft-section {
+  background: transparent;
+}
+
+.ocr-draft-item {
+  padding-block: var(--mantine-spacing-md);
+  border-top: 1px solid var(--mantine-color-default-border);
+}
+
+.ocr-draft-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.ocr-draft-item:last-child {
+  padding-bottom: 0;
+}
+
 .ocr-draft-desktop-grid {
   display: grid;
   grid-template-columns: 130px minmax(220px, 1fr) minmax(220px, 1fr);

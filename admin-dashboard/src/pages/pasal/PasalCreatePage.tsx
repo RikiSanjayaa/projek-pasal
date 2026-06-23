@@ -145,7 +145,7 @@ export function PasalCreatePage() {
 
       <Grid>
         <Grid.Col span={{ base: 12, md: 8 }}>
-          <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Card padding="lg" radius="md" withBorder>
             <form onSubmit={form.onSubmit(handleSubmit)}>
               <Stack gap="md">
                 <Select

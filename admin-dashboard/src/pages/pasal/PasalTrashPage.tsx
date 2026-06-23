@@ -309,7 +309,7 @@ export function PasalTrashPage() {
       </Alert>
 
       {/* Filters */}
-      <Card shadow="sm" padding="md" radius="md" withBorder>
+      <Card padding="md" radius="md" withBorder>
         <Group>
           <TextInput
             placeholder="Cari nomor, judul, atau isi pasal..."
@@ -336,7 +336,7 @@ export function PasalTrashPage() {
 
       {/* Bulk Actions */}
       {selectedIds.length > 0 && (
-        <Card shadow="sm" padding="sm" radius="md" withBorder bg="var(--mantine-color-blue-light)">
+        <Card padding="sm" radius="md" withBorder bg="var(--mantine-color-blue-light)">
           <Group justify="space-between">
             <Text size="sm" fw={500}>
               {selectedIds.length} pasal dipilih
@@ -364,7 +364,7 @@ export function PasalTrashPage() {
       )}
 
       {/* Table */}
-      <Card shadow="sm" padding="md" radius="md" withBorder>
+      <Card padding="md" radius="md" withBorder>
         <DataTable
           columns={pasalTrashColumns}
           data={pasalData?.data || []}

@@ -33,7 +33,7 @@ export function PasalDetailPage() {
             Kembali
           </Button>
         </Group>
-        <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Card padding="lg" radius="md" withBorder>
           <Text ta="center" c="dimmed">ID pasal tidak valid</Text>
         </Card>
       </Stack>
@@ -69,7 +69,7 @@ export function PasalDetailPage() {
             Kembali
           </Button>
         </Group>
-        <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Card padding="lg" radius="md" withBorder>
           <Text ta="center" c="dimmed">Pasal tidak ditemukan</Text>
         </Card>
       </Stack>
@@ -133,7 +133,7 @@ export function PasalDetailPage() {
 
       <Grid>
         <Grid.Col span={{ base: 12, md: 8 }}>
-          <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Card padding="lg" radius="md" withBorder>
             <Stack gap="md">
               {pasal.judul && (
                 <div>
@@ -144,7 +144,7 @@ export function PasalDetailPage() {
 
               <div>
                 <Text size="sm" c="dimmed" mb={4}>Isi Pasal</Text>
-                <Card withBorder padding="sm" bg="var(--mantine-color-default-hover)" shadow="none">
+                <Card withBorder padding="sm" bg="var(--mantine-color-default-hover)">
                   <Text style={{ whiteSpace: 'pre-wrap' }}>{pasal.isi}</Text>
                 </Card>
               </div>
@@ -152,7 +152,7 @@ export function PasalDetailPage() {
               {pasal.penjelasan && (
                 <div>
                   <Text size="sm" c="dimmed" mb={4}>Penjelasan</Text>
-                  <Card withBorder padding="sm" bg="var(--mantine-color-blue-light)" shadow="none">
+                  <Card withBorder padding="sm" bg="var(--mantine-color-blue-light)">
                     <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{pasal.penjelasan}</Text>
                   </Card>
                 </div>

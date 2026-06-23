@@ -20,7 +20,7 @@ import {
 
 export function XlsxImportGuide() {
   return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder>
+    <Card padding="lg" radius="md" withBorder>
       <Title order={4} mb="md">
         <Group gap="xs">
           <IconFileSpreadsheet size={20} />

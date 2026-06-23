@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import {
   ActionIcon,
   Alert,
@@ -22,6 +22,7 @@ import { showNotification } from '@mantine/notifications'
 import { IconCopy, IconDevices, IconRefresh } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
+import { SearchablePaginatedList } from '@/components/SearchablePaginatedList'
 import { api, type PaginatedResponse } from '@/lib/api'
 
 interface AdminDevice {
@@ -106,9 +107,6 @@ export function ManageAdminPage() {
     onError: (error: Error) => showNotification({ title: 'Gagal', message: error.message, color: 'red' }),
   })
 
-  const superAdmins = useMemo(() => admins.filter((admin) => admin.role === 'super_admin'), [admins])
-  const regularAdmins = useMemo(() => admins.filter((admin) => admin.role !== 'super_admin'), [admins])
-
   if (adminUser?.role !== 'super_admin') {
     return (
       <Card>
@@ -159,54 +157,6 @@ export function ManageAdminPage() {
     )
   })
 
-  const renderMobileCards = (items: AdminUser[], allowToggle: boolean) => (
-    <Stack gap="sm">
-      {items.map((admin) => {
-        const activeDevices = admin.devices?.filter((device) => device.is_active).length || 0
-        return (
-          <Card key={admin.id} withBorder padding="sm" radius="md">
-            <Stack gap="xs">
-              <div>
-                <Text fw={600}>{admin.nama}</Text>
-                <Text size="sm" c="dimmed" style={{ overflowWrap: 'anywhere' }}>{admin.email}</Text>
-              </div>
-              <Group gap="xs">
-                <Badge color={admin.role === 'super_admin' ? 'teal' : 'blue'}>{admin.role}</Badge>
-                <Badge color={admin.is_active ? 'green' : 'gray'} variant="light">{admin.is_active ? 'Aktif' : 'Nonaktif'}</Badge>
-                <Tooltip label="Lihat perangkat">
-                  <Badge
-                    color={activeDevices ? 'blue' : 'gray'}
-                    variant="light"
-                    leftSection={<IconDevices size={12} />}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => {
-                      setSelectedAdmin(admin)
-                      devicesModal.open()
-                    }}
-                  >
-                    {activeDevices} aktif
-                  </Badge>
-                </Tooltip>
-              </Group>
-              {allowToggle && (
-                <Button
-                  size="xs"
-                  variant="light"
-                  color={admin.is_active ? 'orange' : 'green'}
-                  onClick={() => toggleMutation.mutate({ id: admin.id, active: !admin.is_active })}
-                  loading={toggleMutation.isPending}
-                  fullWidth
-                >
-                  {admin.is_active ? 'Nonaktifkan' : 'Aktifkan'}
-                </Button>
-              )}
-            </Stack>
-          </Card>
-        )
-      })}
-    </Stack>
-  )
-
   return (
     <Stack gap="lg">
       <Group justify="space-between" wrap="wrap">
@@ -230,25 +180,51 @@ export function ManageAdminPage() {
         </Group>
       </Alert>
 
-      <Card shadow="sm" padding="md" radius="md" withBorder>
-        <Title order={4} mb="sm">Super Admin</Title>
-        {isMobile ? renderMobileCards(superAdmins, false) : <ScrollArea>
-          <Table striped highlightOnHover miw={760}>
-            <Table.Thead><Table.Tr><Table.Th>Nama</Table.Th><Table.Th>Email</Table.Th><Table.Th>Role</Table.Th><Table.Th>Status</Table.Th><Table.Th>Perangkat</Table.Th><Table.Th>Aksi</Table.Th></Table.Tr></Table.Thead>
-            <Table.Tbody>{isLoading ? null : renderRows(superAdmins, false)}</Table.Tbody>
-          </Table>
-        </ScrollArea>}
-      </Card>
-
-      <Card shadow="sm" padding="md" radius="md" withBorder>
-        <Title order={4} mb="sm">Admin</Title>
-        {isMobile ? renderMobileCards(regularAdmins, true) : <ScrollArea>
-          <Table striped highlightOnHover miw={760}>
-            <Table.Thead><Table.Tr><Table.Th>Nama</Table.Th><Table.Th>Email</Table.Th><Table.Th>Role</Table.Th><Table.Th>Status</Table.Th><Table.Th>Perangkat</Table.Th><Table.Th>Aksi</Table.Th></Table.Tr></Table.Thead>
-            <Table.Tbody>{renderRows(regularAdmins, true)}</Table.Tbody>
-          </Table>
-        </ScrollArea>}
-      </Card>
+      <SearchablePaginatedList
+        data={admins}
+        isLoading={isLoading}
+        searchTitle="Cari admin"
+        getSearchableText={(admin) => `${admin.nama} ${admin.email} ${admin.role}`}
+        isActive={(admin) => admin.role === 'super_admin'}
+        activeSection={{
+          title: 'Super Admin',
+          emptyText: 'Tidak ada super admin.',
+          render: (items) => (
+            <Table striped highlightOnHover miw={820}>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Nama</Table.Th>
+                  <Table.Th>Email</Table.Th>
+                  <Table.Th>Role</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                  <Table.Th>Perangkat</Table.Th>
+                  <Table.Th>Aksi</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>{renderRows(items, false)}</Table.Tbody>
+            </Table>
+          ),
+        }}
+        inactiveSection={{
+          title: 'Admin',
+          emptyText: 'Tidak ada admin.',
+          render: (items) => (
+            <Table striped highlightOnHover miw={820}>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Nama</Table.Th>
+                  <Table.Th>Email</Table.Th>
+                  <Table.Th>Role</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                  <Table.Th>Perangkat</Table.Th>
+                  <Table.Th>Aksi</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>{renderRows(items, true)}</Table.Tbody>
+            </Table>
+          ),
+        }}
+      />
 
       <Modal opened={!!credentials} onClose={() => setCredentials(null)} title="Kredensial Sementara" closeOnClickOutside={false} fullScreen={isMobile}>
         {credentials && (

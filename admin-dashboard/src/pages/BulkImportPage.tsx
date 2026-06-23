@@ -409,7 +409,7 @@ export function BulkImportPage() {
         const preparedImage = await prepareImageForOcr(file)
         setOcrPhase(`Membaca foto ${index + 1}/${images.length}: ${file.name}`)
         const result = await recognize(preparedImage, 'ind+eng', {
-          logger: (message) => {
+          logger: (message: { status?: string; progress?: number }) => {
             if (message.status === 'recognizing text') {
               const pageProgress = message.progress || 0
               setOcrProgress(Math.round(((index + pageProgress) / images.length) * 100))
@@ -581,7 +581,7 @@ export function BulkImportPage() {
         </div>
       </Group>
 
-      <Card shadow="sm" padding="lg" radius="md" withBorder className="bulk-import-tool">
+      <Card padding="lg" radius="md" withBorder className="bulk-import-tool">
         <Stack gap="lg">
           {hasOcrSession && (
             <Group gap="xs" wrap="wrap">
@@ -616,7 +616,7 @@ export function BulkImportPage() {
 
             <Tabs.Panel value="ocr" pt="md">
               <Stack gap="lg">
-                <Card withBorder radius="md" padding="md">
+                <Box className="ocr-panel ocr-panel-primary">
                   <Group justify="space-between" align="flex-start" mb="md" wrap="wrap">
                     <div>
                       <Group gap="xs" mb={4}>
@@ -649,20 +649,20 @@ export function BulkImportPage() {
                       Rapikan Teks
                     </Button>
                   </Group>
-                </Card>
+                </Box>
 
                 {isOcrProcessing && (
-                  <Card withBorder radius="md" padding="md">
+                  <Box className="ocr-panel">
                     <Group justify="space-between" mb="xs">
                       <Text size="sm" fw={700}>{ocrPhase || 'Memproses OCR'}</Text>
                       <Text size="sm" c="dimmed">{ocrProgress}%</Text>
                     </Group>
                     <Progress value={ocrProgress} animated />
-                  </Card>
+                  </Box>
                 )}
 
                 <SimpleGrid cols={{ base: 1, md: showOcrRawText ? 2 : 1 }} spacing="md">
-                  <Card withBorder radius="md" padding="md">
+                  <Box className="ocr-panel">
                     <Group gap="xs" mb="sm">
                       <IconListCheck size={16} />
                       <Text fw={700}>Agar hasil lebih rapi</Text>
@@ -681,9 +681,9 @@ export function BulkImportPage() {
                     >
                       {showOcrRawText ? 'Sembunyikan teks mentah' : 'Tampilkan teks mentah / paste manual'}
                     </Button>
-                  </Card>
+                  </Box>
                   {showOcrRawText && (
-                    <Card withBorder radius="md" padding="md">
+                    <Box className="ocr-panel">
                       <Textarea
                         label="Teks mentah"
                         description="Pakai ini hanya jika perlu memperbaiki hasil bacaan sebelum dibuat draft."
@@ -692,12 +692,12 @@ export function BulkImportPage() {
                         value={ocrRawText}
                         onChange={(event) => setOcrRawText(event.currentTarget.value)}
                       />
-                    </Card>
+                    </Box>
                   )}
                 </SimpleGrid>
 
                 {ocrDrafts.length > 0 && (
-                  <Card withBorder radius="md" padding="md">
+                  <Box className="ocr-panel ocr-draft-section">
                     <Group justify="space-between" align="center" mb="md">
                       <div>
                         <Text fw={800}>Periksa Draft Pasal</Text>
@@ -762,7 +762,7 @@ export function BulkImportPage() {
                       {ocrDrafts.map((draft) => {
                         const errors = draftErrors(draft, ocrDrafts)
                         return (
-                          <Card key={draft.id} withBorder radius="md" padding="md">
+                          <Box key={draft.id} className="ocr-draft-item">
                             <Group justify="space-between" align="flex-start" mb="md" wrap="nowrap">
                               <div>
                                 <Text size="xs" c="dimmed" tt="uppercase" fw={700}>Draft Pasal</Text>
@@ -817,11 +817,11 @@ export function BulkImportPage() {
                                 />
                               </Box>
                             </Box>
-                          </Card>
+                          </Box>
                         )
                       })}
                     </Stack>
-                  </Card>
+                  </Box>
                 )}
               </Stack>
             </Tabs.Panel>

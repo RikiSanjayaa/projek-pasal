@@ -122,7 +122,7 @@ export function PasalEditPage() {
 
       <Grid>
         <Grid.Col span={{ base: 12, md: 8 }}>
-          <Card shadow="sm" padding="lg" radius="md" withBorder pos="relative">
+          <Card padding="lg" radius="md" withBorder pos="relative">
             <LoadingOverlay visible={loadingPasal} />
 
             <form onSubmit={form.onSubmit(handleSubmit)}>

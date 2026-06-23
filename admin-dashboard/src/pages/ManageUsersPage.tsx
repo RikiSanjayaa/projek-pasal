@@ -1,10 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import {
   ActionIcon,
   Alert,
   Badge,
   Button,
-  Card,
   CopyButton,
   Group,
   Modal,
@@ -23,6 +22,7 @@ import { showNotification } from '@mantine/notifications'
 import { IconCheck, IconCopy, IconDevices, IconFileSpreadsheet, IconRefresh, IconTrash, IconUpload, IconX } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
+import { SearchablePaginatedList } from '@/components/SearchablePaginatedList'
 import { api, type PaginatedResponse } from '@/lib/api'
 
 interface UserDevice {
@@ -172,9 +172,6 @@ export function ManageUsersPage() {
     onError: (error: Error) => showNotification({ title: 'Gagal import', message: error.message, color: 'red' }),
   })
 
-  const activeUsers = useMemo(() => users.filter((user) => user.is_active && daysUntilExpiry(user.expires_at) >= 0), [users])
-  const inactiveUsers = useMemo(() => users.filter((user) => !user.is_active || daysUntilExpiry(user.expires_at) < 0), [users])
-
   const renderUserActions = (user: MobileUser, includeDevices = false) => {
     const activeDevices = user.devices?.filter((device) => device.is_active).length || 0
     const isExtending = extendMutation.isPending && extendMutation.variables === user.id
@@ -184,10 +181,10 @@ export function ManageUsersPage() {
 
     return (
       <Group gap={4} wrap="wrap">
-        <Button size="xs" variant="light" onClick={() => extendMutation.mutate(user.id)} loading={isExtending} fullWidth={isMobile}>
+        <Button size="xs" variant="light" onClick={() => extendMutation.mutate(user.id)} loading={isExtending}>
           Perpanjang
         </Button>
-        <Button size="xs" variant="light" onClick={() => resetPasswordMutation.mutate(user.id)} loading={isResettingPassword} fullWidth={isMobile}>
+        <Button size="xs" variant="light" onClick={() => resetPasswordMutation.mutate(user.id)} loading={isResettingPassword}>
           Reset Password
         </Button>
         <Button
@@ -196,7 +193,6 @@ export function ManageUsersPage() {
           variant="light"
           onClick={() => toggleMutation.mutate({ id: user.id, active: !user.is_active })}
           loading={isToggling}
-          fullWidth={isMobile}
         >
           {user.is_active ? 'Nonaktifkan' : 'Aktifkan'}
         </Button>
@@ -222,26 +218,6 @@ export function ManageUsersPage() {
       </Group>
     )
   }
-
-  const renderMobileCards = (items: MobileUser[]) => (
-    <Stack gap="sm">
-      {items.map((user) => (
-        <Card key={user.id} withBorder padding="sm" radius="md">
-          <Stack gap="xs">
-            <div>
-              <Text fw={600}>{user.nama}</Text>
-              <Text size="sm" c="dimmed" style={{ overflowWrap: 'anywhere' }}>{user.email}</Text>
-            </div>
-            <Group gap="xs">
-              <Badge color={user.is_active ? 'green' : 'gray'} variant="light">{user.is_active ? 'Aktif' : 'Nonaktif'}</Badge>
-              <ExpiryBadge expiresAt={user.expires_at} />
-            </Group>
-            {renderUserActions(user, true)}
-          </Stack>
-        </Card>
-      ))}
-    </Stack>
-  )
 
   const renderRows = (items: MobileUser[]) => items.map((user) => {
     const activeDevices = user.devices?.filter((device) => device.is_active).length || 0
@@ -312,34 +288,56 @@ export function ManageUsersPage() {
         </Group>
       </Dropzone>
 
-      <Card shadow="sm" padding="md" radius="md" withBorder>
-        <Group justify="space-between" mb="sm" wrap="wrap">
-          <Title order={4}>Pengguna Aktif</Title>
-          <Button leftSection={<IconRefresh size={16} />} variant="light" onClick={() => queryClient.invalidateQueries({ queryKey: ['mobile_users'] })} fullWidth={isMobile}>
-            Refresh
-          </Button>
-        </Group>
-        {isMobile ? renderMobileCards(activeUsers) : <ScrollArea>
-          <Table striped highlightOnHover miw={850}>
-            <Table.Thead>
-              <Table.Tr><Table.Th>Nama</Table.Th><Table.Th>Email</Table.Th><Table.Th>Status</Table.Th><Table.Th>Masa Aktif</Table.Th><Table.Th>Perangkat</Table.Th><Table.Th>Aksi</Table.Th></Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>{isLoading ? null : renderRows(activeUsers)}</Table.Tbody>
-          </Table>
-        </ScrollArea>}
-      </Card>
-
-      <Card shadow="sm" padding="md" radius="md" withBorder>
-        <Title order={4} mb="sm">Pengguna Nonaktif / Kadaluarsa</Title>
-        {isMobile ? renderMobileCards(inactiveUsers) : <ScrollArea>
-          <Table striped highlightOnHover miw={850}>
-            <Table.Thead>
-              <Table.Tr><Table.Th>Nama</Table.Th><Table.Th>Email</Table.Th><Table.Th>Status</Table.Th><Table.Th>Masa Aktif</Table.Th><Table.Th>Perangkat</Table.Th><Table.Th>Aksi</Table.Th></Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>{renderRows(inactiveUsers)}</Table.Tbody>
-          </Table>
-        </ScrollArea>}
-      </Card>
+      <SearchablePaginatedList
+        data={users}
+        isLoading={isLoading}
+        searchTitle="Cari pengguna"
+        getSearchableText={(user) => `${user.nama} ${user.email}`}
+        isActive={(user) => user.is_active && daysUntilExpiry(user.expires_at) >= 0}
+        activeSection={{
+          title: 'Pengguna Aktif',
+          emptyText: 'Tidak ada pengguna aktif.',
+          actionElement: (
+            <Button leftSection={<IconRefresh size={16} />} variant="light" onClick={() => queryClient.invalidateQueries({ queryKey: ['mobile_users'] })} fullWidth={isMobile}>
+              Refresh
+            </Button>
+          ),
+          render: (items) => (
+            <Table striped highlightOnHover miw={900}>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Nama</Table.Th>
+                  <Table.Th>Email</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                  <Table.Th>Masa Aktif</Table.Th>
+                  <Table.Th>Perangkat</Table.Th>
+                  <Table.Th>Aksi</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>{renderRows(items)}</Table.Tbody>
+            </Table>
+          ),
+        }}
+        inactiveSection={{
+          title: 'Pengguna Nonaktif / Kadaluarsa',
+          emptyText: 'Tidak ada pengguna nonaktif atau kadaluarsa.',
+          render: (items) => (
+            <Table striped highlightOnHover miw={900}>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Nama</Table.Th>
+                  <Table.Th>Email</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                  <Table.Th>Masa Aktif</Table.Th>
+                  <Table.Th>Perangkat</Table.Th>
+                  <Table.Th>Aksi</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>{renderRows(items)}</Table.Tbody>
+            </Table>
+          ),
+        }}
+      />
 
       <Modal opened={!!credentials} onClose={() => setCredentials(null)} title="Kredensial Sementara" closeOnClickOutside={false} fullScreen={isMobile}>
         {credentials && (

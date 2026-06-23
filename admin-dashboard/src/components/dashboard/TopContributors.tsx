@@ -12,7 +12,7 @@ export function TopContributors({ logs, loading }: TopContributorsProps) {
 
   if (loading) {
     return (
-      <Card shadow="sm" padding="lg" radius="md" withBorder style={{ height: '100%' }}>
+      <Card padding="lg" radius="md" withBorder style={{ height: '100%' }}>
         <Title order={4} mb="md">Kontributor Teratas</Title>
         <Stack>
           {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} height={40} radius="sm" />)}
@@ -45,7 +45,7 @@ export function TopContributors({ logs, loading }: TopContributorsProps) {
   ))
 
   return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Card padding="lg" radius="md" withBorder style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Title order={4} mb="md">Kontributor Teratas</Title>
 
       <ScrollArea h={isMobile ? 280 : 400} type="auto">
