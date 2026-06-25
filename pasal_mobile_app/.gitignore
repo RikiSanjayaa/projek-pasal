@@ -71,6 +71,7 @@ ios/.symlinks/
 /macos/
 /web/
 # Allow custom web assets (required for Docker builds)
+!/web/index.html
 !/web/sqlite3.wasm
 !/web/drift_worker.dart.js
 !/web/favicon.png
