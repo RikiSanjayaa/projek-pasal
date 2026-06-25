@@ -22,8 +22,9 @@ export function TopContributors({ logs, loading }: TopContributorsProps) {
   }
 
   const contributions = aggregateAdminContributions(logs)
+  const topContributors = contributions.slice(0, 8)
 
-  const rows = contributions.slice(0, 8).map((contrib, index) => (
+  const rows = topContributors.map((contrib, index) => (
     <Table.Tr key={contrib.email}>
       <Table.Td>
         <div>
@@ -59,7 +60,19 @@ export function TopContributors({ logs, loading }: TopContributorsProps) {
               <Table.Th style={{ textAlign: 'right', fontWeight: 'bold' }}>Total</Table.Th>
             </Table.Tr>
           </Table.Thead>
-          <Table.Tbody>{rows}</Table.Tbody>
+          <Table.Tbody>
+            {rows.length > 0 ? (
+              rows
+            ) : (
+              <Table.Tr>
+                <Table.Td colSpan={5}>
+                  <Text c="dimmed" ta="center" py="lg">
+                    Belum ada kontribusi admin
+                  </Text>
+                </Table.Td>
+              </Table.Tr>
+            )}
+          </Table.Tbody>
         </Table>
       </ScrollArea>
     </Card>

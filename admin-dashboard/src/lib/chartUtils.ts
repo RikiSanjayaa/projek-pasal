@@ -55,9 +55,24 @@ export function aggregateAdminContributions(
   > = {}
 
   logs.forEach((log) => {
-    if (!result[log.admin_email]) {
-      result[log.admin_email] = {
-        email: log.admin_email,
+    const email = String(log.admin_email || '').trim()
+    if (!email) return
+
+    const action = String(log.action || '').toUpperCase()
+    const bucket =
+      action === 'CREATE' || action === 'IMPORT'
+        ? 'creates'
+        : action === 'UPDATE' || action === 'RESTORE'
+          ? 'updates'
+          : action === 'DELETE'
+            ? 'deletes'
+            : null
+
+    if (!bucket) return
+
+    if (!result[email]) {
+      result[email] = {
+        email,
         total: 0,
         creates: 0,
         updates: 0,
@@ -65,10 +80,8 @@ export function aggregateAdminContributions(
       }
     }
 
-    result[log.admin_email].total++
-    result[log.admin_email][
-      (log.action.toLowerCase() + 's') as 'creates' | 'updates' | 'deletes'
-    ]++
+    result[email].total++
+    result[email][bucket]++
   })
 
   return Object.values(result).sort((a, b) => b.total - a.total)
