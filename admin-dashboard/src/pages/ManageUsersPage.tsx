@@ -21,7 +21,6 @@ import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import { showNotification } from '@mantine/notifications'
 import { IconCheck, IconCopy, IconDevices, IconFileSpreadsheet, IconRefresh, IconTrash, IconUpload, IconX } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import * as XLSX from 'xlsx'
 import { SearchablePaginatedList } from '@/components/SearchablePaginatedList'
 import { api, type PaginatedResponse } from '@/lib/api'
 import { invalidateAdminData } from '@/lib/query-invalidation'
@@ -157,6 +156,7 @@ export function ManageUsersPage() {
   const batchMutation = useMutation({
     mutationFn: async (file: File) => {
       const buffer = await file.arrayBuffer()
+      const XLSX = await import('xlsx')
       const workbook = XLSX.read(buffer, { type: 'array' })
       const rows = XLSX.utils.sheet_to_json<Record<string, string>>(workbook.Sheets[workbook.SheetNames[0]], { defval: '' })
       const users = rows.map((row, index) => {

@@ -35,8 +35,6 @@ import {
   IconX,
 } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { recognize } from 'tesseract.js'
-import * as XLSX from 'xlsx'
 import { XlsxImportGuide } from '@/components/bulk-import/XlsxImportGuide'
 import { api, type PaginatedResponse } from '@/lib/api'
 import { invalidatePasalData } from '@/lib/query-invalidation'
@@ -321,7 +319,8 @@ export function BulkImportPage() {
     [ocrDrafts]
   )
 
-  const parseXlsxFile = useCallback((data: ArrayBuffer): ImportPasal[] => {
+  const parseXlsxFile = useCallback(async (data: ArrayBuffer): Promise<ImportPasal[]> => {
+    const XLSX = await import('xlsx')
     const workbook = XLSX.read(data, { type: 'array' })
     const worksheet = workbook.Sheets[workbook.SheetNames[0]]
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: '' })
@@ -372,9 +371,9 @@ export function BulkImportPage() {
     setImportResult(null)
 
     const reader = new FileReader()
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
-        const validated = parseXlsxFile(event.target?.result as ArrayBuffer)
+        const validated = await parseXlsxFile(event.target?.result as ArrayBuffer)
         setExcelRows(validated)
         notifications.show({
           title: 'File berhasil dibaca',
@@ -404,6 +403,7 @@ export function BulkImportPage() {
 
     try {
       const pageTexts: string[] = []
+      const { recognize } = await import('tesseract.js')
 
       for (const [index, file] of images.entries()) {
         setOcrPhase(`Menyiapkan foto ${index + 1}/${images.length}: ${file.name}`)
@@ -536,7 +536,8 @@ export function BulkImportPage() {
     importMutation.mutate()
   }
 
-  const downloadXlsxTemplate = () => {
+  const downloadXlsxTemplate = async () => {
+    const XLSX = await import('xlsx')
     const templateData = [
       {
         nomor: '1',
