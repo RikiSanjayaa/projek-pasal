@@ -14,7 +14,6 @@ import './styles.css'
 
 import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
-import { DataMappingProvider } from './contexts/DataMappingContext'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,9 +44,7 @@ createRoot(document.getElementById('root')!).render(
         <ModalsProvider>
           <BrowserRouter basename={routerBasename} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
             <AuthProvider>
-              <DataMappingProvider>
-                <App />
-              </DataMappingProvider>
+              <App />
             </AuthProvider>
           </BrowserRouter>
         </ModalsProvider>

@@ -2,6 +2,7 @@ import { lazy, Suspense, type ReactNode } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import { LoadingOverlay, Box } from '@mantine/core'
+import { DataMappingProvider } from './contexts/DataMappingContext'
 
 // Layouts
 import { AdminLayout } from './layouts/AdminLayout'
@@ -29,6 +30,10 @@ function PageLoader() {
       <LoadingOverlay visible={true} />
     </Box>
   )
+}
+
+function WithDataMapping({ children }: { children: ReactNode }) {
+  return <DataMappingProvider>{children}</DataMappingProvider>
 }
 
 // Protected Route wrapper
@@ -75,8 +80,8 @@ function App() {
           <Route path="pasal/:id/edit" element={<PasalEditPage />} />
           <Route path="undang-undang" element={<UndangUndangListPage />} />
           <Route path="bulk-import" element={<BulkImportPage />} />
-          <Route path="audit-log" element={<AuditLogPage />} />
-          <Route path="audit-log/:id" element={<AuditLogDetailPage />} />
+          <Route path="audit-log" element={<WithDataMapping><AuditLogPage /></WithDataMapping>} />
+          <Route path="audit-log/:id" element={<WithDataMapping><AuditLogDetailPage /></WithDataMapping>} />
           <Route path="manage-admin" element={<ManageAdminPage />} />
           <Route path="manage-users" element={<ManageUsersPage />} />
         </Route>

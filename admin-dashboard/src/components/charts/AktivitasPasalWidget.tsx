@@ -4,7 +4,6 @@ import { formatDistanceToNow } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
 import { useNavigate } from 'react-router-dom'
 import { AuditLogHint } from '@/components/AuditLogHint'
-import { useDataMapping } from '@/contexts/DataMappingContext'
 import { getOrphanedLinks } from '@/lib/chartUtils'
 import { formatPasalLabel } from '@/lib/pasal-format'
 
@@ -17,14 +16,13 @@ interface AktivitasPasalWidgetProps {
   loading?: boolean
 }
 
-export function AktivitasPasalWidget({ recentLogs = [], trashedPasal = [], links = [], pasal = [], loading }: AktivitasPasalWidgetProps) {
+export function AktivitasPasalWidget({ recentLogs = [], trashedPasal = [], links = [], pasal = [], undangUndang = [], loading }: AktivitasPasalWidgetProps) {
   const navigate = useNavigate()
   const { colorScheme } = useMantineColorScheme()
   const isDark = colorScheme === 'dark'
-  const { undangUndangData, pasalData } = useDataMapping()
 
   // Create a Map from active pasal only (filter out deleted/inactive pasal)
-  const activePasal = pasal.length > 0 ? pasal : (pasalData || [])
+  const activePasal = pasal || []
   const pasalMap = new Map(activePasal.map((p: any) => [p.id, p]))
 
   // Get orphaned links
@@ -106,8 +104,8 @@ export function AktivitasPasalWidget({ recentLogs = [], trashedPasal = [], links
                   </div>
                   <AuditLogHint
                     log={log}
-                    undangUndangData={undangUndangData}
-                    pasalData={pasalData}
+                    undangUndangData={undangUndang}
+                    pasalData={activePasal}
                     maxLength={50}
                   />
                 </Group>

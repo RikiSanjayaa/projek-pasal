@@ -7,11 +7,11 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+  ResponsiveContainer,
 } from 'recharts'
 import { useState, useMemo } from 'react'
 import { subDays, startOfDay, format } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
-import { useElementSize } from '@mantine/hooks'
 import { useMediaQuery } from '@mantine/hooks'
 
 interface CombinedAnalyticsChartProps {
@@ -23,7 +23,6 @@ export function CombinedAnalyticsChart({ logs, loading }: CombinedAnalyticsChart
   const { colorScheme } = useMantineColorScheme()
   const isDark = colorScheme === 'dark'
   const navigate = useNavigate()
-  const { ref: chartRef, width: chartWidth } = useElementSize()
   const isMobile = useMediaQuery('(max-width: 48em)')
 
   const [range, setRange] = useState<string>('30')
@@ -52,8 +51,14 @@ export function CombinedAnalyticsChart({ logs, loading }: CombinedAnalyticsChart
       const d = new Date(log.created_at)
       if (d >= cutoff) {
         const label = format(d, 'MMM dd')
-        if (result[label]) {
-          const action = log.action as 'CREATE' | 'UPDATE' | 'DELETE'
+        const rawAction = String(log.action || '').toUpperCase()
+        const action = rawAction === 'IMPORT'
+          ? 'CREATE'
+          : rawAction === 'RESTORE'
+            ? 'UPDATE'
+            : rawAction
+
+        if (result[label] && (action === 'CREATE' || action === 'UPDATE' || action === 'DELETE')) {
           result[label][action] = (result[label][action] || 0) + 1
           result[label].total += 1
         }
@@ -124,9 +129,9 @@ export function CombinedAnalyticsChart({ logs, loading }: CombinedAnalyticsChart
         </Group>
       </div>
 
-      <div ref={chartRef} style={{ flex: '1 1 auto', width: '100%', height: chartHeight, minWidth: 1, minHeight: chartHeight }}>
-        {chartWidth > 0 && (
-          <ComposedChart width={chartWidth} height={chartHeight} data={data} onClick={handleClick}>
+      <div style={{ flex: '1 1 auto', width: '100%', height: chartHeight, minWidth: 1, minHeight: chartHeight }}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={1} debounce={50}>
+          <ComposedChart data={data} onClick={handleClick}>
             <defs>
               <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
@@ -164,7 +169,7 @@ export function CombinedAnalyticsChart({ logs, loading }: CombinedAnalyticsChart
             <Bar dataKey="UPDATE" name="Diubah" stackId="a" fill="#228BE6" />
             <Bar dataKey="DELETE" name="Dihapus" stackId="a" fill="#FA5252" radius={[4, 4, 0, 0]} />
           </ComposedChart>
-        )}
+        </ResponsiveContainer>
       </div>
     </Card>
   )

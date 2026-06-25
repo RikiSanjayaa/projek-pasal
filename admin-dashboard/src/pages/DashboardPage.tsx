@@ -1,10 +1,13 @@
+import { lazy, Suspense } from 'react'
 import {
+  Card,
   Title,
   Text,
   Grid,
   Group,
   Stack,
   Button,
+  Skeleton,
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import {
@@ -15,9 +18,16 @@ import {
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { api } from '@/lib/api'
-import { CombinedAnalyticsChart } from '@/components/charts/CombinedAnalyticsChart'
-import { TopContributors } from '@/components/dashboard/TopContributors'
-import { AktivitasPasalWidget } from '@/components/charts/AktivitasPasalWidget'
+
+const CombinedAnalyticsChart = lazy(() =>
+  import('@/components/charts/CombinedAnalyticsChart').then((module) => ({ default: module.CombinedAnalyticsChart }))
+)
+const TopContributors = lazy(() =>
+  import('@/components/dashboard/TopContributors').then((module) => ({ default: module.TopContributors }))
+)
+const AktivitasPasalWidget = lazy(() =>
+  import('@/components/charts/AktivitasPasalWidget').then((module) => ({ default: module.AktivitasPasalWidget }))
+)
 
 interface DashboardSummary {
   total_pasal_active: number
@@ -32,6 +42,27 @@ interface DashboardSummary {
   trashed_pasal: any[]
   recent_audit_logs: any[]
   new_pasal_this_week: number
+}
+
+function AnalyticsSkeleton() {
+  return (
+    <Card padding="lg" radius="md" withBorder style={{ height: '100%' }}>
+      <Group justify="space-between" mb="md">
+        <Skeleton height={28} width={200} />
+        <Skeleton height={36} width={150} />
+      </Group>
+      <Skeleton height={350} radius="md" />
+    </Card>
+  )
+}
+
+function ActivitySkeleton() {
+  return (
+    <Card padding="lg" radius="md" withBorder>
+      <Skeleton height={28} width={180} mb="md" />
+      <Skeleton height={220} radius="md" />
+    </Card>
+  )
 }
 
 export function DashboardPage() {
@@ -61,7 +92,9 @@ export function DashboardPage() {
       }
     },
     staleTime: 30 * 1000,
+    placeholderData: (previousData) => previousData,
     refetchInterval: 60 * 1000,
+    refetchIntervalInBackground: false,
   })
 
   // Extract data from the combined query
@@ -123,22 +156,28 @@ export function DashboardPage() {
       {/* Main Analytics Section */}
       <Grid gutter="lg">
         <Grid.Col span={{ base: 12, lg: 8 }}>
-          <CombinedAnalyticsChart logs={auditLogsAnalytics} loading={loadingDashboard} />
+          <Suspense fallback={<AnalyticsSkeleton />}>
+            <CombinedAnalyticsChart logs={auditLogsAnalytics} loading={loadingDashboard} />
+          </Suspense>
         </Grid.Col>
         <Grid.Col span={{ base: 12, lg: 4 }}>
-          <TopContributors logs={auditLogsAnalytics} loading={loadingDashboard} />
+          <Suspense fallback={<AnalyticsSkeleton />}>
+            <TopContributors logs={auditLogsAnalytics} loading={loadingDashboard} />
+          </Suspense>
         </Grid.Col>
       </Grid>
 
       {/* Detailed Insights & Activity */}
-      <AktivitasPasalWidget
-        pasal={dashboardData?.allPasal}
-        recentLogs={dashboardData?.recentAuditLogs}
-        trashedPasal={dashboardData?.trashedPasal}
-        undangUndang={dashboardData?.undangUndangList}
-        links={dashboardData?.allLinks}
-        loading={loadingDashboard}
-      />
+      <Suspense fallback={<ActivitySkeleton />}>
+        <AktivitasPasalWidget
+          pasal={dashboardData?.allPasal}
+          recentLogs={dashboardData?.recentAuditLogs}
+          trashedPasal={dashboardData?.trashedPasal}
+          undangUndang={dashboardData?.undangUndangList}
+          links={dashboardData?.allLinks}
+          loading={loadingDashboard}
+        />
+      </Suspense>
     </Stack>
   )
 }
