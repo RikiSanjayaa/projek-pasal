@@ -29,6 +29,7 @@ import { DataTable, type Column } from '@/components/DataTable'
 import { api, toQueryString, type PaginatedResponse } from '@/lib/api'
 import type { PasalWithUndangUndang } from '@/lib/database.types'
 import { formatPasalLabel } from '@/lib/pasal-format'
+import { invalidatePasalData } from '@/lib/query-invalidation'
 
 const PAGE_SIZE_OPTIONS = [
   { value: '5', label: '5 per halaman' },
@@ -273,8 +274,8 @@ export function PasalListPage() {
     mutationFn: async (id: string) => {
       await api.delete(`/admin/pasal/${id}`)
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pasal'] })
+    onSuccess: async () => {
+      await invalidatePasalData(queryClient)
       notifications.show({
         title: 'Berhasil',
         message: 'Pasal berhasil dihapus',
@@ -296,8 +297,8 @@ export function PasalListPage() {
     mutationFn: async (ids: string[]) => {
       await api.post('/admin/pasal/bulk-delete', { ids })
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pasal'] })
+    onSuccess: async () => {
+      await invalidatePasalData(queryClient)
       notifications.show({
         title: 'Berhasil',
         message: `${selectedIds.length} pasal berhasil dihapus`,

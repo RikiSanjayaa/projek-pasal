@@ -20,6 +20,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type PaginatedResponse } from '@/lib/api'
 import { PasalLinksSidebar } from '@/components/PasalLinksSidebar'
 import type { PasalInsert, PasalWithUndangUndang } from '@/lib/database.types'
+import { invalidatePasalData } from '@/lib/query-invalidation'
 
 // Type for pending link (before pasal is created)
 interface PendingLink {
@@ -101,9 +102,8 @@ export function PasalCreatePage() {
 
       return result as { id: string }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pasal'] })
-      queryClient.invalidateQueries({ queryKey: ['pasal_links'] })
+    onSuccess: async () => {
+      await invalidatePasalData(queryClient)
       notifications.show({
         title: 'Berhasil',
         message: pendingLinks.length > 0

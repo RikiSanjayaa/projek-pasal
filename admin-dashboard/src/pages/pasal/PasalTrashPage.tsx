@@ -28,6 +28,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DataTable, type Column } from '@/components/DataTable'
 import { api, toQueryString, type PaginatedResponse } from '@/lib/api'
 import { formatPasalLabel } from '@/lib/pasal-format'
+import { invalidatePasalData } from '@/lib/query-invalidation'
 
 // Type for deleted pasal
 interface DeletedPasal {
@@ -196,8 +197,8 @@ export function PasalTrashPage() {
     mutationFn: async (id: string) => {
       await api.patch(`/admin/pasal/${id}/restore`)
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pasal'] })
+    onSuccess: async () => {
+      await invalidatePasalData(queryClient)
       notifications.show({
         title: 'Berhasil',
         message: 'Pasal berhasil di-restore',
@@ -219,8 +220,8 @@ export function PasalTrashPage() {
     mutationFn: async (id: string) => {
       await api.delete(`/admin/pasal/${id}/force`)
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pasal'] })
+    onSuccess: async () => {
+      await invalidatePasalData(queryClient)
       notifications.show({
         title: 'Berhasil',
         message: 'Pasal berhasil dihapus permanen',
@@ -242,8 +243,8 @@ export function PasalTrashPage() {
     mutationFn: async (ids: string[]) => {
       await api.post('/admin/pasal/bulk-restore', { ids })
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pasal'] })
+    onSuccess: async () => {
+      await invalidatePasalData(queryClient)
       notifications.show({
         title: 'Berhasil',
         message: `${selectedIds.length} pasal berhasil di-restore`,
@@ -266,8 +267,8 @@ export function PasalTrashPage() {
     mutationFn: async (ids: string[]) => {
       await api.post('/admin/pasal/bulk-force-delete', { ids })
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pasal'] })
+    onSuccess: async () => {
+      await invalidatePasalData(queryClient)
       notifications.show({
         title: 'Berhasil',
         message: `${selectedIds.length} pasal berhasil dihapus permanen`,

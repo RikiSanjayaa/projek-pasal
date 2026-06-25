@@ -26,6 +26,7 @@ import { IconPlus, IconEdit, IconAlertCircle } from '@tabler/icons-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type { UndangUndang, UndangUndangInsert, UndangUndangUpdate } from '@/lib/database.types'
+import { invalidateUndangUndangData } from '@/lib/query-invalidation'
 
 interface PaginatedResponse<T> {
   data: T[]
@@ -99,8 +100,8 @@ export function UndangUndangListPage() {
     mutationFn: async (data: UndangUndangInsert) => {
       await api.post('/admin/undang-undang', data)
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['undang_undang'] })
+    onSuccess: async () => {
+      await invalidateUndangUndangData(queryClient)
       notifications.show({
         title: 'Berhasil',
         message: 'Undang-undang berhasil ditambahkan',
@@ -123,9 +124,8 @@ export function UndangUndangListPage() {
     mutationFn: async ({ id, data }: { id: string; data: UndangUndangUpdate }) => {
       await api.put(`/admin/undang-undang/${id}`, data)
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['undang_undang'] })
-      queryClient.invalidateQueries({ queryKey: ['pasal'] })
+    onSuccess: async () => {
+      await invalidateUndangUndangData(queryClient)
       notifications.show({
         title: 'Berhasil',
         message: 'Undang-undang berhasil diperbarui',

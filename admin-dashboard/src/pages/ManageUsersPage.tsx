@@ -24,6 +24,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
 import { SearchablePaginatedList } from '@/components/SearchablePaginatedList'
 import { api, type PaginatedResponse } from '@/lib/api'
+import { invalidateAdminData } from '@/lib/query-invalidation'
 
 interface UserDevice {
   id: string
@@ -86,8 +87,8 @@ export function ManageUsersPage() {
         password: password || undefined,
       })
     },
-    onSuccess: (user) => {
-      queryClient.invalidateQueries({ queryKey: ['mobile_users'] })
+    onSuccess: async (user) => {
+      await invalidateAdminData(queryClient)
       setCredentials({ email: user.email, password: user.temporary_password || password, expires_at: user.expires_at })
       setEmail('')
       setNama('')
@@ -100,14 +101,16 @@ export function ManageUsersPage() {
   const toggleMutation = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) =>
       api.patch(`/admin/mobile-users/${id}/${active ? 'activate' : 'deactivate'}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['mobile_users'] }),
+    onSuccess: async () => {
+      await invalidateAdminData(queryClient)
+    },
     onError: (error: Error) => showNotification({ title: 'Gagal', message: error.message, color: 'red' }),
   })
 
   const extendMutation = useMutation({
     mutationFn: (id: string) => api.patch(`/admin/mobile-users/${id}/extend`, { years: 3 }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mobile_users'] })
+    onSuccess: async () => {
+      await invalidateAdminData(queryClient)
       showNotification({ title: 'Berhasil', message: 'Masa aktif diperpanjang 3 tahun', color: 'green' })
     },
     onError: (error: Error) => showNotification({ title: 'Gagal', message: error.message, color: 'red' }),
@@ -115,8 +118,8 @@ export function ManageUsersPage() {
 
   const resetPasswordMutation = useMutation({
     mutationFn: (id: string) => api.patch<MobileUser & { temporary_password: string }>(`/admin/mobile-users/${id}/password`),
-    onSuccess: (user) => {
-      queryClient.invalidateQueries({ queryKey: ['mobile_users'] })
+    onSuccess: async (user) => {
+      await invalidateAdminData(queryClient)
       setCredentials({ email: user.email, password: user.temporary_password, expires_at: user.expires_at })
       showNotification({ title: 'Berhasil', message: 'Password baru berhasil dibuat', color: 'green' })
     },
@@ -125,8 +128,8 @@ export function ManageUsersPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/admin/mobile-users/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mobile_users'] })
+    onSuccess: async () => {
+      await invalidateAdminData(queryClient)
       showNotification({ title: 'Berhasil', message: 'Pengguna dihapus', color: 'green' })
     },
     onError: (error: Error) => showNotification({ title: 'Gagal', message: error.message, color: 'red' }),
@@ -135,7 +138,7 @@ export function ManageUsersPage() {
   const deviceMutation = useMutation({
     mutationFn: ({ userId, deviceId }: { userId: string; deviceId: string }) =>
       api.delete(`/admin/mobile-users/${userId}/devices/${deviceId}`),
-    onSuccess: (_, variables) => {
+    onSuccess: async (_, variables) => {
       setSelectedUser((user) =>
         user
           ? {
@@ -146,7 +149,7 @@ export function ManageUsersPage() {
             }
           : user
       )
-      queryClient.invalidateQueries({ queryKey: ['mobile_users'] })
+      await invalidateAdminData(queryClient)
     },
     onError: (error: Error) => showNotification({ title: 'Gagal', message: error.message, color: 'red' }),
   })
@@ -165,8 +168,8 @@ export function ManageUsersPage() {
       })
       return api.post<{ created: MobileUser[]; errors: { row: number; message: string }[] }>('/admin/mobile-users/bulk-create', { users })
     },
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['mobile_users'] })
+    onSuccess: async (result) => {
+      await invalidateAdminData(queryClient)
       showNotification({ title: 'Import selesai', message: `${result.created.length} berhasil, ${result.errors.length} gagal`, color: result.errors.length ? 'orange' : 'green' })
     },
     onError: (error: Error) => showNotification({ title: 'Gagal import', message: error.message, color: 'red' }),

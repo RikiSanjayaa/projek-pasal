@@ -21,6 +21,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type PaginatedResponse } from '@/lib/api'
 import { PasalLinksSidebar } from '@/components/PasalLinksSidebar'
 import type { PasalUpdate, Pasal } from '@/lib/database.types'
+import { invalidatePasalData } from '@/lib/query-invalidation'
 
 export function PasalEditPage() {
   const { id } = useParams<{ id: string }>()
@@ -81,8 +82,8 @@ export function PasalEditPage() {
     mutationFn: async (data: PasalUpdate) => {
       await api.put(`/admin/pasal/${id}`, data)
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pasal'] })
+    onSuccess: async () => {
+      await invalidatePasalData(queryClient)
       notifications.show({
         title: 'Berhasil',
         message: 'Pasal berhasil diperbarui',

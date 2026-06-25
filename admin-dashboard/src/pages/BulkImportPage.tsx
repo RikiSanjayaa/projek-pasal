@@ -39,6 +39,7 @@ import { recognize } from 'tesseract.js'
 import * as XLSX from 'xlsx'
 import { XlsxImportGuide } from '@/components/bulk-import/XlsxImportGuide'
 import { api, type PaginatedResponse } from '@/lib/api'
+import { invalidatePasalData } from '@/lib/query-invalidation'
 
 const MAX_LINKS_PER_PASAL = 5
 
@@ -509,9 +510,9 @@ export function BulkImportPage() {
         },
       }
     },
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       setImportResult(result)
-      queryClient.invalidateQueries({ queryKey: ['pasal'] })
+      await invalidatePasalData(queryClient)
 
       const totalFailed = result.pasal.failed + result.links.failed
       const totalSuccess = result.pasal.success + result.links.success

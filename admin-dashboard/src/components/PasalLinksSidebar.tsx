@@ -21,6 +21,7 @@ import { notifications } from '@mantine/notifications'
 import { api, type PaginatedResponse } from '@/lib/api'
 import type { PasalWithUndangUndang } from '@/lib/database.types'
 import { formatPasalLabel } from '@/lib/pasal-format'
+import { invalidatePasalData } from '@/lib/query-invalidation'
 
 // Type for pasal link with relations
 interface PasalLinkWithRelations {
@@ -205,7 +206,8 @@ export function PasalLinksSidebar({
         keterangan: keterangan || null,
       })
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      await invalidatePasalData(queryClient)
       queryClient.invalidateQueries({ queryKey: ['pasal_links', pasalId] })
       notifications.show({
         title: 'Berhasil',
@@ -229,7 +231,8 @@ export function PasalLinksSidebar({
     mutationFn: async (linkId: string) => {
       await api.delete(`/admin/pasal-links/${linkId}`)
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      await invalidatePasalData(queryClient)
       queryClient.invalidateQueries({ queryKey: ['pasal_links', pasalId] })
       notifications.show({
         title: 'Berhasil',

@@ -24,6 +24,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
 import { SearchablePaginatedList } from '@/components/SearchablePaginatedList'
 import { api, type PaginatedResponse } from '@/lib/api'
+import { invalidateAdminData } from '@/lib/query-invalidation'
 
 interface AdminDevice {
   id: string
@@ -82,8 +83,8 @@ export function ManageAdminPage() {
         role: 'admin',
       })
     },
-    onSuccess: (admin) => {
-      queryClient.invalidateQueries({ queryKey: ['admin_users'] })
+    onSuccess: async (admin) => {
+      await invalidateAdminData(queryClient)
       setCredentials({ email: admin.email, password: admin.temporary_password || password })
       setEmail('')
       setNama('')
@@ -96,14 +97,18 @@ export function ManageAdminPage() {
   const toggleMutation = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) =>
       api.patch(`/admin/admin-users/${id}/${active ? 'activate' : 'deactivate'}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin_users'] }),
+    onSuccess: async () => {
+      await invalidateAdminData(queryClient)
+    },
     onError: (error: Error) => showNotification({ title: 'Gagal', message: error.message, color: 'red' }),
   })
 
   const deviceMutation = useMutation({
     mutationFn: ({ adminId, deviceId }: { adminId: string; deviceId: string }) =>
       api.delete(`/admin/admin-users/${adminId}/devices/${deviceId}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin_users'] }),
+    onSuccess: async () => {
+      await invalidateAdminData(queryClient)
+    },
     onError: (error: Error) => showNotification({ title: 'Gagal', message: error.message, color: 'red' }),
   })
 
