@@ -20,6 +20,7 @@ import { IconLink, IconChevronDown, IconChevronUp, IconPlus, IconX, IconArrowRig
 import { notifications } from '@mantine/notifications'
 import { api, type PaginatedResponse } from '@/lib/api'
 import type { PasalWithUndangUndang } from '@/lib/database.types'
+import { formatPasalLabel } from '@/lib/pasal-format'
 
 // Type for pasal link with relations
 interface PasalLinkWithRelations {
@@ -121,7 +122,7 @@ function LinkedPasalDetail({ pasalId, excludePasalId }: { pasalId: string; exclu
             <Group gap={4}>
               {relatedLinks.slice(0, 3).map((link) => (
                 <Badge key={link.id} size="xs" variant="outline" color="blue">
-                  {link.target_pasal?.undang_undang?.kode} Pasal {link.target_pasal?.nomor}
+                  {link.target_pasal?.undang_undang?.kode} {formatPasalLabel(link.target_pasal?.nomor)}
                 </Badge>
               ))}
               {relatedLinks.length > 3 && (
@@ -320,7 +321,7 @@ export function PasalLinksSidebar({
                         {targetPasal?.undang_undang?.kode}
                       </Badge>
                       <Text size="sm" fw={500} style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        Pasal {targetPasal?.nomor}
+                        {formatPasalLabel(targetPasal?.nomor)}
                       </Text>
                     </Group>
                     <Group gap="xs" wrap="nowrap">
@@ -364,11 +365,13 @@ export function PasalLinksSidebar({
                           {targetPasal?.undang_undang?.kode}
                         </Badge>
                         <Text size="sm" fw={500} style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          Pasal {targetPasal?.nomor}                        {targetPasal?.judul && (
+                          {formatPasalLabel(targetPasal?.nomor)}
+                          {targetPasal?.judul && (
                             <Text component="span" size="xs" c="dimmed" ml={4}>
                               - {targetPasal?.judul}
                             </Text>
-                          )}                        </Text>
+                          )}
+                        </Text>
                       </Group>
                       {isEditMode && (
                         <Tooltip label="Hapus link">
@@ -457,7 +460,7 @@ export function PasalLinksSidebar({
                     })
                     .map((p) => ({
                       value: p.id,
-                      label: `${p.undang_undang.kode} - Pasal ${p.nomor}${p.judul ? ` (${p.judul})` : ''}`,
+                      label: `${p.undang_undang.kode} - ${formatPasalLabel(p.nomor)}${p.judul ? ` (${p.judul})` : ''}`,
                     })) || []
                 }
                 value={linkSearchValue}
@@ -481,7 +484,7 @@ export function PasalLinksSidebar({
                   if (isCreateMode) {
                     if (!onAddPendingLink) return
                     const selectedItem = effectiveAllPasalList.find(
-                      (p) => `${p.undang_undang.kode} - Pasal ${p.nomor}${p.judul ? ` (${p.judul})` : ''}` === linkSearchValue
+                      (p) => `${p.undang_undang.kode} - ${formatPasalLabel(p.nomor)}${p.judul ? ` (${p.judul})` : ''}` === linkSearchValue
                     )
                     if (selectedItem) {
                       // Check if already added
@@ -496,7 +499,7 @@ export function PasalLinksSidebar({
 
                       onAddPendingLink({
                         targetPasalId: selectedItem.id,
-                        targetPasalLabel: `${selectedItem.undang_undang.kode} - Pasal ${selectedItem.nomor}${selectedItem.judul ? ` (${selectedItem.judul})` : ''}`,
+                        targetPasalLabel: `${selectedItem.undang_undang.kode} - ${formatPasalLabel(selectedItem.nomor)}${selectedItem.judul ? ` (${selectedItem.judul})` : ''}`,
                         keterangan: linkKeterangan,
                       })
                       setLinkSearchValue('')
@@ -504,7 +507,7 @@ export function PasalLinksSidebar({
                     }
                   } else {
                     const selectedItem = effectiveAllPasalList.find(
-                      (p) => `${p.undang_undang.kode} - Pasal ${p.nomor}${p.judul ? ` (${p.judul})` : ''}` === linkSearchValue
+                      (p) => `${p.undang_undang.kode} - ${formatPasalLabel(p.nomor)}${p.judul ? ` (${p.judul})` : ''}` === linkSearchValue
                     )
                     if (selectedItem) {
                       addLinkMutation.mutate({

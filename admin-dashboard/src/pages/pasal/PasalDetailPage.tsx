@@ -16,6 +16,7 @@ import { IconArrowLeft, IconEdit, IconTrash, IconAlertCircle } from '@tabler/ico
 import { api } from '@/lib/api'
 import { PasalLinksSidebar } from '@/components/PasalLinksSidebar'
 import type { PasalWithUndangUndang } from '@/lib/database.types'
+import { formatPasalLabel } from '@/lib/pasal-format'
 
 export function PasalDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -103,7 +104,7 @@ export function PasalDetailPage() {
             <Badge color="blue" variant="light">
               {pasal.undang_undang?.kode}
             </Badge>
-            Pasal {pasal.nomor}
+            {formatPasalLabel(pasal.nomor)}
           </Group>
         </Title>
         <Text c="dimmed">Detail pasal</Text>

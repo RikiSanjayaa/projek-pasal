@@ -27,6 +27,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DataTable, type Column } from '@/components/DataTable'
 import { api, toQueryString, type PaginatedResponse } from '@/lib/api'
+import { formatPasalLabel } from '@/lib/pasal-format'
 
 // Type for deleted pasal
 interface DeletedPasal {
@@ -99,7 +100,7 @@ export function PasalTrashPage() {
       title: 'Nomor',
       width: 100,
       render: (value) => (
-        <Text fw={500}>Pasal {value}</Text>
+        <Text fw={500}>{formatPasalLabel(value as string)}</Text>
       ),
     },
     {
@@ -419,7 +420,7 @@ export function PasalTrashPage() {
           </Text>
           <Card withBorder padding="sm">
             <Text fw={500}>
-              {selectedPasal?.undang_undang.kode} - Pasal {selectedPasal?.nomor}
+              {selectedPasal?.undang_undang.kode} - {formatPasalLabel(selectedPasal?.nomor)}
             </Text>
             {selectedPasal?.judul && (
               <Text size="sm" c="dimmed">{selectedPasal.judul}</Text>
@@ -454,7 +455,7 @@ export function PasalTrashPage() {
           </Alert>
           <Card withBorder padding="sm">
             <Text fw={500}>
-              {selectedPasal?.undang_undang.kode} - Pasal {selectedPasal?.nomor}
+              {selectedPasal?.undang_undang.kode} - {formatPasalLabel(selectedPasal?.nomor)}
             </Text>
             {selectedPasal?.judul && (
               <Text size="sm" c="dimmed">{selectedPasal.judul}</Text>

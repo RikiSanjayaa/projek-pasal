@@ -1,5 +1,6 @@
 import { Text } from '@mantine/core'
 import type { AuditLog } from '@/lib/database.types'
+import { formatPasalLabel } from '@/lib/pasal-format'
 
 interface AuditLogHintProps {
   log: AuditLog
@@ -22,7 +23,7 @@ export function AuditLogHint({
     const pasal = pasalData.find(p => p.id === pasalId)
     if (!pasal) return pasalId
     const uuNama = uuMap.get(pasal.undang_undang_id) || pasal.undang_undang_id
-    return `${uuNama} ${pasal.nomor}`
+    return `${uuNama} ${formatPasalLabel(pasal.nomor)}`
   }
 
   const getChangeHint = (): string => {
@@ -34,7 +35,7 @@ export function AuditLogHint({
       const judul = (data.judul as string) || ''
       const undangUndangId = data.undang_undang_id as string
       const undangUndangNama = undangUndangId ? uuMap.get(undangUndangId) || undangUndangId : ''
-      return `Pasal ${nomor}${judul ? ` - ${judul}` : ''}${undangUndangNama ? ` (${undangUndangNama})` : ''}`
+      return `${formatPasalLabel(nomor)}${judul ? ` - ${judul}` : ''}${undangUndangNama ? ` (${undangUndangNama})` : ''}`
     }
 
     if (log.table_name === 'undang_undang') {

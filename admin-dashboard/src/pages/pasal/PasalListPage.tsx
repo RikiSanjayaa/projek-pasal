@@ -28,6 +28,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DataTable, type Column } from '@/components/DataTable'
 import { api, toQueryString, type PaginatedResponse } from '@/lib/api'
 import type { PasalWithUndangUndang } from '@/lib/database.types'
+import { formatPasalLabel } from '@/lib/pasal-format'
 
 const PAGE_SIZE_OPTIONS = [
   { value: '5', label: '5 per halaman' },
@@ -80,7 +81,7 @@ const pasalColumns: Column<PasalWithUndangUndang>[] = [
     title: 'Nomor',
     width: 100,
     render: (value) => (
-      <Text fw={500}>Pasal {value}</Text>
+      <Text fw={500}>{formatPasalLabel(value as string)}</Text>
     ),
   },
   {
@@ -459,7 +460,7 @@ export function PasalListPage() {
         centered
       >
         <Text mb="lg">
-          Apakah Anda yakin ingin menghapus <strong>Pasal {selectedPasal?.nomor}</strong> dari{' '}
+          Apakah Anda yakin ingin menghapus <strong>{formatPasalLabel(selectedPasal?.nomor)}</strong> dari{' '}
           <strong>{selectedPasal?.undang_undang?.kode}</strong>?
         </Text>
         <Group justify="flex-end">

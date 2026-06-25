@@ -88,7 +88,71 @@ Untuk test reset password saat development:
 
 ## Alternatif Non-Docker
 
+Mode ini cocok kalau ingin menjalankan project seperti server biasa tanpa Docker.
+
+Kebutuhan lokal:
+
+- PHP 8.4 atau minimal PHP 8.3.
+- PHP extension: `pdo_pgsql`, `pgsql`, `fileinfo`, `mbstring`, `openssl`, `curl`, `zip`, `xml`, `gd`.
+- Composer.
+- Node.js 22+ dan NPM.
+- PostgreSQL native yang sedang berjalan di laptop.
+- `psql` dari PostgreSQL Command Line Tools. Jika belum ada di PATH, script akan mencari di `C:\Program Files\PostgreSQL\*\bin\psql.exe`.
+
+Untuk Windows, install PostgreSQL dari installer resmi atau package manager yang biasa dipakai. Saat instalasi, aktifkan **Command Line Tools**, pakai port default `5432`, dan ingat password user `postgres` karena akan diminta oleh script setup.
+
+Setup pertama kali:
+
+```powershell
+.\setup-local-native.ps1
+```
+
+Script ini akan:
+
+- membuat/memperbarui database `caripasal`;
+- membuat/memperbarui user `caripasal_user`;
+- mengisi `backend-laravel/.env` untuk PostgreSQL native port `5432`;
+- mengisi `admin-dashboard/.env`;
+- menjalankan `composer install` dan `npm install` bila dependency belum ada;
+- menjalankan migration dan seeder.
+
+Jika database dan user PostgreSQL sudah dibuat manual:
+
+```powershell
+.\setup-local-native.ps1 -SkipDatabaseCreate
+```
+
+Menjalankan web lokal:
+
+```powershell
+.\start-local-native.ps1
+```
+
+Alamat lokal:
+
+```text
+Admin laptop:        http://127.0.0.1:5173/admin
+API health:          http://127.0.0.1:8000/api/health
+Admin HP satu Wi-Fi: lihat output script start-local-native.ps1
+Android emulator:    http://10.0.2.2:8000/api
+```
+
+Login admin awal:
+
+```text
+email:    superadmin@caripasal.local
+password: ChangeMe123!
+```
+
+Stop server lokal:
+
+```powershell
+.\stop-local-lan.ps1
+```
+
 ### Backend Laravel
+
+Jika ingin menjalankan manual tanpa script:
 
 ```powershell
 cd backend-laravel

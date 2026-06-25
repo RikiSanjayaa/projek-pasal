@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { AuditLogHint } from '@/components/AuditLogHint'
 import { useDataMapping } from '@/contexts/DataMappingContext'
 import { getOrphanedLinks } from '@/lib/chartUtils'
+import { formatPasalLabel } from '@/lib/pasal-format'
 
 interface AktivitasPasalWidgetProps {
   pasal?: any[]
@@ -151,7 +152,7 @@ export function AktivitasPasalWidget({ recentLogs = [], trashedPasal = [], links
                   </Badge>
                   <div style={{ flex: 1 }}>
                     <Text size="sm" fw={500}>
-                      Pasal {p.nomor} - {p.judul}
+                      {formatPasalLabel(p.nomor)} - {p.judul}
                     </Text>
                   </div>
                   <Text size="xs" c="dimmed">
@@ -196,7 +197,7 @@ export function AktivitasPasalWidget({ recentLogs = [], trashedPasal = [], links
                   </Badge>
                   <div style={{ flex: 1 }}>
                     <Text size="sm" fw={500}>
-                      Pasal {brokenLink.sourcePasal?.nomor} {brokenLink.sourcePasal?.judul && `- ${brokenLink.sourcePasal.judul}`}
+                      {formatPasalLabel(brokenLink.sourcePasal?.nomor)} {brokenLink.sourcePasal?.judul && `- ${brokenLink.sourcePasal.judul}`}
                     </Text>
                     <Text size="xs" c="dimmed" mt="xs">
                       Merujuk ke pasal yang tidak ada: {brokenLink.targetPasalId}
