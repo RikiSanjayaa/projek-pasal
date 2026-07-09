@@ -252,12 +252,86 @@ function draftErrors(draft: OcrDraft, drafts: OcrDraft[]) {
   return errors
 }
 
+function isAppleMobileBrowser() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+
+function fileToObjectImage(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file)
+    const image = new Image()
+
+    const cleanup = () => URL.revokeObjectURL(objectUrl)
+
+    image.onload = () => {
+      cleanup()
+      resolve(image)
+    }
+    image.onerror = () => {
+      cleanup()
+      reject(new Error('Foto tidak bisa dibaca. Jika memakai iPhone, pilih foto JPG/PNG atau ambil ulang lewat kamera.'))
+    }
+    image.src = objectUrl
+  })
+}
+
+async function drawImageFileToCanvas(file: File) {
+  const unsupportedAppleFormat = /image\/(heic|heif)/i.test(file.type) || /\.(heic|heif)$/i.test(file.name)
+  if (unsupportedAppleFormat) {
+    throw new Error('Format HEIC/HEIF iPhone belum bisa dibaca OCR. Ubah ke JPG/PNG atau ambil foto baru lewat kamera.')
+  }
+
+  try {
+    if (typeof createImageBitmap === 'function') {
+      const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+      return {
+        source: bitmap,
+        width: bitmap.width,
+        height: bitmap.height,
+        close: () => bitmap.close(),
+      }
+    }
+  } catch {
+    // Safari iPhone can fail here for valid camera/library photos. Fall back to HTMLImageElement.
+  }
+
+  const image = await fileToObjectImage(file)
+  return {
+    source: image,
+    width: image.naturalWidth || image.width,
+    height: image.naturalHeight || image.height,
+    close: () => undefined,
+  }
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, fallback: File): Promise<Blob | File> {
+  return new Promise((resolve) => {
+    if (typeof canvas.toBlob === 'function') {
+      canvas.toBlob((blob) => resolve(blob || fallback), 'image/jpeg', 0.9)
+      return
+    }
+
+    fetch(canvas.toDataURL('image/jpeg', 0.9))
+      .then((response) => response.blob())
+      .then(resolve)
+      .catch(() => resolve(fallback))
+  })
+}
+
+function getOcrErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message.trim()) return error.message
+  if (typeof error === 'string' && error.trim()) return error
+  return 'Foto tidak bisa dibaca. Coba ambil ulang foto sebagai JPG/PNG dengan cahaya yang lebih jelas.'
+}
+
 async function prepareImageForOcr(file: File): Promise<File | Blob> {
-  const image = await createImageBitmap(file)
+  const image = await drawImageFileToCanvas(file)
+  const maxLongestSide = isAppleMobileBrowser() ? 1800 : 2400
+  const minReadableWidth = isAppleMobileBrowser() ? 1100 : 1400
   const longestSide = Math.max(image.width, image.height)
-  const scale = longestSide > 2400 ? 2400 / longestSide : Math.max(1, 1400 / Math.max(1, image.width))
-  const width = Math.round(image.width * scale)
-  const height = Math.round(image.height * scale)
+  const scale = longestSide > maxLongestSide ? maxLongestSide / longestSide : Math.max(1, minReadableWidth / Math.max(1, image.width))
+  const width = Math.max(1, Math.round(image.width * scale))
+  const height = Math.max(1, Math.round(image.height * scale))
 
   const canvas = document.createElement('canvas')
   canvas.width = width
@@ -266,7 +340,7 @@ async function prepareImageForOcr(file: File): Promise<File | Blob> {
   const context = canvas.getContext('2d')
   if (!context) return file
 
-  context.drawImage(image, 0, 0, width, height)
+  context.drawImage(image.source, 0, 0, width, height)
   image.close()
 
   const imageData = context.getImageData(0, 0, width, height)
@@ -282,9 +356,7 @@ async function prepareImageForOcr(file: File): Promise<File | Blob> {
 
   context.putImageData(imageData, 0, 0)
 
-  return new Promise((resolve) => {
-    canvas.toBlob((blob) => resolve(blob || file), 'image/png')
-  })
+  return canvasToBlob(canvas, file)
 }
 
 export function BulkImportPage() {
@@ -432,9 +504,10 @@ export function BulkImportPage() {
         color: 'green',
       })
     } catch (error) {
+      console.error('OCR failed', error)
       notifications.show({
         title: 'OCR gagal',
-        message: error instanceof Error ? error.message : 'Foto tidak bisa dibaca.',
+        message: getOcrErrorMessage(error),
         color: 'red',
       })
     } finally {
@@ -638,7 +711,7 @@ export function BulkImportPage() {
                       <input
                         hidden
                         type="file"
-                        accept="image/*"
+                        accept="image/jpeg,image/png,image/webp"
                         capture="environment"
                         multiple
                         onChange={(event) => {
