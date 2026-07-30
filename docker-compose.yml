@@ -40,8 +40,6 @@ services:
     env_file:
       - path: ./backend-laravel/.env.docker
         required: false
-    ports:
-      - "${POSTGRES_PORT}:5432"
     volumes:
       - caripasal_postgres_data:/var/lib/postgresql/data
     healthcheck:
