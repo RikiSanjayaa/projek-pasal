@@ -177,7 +177,10 @@ export function PasalCreatePage() {
                 <Textarea
                   label="Isi Pasal"
                   placeholder="Masukkan isi lengkap pasal..."
-                  minRows={6}
+                  autosize
+                  minRows={12}
+                  maxRows={28}
+                  resize="vertical"
                   required
                   {...form.getInputProps('isi')}
                 />
@@ -185,7 +188,10 @@ export function PasalCreatePage() {
                 <Textarea
                   label="Penjelasan"
                   placeholder="Penjelasan atau tafsir pasal (opsional)"
-                  minRows={3}
+                  autosize
+                  minRows={8}
+                  maxRows={20}
+                  resize="vertical"
                   {...form.getInputProps('penjelasan')}
                 />
 
