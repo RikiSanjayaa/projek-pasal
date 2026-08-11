@@ -50,6 +50,28 @@ class ApiService {
   static String messageFromError(Object error) {
     if (error is DioException) {
       final data = error.response?.data;
+      final statusCode = error.response?.statusCode;
+      final server = error.response?.headers.value('server') ?? '';
+      final mitigated = error.response?.headers.value('cf-mitigated') ?? '';
+      final isHtmlResponse = data is String &&
+          (data.contains('<!DOCTYPE html') || data.contains('<html'));
+      final isCloudflareBlock =
+          server.toLowerCase().contains('cloudflare') ||
+          mitigated.isNotEmpty ||
+          (data is String && data.toLowerCase().contains('cloudflare'));
+
+      if (statusCode == 403 && (isCloudflareBlock || isHtmlResponse)) {
+        return 'Akses ke server sedang diblokir proteksi keamanan. Hubungi admin server untuk membuka akses API aplikasi mobile.';
+      }
+      final rawError = error.error?.toString().toLowerCase() ?? '';
+      final message = error.message?.toLowerCase() ?? '';
+      if (error.type == DioExceptionType.badCertificate ||
+          rawError.contains('certificate_verify_failed') ||
+          rawError.contains('handshake') ||
+          message.contains('certificate_verify_failed') ||
+          message.contains('handshake')) {
+        return 'Sertifikat HTTPS server tidak valid atau belum dipercaya perangkat. Hubungi admin server untuk memperbaiki SSL domain API.';
+      }
       if (data is Map && data['message'] != null) {
         return data['message'].toString();
       }

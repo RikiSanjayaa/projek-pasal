@@ -7,6 +7,7 @@ Arsitektur production diarahkan ke satu subdomain:
 ```text
 https://pasal.kampus.ac.id/admin  -> React admin dashboard
 https://pasal.kampus.ac.id/api    -> Laravel REST API
+https://pasal.kampus.ac.id/mobile -> Flutter Web mobile
 ```
 
 ## Stack
@@ -24,6 +25,7 @@ projek-pasal/
   backend-laravel/      Laravel REST API
   admin-dashboard/      React admin dashboard
   pasal_mobile_app/     Flutter mobile app
+  mobile-web-dist/      Hasil build Flutter Web yang boleh dipublish ke server
   deploy/               Script dan konfigurasi aaPanel
   docs/                 Dokumentasi teknis
 ```
@@ -198,6 +200,7 @@ http://10.0.2.2:8000/api
 - [Arsitektur Sistem](docs/ARSITEKTUR.md)
 - [Database Schema](docs/DATABASE.md)
 - [Deploy CariPasal di aaPanel](docs/AAPANEL_DEPLOYMENT.md)
+- [Deploy Flutter Web Mobile ke aaPanel](docs/MOBILE_WEB_AAPANEL.md)
 - [Catatan Migrasi Historis](docs/LARAVEL_POSTGRESQL_MIGRATION_PLAN.md)
 
 ## Deploy aaPanel
@@ -214,6 +217,54 @@ Cek prasyarat server:
 ```bash
 cd /www/wwwroot/pasal
 bash deploy/aapanel-doctor.sh
+```
+
+### Deploy Mobile Web ke `/mobile/`
+
+Mobile web dipakai agar pengguna iPhone/Android bisa membuka aplikasi melalui browser:
+
+```text
+https://ubgpasal.ubg.ac.id/mobile/
+```
+
+Untuk mengurangi beban server kampus, Flutter Web dibuild di laptop lalu hasilnya dipush ke GitHub.
+
+Build di laptop dari root repo:
+
+```powershell
+.\build-mobile-web.ps1 `
+  -ApiBaseUrl "https://ubgpasal.ubg.ac.id/api" `
+  -WebAppUrl "https://ubgpasal.ubg.ac.id" `
+  -BaseHref "/mobile/"
+```
+
+Push hasil build:
+
+```powershell
+git add mobile-web-dist build-mobile-web.ps1 deploy/aapanel-publish-mobile-web.sh docs/MOBILE_WEB_AAPANEL.md README.md
+git commit -m "build: update mobile web kampus"
+git push origin main
+```
+
+Publish di server kampus:
+
+```bash
+cd /www/wwwroot/hukum-ubg.ac.id/projek-pasal
+git pull --ff-only origin main
+
+APP_ROOT=/www/wwwroot/hukum-ubg.ac.id/projek-pasal \
+DOMAIN=ubgpasal.ubg.ac.id \
+bash deploy/aapanel-publish-mobile-web.sh
+```
+
+Config Nginx domain `ubgpasal.ubg.ac.id` harus punya blok:
+
+```nginx
+location ^~ /mobile/ {
+    alias /www/wwwroot/hukum-ubg.ac.id/projek-pasal/mobile/;
+    index index.html;
+    try_files $uri $uri/ /mobile/index.html;
+}
 ```
 
 ## Verifikasi
