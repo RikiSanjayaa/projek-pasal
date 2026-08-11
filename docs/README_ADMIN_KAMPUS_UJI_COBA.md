@@ -12,7 +12,7 @@ Mobile web ini adalah hasil build Flutter Web yang sudah dipush ke GitHub di fol
 mobile-web-dist/
 ```
 
-Jadi server kampus tidak perlu install Flutter, Android SDK, atau build apa pun. Server cukup pull dari GitHub lalu publish hasil build ke folder `/mobile`.
+Jadi server kampus tidak perlu install Flutter, Android SDK, atau build apa pun. Server cukup menjalankan satu script untuk pull dari GitHub lalu publish hasil build ke folder `/mobile`.
 
 ## Ringkasan URL
 
@@ -22,9 +22,39 @@ https://ubgpasal.ubg.ac.id/api/health   Cek backend Laravel
 https://ubgpasal.ubg.ac.id/mobile/      Mobile web untuk uji coba HP/browser
 ```
 
-## 1. Update Source dari GitHub
+## 1. Cara Paling Mudah
 
-Masuk ke server kampus:
+Masuk ke server kampus, lalu jalankan:
+
+```bash
+cd /www/wwwroot/hukum-ubg.ac.id/projek-pasal
+
+APP_ROOT=/www/wwwroot/hukum-ubg.ac.id/projek-pasal \
+DOMAIN=ubgpasal.ubg.ac.id \
+bash deploy/aapanel-mobile-web-update.sh
+```
+
+Script ini akan otomatis:
+
+- pull update terbaru dari GitHub;
+- mengecek folder `mobile-web-dist/`;
+- publish hasil build ke folder `mobile/`;
+- mengatur permission file;
+- reload Nginx;
+- mengecek `https://ubgpasal.ubg.ac.id/mobile/`;
+- mengecek `https://ubgpasal.ubg.ac.id/api/health`.
+
+Kalau script selesai tanpa error, buka:
+
+```text
+https://ubgpasal.ubg.ac.id/mobile/
+```
+
+## 2. Cara Manual Jika Script Utama Bermasalah
+
+Bagian ini hanya dipakai kalau script satu perintah di atas gagal.
+
+Update source dari GitHub:
 
 ```bash
 cd /www/wwwroot/hukum-ubg.ac.id/projek-pasal
@@ -38,7 +68,7 @@ ls -la mobile-web-dist
 ls -la mobile-web-dist/index.html
 ```
 
-## 2. Publish Mobile Web ke `/mobile/`
+Publish Mobile Web ke `/mobile/`:
 
 Jalankan:
 
@@ -57,7 +87,7 @@ Script ini akan:
 - reload Nginx;
 - menampilkan URL `https://ubgpasal.ubg.ac.id/mobile/`.
 
-## 3. Config Nginx yang Dibutuhkan
+## 3. Config Nginx yang Dibutuhkan Sekali Saja
 
 Di aaPanel, buka config Nginx untuk domain:
 
@@ -161,15 +191,14 @@ Admin dashboard dan `/mobile/` boleh tetap lewat Cloudflare. Yang tidak boleh ke
 
 ## 7. Update Berikutnya
 
-Kalau developer sudah push update baru ke GitHub, admin server cukup jalankan ulang:
+Kalau developer sudah push update baru ke GitHub, admin server cukup jalankan satu perintah ini:
 
 ```bash
 cd /www/wwwroot/hukum-ubg.ac.id/projek-pasal
-git pull --ff-only origin main
 
 APP_ROOT=/www/wwwroot/hukum-ubg.ac.id/projek-pasal \
 DOMAIN=ubgpasal.ubg.ac.id \
-bash deploy/aapanel-publish-mobile-web.sh
+bash deploy/aapanel-mobile-web-update.sh
 ```
 
 Kalau update juga menyentuh backend/admin dashboard, jalankan script deploy utama:
@@ -187,6 +216,5 @@ Setelah itu publish mobile web lagi:
 ```bash
 APP_ROOT=/www/wwwroot/hukum-ubg.ac.id/projek-pasal \
 DOMAIN=ubgpasal.ubg.ac.id \
-bash deploy/aapanel-publish-mobile-web.sh
+bash deploy/aapanel-mobile-web-update.sh
 ```
-

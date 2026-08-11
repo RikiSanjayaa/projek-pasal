@@ -251,11 +251,10 @@ Publish di server kampus:
 
 ```bash
 cd /www/wwwroot/hukum-ubg.ac.id/projek-pasal
-git pull --ff-only origin main
 
 APP_ROOT=/www/wwwroot/hukum-ubg.ac.id/projek-pasal \
 DOMAIN=ubgpasal.ubg.ac.id \
-bash deploy/aapanel-publish-mobile-web.sh
+bash deploy/aapanel-mobile-web-update.sh
 ```
 
 Config Nginx domain `ubgpasal.ubg.ac.id` harus punya blok:
