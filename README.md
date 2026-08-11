@@ -201,6 +201,7 @@ http://10.0.2.2:8000/api
 - [Database Schema](docs/DATABASE.md)
 - [Deploy CariPasal di aaPanel](docs/AAPANEL_DEPLOYMENT.md)
 - [Deploy Flutter Web Mobile ke aaPanel](docs/MOBILE_WEB_AAPANEL.md)
+- [Panduan Admin Kampus untuk Uji Coba Mobile Web](docs/README_ADMIN_KAMPUS_UJI_COBA.md)
 - [Catatan Migrasi Historis](docs/LARAVEL_POSTGRESQL_MIGRATION_PLAN.md)
 
 ## Deploy aaPanel
