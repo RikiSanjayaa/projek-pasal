@@ -43,6 +43,36 @@ String normalizeLegalDisplayText(String value) {
   return blocks.join('\n').trim();
 }
 
+TextAlign smartLegalTextAlign({
+  required TextAlign requested,
+  required String text,
+  required double maxWidth,
+  required double fontSize,
+}) {
+  if (requested != TextAlign.justify) return requested;
+  if (!maxWidth.isFinite) return requested;
+
+  final words = text
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((word) => word.isNotEmpty);
+  final wordCount = words.length;
+  if (wordCount < 8) return TextAlign.left;
+
+  final readableCharsPerLine = maxWidth / (fontSize * 0.56);
+  final averageWordLength =
+      text.replaceAll(RegExp(r'\s+'), '').length / wordCount;
+  final estimatedWordsPerLine = readableCharsPerLine / (averageWordLength + 1);
+
+  // Flutter does not hyphenate Indonesian text. On narrow phone columns,
+  // forced justify creates large gaps, so use left alignment for those cases.
+  if (maxWidth < 330 || estimatedWordsPerLine < 6) {
+    return TextAlign.left;
+  }
+
+  return TextAlign.justify;
+}
+
 class LawContentFormatter extends StatelessWidget {
   final String content;
   final String searchQuery;
@@ -70,86 +100,106 @@ class LawContentFormatter extends StatelessWidget {
     final normalizedContent = normalizeLegalDisplayText(content);
     if (normalizedContent.isEmpty) return const SizedBox.shrink();
 
-    // Regex matches markers like: (1), 1., a., (a), (2a), 2a.
-    final RegExp pattern = RegExp(
-      r'(?:^|[\.\:;!?\n])\s*((\(\d+[a-z]?\))|(\d+[a-z]?\.)|(\([a-z]\))|([a-z]\.))\s+',
-      caseSensitive: false,
-    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
 
-    final List<Widget> children = [];
-
-    final matches = pattern.allMatches(normalizedContent);
-
-    if (matches.isEmpty) {
-      return HighlightText(
-        text: normalizedContent,
-        query: searchQuery,
-        style: TextStyle(
-          fontSize: fontSize,
-          color: color,
-          height: height,
-          letterSpacing: letterSpacing,
-        ),
-        textAlign: textAlign,
-      );
-    }
-
-    // Handle Intro text
-    final firstMatch = matches.first;
-    final fullFirstMatchStr = normalizedContent.substring(
-      firstMatch.start,
-      firstMatch.end,
-    );
-    final firstMarkerStr = firstMatch.group(1)!;
-    final firstMarkerAbsoluteStart =
-        firstMatch.start + fullFirstMatchStr.indexOf(firstMarkerStr);
-
-    String introText = normalizedContent.substring(0, firstMarkerAbsoluteStart);
-    if (introText.trim().isNotEmpty) {
-      children.add(_buildParagraph(introText.trim(), 0));
-    }
-
-    // Loop through all matches
-    for (int i = 0; i < matches.length; i++) {
-      final match = matches.elementAt(i);
-
-      final markerStr = match.group(1)!;
-      final bodyStart = match.end;
-
-      int bodyEnd = normalizedContent.length;
-
-      if (i + 1 < matches.length) {
-        final nextMatch = matches.elementAt(i + 1);
-        final nextFullMatchStr = normalizedContent.substring(
-          nextMatch.start,
-          nextMatch.end,
+        // Regex matches markers like: (1), 1., a., (a), (2a), 2a.
+        final RegExp pattern = RegExp(
+          r'(?:^|[\.\:;!?\n])\s*((\(\d+[a-z]?\))|(\d+[a-z]?\.)|(\([a-z]\))|([a-z]\.))\s+',
+          caseSensitive: false,
         );
-        final nextMarkerStr = nextMatch.group(1)!;
-        bodyEnd = nextMatch.start + nextFullMatchStr.indexOf(nextMarkerStr);
-      }
 
-      String body = normalizedContent.substring(bodyStart, bodyEnd);
+        final List<Widget> children = [];
 
-      // Calculate indent level based on marker type
-      int indentLevel = 0;
-      if (RegExp(r'^\(?\d+[a-z]?\)?\.?$').hasMatch(markerStr)) {
-        // (1), 1., (2a), 2a.
-        indentLevel = 0;
-      } else if (RegExp(r'^\(?[a-z]\)?\.?$').hasMatch(markerStr)) {
-        // (a), a.
-        indentLevel = 1;
-      }
+        final matches = pattern.allMatches(normalizedContent);
 
-      children.add(_buildListItem(markerStr, body.trim(), indentLevel));
-    }
+        if (matches.isEmpty) {
+          return _buildHighlightedParagraph(normalizedContent, maxWidth);
+        }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: children,
+        // Handle Intro text
+        final firstMatch = matches.first;
+        final fullFirstMatchStr = normalizedContent.substring(
+          firstMatch.start,
+          firstMatch.end,
+        );
+        final firstMarkerStr = firstMatch.group(1)!;
+        final firstMarkerAbsoluteStart =
+            firstMatch.start + fullFirstMatchStr.indexOf(firstMarkerStr);
+
+        String introText = normalizedContent.substring(
+          0,
+          firstMarkerAbsoluteStart,
+        );
+        if (introText.trim().isNotEmpty) {
+          children.add(_buildParagraph(introText.trim(), 0, maxWidth));
+        }
+
+        // Loop through all matches
+        for (int i = 0; i < matches.length; i++) {
+          final match = matches.elementAt(i);
+
+          final markerStr = match.group(1)!;
+          final bodyStart = match.end;
+
+          int bodyEnd = normalizedContent.length;
+
+          if (i + 1 < matches.length) {
+            final nextMatch = matches.elementAt(i + 1);
+            final nextFullMatchStr = normalizedContent.substring(
+              nextMatch.start,
+              nextMatch.end,
+            );
+            final nextMarkerStr = nextMatch.group(1)!;
+            bodyEnd = nextMatch.start + nextFullMatchStr.indexOf(nextMarkerStr);
+          }
+
+          String body = normalizedContent.substring(bodyStart, bodyEnd);
+
+          // Calculate indent level based on marker type
+          int indentLevel = 0;
+          if (RegExp(r'^\(?\d+[a-z]?\)?\.?$').hasMatch(markerStr)) {
+            // (1), 1., (2a), 2a.
+            indentLevel = 0;
+          } else if (RegExp(r'^\(?[a-z]\)?\.?$').hasMatch(markerStr)) {
+            // (a), a.
+            indentLevel = 1;
+          }
+
+          children.add(
+            _buildListItem(markerStr, body.trim(), indentLevel, maxWidth),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: children,
+        );
+      },
     );
   }
 
-  Widget _buildParagraph(String text, int indentLevel) {
+  Widget _buildHighlightedParagraph(String text, double maxWidth) {
+    return HighlightText(
+      text: text,
+      query: searchQuery,
+      style: TextStyle(
+        fontSize: fontSize,
+        color: color,
+        height: height,
+        letterSpacing: letterSpacing,
+      ),
+      textAlign: smartLegalTextAlign(
+        requested: textAlign,
+        text: text,
+        maxWidth: maxWidth,
+        fontSize: fontSize,
+      ),
+    );
+  }
+
+  Widget _buildParagraph(String text, int indentLevel, double maxWidth) {
     return Padding(
       padding: EdgeInsets.only(bottom: 8.0, left: indentLevel * 16.0),
       child: HighlightText(
@@ -161,12 +211,22 @@ class LawContentFormatter extends StatelessWidget {
           height: height,
           letterSpacing: letterSpacing,
         ),
-        textAlign: textAlign,
+        textAlign: smartLegalTextAlign(
+          requested: textAlign,
+          text: text,
+          maxWidth: maxWidth - (indentLevel * 16.0),
+          fontSize: fontSize,
+        ),
       ),
     );
   }
 
-  Widget _buildListItem(String marker, String text, int indentLevel) {
+  Widget _buildListItem(
+    String marker,
+    String text,
+    int indentLevel,
+    double maxWidth,
+  ) {
     const double baseLeftPadding = 0.0;
     const double indentWidth = 22.0;
 
@@ -204,7 +264,12 @@ class LawContentFormatter extends StatelessWidget {
                 height: height,
                 letterSpacing: letterSpacing,
               ),
-              textAlign: textAlign,
+              textAlign: smartLegalTextAlign(
+                requested: textAlign,
+                text: text,
+                maxWidth: maxWidth - markerWidth - (indentLevel * indentWidth),
+                fontSize: fontSize,
+              ),
             ),
           ),
         ],

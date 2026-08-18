@@ -58,11 +58,18 @@ class PenjelasanSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          HighlightText(
-            text: normalizedPenjelasan,
-            query: searchQuery,
-            textAlign: TextAlign.justify,
-            style: TextStyle(fontSize: 14, height: 1.6, color: subTextColor),
+          LayoutBuilder(
+            builder: (context, constraints) => HighlightText(
+              text: normalizedPenjelasan,
+              query: searchQuery,
+              textAlign: smartLegalTextAlign(
+                requested: TextAlign.justify,
+                text: normalizedPenjelasan,
+                maxWidth: constraints.maxWidth,
+                fontSize: 14,
+              ),
+              style: TextStyle(fontSize: 14, height: 1.6, color: subTextColor),
+            ),
           ),
         ],
       ),

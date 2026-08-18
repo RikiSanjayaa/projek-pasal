@@ -8,6 +8,7 @@ use App\Models\PasalLink;
 use App\Models\SearchAlias;
 use App\Services\AuditService;
 use App\Services\ImportPasalService;
+use App\Support\PasalTextNormalizer;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -202,6 +203,14 @@ class PasalController extends Controller
 
     private function validated(Request $request, bool $partial = false, ?Pasal $pasal = null): array
     {
+        $normalizable = [];
+        foreach (['nomor', 'judul', 'isi', 'penjelasan'] as $field) {
+            if ($request->has($field)) {
+                $normalizable[$field] = $request->input($field);
+            }
+        }
+        $request->merge(PasalTextNormalizer::normalizePayload($normalizable));
+
         $required = $partial ? 'sometimes' : 'required';
         $undangUndangId = $request->input('undang_undang_id', $pasal?->undang_undang_id);
 

@@ -36,7 +36,15 @@ import {
 } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { XlsxImportGuide } from '@/components/bulk-import/XlsxImportGuide'
+import { PasalQualityAlert } from '@/components/PasalQualityAlert'
 import { api, type PaginatedResponse } from '@/lib/api'
+import {
+  applyCommonOcrCorrections,
+  getPasalQualityIssues,
+  normalizeLegalTextForStorage,
+  normalizePasalInput,
+  summarizeQualityIssues,
+} from '@/lib/pasal-quality'
 import { invalidatePasalData } from '@/lib/query-invalidation'
 
 const MAX_LINKS_PER_PASAL = 5
@@ -75,7 +83,7 @@ interface ImportResult {
 }
 
 function cleanOcrText(text: string) {
-  return text
+  return applyCommonOcrCorrections(text)
     .replace(/\r/g, '')
     .split('\n')
     .map((line) => line
@@ -99,42 +107,11 @@ function cleanOcrText(text: string) {
     .trim()
 }
 
-function normalizeLegalTextForStorage(text?: string | null) {
-  const lines = String(text || '')
-    .replace(/\r/g, '')
-    .replace(/\b[a-z]\s+(?=[0-9]+[a-z]?\.\s+)/gi, '')
-    .replace(/[ \t]+((?:\([0-9ivxlcdm]+[a-z]?\)|[0-9]+[a-z]?\.|\([a-z]\)|[a-z]\.)\s+)/gi, '\n$1')
-    .split('\n')
-    .map((line) => line.replace(/[ \t]+/g, ' ').trim())
-    .filter(Boolean)
-
-  const blocks: string[] = []
-  const startsNewBlock = (line: string) => (
-    /^(Pasal|Nom[oe]r)\s+[0-9]/i.test(line) ||
-    /^(Penjelasan|Pendapat\s+Ahli|Catatan\s+Ahli)\s*:?/i.test(line) ||
-    /^(\([0-9ivxlcdm]+[a-z]?\)|[0-9]+[a-z]?\.|\([a-z]\)|[a-z]\.)\s+/i.test(line)
-  )
-
-  for (const line of lines) {
-    if (blocks.length === 0 || startsNewBlock(line)) {
-      blocks.push(line)
-    } else {
-      blocks[blocks.length - 1] = `${blocks[blocks.length - 1]} ${line}`.replace(/[ \t]+/g, ' ')
-    }
-  }
-
-  return blocks.join('\n').replace(/\n{3,}/g, '\n\n').trim()
-}
-
 function normalizeImportPasal(row: ImportPasal): ImportPasal {
-  return {
+  return normalizePasalInput({
     ...row,
-    nomor: row.nomor.trim(),
-    judul: row.judul?.trim() || undefined,
-    isi: normalizeLegalTextForStorage(row.isi),
-    penjelasan: normalizeLegalTextForStorage(row.penjelasan) || undefined,
     keywords: row.keywords?.map((keyword) => keyword.trim()).filter(Boolean) || [],
-  }
+  })
 }
 
 function createDraftId() {
@@ -242,14 +219,14 @@ function parseOcrTextToDrafts(text: string, source = 'Teks manual'): OcrDraft[] 
   })
 }
 
-function draftErrors(draft: OcrDraft, drafts: OcrDraft[]) {
-  const errors: string[] = []
-  if (!draft.nomor.trim()) errors.push('Nomor wajib diisi')
-  if (!draft.isi.trim()) errors.push('Isi wajib diisi')
-  if (draft.nomor.trim() && drafts.filter((item) => item.nomor.trim().toLowerCase() === draft.nomor.trim().toLowerCase()).length > 1) {
-    errors.push('Nomor duplikat dalam batch')
-  }
-  return errors
+function draftQualityIssues(draft: OcrDraft, drafts: OcrDraft[]) {
+  const normalizedNomor = draft.nomor.trim().toLowerCase()
+  const duplicateInBatch = Boolean(normalizedNomor) && drafts.filter((item) => item.nomor.trim().toLowerCase() === normalizedNomor).length > 1
+  return getPasalQualityIssues(draft, { duplicateInBatch })
+}
+
+function draftHasBlockingIssues(draft: OcrDraft, drafts: OcrDraft[]) {
+  return draftQualityIssues(draft, drafts).some((issue) => issue.severity === 'error')
 }
 
 function isAppleMobileBrowser() {
@@ -387,7 +364,11 @@ export function BulkImportPage() {
   })
 
   const ocrInvalidCount = useMemo(
-    () => ocrDrafts.filter((draft) => draftErrors(draft, ocrDrafts).length > 0).length,
+    () => ocrDrafts.filter((draft) => draftHasBlockingIssues(draft, ocrDrafts)).length,
+    [ocrDrafts]
+  )
+  const ocrWarningCount = useMemo(
+    () => ocrDrafts.reduce((total, draft) => total + draftQualityIssues(draft, ocrDrafts).filter((issue) => issue.severity === 'warning').length, 0),
     [ocrDrafts]
   )
 
@@ -536,6 +517,16 @@ export function BulkImportPage() {
     setOcrDrafts((drafts) => drafts.filter((draft) => draft.id !== id))
   }
 
+  const cleanAllOcrDrafts = () => {
+    setOcrRawText((text) => cleanOcrText(text))
+    setOcrDrafts((drafts) => drafts.map((draft) => normalizePasalInput(draft)))
+    notifications.show({
+      title: 'Draft dirapikan',
+      message: 'Nomor, spasi, format ayat, dan typo OCR umum sudah dibersihkan.',
+      color: 'blue',
+    })
+  }
+
   const rowsForImport = () => {
     if (mode === 'ocr') {
       if (ocrDrafts.length === 0) throw new Error('Belum ada draft OCR untuk diimport')
@@ -667,7 +658,8 @@ export function BulkImportPage() {
                 {ocrDrafts.length} draft pasal
               </Badge>
               <Badge variant="light" color={ocrInvalidCount > 0 ? 'red' : 'green'}>
-                {ocrValidCount} valid, {ocrInvalidCount} perlu dicek
+                {ocrValidCount} valid, {ocrInvalidCount} wajib diperbaiki
+                {ocrWarningCount > 0 ? `, ${ocrWarningCount} catatan` : ''}
               </Badge>
             </Group>
           )}
@@ -722,6 +714,9 @@ export function BulkImportPage() {
                     </Button>
                     <Button variant="light" leftSection={<IconWand size={16} />} onClick={reparseOcrText} disabled={!ocrRawText || isOcrProcessing}>
                       Rapikan Teks
+                    </Button>
+                    <Button variant="light" color="teal" leftSection={<IconListCheck size={16} />} onClick={cleanAllOcrDrafts} disabled={ocrDrafts.length === 0 || isOcrProcessing}>
+                      Rapikan Draft
                     </Button>
                   </Group>
                 </Box>
@@ -783,7 +778,8 @@ export function BulkImportPage() {
                     </Group>
                     <Stack gap="md" hiddenFrom="sm">
                       {ocrDrafts.map((draft) => {
-                        const errors = draftErrors(draft, ocrDrafts)
+                        const issues = draftQualityIssues(draft, ocrDrafts)
+                        const hasErrors = issues.some((issue) => issue.severity === 'error')
                         return (
                           <Card key={draft.id} withBorder padding="sm" radius="md">
                             <Stack gap="sm">
@@ -826,7 +822,10 @@ export function BulkImportPage() {
                                 value={draft.keywords || []}
                                 onChange={(keywords) => updateDraft(draft.id, { keywords })}
                               />
-                              {errors.length === 0 ? <Badge color="green">Valid</Badge> : <Badge color="red">{errors.join(', ')}</Badge>}
+                              <Badge color={issues.length === 0 ? 'green' : hasErrors ? 'red' : 'yellow'}>
+                                {summarizeQualityIssues(issues)}
+                              </Badge>
+                              {issues.length > 0 && <PasalQualityAlert issues={issues} compact />}
                             </Stack>
                           </Card>
                         )
@@ -835,7 +834,8 @@ export function BulkImportPage() {
 
                     <Stack gap="md" visibleFrom="sm">
                       {ocrDrafts.map((draft) => {
-                        const errors = draftErrors(draft, ocrDrafts)
+                        const issues = draftQualityIssues(draft, ocrDrafts)
+                        const hasErrors = issues.some((issue) => issue.severity === 'error')
                         return (
                           <Box key={draft.id} className="ocr-draft-item">
                             <Group justify="space-between" align="flex-start" mb="md" wrap="nowrap">
@@ -844,7 +844,9 @@ export function BulkImportPage() {
                                 <Text size="sm" c="dimmed">{draft.source}</Text>
                               </div>
                               <Group gap="xs" wrap="nowrap">
-                                {errors.length === 0 ? <Badge color="green">Valid</Badge> : <Badge color="red">{errors.join(', ')}</Badge>}
+                                <Badge color={issues.length === 0 ? 'green' : hasErrors ? 'red' : 'yellow'}>
+                                  {summarizeQualityIssues(issues)}
+                                </Badge>
                                 <ActionIcon color="red" variant="subtle" onClick={() => removeDraft(draft.id)}>
                                   <IconTrash size={16} />
                                 </ActionIcon>
@@ -892,6 +894,11 @@ export function BulkImportPage() {
                                 />
                               </Box>
                             </Box>
+                            {issues.length > 0 && (
+                              <Box mt="md">
+                                <PasalQualityAlert issues={issues} compact />
+                              </Box>
+                            )}
                           </Box>
                         )
                       })}

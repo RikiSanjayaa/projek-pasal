@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Title,
@@ -15,18 +15,22 @@ import {
   Grid,
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
+import { modals } from '@mantine/modals'
 import { notifications } from '@mantine/notifications'
-import { IconArrowLeft } from '@tabler/icons-react'
+import { IconArrowLeft, IconWand } from '@tabler/icons-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, type PaginatedResponse } from '@/lib/api'
+import { api, toQueryString, type PaginatedResponse } from '@/lib/api'
+import { PasalQualityAlert } from '@/components/PasalQualityAlert'
 import { PasalLinksSidebar } from '@/components/PasalLinksSidebar'
 import type { PasalUpdate, Pasal } from '@/lib/database.types'
+import { getPasalQualityIssues, normalizePasalInput, normalizePasalNumber } from '@/lib/pasal-quality'
 import { invalidatePasalData } from '@/lib/query-invalidation'
 
 export function PasalEditPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [checkingQuality, setCheckingQuality] = useState(false)
 
   // Fetch pasal data
   const { data: pasal, isLoading: loadingPasal } = useQuery({
@@ -64,6 +68,11 @@ export function PasalEditPage() {
     },
   })
 
+  const qualityIssues = useMemo(
+    () => getPasalQualityIssues(form.values),
+    [form.values]
+  )
+
   // Update form when pasal data is loaded
   useEffect(() => {
     if (pasal) {
@@ -100,8 +109,65 @@ export function PasalEditPage() {
     },
   })
 
-  const handleSubmit = (values: PasalUpdate) => {
-    updateMutation.mutate(values)
+  const checkExistingDuplicate = async (values: PasalUpdate) => {
+    if (!values.undang_undang_id || !values.nomor) return false
+
+    const response = await api.get<PaginatedResponse<Pasal>>(`/admin/pasal${toQueryString({
+      undang_undang_id: values.undang_undang_id,
+      search: values.nomor,
+      with_trashed: 1,
+      per_page: 30,
+    })}`)
+
+    const targetNomor = normalizePasalNumber(values.nomor).toLowerCase()
+    return response.data.some((item) => item.id !== id && normalizePasalNumber(item.nomor).toLowerCase() === targetNomor)
+  }
+
+  const handleSubmit = async (values: PasalUpdate) => {
+    const prepared = normalizePasalInput(values)
+    form.setValues(prepared)
+    setCheckingQuality(true)
+
+    try {
+      const hasExistingDuplicate = await checkExistingDuplicate(prepared)
+      const issues = getPasalQualityIssues(prepared, { hasExistingDuplicate })
+      const hasErrors = issues.some((issue) => issue.severity === 'error')
+      const hasWarnings = issues.some((issue) => issue.severity === 'warning')
+
+      if (hasErrors) {
+        notifications.show({
+          title: 'Data belum bisa disimpan',
+          message: 'Perbaiki nomor duplikat atau field wajib terlebih dahulu.',
+          color: 'red',
+        })
+        return
+      }
+
+      if (hasWarnings) {
+        modals.openConfirmModal({
+          title: 'Quality check pasal',
+          children: <PasalQualityAlert issues={issues} compact />,
+          labels: { confirm: 'Tetap Simpan', cancel: 'Perbaiki Dulu' },
+          confirmProps: { color: 'orange' },
+          onConfirm: () => updateMutation.mutate(prepared),
+        })
+        return
+      }
+
+      updateMutation.mutate(prepared)
+    } finally {
+      setCheckingQuality(false)
+    }
+  }
+
+  const cleanFormText = () => {
+    const prepared = normalizePasalInput(form.values)
+    form.setValues(prepared)
+    notifications.show({
+      title: 'Teks dirapikan',
+      message: 'Spasi, nomor pasal, dan typo OCR umum sudah dibersihkan.',
+      color: 'blue',
+    })
   }
 
   return (
@@ -182,11 +248,16 @@ export function PasalEditPage() {
                   {...form.getInputProps('keywords')}
                 />
 
+                <PasalQualityAlert issues={qualityIssues} />
+
                 <Group justify="flex-end" mt="md">
+                  <Button variant="light" leftSection={<IconWand size={16} />} onClick={cleanFormText}>
+                    Rapikan Teks
+                  </Button>
                   <Button variant="default" onClick={() => navigate(-1)}>
                     Batal
                   </Button>
-                  <Button type="submit" loading={updateMutation.isPending}>
+                  <Button type="submit" loading={updateMutation.isPending || checkingQuality}>
                     Simpan Perubahan
                   </Button>
                 </Group>

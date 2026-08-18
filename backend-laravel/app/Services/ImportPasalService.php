@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Pasal;
 use App\Models\PasalLink;
 use App\Models\UndangUndang;
+use App\Support\PasalTextNormalizer;
 use Illuminate\Http\UploadedFile;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
@@ -28,7 +29,7 @@ class ImportPasalService
                     throw new \RuntimeException('Undang-undang tidak ditemukan.');
                 }
 
-                $payload = [
+                $payload = PasalTextNormalizer::normalizePayload([
                     'undang_undang_id' => $uu->id,
                     'nomor' => (string) ($row['nomor'] ?? ''),
                     'judul' => $row['judul'] ?? null,
@@ -37,7 +38,7 @@ class ImportPasalService
                     'keywords' => $this->normalizeKeywords($row['keywords'] ?? []),
                     'is_active' => true,
                     'updated_by' => $adminId,
-                ];
+                ]);
 
                 if ($payload['nomor'] === '' || $payload['isi'] === '') {
                     throw new \RuntimeException('Nomor dan isi pasal wajib diisi.');
@@ -70,7 +71,9 @@ class ImportPasalService
                         throw new \RuntimeException('Target link tidak lengkap atau UU target tidak ditemukan.');
                     }
 
-                    $targetPasal = Pasal::where('undang_undang_id', $targetUu->id)->where('nomor', (string) $targetNomor)->first();
+                    $targetPasal = Pasal::where('undang_undang_id', $targetUu->id)
+                        ->where('nomor', PasalTextNormalizer::normalizeNomor($targetNomor))
+                        ->first();
                     if (! $targetPasal) {
                         throw new \RuntimeException('Pasal target tidak ditemukan.');
                     }

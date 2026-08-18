@@ -92,7 +92,7 @@ class KeywordResultScreen extends StatelessWidget {
                           padding: const EdgeInsets.all(16),
                           child: Text(
                             pasal.isi,
-                            textAlign: TextAlign.justify,
+                            textAlign: TextAlign.left,
                             style: TextStyle(
                               height: 1.5,
                               color: AppColors.textPrimary(isDark),
