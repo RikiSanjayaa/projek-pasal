@@ -7,6 +7,7 @@ use App\Models\AiChatLog;
 use App\Services\GeminiService;
 use App\Services\LegalContextService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Throwable;
 
@@ -48,16 +49,23 @@ class AiChatController extends Controller
 
         $responseMs = (int) round((microtime(true) - $startedAt) * 1000);
 
-        AiChatLog::create([
-            'mobile_user_id' => $request->user()?->id,
-            'question' => $question,
-            'normalized_question' => $contextService->normalize($question),
-            'answer' => $answer,
-            'model' => $gemini->model(),
-            'sources' => $sources,
-            'metadata' => $metadata,
-            'response_ms' => $responseMs,
-        ]);
+        try {
+            AiChatLog::create([
+                'mobile_user_id' => $request->user()?->id,
+                'question' => $question,
+                'normalized_question' => $contextService->normalize($question),
+                'answer' => $answer,
+                'model' => $gemini->model(),
+                'sources' => $sources,
+                'metadata' => $metadata,
+                'response_ms' => $responseMs,
+            ]);
+        } catch (Throwable $e) {
+            Log::warning('AI chat log could not be saved.', [
+                'mobile_user_id' => $request->user()?->id,
+                'message' => $e->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'answer' => $answer,

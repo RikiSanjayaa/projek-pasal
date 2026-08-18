@@ -126,11 +126,17 @@ class LegalContextService
             ->reject(fn ($token) => in_array($token, [
                 'dan', 'atau', 'yang', 'dengan', 'untuk', 'pada', 'dalam',
                 'pasal', 'kalau', 'jika', 'apa', 'bagaimana', 'kena',
+                'saya', 'aku', 'kami', 'mengalami', 'terjadi', 'hukum',
+                'hukuman', 'sanksi', 'bagi', 'buat', 'pelaku', 'korban',
             ], true));
 
         $aliases = [
             'maling' => ['pencurian', 'mencuri', 'mengambil barang'],
             'curi' => ['pencurian', 'mencuri', 'mengambil barang'],
+            'copet' => ['pencurian', 'mencuri', 'mengambil barang'],
+            'pencopetan' => ['pencurian', 'mencuri', 'mengambil barang'],
+            'jambret' => ['pencurian', 'pencurian dengan kekerasan', 'mengambil barang'],
+            'penjambretan' => ['pencurian', 'pencurian dengan kekerasan', 'mengambil barang'],
             'tipu' => ['penipuan', 'perbuatan curang'],
             'bohong' => ['penipuan', 'keterangan palsu', 'berita bohong'],
             'ancam' => ['pengancaman', 'ancaman kekerasan'],
