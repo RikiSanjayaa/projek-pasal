@@ -19,6 +19,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
   final List<AiChatMessage> _messages = [];
+  final Map<String, GlobalKey> _messageKeys = {};
 
   static const List<String> _quickPrompts = [
     'Saya mengalami pencopetan',
@@ -40,10 +41,11 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     final question = (value ?? _controller.text).trim();
     if (question.length < 3 || _isLoading) return;
 
+    final userMessageId = 'user-${DateTime.now().microsecondsSinceEpoch}';
     setState(() {
       _messages.add(
         AiChatMessage(
-          id: 'user-${DateTime.now().microsecondsSinceEpoch}',
+          id: userMessageId,
           text: question,
           isUser: true,
           createdAt: DateTime.now(),
@@ -52,17 +54,20 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
       _isLoading = true;
       _controller.clear();
     });
-    _focusNode.unfocus();
+    if (value != null) {
+      _focusNode.unfocus();
+    }
     _scrollToBottom();
 
     try {
       final response = await AiChatService.ask(question);
       if (!mounted) return;
 
+      final aiMessageId = 'ai-${DateTime.now().microsecondsSinceEpoch}';
       setState(() {
         _messages.add(
           AiChatMessage(
-            id: 'ai-${DateTime.now().microsecondsSinceEpoch}',
+            id: aiMessageId,
             text: response.answer,
             isUser: false,
             createdAt: DateTime.now(),
@@ -70,25 +75,25 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
             isError: !response.isConfigured,
           ),
         );
+        _isLoading = false;
       });
+      _scrollMessageIntoView(aiMessageId);
     } catch (error) {
       if (!mounted) return;
+      final errorMessageId = 'error-${DateTime.now().microsecondsSinceEpoch}';
       setState(() {
         _messages.add(
           AiChatMessage(
-            id: 'error-${DateTime.now().microsecondsSinceEpoch}',
+            id: errorMessageId,
             text: error.toString().replaceFirst('Exception: ', ''),
             isUser: false,
             createdAt: DateTime.now(),
             isError: true,
           ),
         );
+        _isLoading = false;
       });
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        _scrollToBottom();
-      }
+      _scrollMessageIntoView(errorMessageId);
     }
   }
 
@@ -99,6 +104,25 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
         _scrollController.position.maxScrollExtent,
         duration: const Duration(milliseconds: 240),
         curve: Curves.easeOut,
+      );
+    });
+  }
+
+  GlobalKey _keyForMessage(String id) {
+    return _messageKeys.putIfAbsent(id, GlobalKey.new);
+  }
+
+  void _scrollMessageIntoView(String id) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = _messageKeys[id]?.currentContext;
+      if (context == null) return;
+
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+        alignment: 0.08,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
       );
     });
   }
@@ -158,7 +182,11 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                             return _buildTypingBubble(isDark);
                           }
 
-                          return _buildMessageBubble(_messages[index], isDark);
+                          final message = _messages[index];
+                          return KeyedSubtree(
+                            key: _keyForMessage(message.id),
+                            child: _buildMessageBubble(message, isDark),
+                          );
                         },
                       ),
               ),
@@ -455,7 +483,9 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   Widget _buildComposer(bool isDark, bool keyboardOpen) {
     return SafeArea(
       top: false,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
         padding: EdgeInsets.fromLTRB(20, 8, 20, keyboardOpen ? 10 : 96),
         decoration: BoxDecoration(
           color: AppColors.scaffold(isDark),
