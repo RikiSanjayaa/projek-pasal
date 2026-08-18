@@ -14,12 +14,14 @@ class AiAssistantScreen extends StatefulWidget {
   State<AiAssistantScreen> createState() => _AiAssistantScreenState();
 }
 
-class _AiAssistantScreenState extends State<AiAssistantScreen> {
+class _AiAssistantScreenState extends State<AiAssistantScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
   final List<AiChatMessage> _messages = [];
   final Map<String, GlobalKey> _messageKeys = {};
+  late final AnimationController _loadingController;
 
   static const List<String> _quickPrompts = [
     'Saya mengalami pencopetan',
@@ -30,7 +32,17 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    _loadingController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..repeat();
+  }
+
+  @override
   void dispose() {
+    _loadingController.dispose();
     _controller.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
@@ -291,61 +303,75 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
 
   Widget _buildEmptyState(bool isDark) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
       children: [
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: AppColors.card(isDark),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColors.border(isDark)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  Icons.psychology_alt_rounded,
-                  color: AppColors.primary,
-                ),
+        TweenAnimationBuilder<double>(
+          duration: const Duration(milliseconds: 380),
+          curve: Curves.easeOutCubic,
+          tween: Tween(begin: 0, end: 1),
+          builder: (context, value, child) {
+            return Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(0, 18 * (1 - value)),
+                child: child,
               ),
-              const SizedBox(height: 14),
-              Text(
-                'Tanyakan kasus atau pasal',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary(isDark),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: AppColors.card(isDark),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.border(isDark)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    Icons.psychology_alt_rounded,
+                    color: AppColors.primary,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Asisten akan mencari rujukan dari database aplikasi, lalu menjelaskan dengan bahasa yang mudah dipahami.',
-                style: TextStyle(
-                  fontSize: 13,
-                  height: 1.45,
-                  color: AppColors.textSecondary(isDark),
+                const SizedBox(height: 14),
+                Text(
+                  'Tanyakan kasus atau pasal',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary(isDark),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _quickPrompts.map((prompt) {
-                  return ActionChip(
-                    avatar: const Icon(Icons.bolt_rounded, size: 16),
-                    label: Text(prompt),
-                    onPressed: () => _sendQuestion(prompt),
-                  );
-                }).toList(),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  'Asisten akan mencari rujukan dari database aplikasi, lalu menjelaskan dengan bahasa yang mudah dipahami.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.45,
+                    color: AppColors.textSecondary(isDark),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _quickPrompts.map((prompt) {
+                    return ActionChip(
+                      avatar: const Icon(Icons.bolt_rounded, size: 16),
+                      label: Text(prompt),
+                      onPressed: () => _sendQuestion(prompt),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -367,78 +393,97 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
         ? Colors.white
         : AppColors.textPrimary(isDark);
 
-    return Align(
-      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: BoxConstraints(maxWidth: bubbleWidth),
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: bubbleColor,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(18),
-            topRight: const Radius.circular(18),
-            bottomLeft: Radius.circular(message.isUser ? 18 : 6),
-            bottomRight: Radius.circular(message.isUser ? 6 : 18),
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+      tween: Tween(begin: 0, end: 1),
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(
+              message.isUser ? 14 * (1 - value) : -14 * (1 - value),
+              8 * (1 - value),
+            ),
+            child: child,
           ),
-          border: message.isUser ? null : Border.all(color: borderColor),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (message.isError) ...[
-              Row(
-                children: [
-                  Icon(
-                    Icons.error_outline_rounded,
-                    size: 17,
-                    color: Colors.red[300],
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Terjadi kendala',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
+        );
+      },
+      child: Align(
+        alignment: message.isUser
+            ? Alignment.centerRight
+            : Alignment.centerLeft,
+        child: Container(
+          constraints: BoxConstraints(maxWidth: bubbleWidth),
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: bubbleColor,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(18),
+              topRight: const Radius.circular(18),
+              bottomLeft: Radius.circular(message.isUser ? 18 : 6),
+              bottomRight: Radius.circular(message.isUser ? 6 : 18),
+            ),
+            border: message.isUser ? null : Border.all(color: borderColor),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (message.isError) ...[
+                Row(
+                  children: [
+                    Icon(
+                      Icons.error_outline_rounded,
+                      size: 17,
                       color: Colors.red[300],
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-            ],
-            SelectableText(
-              message.text,
-              style: TextStyle(fontSize: 13.5, height: 1.5, color: textColor),
-            ),
-            if (message.sources.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text(
-                'Rujukan',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textSecondary(isDark),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: message.sources.map((source) {
-                  return ActionChip(
-                    visualDensity: VisualDensity.compact,
-                    avatar: const Icon(Icons.menu_book_outlined, size: 15),
-                    label: Text(
-                      '${source.uuKode ?? 'UU'} Pasal ${source.nomor}',
-                      overflow: TextOverflow.ellipsis,
+                    const SizedBox(width: 8),
+                    Text(
+                      'Terjadi kendala',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.red[300],
+                      ),
                     ),
-                    onPressed: () => _openSource(source),
-                  );
-                }).toList(),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+              SelectableText(
+                message.text,
+                style: TextStyle(fontSize: 13.5, height: 1.5, color: textColor),
               ),
+              if (message.sources.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Rujukan',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textSecondary(isDark),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: message.sources.map((source) {
+                    return ActionChip(
+                      visualDensity: VisualDensity.compact,
+                      avatar: const Icon(Icons.menu_book_outlined, size: 15),
+                      label: Text(
+                        '${source.uuKode ?? 'UU'} Pasal ${source.nomor}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onPressed: () => _openSource(source),
+                    );
+                  }).toList(),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -455,26 +500,58 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.border(isDark)),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              'Mencari rujukan...',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary(isDark),
-              ),
-            ),
-          ],
+        child: AnimatedBuilder(
+          animation: _loadingController,
+          builder: (context, _) {
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Icon(
+                    Icons.auto_awesome_rounded,
+                    size: 15,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'AI sedang menjawab',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary(isDark),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ...List.generate(3, _buildTypingDot),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTypingDot(int index) {
+    final raw = (_loadingController.value + (index * 0.22)) % 1;
+    final opacity = raw < 0.5 ? 0.35 + raw : 0.85 - ((raw - 0.5) * 0.8);
+    final scale = 0.75 + (opacity * 0.35);
+
+    return Transform.scale(
+      scale: scale,
+      child: Container(
+        width: 5,
+        height: 5,
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: opacity.clamp(0.35, 0.9)),
+          shape: BoxShape.circle,
         ),
       ),
     );
@@ -486,7 +563,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOutCubic,
-        padding: EdgeInsets.fromLTRB(20, 8, 20, keyboardOpen ? 10 : 96),
+        padding: EdgeInsets.fromLTRB(20, 8, 20, keyboardOpen ? 10 : 12),
         decoration: BoxDecoration(
           color: AppColors.scaffold(isDark),
           border: Border(
@@ -524,17 +601,41 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
               ),
             ),
             const SizedBox(width: 10),
-            SizedBox(
-              width: 48,
-              height: 48,
-              child: IconButton.filled(
-                onPressed: _isLoading ? null : _sendQuestion,
-                icon: const Icon(Icons.send_rounded, size: 21),
-                style: IconButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: AppColors.primary.withValues(
-                    alpha: 0.4,
+            AnimatedScale(
+              duration: const Duration(milliseconds: 160),
+              scale: _isLoading ? 0.94 : 1,
+              child: SizedBox(
+                width: 48,
+                height: 48,
+                child: IconButton.filled(
+                  onPressed: _isLoading ? null : _sendQuestion,
+                  icon: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    transitionBuilder: (child, animation) {
+                      return ScaleTransition(scale: animation, child: child);
+                    },
+                    child: _isLoading
+                        ? SizedBox(
+                            key: const ValueKey('loading'),
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                          )
+                        : const Icon(
+                            Icons.send_rounded,
+                            key: ValueKey('send'),
+                            size: 21,
+                          ),
+                  ),
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: AppColors.primary.withValues(
+                      alpha: 0.72,
+                    ),
                   ),
                 ),
               ),
