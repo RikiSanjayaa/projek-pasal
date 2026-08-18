@@ -21,6 +21,7 @@ Push-Location $MobileAppDir
 try {
   flutter pub get
   flutter build web --release `
+    --no-tree-shake-icons `
     --base-href=$BaseHref `
     --dart-define=API_BASE_URL=$ApiBaseUrl `
     --dart-define=WEB_APP_URL=$WebAppUrl
@@ -55,6 +56,13 @@ if (Test-Path -LiteralPath $BootstrapPath) {
   $BootstrapJs = Get-Content -LiteralPath $BootstrapPath -Raw
   $BootstrapJs = $BootstrapJs -replace '"main\.dart\.js"', "`"main.dart.js?v=$BuildId`""
   Set-Content -LiteralPath $BootstrapPath -Value $BootstrapJs -NoNewline
+}
+
+$FontManifestPath = Join-Path $OutputDir "assets\FontManifest.json"
+if (Test-Path -LiteralPath $FontManifestPath) {
+  $FontManifest = Get-Content -LiteralPath $FontManifestPath -Raw
+  $FontManifest = $FontManifest -replace 'fonts/MaterialIcons-Regular\.otf', "fonts/MaterialIcons-Regular.otf?v=$BuildId"
+  Set-Content -LiteralPath $FontManifestPath -Value $FontManifest -NoNewline
 }
 
 Write-Host ""
