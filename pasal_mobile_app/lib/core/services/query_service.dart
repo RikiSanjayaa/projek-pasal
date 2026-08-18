@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../database/app_database.dart';
+import '../utils/search_utils.dart';
 import '../../models/undang_undang_model.dart';
 import '../../models/pasal_model.dart';
 import '../../models/pasal_link_model.dart';
@@ -93,8 +94,9 @@ class QueryService {
   static Future<List<PasalModel>> searchPasal(String query) async {
     if (query.isEmpty) return [];
     try {
-      final data = await _database.searchActivePasal(query);
-      return data.map((row) => _rowToPasalModel(row)).toList();
+      final data = await _database.getActivePasal();
+      final pasal = data.map((row) => _rowToPasalModel(row)).toList();
+      return SearchUtils.rankPasal(pasal, query);
     } catch (e) {
       print("Search error: $e");
       return [];
@@ -124,8 +126,9 @@ class QueryService {
 
   static Future<List<PasalModel>> getPasalByKeyword(String keyword) async {
     try {
-      final data = await _database.searchActivePasal(keyword);
-      return data.map((row) => _rowToPasalModel(row)).toList();
+      final data = await _database.getActivePasal();
+      final pasal = data.map((row) => _rowToPasalModel(row)).toList();
+      return SearchUtils.rankPasal(pasal, keyword);
     } catch (e) {
       print("Error getting pasal by keyword: $e");
       return [];

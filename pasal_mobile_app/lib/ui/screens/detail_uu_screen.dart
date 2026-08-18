@@ -4,6 +4,7 @@ import '../../models/undang_undang_model.dart';
 import '../../models/pasal_model.dart';
 import '../../core/services/query_service.dart';
 import '../../core/services/sync_manager.dart';
+import '../../core/utils/search_utils.dart';
 import '../widgets/pasal_card.dart';
 import '../widgets/settings_drawer.dart';
 import '../utils/uu_color_helper.dart';
@@ -56,10 +57,7 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
       if (query.isEmpty) {
         _filteredPasal = _allPasal;
       } else {
-        _filteredPasal = _allPasal.where((p) {
-          return p.nomor.toLowerCase().contains(query.toLowerCase()) ||
-              p.isi.toLowerCase().contains(query.toLowerCase());
-        }).toList();
+        _filteredPasal = SearchUtils.rankPasal(_allPasal, query);
       }
     });
   }

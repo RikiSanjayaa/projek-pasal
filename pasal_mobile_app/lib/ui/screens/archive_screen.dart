@@ -58,29 +58,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     }).toList();
 
     if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery.toLowerCase().trim();
-      final nomorQuery = SearchUtils.extractNomorQuery(q);
-
-      source = source.where((p) {
-        final nomorMatch =
-            p.nomor.toLowerCase().contains(nomorQuery) ||
-            'pasal ${p.nomor}'.toLowerCase().contains(q);
-
-        final contentMatch = p.isi.toLowerCase().contains(q);
-
-        final titleMatch =
-            p.judul != null && p.judul!.toLowerCase().contains(q);
-
-        return nomorMatch || contentMatch || titleMatch;
-      }).toList();
-
-      if (SearchUtils.isNomorSearch(q)) {
-        source = SearchUtils.sortByNomorRelevance(
-          source,
-          nomorQuery,
-          (p) => p.nomor,
-        );
-      }
+      source = SearchUtils.rankPasal(source, _searchQuery);
     }
 
     setState(() {

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pasal_mobile_app/core/utils/search_utils.dart';
+import 'package:pasal_mobile_app/models/pasal_model.dart';
 
 void main() {
   group('SearchUtils', () {
@@ -129,6 +130,55 @@ void main() {
           (item) => item,
         );
         expect(result.first, '16'); // exact match
+      });
+    });
+
+    group('rankPasal', () {
+      final pasalList = [
+        PasalModel(
+          id: '1',
+          undangUndangId: 'uu-1',
+          nomor: '480',
+          judul: 'Penadahan',
+          isi: 'Barangsiapa membeli atau menyimpan barang yang diperoleh dari kejahatan.',
+          keywords: const ['penadahan', 'hasil kejahatan'],
+        ),
+        PasalModel(
+          id: '2',
+          undangUndangId: 'uu-1',
+          nomor: '362',
+          judul: 'Pencurian',
+          isi: 'Barangsiapa mengambil barang sesuatu yang seluruhnya atau sebagian kepunyaan orang lain.',
+          keywords: const ['pencurian'],
+        ),
+        PasalModel(
+          id: '3',
+          undangUndangId: 'uu-1',
+          nomor: '340',
+          judul: 'Pembunuhan berencana',
+          isi: 'Barangsiapa dengan sengaja dan dengan rencana terlebih dahulu merampas nyawa orang lain.',
+          keywords: const ['pembunuhan'],
+        ),
+      ];
+
+      test('prioritizes exact pasal number', () {
+        final result = SearchUtils.rankPasal(pasalList, 'pasal 480');
+        expect(result.first.nomor, '480');
+      });
+
+      test('expands simple legal synonyms', () {
+        final result = SearchUtils.rankPasal(pasalList, 'maling');
+        expect(result.first.nomor, '362');
+      });
+
+      test('handles light typo with fuzzy token matching', () {
+        final result = SearchUtils.rankPasal(pasalList, 'penadahn');
+        expect(result.first.nomor, '480');
+      });
+
+      test('returns empty list when nothing is relevant', () {
+        final result = SearchUtils.rankPasal(pasalList, 'meteorologi');
+        expect(result, isEmpty);
       });
     });
   });

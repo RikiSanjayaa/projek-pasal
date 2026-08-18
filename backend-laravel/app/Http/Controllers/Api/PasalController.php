@@ -9,6 +9,7 @@ use App\Services\AuditService;
 use App\Services\ImportPasalService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class PasalController extends Controller
@@ -28,11 +29,9 @@ class PasalController extends Controller
         if ($request->has('is_active')) {
             $query->where('is_active', filter_var($request->query('is_active'), FILTER_VALIDATE_BOOLEAN));
         }
-        if ($search = $request->query('search')) {
-            $query->where(fn ($q) => $q
-                ->where('nomor', 'ilike', "%{$search}%")
-                ->orWhere('judul', 'ilike', "%{$search}%")
-                ->orWhere('isi', 'ilike', "%{$search}%"));
+        $search = trim((string) $request->query('search', ''));
+        if ($search !== '') {
+            $this->applySmartSearch($query, $search);
         }
         $keywords = $request->query('keywords', []);
         if (is_string($keywords)) {
@@ -46,10 +45,16 @@ class PasalController extends Controller
             });
         }
 
-        $sort = $request->boolean('trash') ? 'deleted_at' : 'nomor';
+        $sort = $request->boolean('trash') ? 'deleted_at' : ($search !== '' ? 'relevance' : 'nomor');
         $direction = $request->boolean('trash') ? 'desc' : 'asc';
 
-        return response()->json($query->orderBy($sort, $direction)->paginate((int) $request->query('per_page', 20)));
+        if ($sort === 'relevance') {
+            $query->orderByDesc('search_score')->orderBy('nomor');
+        } else {
+            $query->orderBy($sort, $direction);
+        }
+
+        return response()->json($query->paginate((int) $request->query('per_page', 20)));
     }
 
     public function store(Request $request, AuditService $audit): JsonResponse
@@ -217,5 +222,122 @@ class PasalController extends Controller
         ], [
             'nomor.unique' => 'Nomor pasal ini sudah ada pada undang-undang yang dipilih.',
         ]);
+    }
+
+    private function applySmartSearch($query, string $search): void
+    {
+        $terms = $this->expandedSearchTerms($search);
+        $likeTerms = array_map(fn ($term) => '%'.$term.'%', $terms);
+        $tsQuery = implode(' ', array_slice($terms, 0, 8));
+        $nomorQuery = $this->extractNomorQuery($search);
+
+        $query->select('pasal.*')->selectRaw(
+            <<<SQL
+            (
+                CASE WHEN lower(regexp_replace(nomor, '^pasal[[:space:]]+', '', 'i')) = ? THEN 1000 ELSE 0 END +
+                CASE WHEN lower(nomor) = ? THEN 850 ELSE 0 END +
+                CASE WHEN nomor ILIKE ? THEN 420 ELSE 0 END +
+                CASE WHEN judul ILIKE ? THEN 260 ELSE 0 END +
+                CASE WHEN array_to_string(keywords, ' ') ILIKE ? THEN 220 ELSE 0 END +
+                CASE WHEN isi ILIKE ? THEN 90 ELSE 0 END +
+                CASE WHEN penjelasan ILIKE ? THEN 45 ELSE 0 END +
+                COALESCE(ts_rank_cd(search_vector, websearch_to_tsquery('simple', ?)), 0) * 120
+            ) AS search_score
+            SQL,
+            [
+                Str::lower($nomorQuery),
+                Str::lower($search),
+                '%'.$nomorQuery.'%',
+                '%'.$search.'%',
+                '%'.$search.'%',
+                '%'.$search.'%',
+                '%'.$search.'%',
+                $tsQuery,
+            ]
+        );
+
+        $query->where(function ($q) use ($likeTerms, $tsQuery) {
+            $q->whereRaw("search_vector @@ websearch_to_tsquery('simple', ?)", [$tsQuery]);
+
+            foreach ($likeTerms as $term) {
+                $q->orWhere('nomor', 'ilike', $term)
+                    ->orWhere('judul', 'ilike', $term)
+                    ->orWhere('isi', 'ilike', $term)
+                    ->orWhere('penjelasan', 'ilike', $term)
+                    ->orWhereRaw("array_to_string(keywords, ' ') ILIKE ?", [$term]);
+            }
+        });
+    }
+
+    private function expandedSearchTerms(string $search): array
+    {
+        $normalized = $this->normalizeSearchText($search);
+        $tokens = array_values(array_filter(explode(' ', $normalized), fn ($token) => mb_strlen($token) > 1));
+        $terms = [$normalized, ...$tokens];
+        $synonyms = [
+            'maling' => ['pencurian', 'mencuri', 'mengambil barang'],
+            'curi' => ['pencurian', 'mencuri', 'mengambil barang'],
+            'nyuri' => ['pencurian', 'mencuri', 'mengambil barang'],
+            'penadah' => ['penadahan', 'hasil kejahatan'],
+            'tipu' => ['penipuan', 'perbuatan curang'],
+            'bohong' => ['penipuan', 'keterangan palsu', 'berita bohong'],
+            'ancam' => ['pengancaman', 'ancaman kekerasan'],
+            'aniaya' => ['penganiayaan', 'kekerasan'],
+            'bunuh' => ['pembunuhan', 'menghilangkan nyawa'],
+            'narkoba' => ['narkotika', 'psikotropika'],
+            'sabu' => ['narkotika', 'psikotropika'],
+            'ganja' => ['narkotika'],
+            'judi' => ['perjudian'],
+            'korupsi' => ['tindak pidana korupsi', 'merugikan keuangan negara'],
+            'suap' => ['gratifikasi', 'korupsi'],
+            'fitnah' => ['pencemaran nama baik', 'penghinaan'],
+            'hoax' => ['berita bohong', 'kabar bohong'],
+            'palsu' => ['pemalsuan', 'surat palsu', 'keterangan palsu'],
+            'gelap' => ['penggelapan'],
+            'rampas' => ['perampasan', 'kekerasan'],
+            'paksa' => ['pemaksaan', 'kekerasan'],
+            'rusak' => ['perusakan', 'merusak'],
+        ];
+
+        foreach ($tokens as $token) {
+            array_push($terms, ...($synonyms[$token] ?? []));
+        }
+
+        if (str_contains($normalized, 'barang curian')) {
+            array_push($terms, 'penadahan', 'hasil kejahatan');
+        }
+        if (str_contains($normalized, 'judi online')) {
+            array_push($terms, 'perjudian', 'transaksi elektronik');
+        }
+
+        $stopWords = ['dan', 'atau', 'yang', 'dengan', 'untuk', 'pada', 'dalam', 'pasal'];
+
+        $expanded = collect($terms)
+            ->map(fn ($term) => $this->normalizeSearchText($term))
+            ->filter(fn ($term) => $term !== '' && ! in_array($term, $stopWords, true))
+            ->unique()
+            ->take(16)
+            ->values()
+            ->all();
+
+        return $expanded ?: [$normalized];
+    }
+
+    private function normalizeSearchText(string $value): string
+    {
+        $value = Str::lower($value);
+        $value = preg_replace('/[^a-z0-9]+/i', ' ', $value) ?? '';
+
+        return trim(preg_replace('/\s+/', ' ', $value) ?? '');
+    }
+
+    private function extractNomorQuery(string $search): string
+    {
+        $normalized = $this->normalizeSearchText($search);
+        if (str_starts_with($normalized, 'pasal ')) {
+            return trim(substr($normalized, 6));
+        }
+
+        return $normalized;
     }
 }

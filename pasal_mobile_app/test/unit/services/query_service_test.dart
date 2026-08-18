@@ -254,28 +254,24 @@ void main() {
         final testData = [
           TestDataFactory.createPasal(id: 'pasal-1', isi: 'Hukum pidana'),
         ];
-        when(
-          mockDatabase.searchActivePasal('pidana'),
-        ).thenAnswer((_) async => testData);
+        when(mockDatabase.getActivePasal()).thenAnswer((_) async => testData);
 
         final result = await QueryService.searchPasal('pidana');
 
         expect(result.length, 1);
         expect(result.first.id, 'pasal-1');
-        verify(mockDatabase.searchActivePasal('pidana')).called(1);
+        verify(mockDatabase.getActivePasal()).called(1);
       });
 
       test('returns empty list for empty query', () async {
         final result = await QueryService.searchPasal('');
 
         expect(result, isEmpty);
-        verifyNever(mockDatabase.searchActivePasal(any));
+        verifyNever(mockDatabase.getActivePasal());
       });
 
       test('returns empty list when no matches found', () async {
-        when(
-          mockDatabase.searchActivePasal('nonexistent'),
-        ).thenAnswer((_) async => []);
+        when(mockDatabase.getActivePasal()).thenAnswer((_) async => []);
 
         final result = await QueryService.searchPasal('nonexistent');
 
@@ -283,9 +279,7 @@ void main() {
       });
 
       test('returns empty list when database throws exception', () async {
-        when(
-          mockDatabase.searchActivePasal('query'),
-        ).thenThrow(Exception('Search Error'));
+        when(mockDatabase.getActivePasal()).thenThrow(Exception('Search Error'));
 
         final result = await QueryService.searchPasal('query');
 
@@ -367,21 +361,19 @@ void main() {
 
     group('getPasalByKeyword', () {
       test('returns matching pasal for keyword', () async {
-        final testData = [TestDataFactory.createPasal(id: 'pasal-1')];
-        when(
-          mockDatabase.searchActivePasal('pidana'),
-        ).thenAnswer((_) async => testData);
+        final testData = [
+          TestDataFactory.createPasal(id: 'pasal-1', keywords: '["pidana"]'),
+        ];
+        when(mockDatabase.getActivePasal()).thenAnswer((_) async => testData);
 
         final result = await QueryService.getPasalByKeyword('pidana');
 
         expect(result.length, 1);
-        verify(mockDatabase.searchActivePasal('pidana')).called(1);
+        verify(mockDatabase.getActivePasal()).called(1);
       });
 
       test('returns empty list when database throws exception', () async {
-        when(
-          mockDatabase.searchActivePasal('keyword'),
-        ).thenThrow(Exception('DB Error'));
+        when(mockDatabase.getActivePasal()).thenThrow(Exception('DB Error'));
 
         final result = await QueryService.getPasalByKeyword('keyword');
 

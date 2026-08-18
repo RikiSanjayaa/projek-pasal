@@ -164,18 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery.toLowerCase().trim();
-      final nomorQuery = SearchUtils.extractNomorQuery(q);
-
-      source = source.where((p) {
-        final nomorMatch =
-            p.nomor.toLowerCase().contains(nomorQuery) ||
-            'pasal ${p.nomor}'.toLowerCase().contains(q);
-        final contentMatch = p.isi.toLowerCase().contains(q);
-        final titleMatch =
-            p.judul != null && p.judul!.toLowerCase().contains(q);
-        return nomorMatch || contentMatch || titleMatch;
-      }).toList();
+      source = SearchUtils.rankPasal(source, _searchQuery);
     }
 
     if (_selectedKeywords.isNotEmpty) {
@@ -229,10 +218,12 @@ class _HomeScreenState extends State<HomeScreen> {
           .toList();
     }
 
-    final q = _searchQuery.toLowerCase();
+    final q = SearchUtils.normalize(_searchQuery);
     return _allAvailableKeywords
         .where(
-          (k) => k.toLowerCase().contains(q) && !_selectedKeywords.contains(k),
+          (k) =>
+              SearchUtils.normalize(k).contains(q) &&
+              !_selectedKeywords.contains(k),
         )
         .take(5)
         .toList();
