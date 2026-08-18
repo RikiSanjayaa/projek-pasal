@@ -6,6 +6,7 @@ import 'expiry_warning_banner.dart';
 import '../screens/home_screen.dart';
 import '../screens/library_screen.dart';
 import '../screens/archive_screen.dart';
+import '../screens/ai_assistant_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -21,6 +22,7 @@ class _MainNavigationState extends State<MainNavigation> {
     const HomeScreen(),
     const LibraryScreen(),
     const ArchiveScreen(),
+    const AiAssistantScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -92,6 +94,13 @@ class _MainNavigationState extends State<MainNavigation> {
                   isDark: isDark,
                   // disabled: true,
                   // comingSoon: true,
+                ),
+                _buildNavItem(
+                  index: 3,
+                  icon: Icons.auto_awesome_outlined,
+                  activeIcon: Icons.auto_awesome_rounded,
+                  label: 'Asisten',
+                  isDark: isDark,
                 ),
               ],
             ),

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AdminUserController;
+use App\Http\Controllers\Api\AiChatController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
@@ -73,4 +74,5 @@ Route::middleware(['auth:sanctum', 'mobile.active', 'mobile.not_expired', 'devic
     Route::get('/sync/check', [SyncController::class, 'check']);
     Route::get('/sync/updates', [SyncController::class, 'updates']);
     Route::get('/sync/full', [SyncController::class, 'full']);
+    Route::post('/ai-chat', [AiChatController::class, 'mobileChat']);
 });

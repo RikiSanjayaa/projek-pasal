@@ -203,6 +203,7 @@ http://10.0.2.2:8000/api
 - [Deploy Flutter Web Mobile ke aaPanel](docs/MOBILE_WEB_AAPANEL.md)
 - [Panduan Admin Kampus untuk Uji Coba Mobile Web](docs/README_ADMIN_KAMPUS_UJI_COBA.md)
 - [Smart Search CariPasal](docs/SMART_SEARCH.md)
+- [Mini AI Gemini RAG](docs/MINI_AI_GEMINI_RAG.md)
 - [Catatan Migrasi Historis](docs/LARAVEL_POSTGRESQL_MIGRATION_PLAN.md)
 
 ## Deploy aaPanel

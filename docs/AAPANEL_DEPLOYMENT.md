@@ -324,3 +324,30 @@ Test kirim email dari Laravel:
 ```bash
 /www/server/php/84/bin/php artisan tinker --execute='Mail::raw("Tes email CariPasal", function ($m) { $m->to("emailtujuan@gmail.com")->subject("Tes Email CariPasal"); }); echo "sent\n";'
 ```
+
+## 12. Mini AI Gemini
+
+Fitur Asisten di aplikasi mobile memakai Gemini lewat backend Laravel. API key hanya disimpan di `.env` Laravel, bukan di APK/mobile web.
+
+Isi `.env`:
+
+```env
+GEMINI_API_KEY=isi_api_key_google_ai_studio
+GEMINI_MODEL=gemini-3.1-flash-lite
+GEMINI_TIMEOUT=20
+```
+
+Setelah ubah `.env`:
+
+```bash
+cd /www/wwwroot/pasal/backend-laravel
+/www/server/php/84/bin/php artisan optimize:clear
+/www/server/php/84/bin/php artisan config:cache
+sudo /etc/init.d/php-fpm-84 restart
+```
+
+Fitur ini juga menambah tabel `ai_chat_logs`, jadi pastikan migration sudah berjalan:
+
+```bash
+/www/server/php/84/bin/php artisan migrate --force
+```
