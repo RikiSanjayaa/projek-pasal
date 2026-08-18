@@ -98,6 +98,16 @@ TEXT;
             }
         }
 
+        $stepText = collect($payload['steps'] ?? [])
+            ->filter(fn ($step) => is_array($step) && ($step['type'] ?? null) === 'model_output')
+            ->flatMap(fn ($step) => is_array($step['content'] ?? null) ? $step['content'] : [])
+            ->map(fn ($content) => is_array($content) ? ($content['text'] ?? '') : '')
+            ->filter()
+            ->implode("\n");
+        if (trim($stepText) !== '') {
+            return trim($stepText);
+        }
+
         throw new RuntimeException('Response Gemini tidak berisi teks jawaban.');
     }
 }
