@@ -62,6 +62,59 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
     });
   }
 
+  Widget _buildEmptySearchState(bool isDark) {
+    final query = _searchController.text;
+    final suggestions = SearchUtils.suggestionsForQuery(query);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off_rounded,
+              size: 48,
+              color: isDark ? Colors.grey[700] : Colors.grey[300],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Tidak ditemukan',
+              style: TextStyle(
+                color: isDark ? Colors.grey[500] : Colors.grey[600],
+              ),
+            ),
+            if (query.trim().isNotEmpty && suggestions.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(
+                'Coba cari dengan kata ini:',
+                style: TextStyle(
+                  color: isDark ? Colors.grey[500] : Colors.grey[600],
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                children: suggestions.map((suggestion) {
+                  return ActionChip(
+                    label: Text(suggestion),
+                    onPressed: () {
+                      _searchController.text = suggestion;
+                      _filterLocalPasal(suggestion);
+                    },
+                  );
+                }).toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   IconData _getUUIcon(String kode) {
     return UUColorHelper.getIcon(kode);
   }
@@ -341,29 +394,7 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
                 // Pasal list
                 Expanded(
                   child: _filteredPasal.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.search_off_rounded,
-                                size: 48,
-                                color: isDark
-                                    ? Colors.grey[700]
-                                    : Colors.grey[300],
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Tidak ditemukan',
-                                style: TextStyle(
-                                  color: isDark
-                                      ? Colors.grey[500]
-                                      : Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
+                      ? _buildEmptySearchState(isDark)
                       : ListView.builder(
                           padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
                           itemCount: _filteredPasal.length,

@@ -181,5 +181,20 @@ void main() {
         expect(result, isEmpty);
       });
     });
+
+    group('smart suggestions', () {
+      test('returns legal suggestions for everyday words', () {
+        final suggestions = SearchUtils.suggestionsForQuery('maling');
+        expect(suggestions, contains('pencurian'));
+        expect(suggestions, contains('mengambil barang'));
+      });
+
+      test('returns highlight terms with expanded aliases', () {
+        final terms = SearchUtils.highlightTerms('tipu');
+        expect(terms, contains('tipu'));
+        expect(terms, contains('penipuan'));
+        expect(terms, contains('perbuatan curang'));
+      });
+    });
   });
 }

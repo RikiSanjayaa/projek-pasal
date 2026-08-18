@@ -210,6 +210,61 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Widget _buildEmptySearchState(bool isDark) {
+    final suggestions = SearchUtils.suggestionsForQuery(_searchQuery);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.search_off_rounded,
+              size: 48,
+              color: isDark ? Colors.grey[700] : Colors.grey[300],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Data tidak ditemukan.",
+              style: TextStyle(
+                color: isDark ? Colors.grey[400] : Colors.grey[700],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (_searchQuery.trim().isNotEmpty && suggestions.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(
+                "Coba cari dengan kata ini:",
+                style: TextStyle(
+                  color: isDark ? Colors.grey[500] : Colors.grey[600],
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                children: suggestions.map((suggestion) {
+                  return ActionChip(
+                    label: Text(suggestion),
+                    onPressed: () {
+                      _searchQuery = suggestion;
+                      _searchController.text = suggestion;
+                      _applyFilterAndSearch();
+                    },
+                  );
+                }).toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   List<String> _getKeywordSuggestions() {
     if (_searchQuery.isEmpty) {
       return _popularKeywords
@@ -440,9 +495,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         }
 
                         if (_filteredData.isEmpty) {
-                          return const Center(
-                            child: Text("Tidak ada pasal yang cocok."),
-                          );
+                          return _buildEmptySearchState(isDark);
                         }
 
                         return ListView(
@@ -489,7 +542,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     )
                   : _paginatedData.isEmpty
-                  ? const Center(child: Text("Data tidak ditemukan."))
+                  ? _buildEmptySearchState(isDark)
                   : ListView.builder(
                       controller: _listScrollController,
                       padding: const EdgeInsets.symmetric(horizontal: 20),

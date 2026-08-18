@@ -10,6 +10,9 @@ Smart Search dibuat agar pencarian pasal tetap cepat, bisa dipakai offline di mo
 - Nomor pasal selalu diprioritaskan.
 - Keyword, judul, isi pasal, dan penjelasan ikut dihitung dalam ranking.
 - Sinonim hukum umum ditambahkan sebagai content-aware search ringan.
+- Super admin bisa mengelola sinonim/alias dari dashboard tanpa deploy ulang.
+- Jika hasil kosong, UI memberi saran kata hukum yang bisa dicoba.
+- Kata yang cocok di hasil pencarian diberi highlight supaya alasan hasilnya jelas.
 
 ## Contoh Query yang Dibantu
 
@@ -51,7 +54,9 @@ File utama:
 
 ```text
 backend-laravel/app/Http/Controllers/Api/PasalController.php
+backend-laravel/app/Http/Controllers/Api/SearchAliasController.php
 backend-laravel/database/migrations/2026_08_18_000001_include_keywords_in_pasal_search_vector.php
+backend-laravel/database/migrations/2026_08_18_000002_create_search_aliases_table.php
 ```
 
 Backend memakai:
@@ -64,6 +69,37 @@ keyword ranking
 ```
 
 Migration baru memasukkan `keywords` ke `search_vector`, lalu memicu reindex semua pasal dengan update ringan.
+
+## Menu Smart Search
+
+Menu admin:
+
+```text
+/admin/smart-search
+```
+
+Hanya `super_admin` yang bisa mengubah data alias. Admin biasa tetap bisa memakai hasil pencariannya.
+
+Contoh data:
+
+```text
+Kata pencarian: maling
+Kata target: pencurian, mencuri, mengambil barang
+Kategori: Pidana umum
+```
+
+Saat user mencari `maling`, backend ikut mencari `pencurian`, `mencuri`, dan `mengambil barang`. Kalau hasil kosong, frontend memberi saran kata target tersebut.
+
+## Deployment
+
+Jalankan migration setelah pull update:
+
+```bash
+cd backend-laravel
+php artisan migrate --force
+```
+
+Untuk aaPanel, script update yang sudah ada tetap bisa dipakai selama menjalankan `migrate --force`.
 
 ## Kenapa Belum Pakai AI
 

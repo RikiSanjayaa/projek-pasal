@@ -23,6 +23,7 @@ const AuditLogDetailPage = lazy(() => import('./pages/AuditLogDetailPage').then(
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((module) => ({ default: module.NotFoundPage })))
 const ManageAdminPage = lazy(() => import('./pages/ManageAdminPage').then((module) => ({ default: module.ManageAdminPage })))
 const ManageUsersPage = lazy(() => import('./pages/ManageUsersPage').then((module) => ({ default: module.ManageUsersPage })))
+const SearchAliasPage = lazy(() => import('./pages/SearchAliasPage').then((module) => ({ default: module.SearchAliasPage })))
 
 function PageLoader() {
   return (
@@ -84,6 +85,7 @@ function App() {
           <Route path="audit-log/:id" element={<WithDataMapping><AuditLogDetailPage /></WithDataMapping>} />
           <Route path="manage-admin" element={<ManageAdminPage />} />
           <Route path="manage-users" element={<ManageUsersPage />} />
+          <Route path="smart-search" element={<SearchAliasPage />} />
         </Route>
 
         {/* Catch all - 404 */}

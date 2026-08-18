@@ -139,14 +139,35 @@ class SearchUtils {
     return terms.where((term) => term.isNotEmpty).toList();
   }
 
+  static List<String> highlightTerms(String query) {
+    return expandQuery(query).where((term) => term.length >= 3).toList()
+      ..sort((a, b) => b.length.compareTo(a.length));
+  }
+
+  static List<String> suggestionsForQuery(String query) {
+    final normalized = normalize(query);
+    if (normalized.isEmpty) return [];
+
+    final suggestions = <String>{};
+    _synonyms.forEach((term, aliases) {
+      if (normalized.contains(term) || term.contains(normalized)) {
+        suggestions.addAll(aliases);
+      }
+    });
+
+    return suggestions.take(6).toList();
+  }
+
   static String searchableTextForPasal(PasalModel pasal) {
-    return normalize([
-      pasal.nomor,
-      pasal.judul ?? '',
-      pasal.isi,
-      pasal.penjelasan ?? '',
-      pasal.keywords.join(' '),
-    ].join(' '));
+    return normalize(
+      [
+        pasal.nomor,
+        pasal.judul ?? '',
+        pasal.isi,
+        pasal.penjelasan ?? '',
+        pasal.keywords.join(' '),
+      ].join(' '),
+    );
   }
 
   static int scorePasal(PasalModel pasal, String query) {
@@ -159,7 +180,13 @@ class SearchUtils {
     final content = normalize(pasal.isi);
     final explanation = normalize(pasal.penjelasan ?? '');
     final keywords = pasal.keywords.map(normalize).toList();
-    final searchable = [nomor, title, content, explanation, ...keywords].join(' ');
+    final searchable = [
+      nomor,
+      title,
+      content,
+      explanation,
+      ...keywords,
+    ].join(' ');
 
     var score = 0;
 
@@ -221,9 +248,9 @@ class SearchUtils {
     scored.sort((a, b) {
       final byScore = b.score.compareTo(a.score);
       if (byScore != 0) return byScore;
-      return _nomorSortValue(a.pasal.nomor).compareTo(
-        _nomorSortValue(b.pasal.nomor),
-      );
+      return _nomorSortValue(
+        a.pasal.nomor,
+      ).compareTo(_nomorSortValue(b.pasal.nomor));
     });
 
     return scored.map((item) => item.pasal).toList();

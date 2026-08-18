@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
+  Alert,
   Title,
   Text,
   Stack,
@@ -26,10 +27,12 @@ import {
 } from '@tabler/icons-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DataTable, type Column } from '@/components/DataTable'
+import { SearchHighlight } from '@/components/SearchHighlight'
 import { api, toQueryString, type PaginatedResponse } from '@/lib/api'
 import type { PasalWithUndangUndang } from '@/lib/database.types'
 import { formatPasalLabel } from '@/lib/pasal-format'
 import { invalidatePasalData } from '@/lib/query-invalidation'
+import { defaultSearchSuggestions } from '@/lib/smart-search'
 
 const PAGE_SIZE_OPTIONS = [
   { value: '5', label: '5 per halaman' },
@@ -65,8 +68,7 @@ const getPasalStatus = (pasal: PasalWithUndangUndang): { label: string; color: s
   }
 }
 
-// Define table columns
-const pasalColumns: Column<PasalWithUndangUndang>[] = [
+const getPasalColumns = (searchQuery: string, extraTerms: string[]): Column<PasalWithUndangUndang>[] => [
   {
     key: 'undang_undang',
     title: 'Undang-Undang',
@@ -82,25 +84,21 @@ const pasalColumns: Column<PasalWithUndangUndang>[] = [
     title: 'Nomor',
     width: 100,
     render: (value) => (
-      <Text fw={500}>{formatPasalLabel(value as string)}</Text>
+      <SearchHighlight fw={500} text={formatPasalLabel(value as string)} query={searchQuery} extraTerms={extraTerms} />
     ),
   },
   {
     key: 'judul',
     title: 'Judul',
     render: (value) => (
-      <Text size="sm" lineClamp={1}>
-        {value || '-'}
-      </Text>
+      <SearchHighlight size="sm" lineClamp={1} text={(value as string) || '-'} query={searchQuery} extraTerms={extraTerms} />
     ),
   },
   {
     key: 'isi',
     title: 'Isi',
     render: (value) => (
-      <Text size="sm" c="dimmed" lineClamp={2} style={{ maxWidth: 300 }}>
-        {value}
-      </Text>
+      <SearchHighlight size="sm" c="dimmed" lineClamp={2} style={{ maxWidth: 300 }} text={String(value || '')} query={searchQuery} extraTerms={extraTerms} />
     ),
   },
   {
@@ -178,6 +176,26 @@ export function PasalListPage() {
   const [bulkDeleteModal, { open: openBulkDelete, close: closeBulkDelete }] = useDisclosure(false)
   const [selectedPasal, setSelectedPasal] = useState<PasalWithUndangUndang | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+
+  const { data: smartSuggestionData } = useQuery({
+    queryKey: ['search_aliases', 'suggestions', debouncedSearch],
+    queryFn: async () => {
+      return api.get<{ suggestions: string[] }>(
+        `/admin/search-aliases/suggestions${toQueryString({ search: debouncedSearch })}`
+      )
+    },
+    enabled: debouncedSearch.trim().length > 1,
+  })
+
+  const smartSuggestions = useMemo(() => {
+    const remote = smartSuggestionData?.suggestions || []
+    return remote.length > 0 ? remote : defaultSearchSuggestions(debouncedSearch)
+  }, [smartSuggestionData?.suggestions, debouncedSearch])
+
+  const pasalColumns = useMemo(
+    () => getPasalColumns(debouncedSearch, smartSuggestions),
+    [debouncedSearch, smartSuggestions]
+  )
 
   // Fetch undang-undang for filter (include inactive UU)
   const { data: undangUndangList } = useQuery({
@@ -413,6 +431,20 @@ export function PasalListPage() {
 
       {/* Table */}
       <Card padding="md" radius="md" withBorder>
+        {!isLoading && debouncedSearch.trim() && (pasalData?.count || 0) === 0 && smartSuggestions.length > 0 && (
+          <Alert color="yellow" variant="light" mb="md" title="Tidak ada hasil persis">
+            <Stack gap="xs">
+              <Text size="sm">Coba cari dengan istilah yang lebih umum:</Text>
+              <Group gap="xs">
+                {smartSuggestions.map((suggestion) => (
+                  <Button key={suggestion} size="xs" variant="light" onClick={() => setSearch(suggestion)}>
+                    {suggestion}
+                  </Button>
+                ))}
+              </Group>
+            </Stack>
+          </Alert>
+        )}
         <DataTable
           columns={pasalColumns}
           data={pasalData?.data || []}

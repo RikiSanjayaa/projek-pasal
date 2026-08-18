@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\MobileUserController;
 use App\Http\Controllers\Api\PasalController;
 use App\Http\Controllers\Api\PasalLinkController;
 use App\Http\Controllers\Api\PasswordResetController;
+use App\Http\Controllers\Api\SearchAliasController;
 use App\Http\Controllers\Api\SyncController;
 use App\Http\Controllers\Api\UndangUndangController;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,8 @@ Route::middleware(['auth:sanctum', 'role:admin,super_admin'])->prefix('admin')->
     Route::post('/logout', [AuthController::class, 'adminLogout']);
     Route::get('/me', [AuthController::class, 'adminMe']);
     Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
+
+    Route::get('/search-aliases/suggestions', [SearchAliasController::class, 'suggestions']);
 
     Route::apiResource('/undang-undang', UndangUndangController::class);
     Route::patch('/undang-undang/{id}/restore', [UndangUndangController::class, 'restore']);
@@ -50,6 +53,8 @@ Route::middleware(['auth:sanctum', 'role:admin,super_admin'])->prefix('admin')->
     Route::delete('/mobile-users/{id}', [MobileUserController::class, 'destroy']);
 
     Route::middleware('role:super_admin')->group(function () {
+        Route::apiResource('/search-aliases', SearchAliasController::class)->except(['show']);
+
         Route::get('/admin-users', [AdminUserController::class, 'index']);
         Route::post('/admin-users', [AdminUserController::class, 'store']);
         Route::patch('/admin-users/{id}/activate', [AdminUserController::class, 'activate']);

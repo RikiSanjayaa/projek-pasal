@@ -35,6 +35,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconShieldCheck,
+  IconSparkles,
 } from '@tabler/icons-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { requestPasswordRecovery } from '@/lib/auth'
@@ -198,17 +199,30 @@ export function AdminLayout() {
                   />
                 ))}
                 {adminUser?.role === 'super_admin' && (
-                  <NavLink
-                    label="Manage Admin"
-                    leftSection={<IconShieldCheck size={18} />}
-                    active={location.pathname === '/manage-admin'}
-                    onClick={() => {
-                      navigate('/manage-admin')
-                      toggle()
-                    }}
-                    mb={4}
-                    style={{ borderRadius: 8 }}
-                  />
+                  <>
+                    <NavLink
+                      label="Smart Search"
+                      leftSection={<IconSparkles size={18} />}
+                      active={location.pathname === '/smart-search'}
+                      onClick={() => {
+                        navigate('/smart-search')
+                        toggle()
+                      }}
+                      mb={4}
+                      style={{ borderRadius: 8 }}
+                    />
+                    <NavLink
+                      label="Manage Admin"
+                      leftSection={<IconShieldCheck size={18} />}
+                      active={location.pathname === '/manage-admin'}
+                      onClick={() => {
+                        navigate('/manage-admin')
+                        toggle()
+                      }}
+                      mb={4}
+                      style={{ borderRadius: 8 }}
+                    />
+                  </>
                 )}
               </Box>
             )}
@@ -272,18 +286,21 @@ export function AdminLayout() {
                     </Box>
                   )
                 })}
-                {sidebarCollapsed && adminUser?.role === 'super_admin' && (() => {
-                  const isActive = location.pathname === '/manage-admin'
+                {sidebarCollapsed && adminUser?.role === 'super_admin' && [
+                  { path: '/smart-search', label: 'Smart Search', icon: IconSparkles },
+                  { path: '/manage-admin', label: 'Manage Admin', icon: IconShieldCheck },
+                ].map((item) => {
+                  const isActive = location.pathname === item.path
                   const isDark = colorScheme === 'dark'
 
                   return (
                     <Box
-                      key="/manage-admin"
+                      key={item.path}
                       component="a"
                       href="#"
                       onClick={(e) => {
                         e.preventDefault()
-                        navigate('/manage-admin')
+                        navigate(item.path)
                         toggle()
                       }}
                       style={{
@@ -316,12 +333,12 @@ export function AdminLayout() {
                           e.currentTarget.style.backgroundColor = 'transparent'
                         }
                       }}
-                      title="Manage Admin"
+                      title={item.label}
                     >
-                      <IconShieldCheck size={18} />
+                      <item.icon size={18} />
                     </Box>
                   )
-                })()}
+                })}
               </Box>
             )}
           </Transition>
@@ -357,17 +374,30 @@ export function AdminLayout() {
               />
             ))}
             {adminUser?.role === 'super_admin' && (
-              <NavLink
-                label="Manage Admin"
-                leftSection={<IconShieldCheck size={18} />}
-                active={location.pathname === '/manage-admin'}
-                onClick={() => {
-                  navigate('/manage-admin')
-                  toggle()
-                }}
-                mb={4}
-                style={{ borderRadius: 8 }}
-              />
+              <>
+                <NavLink
+                  label="Smart Search"
+                  leftSection={<IconSparkles size={18} />}
+                  active={location.pathname === '/smart-search'}
+                  onClick={() => {
+                    navigate('/smart-search')
+                    toggle()
+                  }}
+                  mb={4}
+                  style={{ borderRadius: 8 }}
+                />
+                <NavLink
+                  label="Manage Admin"
+                  leftSection={<IconShieldCheck size={18} />}
+                  active={location.pathname === '/manage-admin'}
+                  onClick={() => {
+                    navigate('/manage-admin')
+                    toggle()
+                  }}
+                  mb={4}
+                  style={{ borderRadius: 8 }}
+                />
+              </>
             )}
           </Box>
         </Drawer>

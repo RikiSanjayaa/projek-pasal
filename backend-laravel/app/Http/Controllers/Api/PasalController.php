@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Pasal;
 use App\Models\PasalLink;
+use App\Models\SearchAlias;
 use App\Services\AuditService;
 use App\Services\ImportPasalService;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -274,30 +276,7 @@ class PasalController extends Controller
         $normalized = $this->normalizeSearchText($search);
         $tokens = array_values(array_filter(explode(' ', $normalized), fn ($token) => mb_strlen($token) > 1));
         $terms = [$normalized, ...$tokens];
-        $synonyms = [
-            'maling' => ['pencurian', 'mencuri', 'mengambil barang'],
-            'curi' => ['pencurian', 'mencuri', 'mengambil barang'],
-            'nyuri' => ['pencurian', 'mencuri', 'mengambil barang'],
-            'penadah' => ['penadahan', 'hasil kejahatan'],
-            'tipu' => ['penipuan', 'perbuatan curang'],
-            'bohong' => ['penipuan', 'keterangan palsu', 'berita bohong'],
-            'ancam' => ['pengancaman', 'ancaman kekerasan'],
-            'aniaya' => ['penganiayaan', 'kekerasan'],
-            'bunuh' => ['pembunuhan', 'menghilangkan nyawa'],
-            'narkoba' => ['narkotika', 'psikotropika'],
-            'sabu' => ['narkotika', 'psikotropika'],
-            'ganja' => ['narkotika'],
-            'judi' => ['perjudian'],
-            'korupsi' => ['tindak pidana korupsi', 'merugikan keuangan negara'],
-            'suap' => ['gratifikasi', 'korupsi'],
-            'fitnah' => ['pencemaran nama baik', 'penghinaan'],
-            'hoax' => ['berita bohong', 'kabar bohong'],
-            'palsu' => ['pemalsuan', 'surat palsu', 'keterangan palsu'],
-            'gelap' => ['penggelapan'],
-            'rampas' => ['perampasan', 'kekerasan'],
-            'paksa' => ['pemaksaan', 'kekerasan'],
-            'rusak' => ['perusakan', 'merusak'],
-        ];
+        $synonyms = $this->searchAliases();
 
         foreach ($tokens as $token) {
             array_push($terms, ...($synonyms[$token] ?? []));
@@ -321,6 +300,53 @@ class PasalController extends Controller
             ->all();
 
         return $expanded ?: [$normalized];
+    }
+
+    private function searchAliases(): array
+    {
+        $fallback = [
+            'maling' => ['pencurian', 'mencuri', 'mengambil barang'],
+            'curi' => ['pencurian', 'mencuri', 'mengambil barang'],
+            'nyuri' => ['pencurian', 'mencuri', 'mengambil barang'],
+            'barang curian' => ['penadahan', 'hasil kejahatan'],
+            'penadah' => ['penadahan', 'hasil kejahatan'],
+            'tipu' => ['penipuan', 'perbuatan curang'],
+            'bohong' => ['penipuan', 'keterangan palsu', 'berita bohong'],
+            'ancam' => ['pengancaman', 'ancaman kekerasan'],
+            'aniaya' => ['penganiayaan', 'kekerasan'],
+            'bunuh' => ['pembunuhan', 'menghilangkan nyawa'],
+            'narkoba' => ['narkotika', 'psikotropika'],
+            'sabu' => ['narkotika', 'psikotropika'],
+            'ganja' => ['narkotika'],
+            'judi' => ['perjudian'],
+            'judi online' => ['perjudian', 'transaksi elektronik'],
+            'korupsi' => ['tindak pidana korupsi', 'merugikan keuangan negara'],
+            'suap' => ['gratifikasi', 'korupsi'],
+            'fitnah' => ['pencemaran nama baik', 'penghinaan'],
+            'hoax' => ['berita bohong', 'kabar bohong'],
+            'palsu' => ['pemalsuan', 'surat palsu', 'keterangan palsu'],
+            'gelap' => ['penggelapan'],
+            'rampas' => ['perampasan', 'kekerasan'],
+            'paksa' => ['pemaksaan', 'kekerasan'],
+            'rusak' => ['perusakan', 'merusak'],
+        ];
+
+        try {
+            return SearchAlias::query()
+                ->where('is_active', true)
+                ->get(['term', 'aliases'])
+                ->mapWithKeys(fn (SearchAlias $alias) => [
+                    $this->normalizeSearchText($alias->term) => collect($alias->aliases ?? [])
+                        ->map(fn ($item) => $this->normalizeSearchText((string) $item))
+                        ->filter()
+                        ->values()
+                        ->all(),
+                ])
+                ->filter()
+                ->all() ?: $fallback;
+        } catch (QueryException) {
+            return $fallback;
+        }
     }
 
     private function normalizeSearchText(string $value): string
