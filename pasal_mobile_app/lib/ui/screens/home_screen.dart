@@ -84,8 +84,6 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!hasShownShowcase) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          setState(() => _filtersExpanded = true);
-
           Future.delayed(const Duration(milliseconds: 400), () {
             if (mounted) {
               ShowcaseView.get().startShowCase([_searchKey, _filterKey]);

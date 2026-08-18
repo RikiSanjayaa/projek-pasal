@@ -193,8 +193,11 @@ class SearchUtils {
     if (nomorQuery.isNotEmpty) {
       if (nomor == nomorQuery) score += 1000;
       if ('pasal $nomor' == normalizedQuery) score += 1000;
-      if (nomor.startsWith(nomorQuery)) score += 450;
-      if (nomor.contains(nomorQuery)) score += 180;
+      if (nomor.startsWith(nomorQuery)) {
+        final lengthGap = (nomor.length - nomorQuery.length).abs();
+        score += (260 - (lengthGap * 45)).clamp(60, 260);
+      }
+      if (nomor.contains(nomorQuery)) score += 80;
     }
 
     if (title.contains(normalizedQuery)) score += 320;
@@ -239,8 +242,24 @@ class SearchUtils {
     final normalizedQuery = normalize(query);
     if (normalizedQuery.isEmpty) return pasalList.toList();
 
+    final list = pasalList.toList();
+    final nomorQuery = extractNomorQuery(normalizedQuery);
+    if (_isSpecificNomorSearch(normalizedQuery, nomorQuery)) {
+      final exactMatches = list
+          .where((pasal) => normalize(pasal.nomor) == nomorQuery)
+          .toList();
+
+      if (exactMatches.isNotEmpty) {
+        exactMatches.sort(
+          (a, b) =>
+              _nomorSortValue(a.nomor).compareTo(_nomorSortValue(b.nomor)),
+        );
+        return exactMatches;
+      }
+    }
+
     final scored = <({PasalModel pasal, int score})>[];
-    for (final pasal in pasalList) {
+    for (final pasal in list) {
       final score = scorePasal(pasal, normalizedQuery);
       if (score > 0) scored.add((pasal: pasal, score: score));
     }
@@ -340,5 +359,17 @@ class SearchUtils {
   static bool isNomorSearch(String query) {
     final q = extractNomorQuery(query);
     return q.isNotEmpty && RegExp(r'^\d').hasMatch(q);
+  }
+
+  static bool _isSpecificNomorSearch(
+    String normalizedQuery,
+    String nomorQuery,
+  ) {
+    if (nomorQuery.isEmpty) return false;
+    final pattern = RegExp(r'^\d{1,4}[a-z]?(?:\s+(?:bis|ter))?$');
+    if (!pattern.hasMatch(nomorQuery)) return false;
+
+    return normalizedQuery == nomorQuery ||
+        normalizedQuery == 'pasal $nomorQuery';
   }
 }

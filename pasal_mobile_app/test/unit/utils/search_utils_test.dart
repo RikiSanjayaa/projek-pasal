@@ -140,7 +140,8 @@ void main() {
           undangUndangId: 'uu-1',
           nomor: '480',
           judul: 'Penadahan',
-          isi: 'Barangsiapa membeli atau menyimpan barang yang diperoleh dari kejahatan.',
+          isi:
+              'Barangsiapa membeli atau menyimpan barang yang diperoleh dari kejahatan.',
           keywords: const ['penadahan', 'hasil kejahatan'],
         ),
         PasalModel(
@@ -148,7 +149,8 @@ void main() {
           undangUndangId: 'uu-1',
           nomor: '362',
           judul: 'Pencurian',
-          isi: 'Barangsiapa mengambil barang sesuatu yang seluruhnya atau sebagian kepunyaan orang lain.',
+          isi:
+              'Barangsiapa mengambil barang sesuatu yang seluruhnya atau sebagian kepunyaan orang lain.',
           keywords: const ['pencurian'],
         ),
         PasalModel(
@@ -156,7 +158,8 @@ void main() {
           undangUndangId: 'uu-1',
           nomor: '340',
           judul: 'Pembunuhan berencana',
-          isi: 'Barangsiapa dengan sengaja dan dengan rencana terlebih dahulu merampas nyawa orang lain.',
+          isi:
+              'Barangsiapa dengan sengaja dan dengan rencana terlebih dahulu merampas nyawa orang lain.',
           keywords: const ['pembunuhan'],
         ),
       ];
@@ -165,6 +168,61 @@ void main() {
         final result = SearchUtils.rankPasal(pasalList, 'pasal 480');
         expect(result.first.nomor, '480');
       });
+
+      test(
+        'specific pasal number search returns exact number when available',
+        () {
+          final result = SearchUtils.rankPasal([
+            PasalModel(
+              id: '12',
+              undangUndangId: 'uu-1',
+              nomor: '12',
+              isi: 'Isi pasal dua belas.',
+              keywords: const [],
+            ),
+            PasalModel(
+              id: '120',
+              undangUndangId: 'uu-1',
+              nomor: '120',
+              isi: 'Isi pasal seratus dua puluh.',
+              keywords: const [],
+            ),
+            PasalModel(
+              id: '128',
+              undangUndangId: 'uu-1',
+              nomor: '128',
+              isi: 'Isi pasal seratus dua puluh delapan.',
+              keywords: const [],
+            ),
+          ], 'pasal 12');
+
+          expect(result.map((pasal) => pasal.nomor), ['12']);
+        },
+      );
+
+      test(
+        'specific pasal number search falls back to nearby numbers when exact is unavailable',
+        () {
+          final result = SearchUtils.rankPasal([
+            PasalModel(
+              id: '120',
+              undangUndangId: 'uu-1',
+              nomor: '120',
+              isi: 'Isi pasal seratus dua puluh.',
+              keywords: const [],
+            ),
+            PasalModel(
+              id: '128',
+              undangUndangId: 'uu-1',
+              nomor: '128',
+              isi: 'Isi pasal seratus dua puluh delapan.',
+              keywords: const [],
+            ),
+          ], 'pasal 12');
+
+          expect(result.map((pasal) => pasal.nomor), ['120', '128']);
+        },
+      );
 
       test('expands simple legal synonyms', () {
         final result = SearchUtils.rankPasal(pasalList, 'maling');
