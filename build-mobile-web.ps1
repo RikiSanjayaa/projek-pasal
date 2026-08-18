@@ -36,6 +36,27 @@ if (Test-Path -LiteralPath $OutputDir) {
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 Copy-Item -Path (Join-Path $MobileAppDir "build\web\*") -Destination $OutputDir -Recurse -Force
 
+$BuildIdPath = Join-Path $OutputDir ".last_build_id"
+$BuildId = if (Test-Path -LiteralPath $BuildIdPath) {
+  (Get-Content -LiteralPath $BuildIdPath -Raw).Trim()
+} else {
+  [DateTimeOffset]::UtcNow.ToUnixTimeSeconds().ToString()
+}
+
+$IndexPath = Join-Path $OutputDir "index.html"
+if (Test-Path -LiteralPath $IndexPath) {
+  $IndexHtml = Get-Content -LiteralPath $IndexPath -Raw
+  $IndexHtml = $IndexHtml -replace 'src="flutter_bootstrap\.js"', "src=`"flutter_bootstrap.js?v=$BuildId`""
+  Set-Content -LiteralPath $IndexPath -Value $IndexHtml -NoNewline
+}
+
+$BootstrapPath = Join-Path $OutputDir "flutter_bootstrap.js"
+if (Test-Path -LiteralPath $BootstrapPath) {
+  $BootstrapJs = Get-Content -LiteralPath $BootstrapPath -Raw
+  $BootstrapJs = $BootstrapJs -replace '"main\.dart\.js"', "`"main.dart.js?v=$BuildId`""
+  Set-Content -LiteralPath $BootstrapPath -Value $BootstrapJs -NoNewline
+}
+
 Write-Host ""
 Write-Host "Build copied to:"
 Write-Host $OutputDir
