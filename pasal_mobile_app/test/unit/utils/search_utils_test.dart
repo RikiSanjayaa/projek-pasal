@@ -253,6 +253,96 @@ void main() {
         expect(terms, contains('penipuan'));
         expect(terms, contains('perbuatan curang'));
       });
+
+      test('includes pasal numbers and single-word titles in highlight terms', () {
+        final terms = SearchUtils.highlightTerms('pasal 362 pencurian');
+        expect(terms, contains('362'));
+        expect(terms, contains('pencurian'));
+        expect(terms, contains('mencuri'));
+      });
+
+      test('includes 1-digit or 2-digit pasal numbers in highlight terms', () {
+        final terms = SearchUtils.highlightTerms('pasal 1');
+        expect(terms, contains('1'));
+
+        final terms12 = SearchUtils.highlightTerms('12');
+        expect(terms12, contains('12'));
+      });
+    });
+
+    group('extractSnippet', () {
+      final pasalPanjang = PasalModel(
+        id: 'p-long',
+        undangUndangId: 'uu-1',
+        nomor: '450',
+        judul: 'Pasal Panjang Multi Ayat',
+        isi:
+            '(1) Setiap orang yang melakukan perbuatan persiapan pidana dipidana dengan sepertiga hukuman pokok. '
+            '(2) Penjatuhan pidana denda dapat dialihkan menjadi pidana kerja sosial. '
+            '(3) Tindak pidana yang dilakukan dengan kekerasan berat dapat dijatuhi pidana penjara seumur hidup atau pidana mati. '
+            '(4) Ketentuan lebih lanjut diatur dalam Peraturan Pemerintah.',
+        penjelasan:
+            'Yang dimaksud dengan kekerasan berat dalam pasal ini adalah perbuatan yang mengakibatkan luka berat atau kematian secara langsung.',
+        keywords: const ['kekerasan', 'pidana mati'],
+      );
+
+      test('returns beginning of text when match is at the start', () {
+        final snippet = SearchUtils.extractSnippet(
+          pasal: pasalPanjang,
+          query: 'persiapan pidana',
+        );
+
+        expect(snippet.hasMatch, isTrue);
+        expect(snippet.isFromPenjelasan, isFalse);
+        expect(snippet.text.startsWith('...'), isFalse);
+        expect(snippet.text, contains('persiapan pidana'));
+      });
+
+      test(
+        'extracts middle context with leading and trailing ellipsis for long text',
+        () {
+          final snippet = SearchUtils.extractSnippet(
+            pasal: pasalPanjang,
+            query: 'seumur hidup',
+          );
+
+          expect(snippet.hasMatch, isTrue);
+          expect(snippet.isFromPenjelasan, isFalse);
+          expect(snippet.text.startsWith('... '), isTrue);
+          expect(snippet.text, contains('seumur hidup'));
+        },
+      );
+
+      test(
+        'extracts snippet from penjelasan when match is only in penjelasan',
+        () {
+          final snippet = SearchUtils.extractSnippet(
+            pasal: pasalPanjang,
+            query: 'luka berat',
+          );
+
+          expect(snippet.hasMatch, isTrue);
+          expect(snippet.isFromPenjelasan, isTrue);
+          expect(snippet.text, contains('luka berat'));
+        },
+      );
+
+      test('returns default isi for empty query or nomor search', () {
+        final emptySnippet = SearchUtils.extractSnippet(
+          pasal: pasalPanjang,
+          query: '',
+        );
+        expect(emptySnippet.hasMatch, isFalse);
+        expect(emptySnippet.isFromPenjelasan, isFalse);
+        expect(emptySnippet.text.startsWith('(1) Setiap orang'), isTrue);
+
+        final nomorSnippet = SearchUtils.extractSnippet(
+          pasal: pasalPanjang,
+          query: 'pasal 450',
+        );
+        expect(nomorSnippet.hasMatch, isFalse);
+        expect(nomorSnippet.text.startsWith('(1) Setiap orang'), isTrue);
+      });
     });
   });
 }

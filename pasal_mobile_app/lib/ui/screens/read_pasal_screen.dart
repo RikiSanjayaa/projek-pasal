@@ -331,12 +331,14 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                 child: Row(
                                   children: [
                                     Flexible(
-                                      child: Text(
-                                        _currentPasal.nomor
-                                                .toLowerCase()
-                                                .startsWith("pasal")
-                                            ? _currentPasal.nomor
-                                            : "Pasal ${_currentPasal.nomor}",
+                                      child: HighlightText(
+                                        text:
+                                            _currentPasal.nomor
+                                                    .toLowerCase()
+                                                    .startsWith("pasal")
+                                                ? _currentPasal.nomor
+                                                : "Pasal ${_currentPasal.nomor}",
+                                        query: _localSearchQuery,
                                         style: TextStyle(
                                           color: textColor,
                                           fontSize: 20,

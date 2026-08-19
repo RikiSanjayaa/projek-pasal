@@ -98,7 +98,7 @@ const getPasalColumns = (searchQuery: string, extraTerms: string[]): Column<Pasa
     key: 'isi',
     title: 'Isi',
     render: (value) => (
-      <SearchHighlight size="sm" c="dimmed" lineClamp={2} style={{ maxWidth: 300 }} text={String(value || '')} query={searchQuery} extraTerms={extraTerms} />
+      <SearchHighlight size="sm" c="dimmed" lineClamp={2} style={{ maxWidth: 300 }} text={String(value || '')} query={searchQuery} extraTerms={extraTerms} autoSnippet />
     ),
   },
   {

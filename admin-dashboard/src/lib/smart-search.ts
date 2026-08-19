@@ -73,3 +73,62 @@ export function defaultSearchSuggestions(query: string) {
 
   return [...suggestions].slice(0, 6)
 }
+
+export function extractContextSnippet(
+  text: string,
+  query: string,
+  extraTerms: string[] = [],
+  leadingChars = 40,
+  totalChars = 160
+): string {
+  const cleanText = text.replace(/\s+/g, ' ').trim()
+  if (!cleanText || !query.trim()) return cleanText
+
+  const terms = expandSearchTerms(query, extraTerms)
+  if (terms.length === 0 || cleanText.length <= totalChars) return cleanText
+
+  const lowerText = cleanText.toLowerCase()
+  let bestIndex = -1
+  let bestTerm = ''
+
+  for (const term of terms) {
+    const idx = lowerText.indexOf(term.toLowerCase())
+    if (idx === -1) continue
+    if (bestIndex === -1 || term.length > bestTerm.length || (term.length === bestTerm.length && idx < bestIndex)) {
+      bestIndex = idx
+      bestTerm = term
+    }
+  }
+
+  if (bestIndex === -1) return cleanText
+
+  if (bestIndex <= leadingChars + 10) {
+    let end = Math.min(totalChars, cleanText.length)
+    if (end < cleanText.length) {
+      const spaceIdx = cleanText.indexOf(' ', end)
+      if (spaceIdx !== -1 && spaceIdx - end <= 25) {
+        end = spaceIdx
+      }
+      return `${cleanText.substring(0, end).trim()}...`
+    }
+    return cleanText
+  }
+
+  let start = Math.max(0, bestIndex - leadingChars)
+  const spaceBefore = cleanText.indexOf(' ', start)
+  if (spaceBefore !== -1 && spaceBefore < bestIndex) {
+    start = spaceBefore + 1
+  }
+
+  let end = Math.min(cleanText.length, start + totalChars)
+  if (end < cleanText.length) {
+    const spaceAfter = cleanText.indexOf(' ', end)
+    if (spaceAfter !== -1 && spaceAfter - end <= 25) {
+      end = spaceAfter
+    }
+    return `... ${cleanText.substring(start, end).trim()}...`
+  }
+
+  return `... ${cleanText.substring(start).trim()}`
+}
+

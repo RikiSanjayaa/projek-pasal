@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/config/app_colors.dart';
+import '../../core/utils/search_utils.dart';
 import '../../models/pasal_model.dart';
 import '../../core/services/query_service.dart';
 import '../utils/highlight_text.dart';
@@ -104,8 +105,9 @@ class PasalCard extends StatelessWidget {
                     const SizedBox(height: 8),
                   ],
 
-                  Text(
-                    displayNomor,
+                  HighlightText(
+                    text: displayNomor,
+                    query: searchQuery,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
@@ -117,8 +119,9 @@ class PasalCard extends StatelessWidget {
                       pasal.judul!.trim().isNotEmpty) ...[
                     Padding(
                       padding: const EdgeInsets.only(top: 4.0),
-                      child: Text(
-                        pasal.judul!,
+                      child: HighlightText(
+                        text: pasal.judul!,
+                        query: searchQuery,
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
@@ -181,17 +184,79 @@ class PasalCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                   ],
-                  HighlightText(
-                    text: pasal.isi.replaceAll('\n', ' '),
-                    query: searchQuery,
-                    textAlign: TextAlign.left,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: subTextColor,
-                      fontSize: 13,
-                      height: 1.5,
-                    ),
+                  Builder(
+                    builder: (context) {
+                      final snippet = SearchUtils.extractSnippet(
+                        pasal: pasal,
+                        query: searchQuery,
+                      );
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (snippet.isFromPenjelasan) ...[
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2.5,
+                              ),
+                              decoration: BoxDecoration(
+                                color:
+                                    isDark
+                                        ? Colors.amber.withValues(alpha: 0.15)
+                                        : Colors.amber.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(5),
+                                border: Border.all(
+                                  color:
+                                      isDark
+                                          ? Colors.amber.withValues(alpha: 0.4)
+                                          : Colors.amber.withValues(alpha: 0.5),
+                                  width: 0.5,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.info_outline_rounded,
+                                    size: 11,
+                                    color:
+                                        isDark
+                                            ? Colors.amber[300]
+                                            : Colors.amber[800],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Cocok di Penjelasan',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color:
+                                          isDark
+                                              ? Colors.amber[300]
+                                              : Colors.amber[900],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          HighlightText(
+                            text: snippet.text,
+                            query: searchQuery,
+                            textAlign: TextAlign.left,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: subTextColor,
+                              fontSize: 13,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),

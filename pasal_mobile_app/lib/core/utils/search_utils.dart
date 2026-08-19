@@ -140,8 +140,38 @@ class SearchUtils {
   }
 
   static List<String> highlightTerms(String query) {
-    return expandQuery(query).where((term) => term.length >= 3).toList()
+    final expanded = expandQuery(query);
+    final terms = <String>{};
+
+    for (final term in expanded) {
+      if (RegExp(r'^\d+[a-z]?$').hasMatch(term)) {
+        terms.add(term);
+      } else if (term.length >= 3) {
+        terms.add(term);
+      }
+    }
+
+    final rawTokens = normalize(query).split(' ');
+    for (final token in rawTokens) {
+      if (token.isNotEmpty && !_stopWords.contains(token)) {
+        terms.add(token);
+      }
+    }
+
+    return terms.where((t) => t.isNotEmpty).toList()
       ..sort((a, b) => b.length.compareTo(a.length));
+  }
+
+  /// Extracts exact pasal number if present in the query (e.g. "pasal 362 pencurian" -> "362")
+  static String extractFirstNomor(String query) {
+    final normalized = normalize(query);
+    final match = RegExp(
+      r'(?:^|\s)(?:pasal\s+)?(\d{1,4}[a-z]?)(?:\s|$)',
+    ).firstMatch(normalized);
+    if (match != null) {
+      return match.group(1)?.trim() ?? '';
+    }
+    return '';
   }
 
   static List<String> suggestionsForQuery(String query) {
@@ -175,6 +205,7 @@ class SearchUtils {
     if (normalizedQuery.isEmpty) return 0;
 
     final nomorQuery = extractNomorQuery(normalizedQuery);
+    final firstNomor = extractFirstNomor(normalizedQuery);
     final nomor = normalize(pasal.nomor);
     final title = normalize(pasal.judul ?? '');
     final content = normalize(pasal.isi);
@@ -198,6 +229,11 @@ class SearchUtils {
         score += (260 - (lengthGap * 45)).clamp(60, 260);
       }
       if (nomor.contains(nomorQuery)) score += 80;
+    }
+
+    if (firstNomor.isNotEmpty && firstNomor != nomorQuery) {
+      if (nomor == firstNomor) score += 950;
+      else if (nomor.startsWith(firstNomor)) score += 180;
     }
 
     if (title.contains(normalizedQuery)) score += 320;
@@ -372,4 +408,203 @@ class SearchUtils {
     return normalizedQuery == nomorQuery ||
         normalizedQuery == 'pasal $nomorQuery';
   }
+
+  /// Extracts a context-aware snippet from [pasal.isi] or [pasal.penjelasan]
+  /// ensuring that matches in long articles are visible in search results.
+  static SearchSnippet extractSnippet({
+    required PasalModel pasal,
+    required String query,
+    int leadingChars = 40,
+    int totalChars = 160,
+  }) {
+    final cleanQuery = query.trim();
+    final defaultIsiText = pasal.isi.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    if (cleanQuery.isEmpty || isNomorSearch(cleanQuery)) {
+      return SearchSnippet(
+        text: defaultIsiText,
+        source: SnippetSource.defaultIsi,
+        hasMatch: false,
+      );
+    }
+
+    final terms = highlightTerms(cleanQuery);
+    if (terms.isEmpty) {
+      return SearchSnippet(
+        text: defaultIsiText,
+        source: SnippetSource.defaultIsi,
+        hasMatch: false,
+      );
+    }
+
+    final isiMatch = _findSnippetMatch(
+      rawText: pasal.isi,
+      terms: terms,
+      cleanQuery: cleanQuery,
+      source: SnippetSource.isi,
+      leadingChars: leadingChars,
+      totalChars: totalChars,
+    );
+
+    final penjelasanMatch =
+        (pasal.penjelasan != null && pasal.penjelasan!.trim().isNotEmpty)
+            ? _findSnippetMatch(
+              rawText: pasal.penjelasan!,
+              terms: terms,
+              cleanQuery: cleanQuery,
+              source: SnippetSource.penjelasan,
+              leadingChars: leadingChars,
+              totalChars: totalChars,
+            )
+            : null;
+
+    if (isiMatch == null && penjelasanMatch == null) {
+      return SearchSnippet(
+        text: defaultIsiText,
+        source: SnippetSource.defaultIsi,
+        hasMatch: false,
+      );
+    }
+
+    if (isiMatch != null && penjelasanMatch == null) {
+      return isiMatch.snippet;
+    }
+
+    if (isiMatch == null && penjelasanMatch != null) {
+      return penjelasanMatch.snippet;
+    }
+
+    // Both matched: compare match quality
+    // 1. If one matched full clean query, prefer it
+    if (penjelasanMatch!.isFullQueryMatch && !isiMatch!.isFullQueryMatch) {
+      return penjelasanMatch.snippet;
+    }
+    if (isiMatch!.isFullQueryMatch && !penjelasanMatch.isFullQueryMatch) {
+      return isiMatch.snippet;
+    }
+
+    // 2. If one matched a strictly longer term, prefer it
+    if (penjelasanMatch.matchedTermLength > isiMatch.matchedTermLength) {
+      return penjelasanMatch.snippet;
+    }
+
+    // 3. Default prefer isi
+    return isiMatch.snippet;
+  }
+
+  static ({
+    SearchSnippet snippet,
+    int matchedTermLength,
+    bool isFullQueryMatch,
+  })?
+  _findSnippetMatch({
+    required String rawText,
+    required List<String> terms,
+    required String cleanQuery,
+    required SnippetSource source,
+    required int leadingChars,
+    required int totalChars,
+  }) {
+    final cleanText = rawText.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (cleanText.isEmpty) return null;
+
+    final lowerText = cleanText.toLowerCase();
+    final lowerCleanQuery = cleanQuery.toLowerCase();
+    int bestIndex = -1;
+    String bestTerm = '';
+
+    for (final term in terms) {
+      final index = lowerText.indexOf(term.toLowerCase());
+      if (index == -1) continue;
+      if (bestIndex == -1 ||
+          term.length > bestTerm.length ||
+          (term.length == bestTerm.length && index < bestIndex)) {
+        bestIndex = index;
+        bestTerm = term;
+      }
+    }
+
+    if (bestIndex == -1) return null;
+
+    final isFullQuery =
+        lowerCleanQuery.isNotEmpty && lowerText.contains(lowerCleanQuery);
+
+    final snippetText = _buildWindowSnippet(
+      cleanText: cleanText,
+      matchIndex: bestIndex,
+      matchLength: bestTerm.length,
+      leadingChars: leadingChars,
+      totalChars: totalChars,
+    );
+
+    return (
+      snippet: SearchSnippet(
+        text: snippetText,
+        source: source,
+        hasMatch: true,
+      ),
+      matchedTermLength: bestTerm.length,
+      isFullQueryMatch: isFullQuery,
+    );
+  }
+
+  static String _buildWindowSnippet({
+    required String cleanText,
+    required int matchIndex,
+    required int matchLength,
+    required int leadingChars,
+    required int totalChars,
+  }) {
+    if (cleanText.length <= totalChars) {
+      return cleanText;
+    }
+
+    // If match is near the beginning
+    if (matchIndex <= leadingChars + 10) {
+      var end = totalChars.clamp(0, cleanText.length);
+      if (end < cleanText.length) {
+        final spaceIndex = cleanText.indexOf(' ', end);
+        if (spaceIndex != -1 && spaceIndex - end <= 25) {
+          end = spaceIndex;
+        }
+        return '${cleanText.substring(0, end).trim()}...';
+      }
+      return cleanText;
+    }
+
+    // Match is in middle or end of long text
+    var start = (matchIndex - leadingChars).clamp(0, cleanText.length);
+    final spaceBefore = cleanText.indexOf(' ', start);
+    if (spaceBefore != -1 && spaceBefore < matchIndex) {
+      start = spaceBefore + 1;
+    }
+
+    var end = (start + totalChars).clamp(0, cleanText.length);
+    if (end < cleanText.length) {
+      final spaceAfter = cleanText.indexOf(' ', end);
+      if (spaceAfter != -1 && spaceAfter - end <= 25) {
+        end = spaceAfter;
+      }
+      return '... ${cleanText.substring(start, end).trim()}...';
+    } else {
+      return '... ${cleanText.substring(start).trim()}';
+    }
+  }
 }
+
+enum SnippetSource { isi, penjelasan, defaultIsi }
+
+class SearchSnippet {
+  final String text;
+  final SnippetSource source;
+  final bool hasMatch;
+
+  const SearchSnippet({
+    required this.text,
+    required this.source,
+    this.hasMatch = false,
+  });
+
+  bool get isFromPenjelasan => source == SnippetSource.penjelasan;
+}
+
