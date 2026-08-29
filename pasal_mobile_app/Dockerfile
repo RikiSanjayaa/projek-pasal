@@ -25,7 +25,7 @@ RUN flutter create . --platforms web
 RUN cp -r /tmp/web-custom/* web/
 
 # Build for web release
-RUN set -a && . /tmp/mobile.env && set +a && flutter build web --release --dart-define=API_BASE_URL="$API_BASE_URL" --dart-define=WEB_APP_URL="$WEB_APP_URL"
+RUN set -a && . /tmp/mobile.env && set +a && flutter build web --release --no-tree-shake-icons --dart-define=API_BASE_URL="$API_BASE_URL" --dart-define=WEB_APP_URL="$WEB_APP_URL"
 
 # Flutter web emits unversioned entrypoint files. Add a content-based query
 # string so browser/CDN caches do not keep serving an older main.dart.js.
