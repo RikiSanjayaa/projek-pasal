@@ -541,39 +541,17 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                     },
                                     borderRadius: BorderRadius.circular(8),
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 6,
-                                      ),
+                                      padding: const EdgeInsets.all(8.0),
                                       decoration: BoxDecoration(
                                         color: AppColors.primary.withValues(
                                           alpha: isDark ? 0.15 : 0.08,
                                         ),
                                         borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: AppColors.primary.withValues(
-                                            alpha: 0.3,
-                                          ),
-                                        ),
                                       ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: const [
-                                          Icon(
-                                            Icons.print,
-                                            size: 14,
-                                            color: AppColors.primary,
-                                          ),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            "PDF",
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppColors.primary,
-                                            ),
-                                          ),
-                                        ],
+                                      child: Icon(
+                                        Icons.picture_as_pdf_outlined,
+                                        size: 20,
+                                        color: AppColors.primary,
                                       ),
                                     ),
                                   ),
