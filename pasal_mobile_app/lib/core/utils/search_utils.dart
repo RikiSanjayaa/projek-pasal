@@ -53,6 +53,8 @@ class SearchUtils {
     'rampas': ['perampasan', 'kekerasan'],
     'paksa': ['pemaksaan', 'kekerasan'],
     'rusak': ['perusakan', 'merusak'],
+    'pemerkosaan': ['perkosaan', 'persetubuhan'],
+    'perkosa': ['perkosaan', 'pemerkosaan', 'persetubuhan'],
   };
 
   /// Strips "pasal" prefix from search query
@@ -258,10 +260,8 @@ class SearchUtils {
     }
 
     for (final token in tokens) {
-      if (_hasFuzzyTokenMatch(token, searchable)) {
-        score += 18;
-        tokenMatches++;
-      }
+      // Disable loose fuzzy matching score fallback if token is not an exact match anywhere
+      // This prevents irrelevant matches (e.g. "pemerkosaan" matching "perkosaan" via fuzzy without highlight)
     }
 
     if (tokens.isNotEmpty && tokenMatches == 0) return 0;
