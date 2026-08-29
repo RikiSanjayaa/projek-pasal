@@ -152,15 +152,24 @@ class PdfExportService {
         },
         build: (pw.Context context) {
           return [
-            pw.Container(
-              padding: const pw.EdgeInsets.all(10),
-              decoration: pw.BoxDecoration(
-                color: PdfColors.grey100,
-                borderRadius: pw.BorderRadius.circular(6),
-              ),
-              child: pw.Text(
-                'Ditemukan ${pasalList.length} pasal terkait pencarian "$searchQuery"',
-                style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
+            pw.Center(
+              child: pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.blue50,
+                  borderRadius: pw.BorderRadius.circular(6),
+                  border: pw.Border.all(color: PdfColors.blue200),
+                ),
+                child: pw.Text(
+                  'Ditemukan ${pasalList.length} pasal terkait pencarian "$searchQuery"',
+                  textAlign: pw.TextAlign.center,
+                  style: pw.TextStyle(
+                    fontSize: 11,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.blue900,
+                  ),
+                ),
               ),
             ),
             pw.SizedBox(height: 16),
@@ -321,16 +330,12 @@ class PdfExportService {
       }
 
       spans.add(
-        pw.WidgetSpan(
-          child: pw.Container(
-            color: PdfColors.yellow300,
-            child: pw.Text(
-              text.substring(bestIndex, bestIndex + bestTerm.length),
-              style: pw.TextStyle(
-                fontSize: 10,
-                fontWeight: pw.FontWeight.bold,
-              ),
-            ),
+        pw.TextSpan(
+          text: text.substring(bestIndex, bestIndex + bestTerm.length),
+          style: pw.TextStyle(
+            fontSize: 10,
+            fontWeight: pw.FontWeight.bold,
+            background: const pw.BoxDecoration(color: PdfColors.yellow300),
           ),
         ),
       );
