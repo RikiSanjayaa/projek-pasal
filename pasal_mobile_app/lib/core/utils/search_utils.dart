@@ -311,17 +311,57 @@ class SearchUtils {
     return scored.map((item) => item.pasal).toList();
   }
 
+  static const Set<String> _validLegalTerms = {
+    'pencurian',
+    'pencarian',
+    'penyidik',
+    'penyelidik',
+    'penuntutan',
+    'pengadilan',
+    'penganiayaan',
+    'pembunuhan',
+    'penipuan',
+    'penggelapan',
+    'pemalsuan',
+    'perjudian',
+    'narkotika',
+    'psikotropika',
+  };
+
   static bool _hasFuzzyTokenMatch(String token, String text) {
     if (token.length < 4) return false;
+    // If token is an exact valid dictionary term, disable fuzzy matching to prevent collisions (e.g. pencurian vs pencarian)
+    if (_validLegalTerms.contains(token)) return false;
+
     final words = text.split(' ');
     final maxDistance = token.length <= 5 ? 1 : 2;
     for (final word in words) {
+      if (_validLegalTerms.contains(word)) continue;
       if ((word.length - token.length).abs() > maxDistance) continue;
       if (_levenshteinDistance(token, word, maxDistance) <= maxDistance) {
         return true;
       }
     }
     return false;
+  }
+
+  /// Suggests a typo correction (e.g. "penyudik" -> "penyidik")
+  static String? suggestTypoCorrection(String query) {
+    final normalized = normalize(query);
+    if (normalized.isEmpty || _validLegalTerms.contains(normalized)) return null;
+
+    final tokens = tokenize(normalized);
+    for (final token in tokens) {
+      if (_validLegalTerms.contains(token)) continue;
+      for (final validTerm in _validLegalTerms) {
+        if ((token.length - validTerm.length).abs() <= 1) {
+          if (_levenshteinDistance(token, validTerm, 1) <= 1) {
+            return normalized.replaceAll(token, validTerm);
+          }
+        }
+      }
+    }
+    return null;
   }
 
   static int _levenshteinDistance(String a, String b, int maxDistance) {

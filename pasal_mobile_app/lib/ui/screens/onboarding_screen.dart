@@ -261,24 +261,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         final color = page['color'] as Color;
 
         return Padding(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo Kampus UBG
+              const SizedBox(height: 20),
+              // Logo Kampus UBG Header - Top Aligned
               Image.asset(
                 isDark
                     ? 'assets/images/logo-ubg-putih.png'
                     : 'assets/images/logo-ubg-hitam.png',
-                height: 50,
+                height: 55,
                 fit: BoxFit.contain,
               ),
-              const SizedBox(height: 24),
+              const Spacer(),
 
               // Icon container with gradient
               Container(
-                height: 140,
-                width: 140,
+                height: 130,
+                width: 130,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: isDark ? 0.1 : 0.05),
                   shape: BoxShape.circle,
@@ -287,9 +287,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     width: 2,
                   ),
                 ),
-                child: Icon(page['icon'] as IconData, size: 60, color: color),
+                child: Icon(page['icon'] as IconData, size: 55, color: color),
               ),
-              const SizedBox(height: 36),
+              const SizedBox(height: 28),
 
               // Title
               Text(
@@ -313,6 +313,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 textAlign: TextAlign.center,
               ),
+              const Spacer(),
             ],
           ),
         );

@@ -389,39 +389,15 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo Kampus UBG Header
+                  // Logo Kampus UBG (Gantikan icon menu_book)
                   Image.asset(
                     isDark
                         ? 'assets/images/logo-ubg-putih.png'
                         : 'assets/images/logo-ubg-hitam.png',
-                    height: 50,
+                    height: 110,
                     fit: BoxFit.contain,
                   ),
-                  const SizedBox(height: 24),
-
-                  // Logo/Icon
-                  Container(
-                    height: 120,
-                    width: 120,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(
-                        alpha: isDark ? 0.1 : 0.05,
-                      ),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.primary.withValues(
-                          alpha: isDark ? 0.5 : 0.3,
-                        ),
-                        width: 2,
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.menu_book_rounded,
-                      size: 50,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 28),
 
                   // Title
                   Text(
