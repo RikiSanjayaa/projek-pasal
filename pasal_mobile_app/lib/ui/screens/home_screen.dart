@@ -479,7 +479,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(
-                              Icons.picture_as_pdf_rounded,
+                              Icons.picture_as_pdf,
                               size: 14,
                               color: AppColors.primary,
                             ),

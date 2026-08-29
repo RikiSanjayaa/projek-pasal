@@ -555,7 +555,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                         ),
                                       ),
                                       child: Icon(
-                                        Icons.picture_as_pdf_rounded,
+                                        Icons.picture_as_pdf,
                                         size: 20,
                                         color: AppColors.primary,
                                       ),

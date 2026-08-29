@@ -2,6 +2,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../models/pasal_model.dart';
+import '../../ui/widgets/law_content_formatter.dart';
 import '../utils/search_utils.dart';
 
 class PdfExportService {
@@ -80,7 +81,7 @@ class PdfExportService {
                 style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
               ),
               pw.SizedBox(height: 4),
-              _buildHighlightText(pasal.isi, terms),
+              ..._buildFormattedContent(pasal.isi, terms),
               pw.SizedBox(height: 14),
 
               // Penjelasan if any
@@ -90,7 +91,7 @@ class PdfExportService {
                   style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
                 ),
                 pw.SizedBox(height: 4),
-                _buildHighlightText(pasal.penjelasan!, terms),
+                ..._buildFormattedContent(pasal.penjelasan!, terms),
               ],
             ],
           );
@@ -166,10 +167,11 @@ class PdfExportService {
             ...pasalList.map((pasal) {
               return pw.Container(
                 margin: const pw.EdgeInsets.only(bottom: 16),
-                padding: const pw.EdgeInsets.all(10),
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: PdfColors.grey300),
-                  borderRadius: pw.BorderRadius.circular(6),
+                padding: const pw.EdgeInsets.only(bottom: 12),
+                decoration: const pw.BoxDecoration(
+                  border: pw.Border(
+                    bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.8),
+                  ),
                 ),
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -195,7 +197,7 @@ class PdfExportService {
                       ),
                     ],
                     pw.SizedBox(height: 6),
-                    _buildHighlightText(pasal.isi, terms),
+                    ..._buildFormattedContent(pasal.isi, terms),
                   ],
                 ),
               );
@@ -211,10 +213,84 @@ class PdfExportService {
     );
   }
 
-  static pw.Widget _buildHighlightText(String text, List<String> terms) {
-    if (terms.isEmpty) {
-      return pw.Text(text, style: const pw.TextStyle(fontSize: 10));
+  static List<pw.Widget> _buildFormattedContent(String content, List<String> terms) {
+    if (content.isEmpty) return [];
+
+    final normalized = normalizeLegalDisplayText(content);
+    final RegExp pattern = RegExp(
+      r'(?:^|[\.\:;!?\n])\s*((\(\d+[a-z]?\))|(\d+[a-z]?\.)|(\([a-z]\))|([a-z]\.))\s+',
+      caseSensitive: false,
+    );
+
+    final matches = pattern.allMatches(normalized);
+    if (matches.isEmpty) {
+      return [_buildHighlightText(normalized, terms)];
     }
+
+    final List<pw.Widget> widgets = [];
+    final firstMatch = matches.first;
+    final fullFirstMatchStr = normalized.substring(firstMatch.start, firstMatch.end);
+    final firstMarkerStr = firstMatch.group(1)!;
+    final firstMarkerAbsoluteStart = firstMatch.start + fullFirstMatchStr.indexOf(firstMarkerStr);
+
+    String introText = normalized.substring(0, firstMarkerAbsoluteStart);
+    if (introText.trim().isNotEmpty) {
+      widgets.add(
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 6),
+          child: _buildHighlightText(introText.trim(), terms),
+        ),
+      );
+    }
+
+    for (int i = 0; i < matches.length; i++) {
+      final match = matches.elementAt(i);
+      final markerStr = match.group(1)!;
+      final bodyStart = match.end;
+
+      int bodyEnd = normalized.length;
+      if (i + 1 < matches.length) {
+        final nextMatch = matches.elementAt(i + 1);
+        final nextFullMatchStr = normalized.substring(nextMatch.start, nextMatch.end);
+        final nextMarkerStr = nextMatch.group(1)!;
+        bodyEnd = nextMatch.start + nextFullMatchStr.indexOf(nextMarkerStr);
+      }
+
+      String body = normalized.substring(bodyStart, bodyEnd);
+      double indent = 0;
+      if (RegExp(r'^\(?[a-z]\)?\.?$').hasMatch(markerStr)) {
+        indent = 12;
+      }
+
+      widgets.add(
+        pw.Padding(
+          padding: pw.EdgeInsets.only(bottom: 6, left: indent),
+          child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.SizedBox(
+                width: 28,
+                child: pw.Text(
+                  markerStr,
+                  style: pw.TextStyle(
+                    fontSize: 10,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ),
+              pw.Expanded(
+                child: _buildHighlightText(body.trim(), terms),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return widgets;
+  }
+
+  static pw.Widget _buildHighlightText(String text, List<String> terms) {
 
     final lowerText = text.toLowerCase();
     final spans = <pw.InlineSpan>[];
