@@ -13,6 +13,7 @@ import '../widgets/app_notification.dart';
 import '../widgets/pasal_sections.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/services/pdf_export_service.dart';
 import '../widgets/app_showcase.dart';
 
 class ReadPasalScreen extends StatefulWidget {
@@ -520,11 +521,43 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                         ),
                                         child: Icon(
                                           Icons.copy_rounded,
-                                          size: 18,
+                                          size: 20,
                                           color: isDark
                                               ? Colors.grey[400]
                                               : Colors.grey[600],
                                         ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+
+                                  // PDF Print Button
+                                  InkWell(
+                                    onTap: () {
+                                      PdfExportService.exportSinglePasal(
+                                        pasal: _currentPasal,
+                                        searchQuery: _localSearchQuery,
+                                      );
+                                    },
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8.0),
+                                      decoration: BoxDecoration(
+                                        color: isDark
+                                            ? Colors.grey.withValues(
+                                                alpha: 0.1,
+                                              )
+                                            : Colors.grey.withValues(
+                                                alpha: 0.05,
+                                              ),
+                                        borderRadius: BorderRadius.circular(
+                                          8,
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        Icons.picture_as_pdf_rounded,
+                                        size: 20,
+                                        color: AppColors.primary,
                                       ),
                                     ),
                                   ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/services/pdf_export_service.dart';
 import '../../core/config/app_colors.dart';
 import '../../models/pasal_model.dart';
 import '../../models/undang_undang_model.dart';
@@ -440,19 +441,67 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    (_searchQuery.isNotEmpty || _selectedKeywords.isNotEmpty)
-                        ? "Pasal yang sesuai"
-                        : "Pasal Terbaru",
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                  Expanded(
+                    child: Text(
+                      (_searchQuery.isNotEmpty || _selectedKeywords.isNotEmpty)
+                          ? "${_filteredData.length} pasal terkait ditemukan"
+                          : "Pasal Terbaru",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                   ),
-                  Text(
-                    "Total: ${_filteredData.length}",
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
+                  if (_searchQuery.isNotEmpty && _filteredData.isNotEmpty) ...[
+                    InkWell(
+                      onTap: () {
+                        PdfExportService.exportBatchPasal(
+                          pasalList: _filteredData,
+                          searchQuery: _searchQuery,
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(
+                            alpha: isDark ? 0.15 : 0.08,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.picture_as_pdf_rounded,
+                              size: 14,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            const Text(
+                              "Cetak ke PDF",
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    Text(
+                      "Total: ${_filteredData.length}",
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                  ],
                 ],
               ),
             ),
