@@ -389,6 +389,16 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Logo Kampus UBG Header
+                  Image.asset(
+                    isDark
+                        ? 'assets/images/logo-ubg-putih.png'
+                        : 'assets/images/logo-ubg-hitam.png',
+                    height: 50,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(height: 24),
+
                   // Logo/Icon
                   Container(
                     height: 120,

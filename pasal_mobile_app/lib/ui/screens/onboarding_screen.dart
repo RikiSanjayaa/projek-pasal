@@ -265,10 +265,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // Logo Kampus UBG
+              Image.asset(
+                isDark
+                    ? 'assets/images/logo-ubg-putih.png'
+                    : 'assets/images/logo-ubg-hitam.png',
+                height: 50,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(height: 24),
+
               // Icon container with gradient
               Container(
-                height: 160,
-                width: 160,
+                height: 140,
+                width: 140,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: isDark ? 0.1 : 0.05),
                   shape: BoxShape.circle,
@@ -277,9 +287,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     width: 2,
                   ),
                 ),
-                child: Icon(page['icon'] as IconData, size: 70, color: color),
+                child: Icon(page['icon'] as IconData, size: 60, color: color),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 36),
 
               // Title
               Text(
