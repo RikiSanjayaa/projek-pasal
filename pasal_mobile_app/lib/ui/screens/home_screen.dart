@@ -479,8 +479,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(
-                              Icons.picture_as_pdf,
-                              size: 14,
+                              Icons.print,
+                              size: 15,
                               color: AppColors.primary,
                             ),
                             const SizedBox(width: 4),
