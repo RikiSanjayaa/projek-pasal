@@ -36,6 +36,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
   final GlobalKey _searchKey = GlobalKey();
   final GlobalKey _archiveKey = GlobalKey();
   final GlobalKey _copyKey = GlobalKey();
+  final GlobalKey _pdfKey = GlobalKey();
   String? _kodeUU;
   late PasalModel _currentPasal;
   final ScrollController _scrollController = ScrollController();
@@ -58,6 +59,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
               _searchKey,
               _archiveKey,
               _copyKey,
+              _pdfKey,
             ]);
             prefs.setBool('has_shown_read_pasal_showcase', true);
           }
@@ -532,26 +534,34 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                   const SizedBox(width: 8),
 
                                   // PDF Print Button
-                                  InkWell(
-                                    onTap: () {
-                                      PdfExportService.exportSinglePasal(
-                                        pasal: _currentPasal,
-                                        searchQuery: _localSearchQuery,
-                                      );
-                                    },
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(8.0),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primary.withValues(
-                                          alpha: isDark ? 0.15 : 0.08,
+                                  AppShowcase(
+                                    showcaseKey: _pdfKey,
+                                    title: 'Cetak PDF',
+                                    description:
+                                        'Cetak atau unduh pasal ini sebagai PDF.\n\nHasil PDF mencakup isi pasal lengkap beserta penjelasannya (jika ada).',
+                                    child: InkWell(
+                                      onTap: () {
+                                        PdfExportService.exportSinglePasal(
+                                          pasal: _currentPasal,
+                                          searchQuery: _localSearchQuery,
+                                        );
+                                      },
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(8.0),
+                                        decoration: BoxDecoration(
+                                          color: isDark
+                                              ? Colors.grey.withValues(alpha: 0.1)
+                                              : Colors.grey.withValues(alpha: 0.05),
+                                          borderRadius: BorderRadius.circular(8),
                                         ),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Icon(
-                                        Icons.picture_as_pdf_outlined,
-                                        size: 20,
-                                        color: AppColors.primary,
+                                        child: Icon(
+                                          Icons.picture_as_pdf_outlined,
+                                          size: 20,
+                                          color: isDark
+                                              ? Colors.grey[400]
+                                              : Colors.grey[600],
+                                        ),
                                       ),
                                     ),
                                   ),

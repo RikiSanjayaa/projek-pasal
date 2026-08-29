@@ -157,9 +157,9 @@ class PdfExportService {
                 width: double.infinity,
                 padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                 decoration: pw.BoxDecoration(
-                  color: PdfColors.blue50,
+                  color: PdfColors.grey100,
                   borderRadius: pw.BorderRadius.circular(6),
-                  border: pw.Border.all(color: PdfColors.blue200),
+                  border: pw.Border.all(color: PdfColors.grey300),
                 ),
                 child: pw.Text(
                   'Ditemukan ${pasalList.length} pasal terkait pencarian "$searchQuery"',
@@ -167,7 +167,7 @@ class PdfExportService {
                   style: pw.TextStyle(
                     fontSize: 11,
                     fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.blue900,
+                    color: PdfColors.grey800,
                   ),
                 ),
               ),
@@ -207,6 +207,19 @@ class PdfExportService {
                     ],
                     pw.SizedBox(height: 6),
                     ..._buildFormattedContent(pasal.isi, terms),
+                    if (pasal.penjelasan != null &&
+                        pasal.penjelasan!.trim().isNotEmpty) ...[
+                      pw.SizedBox(height: 6),
+                      pw.Text(
+                        'Penjelasan:',
+                        style: pw.TextStyle(
+                          fontSize: 10,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                      pw.SizedBox(height: 4),
+                      ..._buildFormattedContent(pasal.penjelasan!, terms),
+                    ],
                   ],
                 ),
               );
