@@ -190,6 +190,132 @@ class SearchUtils {
     return suggestions.take(6).toList();
   }
 
+  /// Suggests search terms mined from the actual pasal dataset — titles,
+  /// keywords, body text (isi) and penjelasan are compiled into a phrase
+  /// dictionary: 1-3 word n-grams counted per pasal, with high-signal title
+  /// and keyword chunks kept unconditionally. Candidates resembling [query]
+  /// (exact / substring / light fuzzy typo match) are ranked by match
+  /// quality, phrase commonness, then frequency. Every suggestion comes
+  /// from real pasal text, so tapping it is guaranteed to return results.
+  static List<String> suggestionsFromData(
+    String query,
+    Iterable<PasalModel> pasalList, {
+    int limit = 6,
+  }) {
+    final tokens = tokenize(query);
+    if (tokens.isEmpty) return const [];
+
+    final dictionary = _suggestionDictionary(pasalList);
+
+    final scored = <({String phrase, int score, int df})>[];
+    dictionary.forEach((phrase, df) {
+      var best = 0;
+      for (final token in tokens) {
+        if (phrase == token) {
+          best = 1000;
+          break;
+        }
+        if (phrase.contains(token) || token.contains(phrase)) {
+          if (best < 500) best = 500;
+        } else if (_fuzzyClose(phrase, token)) {
+          if (best < 300) best = 300;
+        }
+      }
+      if (best > 0) {
+        best += phrase.split(' ').length * 5; // prefer richer phrases
+        scored.add((phrase: phrase, score: best, df: df));
+      }
+    });
+
+    scored.sort((a, b) {
+      final byScore = b.score.compareTo(a.score);
+      if (byScore != 0) return byScore;
+      final byDf = b.df.compareTo(a.df);
+      if (byDf != 0) return byDf;
+      return a.phrase.compareTo(b.phrase);
+    });
+
+    return scored.take(limit).map((e) => e.phrase).toList();
+  }
+
+  static Map<String, int>? _phraseDfCache;
+  static int _phraseDfCacheLen = -1;
+
+  /// ponytail: dictionary cache is keyed by dataset length only — a sync
+  /// that keeps the same pasal count won't invalidate it; add force/epoch
+  /// param wired to the sync hook if staleness ever shows up.
+  static Map<String, int> _suggestionDictionary(
+    Iterable<PasalModel> pasalList, {
+    bool force = false,
+  }) {
+    final list = pasalList.toList();
+    if (!force && _phraseDfCache != null && _phraseDfCacheLen == list.length) {
+      return _phraseDfCache!;
+    }
+
+    final df = <String, int>{};
+    void record(Set<String> seen, String phrase) {
+      final p = normalize(phrase);
+      if (p.isEmpty || p.length < 4) return;
+      if (seen.add(p)) df[p] = (df[p] ?? 0) + 1;
+    }
+
+    for (final pasal in list) {
+      final seen = <String>{}; // per-pasal dedupe → document frequency
+
+      // High-signal fields: title chunks and keywords, any length.
+      final title = pasal.judul ?? '';
+      if (title.trim().isNotEmpty) {
+        for (final chunk in title.split(RegExp(r'[,;()\[\]\-–—]'))) {
+          final words = tokenize(chunk);
+          if (words.isNotEmpty && words.length <= 6) record(seen, chunk);
+        }
+      }
+      for (final keyword in pasal.keywords) {
+        record(seen, keyword);
+      }
+
+      // Body text (isi + penjelasan): 1-3 word n-gram windows.
+      final bodyTokens = tokenize(
+        [title, pasal.isi, pasal.penjelasan ?? ''].join(' '),
+      );
+      for (var i = 0; i < bodyTokens.length; i++) {
+        record(seen, bodyTokens[i]);
+        if (i + 1 < bodyTokens.length) {
+          record(seen, '${bodyTokens[i]} ${bodyTokens[i + 1]}');
+        }
+        if (i + 2 < bodyTokens.length) {
+          record(
+            seen,
+            '${bodyTokens[i]} ${bodyTokens[i + 1]} ${bodyTokens[i + 2]}',
+          );
+        }
+      }
+    }
+
+    // Prune: drop noisy unigrams (seen in only one pasal); keep phrases.
+    // Cap by document frequency so the dictionary stays bounded.
+    final kept = df.entries.where((e) {
+      final wordCount = e.key.split(' ').length;
+      return wordCount == 1 ? e.value >= 2 : true;
+    }).toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final result = <String, int>{
+      for (final e in kept.take(30000)) e.key: e.value,
+    };
+
+    _phraseDfCache = result;
+    _phraseDfCacheLen = list.length;
+    return result;
+  }
+
+  /// Light typo tolerance: distance ≤1 for short words, ≤2 for long ones.
+  static bool _fuzzyClose(String a, String b) {
+    if (a.length < 4 || b.length < 4) return false;
+    final maxDist = (a.length >= 7 && b.length >= 7) ? 2 : 1;
+    return _levenshteinDistance(a, b, maxDist) <= maxDist;
+  }
+
   static String searchableTextForPasal(PasalModel pasal) {
     return normalize(
       [

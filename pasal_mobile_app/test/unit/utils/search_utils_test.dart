@@ -270,6 +270,47 @@ void main() {
         expect(suggestions, contains('mengambil barang'));
       });
 
+      test('data suggestions rank exact then substring then fuzzy', () {
+        final list = [
+          PasalModel(
+            id: '1',
+            undangUndangId: 'uu-1',
+            nomor: '362',
+            judul: 'Pencurian barang',
+            isi: 'Mencuri.',
+            keywords: const ['pencurian', 'barang bergerak'],
+          ),
+          PasalModel(
+            id: '2',
+            undangUndangId: 'uu-1',
+            nomor: '167',
+            judul: 'Pencurian dengan kekerasan',
+            isi: 'Melanggar ketentuan.',
+            keywords: const ['keras'],
+          ),
+          PasalModel(
+            id: '3',
+            undangUndangId: 'uu-1',
+            nomor: '480',
+            isi: 'Penadahan.',
+            keywords: const ['penadahan'],
+          ),
+        ];
+
+        // Exact token match wins over substring; titles and keywords both suggested.
+        final result = SearchUtils.suggestionsFromData('pencurian', list);
+        expect(result.first, 'pencurian');
+        expect(result, contains('pencurian barang'));
+        expect(result, contains('pencurian dengan kekerasan'));
+
+        // Typo falls back to fuzzy keyword match.
+        final typo = SearchUtils.suggestionsFromData('pencurianx', list);
+        expect(typo, contains('pencurian'));
+
+        // No relevant keyword → empty (no dud suggestions).
+        expect(SearchUtils.suggestionsFromData('meteorologi', list), isEmpty);
+      });
+
       test('returns highlight terms with expanded aliases', () {
         final terms = SearchUtils.highlightTerms('tipu');
         expect(terms, contains('tipu'));

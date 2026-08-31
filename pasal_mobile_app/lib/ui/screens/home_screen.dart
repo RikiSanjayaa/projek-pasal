@@ -211,6 +211,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildEmptySearchState(bool isDark) {
     final suggestions = SearchUtils.suggestionsForQuery(_searchQuery);
+    final dataSuggestions = SearchUtils.suggestionsFromData(
+      _searchQuery,
+      _allPasalCache,
+    );
+    final hasSuggestions = suggestions.isNotEmpty || dataSuggestions.isNotEmpty;
 
     return Center(
       child: Padding(
@@ -231,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            if (_searchQuery.trim().isNotEmpty && suggestions.isNotEmpty) ...[
+            if (_searchQuery.trim().isNotEmpty && hasSuggestions) ...[
               const SizedBox(height: 14),
               Text(
                 "Coba cari dengan kata ini:",
@@ -246,16 +251,28 @@ class _HomeScreenState extends State<HomeScreen> {
                 alignment: WrapAlignment.center,
                 spacing: 8,
                 runSpacing: 8,
-                children: suggestions.map((suggestion) {
-                  return ActionChip(
-                    label: Text(suggestion),
-                    onPressed: () {
-                      _searchQuery = suggestion;
-                      _searchController.text = suggestion;
-                      _applyFilterAndSearch();
-                    },
-                  );
-                }).toList(),
+                children: [
+                  ...suggestions.map((suggestion) {
+                    return ActionChip(
+                      label: Text(suggestion),
+                      onPressed: () {
+                        _searchQuery = suggestion;
+                        _searchController.text = suggestion;
+                        _applyFilterAndSearch();
+                      },
+                    );
+                  }),
+                  ...dataSuggestions.map((suggestion) {
+                    return ActionChip(
+                      label: Text(suggestion),
+                      onPressed: () {
+                        _searchQuery = suggestion;
+                        _searchController.text = suggestion;
+                        _applyFilterAndSearch();
+                      },
+                    );
+                  }),
+                ],
               ),
             ],
           ],
