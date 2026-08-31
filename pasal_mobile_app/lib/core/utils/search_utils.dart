@@ -259,11 +259,6 @@ class SearchUtils {
       if (searchable.contains(term)) tokenMatches++;
     }
 
-    for (final token in tokens) {
-      // Disable loose fuzzy matching score fallback if token is not an exact match anywhere
-      // This prevents irrelevant matches (e.g. "pemerkosaan" matching "perkosaan" via fuzzy without highlight)
-    }
-
     if (tokens.isNotEmpty && tokenMatches == 0) return 0;
     if (tokens.length > 1 && tokenMatches >= tokens.length) score += 90;
     if (tokens.length > 1 && tokenMatches == 1) score -= 20;
@@ -327,23 +322,6 @@ class SearchUtils {
     'narkotika',
     'psikotropika',
   };
-
-  static bool _hasFuzzyTokenMatch(String token, String text) {
-    if (token.length < 4) return false;
-    // If token is an exact valid dictionary term, disable fuzzy matching to prevent collisions (e.g. pencurian vs pencarian)
-    if (_validLegalTerms.contains(token)) return false;
-
-    final words = text.split(' ');
-    final maxDistance = token.length <= 5 ? 1 : 2;
-    for (final word in words) {
-      if (_validLegalTerms.contains(word)) continue;
-      if ((word.length - token.length).abs() > maxDistance) continue;
-      if (_levenshteinDistance(token, word, maxDistance) <= maxDistance) {
-        return true;
-      }
-    }
-    return false;
-  }
 
   /// Suggests a typo correction (e.g. "penyudik" -> "penyidik")
   static String? suggestTypoCorrection(String query) {
