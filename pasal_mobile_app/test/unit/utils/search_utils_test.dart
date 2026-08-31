@@ -238,6 +238,29 @@ void main() {
         final result = SearchUtils.rankPasal(pasalList, 'meteorologi');
         expect(result, isEmpty);
       });
+
+      test('more specific multi-word query narrows results', () {
+        // 6 pasal contain both tokens, 2 pasal only contain "seseorang".
+        PasalModel make(String id, String isi) => PasalModel(
+          id: id,
+          undangUndangId: 'uu-1',
+          nomor: id,
+          isi: isi,
+          keywords: const [],
+        );
+        final list = [
+          for (var i = 1; i <= 6; i++)
+            make('$i', 'Barangsiapa mengambil barang seseorang milik orang lain $i.'),
+          make('7', 'Setiap seseorang wajib menghormati hak orang lain.'),
+          make('8', 'Seseorang yang menyaksikan kejadian wajib lapor.'),
+        ];
+
+        final broad = SearchUtils.rankPasal(list, 'mengambil barang');
+        final specific = SearchUtils.rankPasal(list, 'mengambil barang seseorang');
+
+        expect(broad.length, 6);
+        expect(specific.length, 6); // narrowed, not widened: seseorang-only pasal dropped
+      });
     });
 
     group('smart suggestions', () {

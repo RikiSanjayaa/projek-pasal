@@ -202,9 +202,15 @@ class SearchUtils {
     );
   }
 
-  static int scorePasal(PasalModel pasal, String query) {
+  static int scorePasal(PasalModel pasal, String query) =>
+      _scoreWithMatches(pasal, query).score;
+
+  static ({int score, int matchedTokens}) _scoreWithMatches(
+    PasalModel pasal,
+    String query,
+  ) {
     final normalizedQuery = normalize(query);
-    if (normalizedQuery.isEmpty) return 0;
+    if (normalizedQuery.isEmpty) return (score: 0, matchedTokens: 0);
 
     final nomorQuery = extractNomorQuery(normalizedQuery);
     final firstNomor = extractFirstNomor(normalizedQuery);
@@ -222,6 +228,7 @@ class SearchUtils {
     ].join(' ');
 
     var score = 0;
+    var matchedTokens = 0;
 
     if (nomorQuery.isNotEmpty) {
       if (nomor == nomorQuery) score += 1000;
@@ -250,6 +257,9 @@ class SearchUtils {
     final tokens = tokenize(normalizedQuery);
     var tokenMatches = 0;
 
+    // Full phrase match in content strongly outranks scattered token hits.
+    if (content.contains(normalizedQuery)) score += 150;
+
     for (final term in expandedTerms) {
       if (term.length <= 1) continue;
       if (title.contains(term)) score += 75;
@@ -259,11 +269,17 @@ class SearchUtils {
       if (searchable.contains(term)) tokenMatches++;
     }
 
-    if (tokens.isNotEmpty && tokenMatches == 0) return 0;
+    if (tokens.isNotEmpty) {
+      for (final token in tokens) {
+        if (searchable.contains(token)) matchedTokens++;
+      }
+    }
+
+    if (tokens.isNotEmpty && tokenMatches == 0) return (score: 0, matchedTokens: 0);
     if (tokens.length > 1 && tokenMatches >= tokens.length) score += 90;
     if (tokens.length > 1 && tokenMatches == 1) score -= 20;
 
-    return score;
+    return (score: score, matchedTokens: matchedTokens);
   }
 
   static List<PasalModel> rankPasal(
@@ -289,10 +305,24 @@ class SearchUtils {
       }
     }
 
-    final scored = <({PasalModel pasal, int score})>[];
+    final tokens = tokenize(normalizedQuery);
+    final scored = <({PasalModel pasal, int score, int matchedTokens})>[];
     for (final pasal in list) {
-      final score = scorePasal(pasal, normalizedQuery);
-      if (score > 0) scored.add((pasal: pasal, score: score));
+      final (:score, :matchedTokens) = _scoreWithMatches(pasal, normalizedQuery);
+      if (score > 0) scored.add((pasal: pasal, score: score, matchedTokens: matchedTokens));
+    }
+
+    // Multi-word query: if enough pasal match EVERY token, drop the ones
+    // matching only some tokens — more words should narrow, not widen.
+    if (tokens.isNotEmpty &&
+        tokens.length > 1 &&
+        scored.length > 4) {
+      final fullMatches = scored
+          .where((item) => item.matchedTokens == tokens.length)
+          .toList();
+      if (fullMatches.length >= 5) {
+        scored.removeWhere((item) => item.matchedTokens < tokens.length);
+      }
     }
 
     scored.sort((a, b) {
