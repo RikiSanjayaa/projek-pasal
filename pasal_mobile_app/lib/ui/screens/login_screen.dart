@@ -392,8 +392,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   // Logo Kampus UBG (Gantikan icon menu_book)
                   Image.asset(
                     isDark
-                        ? 'assets/images/logo-ubg-putih.png'
-                        : 'assets/images/logo-ubg-hitam.png',
+                        ? 'assets/images/logo-ubg putih.png'
+                        : 'assets/images/logo-ubg hitam.png',
                     height: 110,
                     fit: BoxFit.contain,
                   ),

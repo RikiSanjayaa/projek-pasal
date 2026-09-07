@@ -268,8 +268,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               // Logo Kampus UBG Header - Top Aligned
               Image.asset(
                 isDark
-                    ? 'assets/images/logo-ubg-putih.png'
-                    : 'assets/images/logo-ubg-hitam.png',
+                    ? 'assets/images/logo-ubg putih.png'
+                    : 'assets/images/logo-ubg hitam.png',
                 height: 55,
                 fit: BoxFit.contain,
               ),
