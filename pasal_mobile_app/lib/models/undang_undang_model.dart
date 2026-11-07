@@ -15,6 +15,10 @@ class UndangUndangModel {
 
   final DateTime? updatedAt;
 
+  final String? officialUrl;
+
+  final String? sourceUrl;
+
   UndangUndangModel({
     required this.id,
     required this.kode,
@@ -24,6 +28,8 @@ class UndangUndangModel {
     required this.tahun,
     required this.isActive,
     this.updatedAt,
+    this.officialUrl,
+    this.sourceUrl,
   });
 
   factory UndangUndangModel.fromJson(Map<String, dynamic> json) {
@@ -39,6 +45,8 @@ class UndangUndangModel {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
           : null,
+      officialUrl: json['official_url'] as String?,
+      sourceUrl: json['source_url'] as String?,
     );
   }
 }

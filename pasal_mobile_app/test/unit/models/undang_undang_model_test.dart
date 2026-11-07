@@ -145,5 +145,40 @@ void main() {
         expect(uu.updatedAt?.day, 15);
       });
     });
+
+    group('official and source urls', () {
+      Map<String, dynamic> base() => {
+        'id': 'uu-1',
+        'kode': 'KUHP',
+        'nama': 'KUHP',
+        'tahun': 2023,
+      };
+
+      test('reads official_url and source_url when present', () {
+        final uu = UndangUndangModel.fromJson({
+          ...base(),
+          'official_url': 'https://peraturan.bpk.go.id/Details/1',
+          'source_url': 'https://datahukum.com/kuhp',
+        });
+        expect(uu.officialUrl, 'https://peraturan.bpk.go.id/Details/1');
+        expect(uu.sourceUrl, 'https://datahukum.com/kuhp');
+      });
+
+      test('missing urls are null', () {
+        final uu = UndangUndangModel.fromJson(base());
+        expect(uu.officialUrl, isNull);
+        expect(uu.sourceUrl, isNull);
+      });
+
+      test('explicit null urls are null', () {
+        final uu = UndangUndangModel.fromJson({
+          ...base(),
+          'official_url': null,
+          'source_url': null,
+        });
+        expect(uu.officialUrl, isNull);
+        expect(uu.sourceUrl, isNull);
+      });
+    });
   });
 }

@@ -157,5 +157,61 @@ void main() {
         expect(pasal.updatedAt?.day, 16);
       });
     });
+
+    group('verification', () {
+      Map<String, dynamic> base() => {
+        'id': 'p1',
+        'undang_undang_id': 'uu-1',
+        'nomor': '1',
+        'isi': 'Isi',
+      };
+
+      test('reads terverifikasi and verified_at', () {
+        final pasal = PasalModel.fromJson({
+          ...base(),
+          'verification_status': 'terverifikasi',
+          'verified_at': '2026-11-07T10:00:00.000Z',
+        });
+        expect(pasal.verificationStatus, 'terverifikasi');
+        expect(pasal.isVerified, isTrue);
+        expect(pasal.verifiedAt?.toUtc().day, 7);
+      });
+
+      test('reads perlu_verifikasi with null verified_at', () {
+        final pasal = PasalModel.fromJson({
+          ...base(),
+          'verification_status': 'perlu_verifikasi',
+          'verified_at': null,
+        });
+        expect(pasal.isVerified, isFalse);
+        expect(pasal.verifiedAt, isNull);
+      });
+
+      test('missing fields default to perlu_verifikasi', () {
+        final pasal = PasalModel.fromJson(base());
+        expect(pasal.verificationStatus, 'perlu_verifikasi');
+        expect(pasal.isVerified, isFalse);
+        expect(pasal.verifiedAt, isNull);
+      });
+
+      test('unknown status falls back to perlu_verifikasi', () {
+        final pasal = PasalModel.fromJson({
+          ...base(),
+          'verification_status': 'something_else',
+        });
+        expect(pasal.verificationStatus, 'perlu_verifikasi');
+        expect(pasal.isVerified, isFalse);
+      });
+
+      test('constructor default is unverified', () {
+        final pasal = PasalModel(
+          id: 'p',
+          undangUndangId: 'u',
+          nomor: '1',
+          isi: 'x',
+        );
+        expect(pasal.isVerified, isFalse);
+      });
+    });
   });
 }

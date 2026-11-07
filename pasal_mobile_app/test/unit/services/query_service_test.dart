@@ -445,6 +445,7 @@ void main() {
             isActive: true,
             createdAt: now.subtract(const Duration(days: 1)),
             updatedAt: null,
+            verificationStatus: 'perlu_verifikasi',
           ),
           PasalTableData(
             id: 'pasal-2',
@@ -456,6 +457,7 @@ void main() {
             isActive: true,
             createdAt: now,
             updatedAt: null,
+            verificationStatus: 'perlu_verifikasi',
           ),
         ];
         when(mockDatabase.getActivePasal()).thenAnswer((_) async => testData);
@@ -479,6 +481,7 @@ void main() {
             isActive: true,
             createdAt: null,
             updatedAt: null,
+            verificationStatus: 'perlu_verifikasi',
           ),
           PasalTableData(
             id: 'pasal-2',
@@ -490,6 +493,7 @@ void main() {
             isActive: true,
             createdAt: DateTime(2024, 1, 1),
             updatedAt: null,
+            verificationStatus: 'perlu_verifikasi',
           ),
         ];
         when(mockDatabase.getActivePasal()).thenAnswer((_) async => testData);

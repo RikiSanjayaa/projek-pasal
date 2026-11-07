@@ -15,6 +15,7 @@ import 'package:showcaseview/showcaseview.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/pdf_export_service.dart';
 import '../widgets/app_showcase.dart';
+import '../widgets/verification_status.dart';
 
 class ReadPasalScreen extends StatefulWidget {
   final PasalModel pasal;
@@ -38,6 +39,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
   final GlobalKey _copyKey = GlobalKey();
   final GlobalKey _pdfKey = GlobalKey();
   String? _kodeUU;
+  String? _officialUrl;
   late PasalModel _currentPasal;
   final ScrollController _scrollController = ScrollController();
 
@@ -81,10 +83,13 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
   }
 
   Future<void> _loadUUInfo() async {
-    final kode = await QueryService.getKodeUU(_currentPasal.undangUndangId);
-    if (mounted) {
+    final uuId = _currentPasal.undangUndangId;
+    final kode = await QueryService.getKodeUU(uuId);
+    final uu = await QueryService.getUUById(uuId);
+    if (mounted && _currentPasal.undangUndangId == uuId) {
       setState(() {
         _kodeUU = kode;
+        _officialUrl = uu?.officialUrl;
       });
     }
   }
@@ -493,6 +498,12 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                           sb.writeln("PENJELASAN");
                                           sb.writeln(_currentPasal.penjelasan);
                                         }
+                                        if (!_currentPasal.isVerified) {
+                                          sb.writeln();
+                                          sb.writeln(
+                                            'Catatan: belum diverifikasi admin.',
+                                          );
+                                        }
 
                                         await Clipboard.setData(
                                           ClipboardData(text: sb.toString()),
@@ -570,6 +581,12 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                             ],
                           ),
 
+                          const SizedBox(height: 12),
+                          VerificationStatusBlock(
+                            pasal: _currentPasal,
+                            officialUrl: _officialUrl,
+                            onOpenOfficial: _openOfficial,
+                          ),
                           const SizedBox(height: 24),
 
                           if (_currentPasal.judul != null &&
@@ -684,10 +701,26 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
     );
   }
 
+  /// url_launcher bukan dependensi proyek, jadi tautan disalin ke clipboard.
+  Future<void> _openOfficial() async {
+    final url = _officialUrl;
+    if (url == null || url.trim().isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: url));
+    if (mounted) {
+      AppNotification.show(
+        context,
+        'Tautan naskah resmi disalin. Tempel di browser untuk membuka.',
+        color: Colors.green,
+        icon: Icons.link_rounded,
+      );
+    }
+  }
+
   void _navigate(BuildContext context, PasalModel target) {
     setState(() {
       _currentPasal = target;
       _kodeUU = null;
+      _officialUrl = null;
     });
     _loadUUInfo();
     _scrollController.jumpTo(0);

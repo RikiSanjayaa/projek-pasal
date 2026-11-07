@@ -13,6 +13,8 @@ class UndangUndangTable extends Table {
   IntColumn get tahun => integer().withDefault(const Constant(0))();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   DateTimeColumn get updatedAt => dateTime().nullable()();
+  TextColumn get officialUrl => text().nullable()();
+  TextColumn get sourceUrl => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -33,6 +35,9 @@ class PasalTable extends Table {
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   DateTimeColumn get createdAt => dateTime().nullable()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
+  TextColumn get verificationStatus =>
+      text().withDefault(const Constant('perlu_verifikasi'))();
+  DateTimeColumn get verifiedAt => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -66,7 +71,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -104,6 +109,21 @@ class AppDatabase extends _$AppDatabase {
                 UNIQUE(source_pasal_id, target_pasal_id)
               )
             ''');
+      }
+      if (from < 5) {
+        // Verification workflow: pasal status + official/source links on UU
+        await customStatement(
+          "ALTER TABLE pasal_table ADD COLUMN verification_status TEXT NOT NULL DEFAULT 'perlu_verifikasi'",
+        );
+        await customStatement(
+          'ALTER TABLE pasal_table ADD COLUMN verified_at INTEGER',
+        );
+        await customStatement(
+          'ALTER TABLE undang_undang_table ADD COLUMN official_url TEXT',
+        );
+        await customStatement(
+          'ALTER TABLE undang_undang_table ADD COLUMN source_url TEXT',
+        );
       }
     },
   );

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/date_format_id.dart';
 import '../utils/search_utils.dart';
 import 'auth_service.dart';
 import 'data_service.dart';
@@ -16,11 +17,6 @@ class SyncManager {
   static const String _lastSyncKey = 'last_sync_timestamp';
   static const String _dataUpdatedKey = 'data_updated_at';
   static const String _searchAliasesKey = 'search_aliases';
-
-  static const List<String> _monthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
-  ];
 
   /// Notifier for sync state changes
   final ValueNotifier<SyncState> state = ValueNotifier(SyncState.idle);
@@ -87,9 +83,9 @@ class SyncManager {
 
   /// Tanggal data terakhir diubah admin, contoh "7 Nov 2026"
   String get dataUpdatedText {
-    final local = _dataUpdatedAt?.toLocal();
-    if (local == null) return "Belum diketahui";
-    return "${local.day} ${_monthNames[local.month - 1]} ${local.year}";
+    final updated = _dataUpdatedAt;
+    if (updated == null) return "Belum diketahui";
+    return DateFormatId.short(updated);
   }
 
   /// Save current time as last sync timestamp

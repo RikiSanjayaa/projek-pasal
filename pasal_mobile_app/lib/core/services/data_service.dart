@@ -373,6 +373,8 @@ class DataService {
       tahun: Value(uu.tahun),
       isActive: Value(uu.isActive),
       updatedAt: Value(uu.updatedAt),
+      officialUrl: Value(uu.officialUrl),
+      sourceUrl: Value(uu.sourceUrl),
     );
   }
 
@@ -402,6 +404,8 @@ class DataService {
       isActive: Value(pasal.isActive),
       createdAt: Value(pasal.createdAt),
       updatedAt: Value(pasal.updatedAt),
+      verificationStatus: Value(pasal.verificationStatus),
+      verifiedAt: Value(pasal.verifiedAt),
     );
   }
 

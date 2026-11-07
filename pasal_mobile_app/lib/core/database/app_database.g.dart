@@ -94,6 +94,28 @@ class $UndangUndangTableTable extends UndangUndangTable
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _officialUrlMeta = const VerificationMeta(
+    'officialUrl',
+  );
+  @override
+  late final GeneratedColumn<String> officialUrl = GeneratedColumn<String>(
+    'official_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sourceUrlMeta = const VerificationMeta(
+    'sourceUrl',
+  );
+  @override
+  late final GeneratedColumn<String> sourceUrl = GeneratedColumn<String>(
+    'source_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -104,6 +126,8 @@ class $UndangUndangTableTable extends UndangUndangTable
     tahun,
     isActive,
     updatedAt,
+    officialUrl,
+    sourceUrl,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -171,6 +195,21 @@ class $UndangUndangTableTable extends UndangUndangTable
         updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
       );
     }
+    if (data.containsKey('official_url')) {
+      context.handle(
+        _officialUrlMeta,
+        officialUrl.isAcceptableOrUnknown(
+          data['official_url']!,
+          _officialUrlMeta,
+        ),
+      );
+    }
+    if (data.containsKey('source_url')) {
+      context.handle(
+        _sourceUrlMeta,
+        sourceUrl.isAcceptableOrUnknown(data['source_url']!, _sourceUrlMeta),
+      );
+    }
     return context;
   }
 
@@ -212,6 +251,14 @@ class $UndangUndangTableTable extends UndangUndangTable
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       ),
+      officialUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}official_url'],
+      ),
+      sourceUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_url'],
+      ),
     );
   }
 
@@ -231,6 +278,8 @@ class UndangUndangTableData extends DataClass
   final int tahun;
   final bool isActive;
   final DateTime? updatedAt;
+  final String? officialUrl;
+  final String? sourceUrl;
   const UndangUndangTableData({
     required this.id,
     required this.kode,
@@ -240,6 +289,8 @@ class UndangUndangTableData extends DataClass
     required this.tahun,
     required this.isActive,
     this.updatedAt,
+    this.officialUrl,
+    this.sourceUrl,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -257,6 +308,12 @@ class UndangUndangTableData extends DataClass
     map['is_active'] = Variable<bool>(isActive);
     if (!nullToAbsent || updatedAt != null) {
       map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
+    if (!nullToAbsent || officialUrl != null) {
+      map['official_url'] = Variable<String>(officialUrl);
+    }
+    if (!nullToAbsent || sourceUrl != null) {
+      map['source_url'] = Variable<String>(sourceUrl);
     }
     return map;
   }
@@ -277,6 +334,12 @@ class UndangUndangTableData extends DataClass
       updatedAt: updatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(updatedAt),
+      officialUrl: officialUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(officialUrl),
+      sourceUrl: sourceUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceUrl),
     );
   }
 
@@ -294,6 +357,8 @@ class UndangUndangTableData extends DataClass
       tahun: serializer.fromJson<int>(json['tahun']),
       isActive: serializer.fromJson<bool>(json['isActive']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
+      officialUrl: serializer.fromJson<String?>(json['officialUrl']),
+      sourceUrl: serializer.fromJson<String?>(json['sourceUrl']),
     );
   }
   @override
@@ -308,6 +373,8 @@ class UndangUndangTableData extends DataClass
       'tahun': serializer.toJson<int>(tahun),
       'isActive': serializer.toJson<bool>(isActive),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
+      'officialUrl': serializer.toJson<String?>(officialUrl),
+      'sourceUrl': serializer.toJson<String?>(sourceUrl),
     };
   }
 
@@ -320,6 +387,8 @@ class UndangUndangTableData extends DataClass
     int? tahun,
     bool? isActive,
     Value<DateTime?> updatedAt = const Value.absent(),
+    Value<String?> officialUrl = const Value.absent(),
+    Value<String?> sourceUrl = const Value.absent(),
   }) => UndangUndangTableData(
     id: id ?? this.id,
     kode: kode ?? this.kode,
@@ -329,6 +398,8 @@ class UndangUndangTableData extends DataClass
     tahun: tahun ?? this.tahun,
     isActive: isActive ?? this.isActive,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+    officialUrl: officialUrl.present ? officialUrl.value : this.officialUrl,
+    sourceUrl: sourceUrl.present ? sourceUrl.value : this.sourceUrl,
   );
   UndangUndangTableData copyWithCompanion(UndangUndangTableCompanion data) {
     return UndangUndangTableData(
@@ -342,6 +413,10 @@ class UndangUndangTableData extends DataClass
       tahun: data.tahun.present ? data.tahun.value : this.tahun,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      officialUrl: data.officialUrl.present
+          ? data.officialUrl.value
+          : this.officialUrl,
+      sourceUrl: data.sourceUrl.present ? data.sourceUrl.value : this.sourceUrl,
     );
   }
 
@@ -355,7 +430,9 @@ class UndangUndangTableData extends DataClass
           ..write('deskripsi: $deskripsi, ')
           ..write('tahun: $tahun, ')
           ..write('isActive: $isActive, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('officialUrl: $officialUrl, ')
+          ..write('sourceUrl: $sourceUrl')
           ..write(')'))
         .toString();
   }
@@ -370,6 +447,8 @@ class UndangUndangTableData extends DataClass
     tahun,
     isActive,
     updatedAt,
+    officialUrl,
+    sourceUrl,
   );
   @override
   bool operator ==(Object other) =>
@@ -382,7 +461,9 @@ class UndangUndangTableData extends DataClass
           other.deskripsi == this.deskripsi &&
           other.tahun == this.tahun &&
           other.isActive == this.isActive &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.officialUrl == this.officialUrl &&
+          other.sourceUrl == this.sourceUrl);
 }
 
 class UndangUndangTableCompanion
@@ -395,6 +476,8 @@ class UndangUndangTableCompanion
   final Value<int> tahun;
   final Value<bool> isActive;
   final Value<DateTime?> updatedAt;
+  final Value<String?> officialUrl;
+  final Value<String?> sourceUrl;
   final Value<int> rowid;
   const UndangUndangTableCompanion({
     this.id = const Value.absent(),
@@ -405,6 +488,8 @@ class UndangUndangTableCompanion
     this.tahun = const Value.absent(),
     this.isActive = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.officialUrl = const Value.absent(),
+    this.sourceUrl = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   UndangUndangTableCompanion.insert({
@@ -416,6 +501,8 @@ class UndangUndangTableCompanion
     this.tahun = const Value.absent(),
     this.isActive = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.officialUrl = const Value.absent(),
+    this.sourceUrl = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        kode = Value(kode),
@@ -429,6 +516,8 @@ class UndangUndangTableCompanion
     Expression<int>? tahun,
     Expression<bool>? isActive,
     Expression<DateTime>? updatedAt,
+    Expression<String>? officialUrl,
+    Expression<String>? sourceUrl,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -440,6 +529,8 @@ class UndangUndangTableCompanion
       if (tahun != null) 'tahun': tahun,
       if (isActive != null) 'is_active': isActive,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (officialUrl != null) 'official_url': officialUrl,
+      if (sourceUrl != null) 'source_url': sourceUrl,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -453,6 +544,8 @@ class UndangUndangTableCompanion
     Value<int>? tahun,
     Value<bool>? isActive,
     Value<DateTime?>? updatedAt,
+    Value<String?>? officialUrl,
+    Value<String?>? sourceUrl,
     Value<int>? rowid,
   }) {
     return UndangUndangTableCompanion(
@@ -464,6 +557,8 @@ class UndangUndangTableCompanion
       tahun: tahun ?? this.tahun,
       isActive: isActive ?? this.isActive,
       updatedAt: updatedAt ?? this.updatedAt,
+      officialUrl: officialUrl ?? this.officialUrl,
+      sourceUrl: sourceUrl ?? this.sourceUrl,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -495,6 +590,12 @@ class UndangUndangTableCompanion
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (officialUrl.present) {
+      map['official_url'] = Variable<String>(officialUrl.value);
+    }
+    if (sourceUrl.present) {
+      map['source_url'] = Variable<String>(sourceUrl.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -512,6 +613,8 @@ class UndangUndangTableCompanion
           ..write('tahun: $tahun, ')
           ..write('isActive: $isActive, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('officialUrl: $officialUrl, ')
+          ..write('sourceUrl: $sourceUrl, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -643,6 +746,29 @@ class $PasalTableTable extends PasalTable
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _verificationStatusMeta =
+      const VerificationMeta('verificationStatus');
+  @override
+  late final GeneratedColumn<String> verificationStatus =
+      GeneratedColumn<String>(
+        'verification_status',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('perlu_verifikasi'),
+      );
+  static const VerificationMeta _verifiedAtMeta = const VerificationMeta(
+    'verifiedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> verifiedAt = GeneratedColumn<DateTime>(
+    'verified_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -656,6 +782,8 @@ class $PasalTableTable extends PasalTable
     isActive,
     createdAt,
     updatedAt,
+    verificationStatus,
+    verifiedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -743,6 +871,21 @@ class $PasalTableTable extends PasalTable
         updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
       );
     }
+    if (data.containsKey('verification_status')) {
+      context.handle(
+        _verificationStatusMeta,
+        verificationStatus.isAcceptableOrUnknown(
+          data['verification_status']!,
+          _verificationStatusMeta,
+        ),
+      );
+    }
+    if (data.containsKey('verified_at')) {
+      context.handle(
+        _verifiedAtMeta,
+        verifiedAt.isAcceptableOrUnknown(data['verified_at']!, _verifiedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -800,6 +943,14 @@ class $PasalTableTable extends PasalTable
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       ),
+      verificationStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}verification_status'],
+      )!,
+      verifiedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}verified_at'],
+      ),
     );
   }
 
@@ -821,6 +972,8 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
   final bool isActive;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final String verificationStatus;
+  final DateTime? verifiedAt;
   const PasalTableData({
     required this.id,
     required this.undangUndangId,
@@ -833,6 +986,8 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
     required this.isActive,
     this.createdAt,
     this.updatedAt,
+    required this.verificationStatus,
+    this.verifiedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -855,6 +1010,10 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
     }
     if (!nullToAbsent || updatedAt != null) {
       map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
+    map['verification_status'] = Variable<String>(verificationStatus);
+    if (!nullToAbsent || verifiedAt != null) {
+      map['verified_at'] = Variable<DateTime>(verifiedAt);
     }
     return map;
   }
@@ -880,6 +1039,10 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
       updatedAt: updatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(updatedAt),
+      verificationStatus: Value(verificationStatus),
+      verifiedAt: verifiedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(verifiedAt),
     );
   }
 
@@ -900,6 +1063,10 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
       isActive: serializer.fromJson<bool>(json['isActive']),
       createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
+      verificationStatus: serializer.fromJson<String>(
+        json['verificationStatus'],
+      ),
+      verifiedAt: serializer.fromJson<DateTime?>(json['verifiedAt']),
     );
   }
   @override
@@ -917,6 +1084,8 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
       'isActive': serializer.toJson<bool>(isActive),
       'createdAt': serializer.toJson<DateTime?>(createdAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
+      'verificationStatus': serializer.toJson<String>(verificationStatus),
+      'verifiedAt': serializer.toJson<DateTime?>(verifiedAt),
     };
   }
 
@@ -932,6 +1101,8 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
     bool? isActive,
     Value<DateTime?> createdAt = const Value.absent(),
     Value<DateTime?> updatedAt = const Value.absent(),
+    String? verificationStatus,
+    Value<DateTime?> verifiedAt = const Value.absent(),
   }) => PasalTableData(
     id: id ?? this.id,
     undangUndangId: undangUndangId ?? this.undangUndangId,
@@ -944,6 +1115,8 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
     isActive: isActive ?? this.isActive,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+    verificationStatus: verificationStatus ?? this.verificationStatus,
+    verifiedAt: verifiedAt.present ? verifiedAt.value : this.verifiedAt,
   );
   PasalTableData copyWithCompanion(PasalTableCompanion data) {
     return PasalTableData(
@@ -964,6 +1137,12 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      verificationStatus: data.verificationStatus.present
+          ? data.verificationStatus.value
+          : this.verificationStatus,
+      verifiedAt: data.verifiedAt.present
+          ? data.verifiedAt.value
+          : this.verifiedAt,
     );
   }
 
@@ -980,7 +1159,9 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
           ..write('relatedIds: $relatedIds, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('verificationStatus: $verificationStatus, ')
+          ..write('verifiedAt: $verifiedAt')
           ..write(')'))
         .toString();
   }
@@ -998,6 +1179,8 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
     isActive,
     createdAt,
     updatedAt,
+    verificationStatus,
+    verifiedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -1013,7 +1196,9 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
           other.relatedIds == this.relatedIds &&
           other.isActive == this.isActive &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.verificationStatus == this.verificationStatus &&
+          other.verifiedAt == this.verifiedAt);
 }
 
 class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
@@ -1028,6 +1213,8 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
   final Value<bool> isActive;
   final Value<DateTime?> createdAt;
   final Value<DateTime?> updatedAt;
+  final Value<String> verificationStatus;
+  final Value<DateTime?> verifiedAt;
   final Value<int> rowid;
   const PasalTableCompanion({
     this.id = const Value.absent(),
@@ -1041,6 +1228,8 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.verificationStatus = const Value.absent(),
+    this.verifiedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PasalTableCompanion.insert({
@@ -1055,6 +1244,8 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.verificationStatus = const Value.absent(),
+    this.verifiedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        undangUndangId = Value(undangUndangId),
@@ -1072,6 +1263,8 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     Expression<bool>? isActive,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<String>? verificationStatus,
+    Expression<DateTime>? verifiedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1086,6 +1279,8 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
       if (isActive != null) 'is_active': isActive,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (verificationStatus != null) 'verification_status': verificationStatus,
+      if (verifiedAt != null) 'verified_at': verifiedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1102,6 +1297,8 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     Value<bool>? isActive,
     Value<DateTime?>? createdAt,
     Value<DateTime?>? updatedAt,
+    Value<String>? verificationStatus,
+    Value<DateTime?>? verifiedAt,
     Value<int>? rowid,
   }) {
     return PasalTableCompanion(
@@ -1116,6 +1313,8 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
+      verifiedAt: verifiedAt ?? this.verifiedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1156,6 +1355,12 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (verificationStatus.present) {
+      map['verification_status'] = Variable<String>(verificationStatus.value);
+    }
+    if (verifiedAt.present) {
+      map['verified_at'] = Variable<DateTime>(verifiedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1176,6 +1381,8 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('verificationStatus: $verificationStatus, ')
+          ..write('verifiedAt: $verifiedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1648,6 +1855,8 @@ typedef $$UndangUndangTableTableCreateCompanionBuilder =
       Value<int> tahun,
       Value<bool> isActive,
       Value<DateTime?> updatedAt,
+      Value<String?> officialUrl,
+      Value<String?> sourceUrl,
       Value<int> rowid,
     });
 typedef $$UndangUndangTableTableUpdateCompanionBuilder =
@@ -1660,6 +1869,8 @@ typedef $$UndangUndangTableTableUpdateCompanionBuilder =
       Value<int> tahun,
       Value<bool> isActive,
       Value<DateTime?> updatedAt,
+      Value<String?> officialUrl,
+      Value<String?> sourceUrl,
       Value<int> rowid,
     });
 
@@ -1709,6 +1920,16 @@ class $$UndangUndangTableTableFilterComposer
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get officialUrl => $composableBuilder(
+    column: $table.officialUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceUrl => $composableBuilder(
+    column: $table.sourceUrl,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1761,6 +1982,16 @@ class $$UndangUndangTableTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get officialUrl => $composableBuilder(
+    column: $table.officialUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceUrl => $composableBuilder(
+    column: $table.sourceUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$UndangUndangTableTableAnnotationComposer
@@ -1797,6 +2028,14 @@ class $$UndangUndangTableTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get officialUrl => $composableBuilder(
+    column: $table.officialUrl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get sourceUrl =>
+      $composableBuilder(column: $table.sourceUrl, builder: (column) => column);
 }
 
 class $$UndangUndangTableTableTableManager
@@ -1847,6 +2086,8 @@ class $$UndangUndangTableTableTableManager
                 Value<int> tahun = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
+                Value<String?> officialUrl = const Value.absent(),
+                Value<String?> sourceUrl = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => UndangUndangTableCompanion(
                 id: id,
@@ -1857,6 +2098,8 @@ class $$UndangUndangTableTableTableManager
                 tahun: tahun,
                 isActive: isActive,
                 updatedAt: updatedAt,
+                officialUrl: officialUrl,
+                sourceUrl: sourceUrl,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -1869,6 +2112,8 @@ class $$UndangUndangTableTableTableManager
                 Value<int> tahun = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
+                Value<String?> officialUrl = const Value.absent(),
+                Value<String?> sourceUrl = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => UndangUndangTableCompanion.insert(
                 id: id,
@@ -1879,6 +2124,8 @@ class $$UndangUndangTableTableTableManager
                 tahun: tahun,
                 isActive: isActive,
                 updatedAt: updatedAt,
+                officialUrl: officialUrl,
+                sourceUrl: sourceUrl,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -1923,6 +2170,8 @@ typedef $$PasalTableTableCreateCompanionBuilder =
       Value<bool> isActive,
       Value<DateTime?> createdAt,
       Value<DateTime?> updatedAt,
+      Value<String> verificationStatus,
+      Value<DateTime?> verifiedAt,
       Value<int> rowid,
     });
 typedef $$PasalTableTableUpdateCompanionBuilder =
@@ -1938,6 +2187,8 @@ typedef $$PasalTableTableUpdateCompanionBuilder =
       Value<bool> isActive,
       Value<DateTime?> createdAt,
       Value<DateTime?> updatedAt,
+      Value<String> verificationStatus,
+      Value<DateTime?> verifiedAt,
       Value<int> rowid,
     });
 
@@ -2002,6 +2253,16 @@ class $$PasalTableTableFilterComposer
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get verificationStatus => $composableBuilder(
+    column: $table.verificationStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get verifiedAt => $composableBuilder(
+    column: $table.verifiedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2069,6 +2330,16 @@ class $$PasalTableTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get verificationStatus => $composableBuilder(
+    column: $table.verificationStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get verifiedAt => $composableBuilder(
+    column: $table.verifiedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PasalTableTableAnnotationComposer
@@ -2118,6 +2389,16 @@ class $$PasalTableTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get verificationStatus => $composableBuilder(
+    column: $table.verificationStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get verifiedAt => $composableBuilder(
+    column: $table.verifiedAt,
+    builder: (column) => column,
+  );
 }
 
 class $$PasalTableTableTableManager
@@ -2162,6 +2443,8 @@ class $$PasalTableTableTableManager
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
+                Value<String> verificationStatus = const Value.absent(),
+                Value<DateTime?> verifiedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PasalTableCompanion(
                 id: id,
@@ -2175,6 +2458,8 @@ class $$PasalTableTableTableManager
                 isActive: isActive,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                verificationStatus: verificationStatus,
+                verifiedAt: verifiedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2190,6 +2475,8 @@ class $$PasalTableTableTableManager
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
+                Value<String> verificationStatus = const Value.absent(),
+                Value<DateTime?> verifiedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PasalTableCompanion.insert(
                 id: id,
@@ -2203,6 +2490,8 @@ class $$PasalTableTableTableManager
                 isActive: isActive,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                verificationStatus: verificationStatus,
+                verifiedAt: verifiedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

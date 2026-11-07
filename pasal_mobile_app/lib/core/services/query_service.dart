@@ -39,6 +39,8 @@ class QueryService {
               tahun: row.tahun,
               isActive: row.isActive,
               updatedAt: row.updatedAt,
+              officialUrl: row.officialUrl,
+              sourceUrl: row.sourceUrl,
             ),
           )
           .toList();
@@ -61,6 +63,8 @@ class QueryService {
         tahun: row.tahun,
         isActive: row.isActive,
         updatedAt: row.updatedAt,
+        officialUrl: row.officialUrl,
+        sourceUrl: row.sourceUrl,
       );
     } catch (e) {
       print("Error getting UU by id: $e");
@@ -196,6 +200,8 @@ class QueryService {
       isActive: row.isActive,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      verificationStatus: row.verificationStatus,
+      verifiedAt: row.verifiedAt,
     );
   }
 
