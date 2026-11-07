@@ -180,7 +180,7 @@ export function PasalDetailPage() {
             </Stack>
           </Card>
           <Box mt="lg">
-            <PasalHistory pasalId={pasal.id} />
+            <PasalHistory pasal={pasal} />
           </Box>
         </Grid.Col>
 

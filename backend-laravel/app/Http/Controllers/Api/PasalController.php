@@ -95,11 +95,6 @@ class PasalController extends Controller
         );
     }
 
-    public function history(string $id): JsonResponse
-    {
-        return response()->json(Pasal::withTrashed()->findOrFail($id)->versi()->get());
-    }
-
     /** Semua keyword/topik yang dipakai pasal aktif, untuk pilihan filter di admin. */
     public function keywords(): JsonResponse
     {

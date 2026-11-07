@@ -38,6 +38,7 @@ const TABLE_OPTIONS = [
   { value: 'pasal', label: 'Pasal' },
   { value: 'undang_undang', label: 'Undang-Undang' },
   { value: 'pasal_links', label: 'Pasal terkait' },
+  { value: 'pasal_versi', label: 'Riwayat pasal' },
   { value: 'mobile_users', label: 'Pengguna mobile' },
   { value: 'admin_users', label: 'Admin' },
 ]
