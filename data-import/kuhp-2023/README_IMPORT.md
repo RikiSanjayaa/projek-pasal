@@ -12,6 +12,7 @@ File ini dibuat oleh `import-tools/prepare_import.py kuhp-2023`. Jangan edit man
   - isi pasal diubah (48): 3, 8, 37, 49, 66, 69, 76, 77, 82, 83, 84, 90, 91, 95, 99, 100, 101, 103, 120, 121, 132, 136, 196, 243, 251, 263, 264, 281, 295, 296, 297, 299, 300, 332, 375, 398, 407, 455, 457, 473, 521, 597, 605, 606, 609, 610, 613, 622
   - hanya penjelasan diubah (4): 48, 433, 458, 466
   - pasal sisipan (1): 599A
+  - pasal dihapus, isinya "Dihapus." (2): 615, 616
 - `judul` diisi judul paragraf/bagian/bab tempat pasal berada (tidak ada judul per pasal).
 - `penjelasan` diisi penjelasan resmi.
 - Pasal 220, 237 diberi catatan Putusan MK di kolom penjelasan.

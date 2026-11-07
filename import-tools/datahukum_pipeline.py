@@ -47,6 +47,8 @@ SMALL_WORDS = {
 
 ORIGINAL = "asli"
 INSERTED = "disisipkan"
+REPEALED = "dihapus"
+REPEALED_TEXT = "Dihapus."
 
 
 @dataclass(frozen=True)
@@ -57,6 +59,8 @@ class Amendment:
     label: str  # contoh "UU 1/2026"
     title: str  # contoh "UU 1/2026 (Penyesuaian Pidana)"
     pdf: Path  # PDF resmi UU perubahan, pembanding rumusan baru
+    # Pasal yang dihapus UU perubahan. HTML datahukum masih memuat teks lamanya tanpa penanda.
+    repealed: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -315,7 +319,10 @@ def parse_datahukum(path: Path, config: LawConfig) -> list[PasalRecord]:
         # Sumber HTML menyalin ulang isi pasal ke versi perubahan walau yang diubah hanya penjelasannya.
         isi_changed = bool(isi_original and isi_amended) and letters(isi_original) != letters(isi_amended)
         pj_changed = bool(pj_amended) and letters(pj_original) != letters(pj_amended)
-        if isi_amended and not isi_original:
+        repealed = bool(config.amendment) and nomor in config.amendment.repealed
+        if repealed:
+            status = REPEALED
+        elif isi_amended and not isi_original:
             status = INSERTED
         elif isi_changed and pj_changed:
             status = "isi & penjelasan diubah"
@@ -326,10 +333,13 @@ def parse_datahukum(path: Path, config: LawConfig) -> list[PasalRecord]:
         else:
             status = ORIGINAL
 
-        fields = {
-            "isi": isi_amended if (isi_changed or not isi_original) else isi_original,
-            "penjelasan": pj_amended if pj_changed else pj_original,
-        }
+        if repealed:
+            fields = {"isi": REPEALED_TEXT, "penjelasan": ""}
+        else:
+            fields = {
+                "isi": isi_amended if (isi_changed or not isi_original) else isi_original,
+                "penjelasan": pj_amended if pj_changed else pj_original,
+            }
         for column, wrong, right in config.text_fixes.get(nomor, []):
             if wrong not in fields[column]:
                 raise ValueError(f"text_fixes Pasal {nomor}: {wrong!r} tidak ditemukan di {column}")
@@ -632,11 +642,13 @@ def write_readme(config: LawConfig, records: list[PasalRecord], review: list[dic
     if config.amendment:
         isi_changed = [r.nomor for r in records if r.status.startswith("isi")]
         pj_changed = [r.nomor for r in records if r.status == "penjelasan diubah"]
+        repealed = [r.nomor for r in records if r.status == REPEALED]
         consolidation = (
             f"- Teks sudah dikonsolidasi dengan {config.amendment.title}:\n"
             f"  - isi pasal diubah ({len(isi_changed)}): {', '.join(isi_changed)}\n"
             f"  - hanya penjelasan diubah ({len(pj_changed)}): {', '.join(pj_changed)}\n"
             f"  - pasal sisipan ({len(inserted)}): {', '.join(inserted)}\n"
+            f"  - pasal dihapus, isinya \"{REPEALED_TEXT}\" ({len(repealed)}): {', '.join(repealed)}\n"
         )
         sources.append(f"3. Rumusan perubahan {config.amendment.title}: `{config.amendment.pdf.name}`")
     mk = ""
@@ -733,6 +745,8 @@ def run(config: LawConfig) -> None:
         notes = list(record.notes)
         if record.nomor in heading_fixes:
             notes.append(heading_fixes[record.nomor])
+        if record.status == REPEALED:
+            notes.append(f"Dihapus oleh {config.amendment.label}; teks lama di HTML diabaikan")
 
         # Rumusan asli dicek ke PDF BPK, rumusan perubahan ke PDF UU perubahan.
         isi_cov = official_coverage(record.original_isi, body, record.nomor, original_order) if record.original_isi else 1.0

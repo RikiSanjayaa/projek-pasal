@@ -94,6 +94,7 @@ CONFIG = LawConfig(
         label="UU 1/2026",
         title="UU 1/2026 (Penyesuaian Pidana)",
         pdf=ROOT / "uu-nomor-1-tahun-2026.pdf",
+        repealed=("615", "616"),
     ),
     mk_notes=MK_NOTES,
     text_fixes=TEXT_FIXES,
