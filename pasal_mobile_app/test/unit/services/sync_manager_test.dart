@@ -51,54 +51,28 @@ void main() {
       });
     });
 
-    group('getSyncIntervalDays', () {
-      test('returns default interval when not set', () async {
-        setupMockSharedPreferences({});
+    group('dataUpdatedAt', () {
+      test('formats server timestamp as Indonesian date', () async {
+        await manager.recordDataUpdatedAt('2026-11-07T13:20:00.000Z');
 
-        final interval = await manager.getSyncIntervalDays();
-
-        expect(interval, SyncManager.defaultSyncIntervalDays);
-        expect(interval, 7); // Default is 7 days
+        expect(manager.dataUpdatedAt, DateTime.utc(2026, 11, 7, 13, 20));
+        expect(manager.dataUpdatedText, '7 Nov 2026');
       });
 
-      test('returns stored interval when set', () async {
-        setupMockSharedPreferences({
-          'sync_interval_days': 14,
-        });
+      test('keeps previous value when server sends nothing usable', () async {
+        await manager.recordDataUpdatedAt('2026-08-31T05:00:00.000Z');
+        await manager.recordDataUpdatedAt(null);
+        await manager.recordDataUpdatedAt('bukan tanggal');
 
-        final interval = await manager.getSyncIntervalDays();
-
-        expect(interval, 14);
-      });
-    });
-
-    group('setSyncIntervalDays', () {
-      test('saves interval to SharedPreferences', () async {
-        setupMockSharedPreferences({});
-
-        await expectLater(manager.setSyncIntervalDays(30), completes);
+        expect(manager.dataUpdatedText, '31 Agu 2026');
       });
 
-      test('can set different interval values', () async {
-        setupMockSharedPreferences({});
+      test('is restored from storage on initialize', () async {
+        setupMockSharedPreferences({'data_updated_at': '2026-01-02T08:00:00.000Z'});
 
-        await manager.setSyncIntervalDays(1);
-        await manager.setSyncIntervalDays(7);
-        await manager.setSyncIntervalDays(30);
-
-        // Should complete without error for all values
-      });
-    });
-
-    group('isSyncDue', () {
-      test('returns true when lastSyncTime is null', () async {
-        setupMockSharedPreferences({});
-        // Ensure no last sync time is set
         await manager.initialize();
 
-        final isDue = await manager.isSyncDue();
-
-        expect(isDue, true);
+        expect(manager.dataUpdatedText, '2 Jan 2026');
       });
     });
 

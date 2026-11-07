@@ -66,7 +66,7 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 2. **Smart Search:** Pencarian instan berdasarkan nomor, isi, atau judul pasal.
 3. **Strict Keyword Filter:** Filter menggunakan Tag (AND Logic). "Judi" + "Online" hanya menampilkan pasal yang mengandung keduanya.
 4. **Dark Mode:** Otomatis menyimpan preferensi pengguna.
-5. **Auto-Sync:** Otomatis mengecek update saat app dibuka. Jika sync terakhir > 7 hari dan ada data baru, akan muncul banner notifikasi.
+5. **Auto-Check Update:** Setiap app dibuka, app menanyakan server apakah ada data baru. Banner hanya muncul kalau memang ada perubahan. Pengaturan menampilkan "Data diperbarui" (tanggal terakhir admin mengubah data di server) dan "Sync terakhir" (kapan HP ini terakhir sync). Tidak ada jadwal pembaruan data mingguan.
 6. **Pasal Terkait:** Menampilkan link ke pasal-pasal yang berhubungan (jika ada di database).
 7. **Deskripsi UU:** Menampilkan informasi tentang undang-undang di halaman detail.
 8. **Error Handling:** Pesan error yang jelas dalam Bahasa Indonesia untuk masalah jaringan, server, atau database.
@@ -83,16 +83,15 @@ App Launch
     |
     +-- Pertama kali? --> [Onboarding] --> Sync & simpan timestamp
     |
-    +-- Sudah ada data? --> Cek apakah sync sudah > 7 hari
+    +-- Sudah ada data? --> [Home Screen], sambil cek /mobile/sync/check di latar belakang
                                 |
-                                +-- Belum waktunya --> [Home Screen]
+                                +-- Ada update? --> Tampilkan UpdateBanner
                                 |
-                                +-- Sudah waktunya --> Cek server
-                                                          |
-                                                          +-- Ada update? --> Tampilkan UpdateBanner
-                                                          |
-                                                          +-- Tidak ada --> [Home Screen]
+                                +-- Tidak ada --> diam (tanggal "Data diperbarui" tetap diperbarui)
 ```
+
+`/mobile/sync/check`, `/mobile/sync/updates`, dan `/mobile/sync/full` mengembalikan
+`data_updated_at`: waktu perubahan terakhir pada undang-undang, pasal, atau relasi pasal.
 
 ---
 
@@ -113,14 +112,11 @@ Jika menambah UU baru di database, update juga:
 - Warna dan cover di `lib/ui/utils/image_helper.dart`
 - Asset gambar di `assets/images/`
 
-### Konfigurasi Sync Interval
+### Cek Update
 
-Default sync interval adalah 7 hari. Untuk mengubah:
-
-```dart
-// Di sync_manager.dart
-static const int defaultSyncIntervalDays = 7; // Ubah sesuai kebutuhan
-```
+Tidak ada interval sync. `SyncManager.checkForUpdates()` dipanggil dari splash screen setiap app
+dibuka dan dari tombol "Periksa Update". Request ini kecil (hanya `has_updates` dan
+`data_updated_at`); data baru diunduh setelah pengguna menekan "Update".
 
 ### API Classes
 
@@ -128,15 +124,15 @@ Untuk menggunakan sync dengan error handling:
 
 ```dart
 // Smart sync - hanya sync jika perlu
-final result = await syncManager.smartSync();
+final result = await DataService.smartSync();
 if (result.success) {
   print(result.message); // "Data sudah up-to-date" atau "Sync berhasil"
 } else {
   print(result.error?.userMessage); // Pesan error dalam Bahasa Indonesia
 }
 
-// Force check update
-final hasUpdate = await syncManager.forceCheckUpdates();
+// Cek update manual
+final hasUpdate = await syncManager.checkForUpdates();
 ```
 
 ### Struktur SyncResult

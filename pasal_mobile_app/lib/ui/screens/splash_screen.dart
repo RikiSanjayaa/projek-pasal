@@ -104,8 +104,8 @@ class _SplashScreenState extends State<SplashScreen>
       );
     } else {
       // Has data - go to main app
-      // Check for updates in background (non-blocking)
-      syncManager.checkOnLaunch();
+      // Cek pembaruan di latar belakang setiap app dibuka (non-blocking)
+      syncManager.checkForUpdates();
 
       Navigator.pushReplacement(
         context,

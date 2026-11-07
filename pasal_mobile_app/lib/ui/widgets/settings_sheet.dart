@@ -142,7 +142,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                             ? null
                             : () async {
                                 final hasUpdate = await syncManager
-                                    .forceCheckUpdates();
+                                    .checkForUpdates();
                                 if (mounted && !hasUpdate) {
                                   AppNotification.show(
                                     context,
@@ -198,15 +198,19 @@ class _SettingsSheetState extends State<SettingsSheet> {
                                       ),
                                     ),
                                     const SizedBox(height: 2),
-                                    Text(
+                                    for (final line in [
+                                      'Data diperbarui: ${syncManager.dataUpdatedText}',
                                       syncManager.lastSyncTime != null
-                                          ? 'Terakhir: ${syncManager.lastSyncText}'
+                                          ? 'Sync terakhir: ${syncManager.lastSyncText}'
                                           : 'Belum pernah sync',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.textSecondary(isDark),
+                                    ])
+                                      Text(
+                                        line,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary(isDark),
+                                        ),
                                       ),
-                                    ),
                                   ],
                                 ),
                               ),

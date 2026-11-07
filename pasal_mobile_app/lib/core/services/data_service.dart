@@ -43,6 +43,7 @@ class DataService {
                 .toIso8601String(),
         },
       );
+      await syncManager.recordDataUpdatedAt(response.data?['data_updated_at']);
       return response.data?['has_updates'] == true;
     } catch (e) {
       print("Check for updates error: $e");
@@ -218,6 +219,7 @@ class DataService {
       await _database.insertAllPasalLinks(_linkCompanions(linkRows));
       await _database.insertAllUndangUndang(_uuCompanions(uuRows));
       await _database.insertAllPasal(_pasalCompanions(pasalRows, linksMap));
+      await syncManager.recordDataUpdatedAt(body['data_updated_at']);
 
       final finalProgress = SyncProgress(
         phase: SyncPhase.complete,
@@ -320,6 +322,7 @@ class DataService {
         await _database.upsertPasal(_pasalCompanion(pasal, linksMap[pasal.id]));
         existing == null ? newRecords++ : updatedRecords++;
       }
+      await syncManager.recordDataUpdatedAt(body['data_updated_at']);
 
       final finalProgress = SyncProgress(
         phase: SyncPhase.complete,
