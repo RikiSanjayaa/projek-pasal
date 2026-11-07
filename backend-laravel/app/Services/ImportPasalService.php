@@ -16,6 +16,7 @@ class ImportPasalService
         $created = 0;
         $updated = 0;
         $errors = [];
+        $needsVerification = 0;
         $pasalByRow = [];
         $linkCreated = 0;
         $linkErrors = [];
@@ -44,12 +45,23 @@ class ImportPasalService
                     throw new \RuntimeException('Nomor dan isi pasal wajib diisi.');
                 }
 
+                // Teks hasil import belum tentu sesuai naskah resmi: pasal baru atau yang teksnya
+                // berubah masuk antrean verifikasi. Pasal yang teksnya sama mempertahankan statusnya.
+                $existing = Pasal::where('undang_undang_id', $uu->id)->where('nomor', $payload['nomor'])->first();
+                $textChanged = ! $existing
+                    || $existing->isi !== $payload['isi']
+                    || $existing->penjelasan !== $payload['penjelasan']
+                    || $existing->judul !== $payload['judul'];
+
                 $pasal = Pasal::updateOrCreate(
                     ['undang_undang_id' => $uu->id, 'nomor' => $payload['nomor']],
-                    $payload + ['created_by' => $adminId],
+                    $payload + ['created_by' => $adminId] + ($textChanged ? Pasal::unverified() : []),
                 );
 
                 $pasal->wasRecentlyCreated ? $created++ : $updated++;
+                if ($textChanged) {
+                    $needsVerification++;
+                }
                 $pasalByRow[$index] = $pasal;
             } catch (\Throwable $e) {
                 $errors[] = ['row' => $index + 1, 'message' => $e->getMessage()];
@@ -98,7 +110,8 @@ class ImportPasalService
             }
         }
 
-        return compact('created', 'updated', 'errors') + ['links' => ['created' => $linkCreated, 'errors' => $linkErrors]];
+        return compact('created', 'updated', 'errors')
+            + ['needs_verification' => $needsVerification, 'links' => ['created' => $linkCreated, 'errors' => $linkErrors]];
     }
 
     public function importFile(UploadedFile $file, ?string $adminId = null): array

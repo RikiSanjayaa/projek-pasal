@@ -14,6 +14,10 @@ class Pasal extends Model
 
     protected $table = 'pasal';
 
+    public const UNVERIFIED = 'perlu_verifikasi';
+
+    public const VERIFIED = 'terverifikasi';
+
     protected $fillable = [
         'undang_undang_id',
         'nomor',
@@ -22,6 +26,9 @@ class Pasal extends Model
         'penjelasan',
         'keywords',
         'is_active',
+        'verification_status',
+        'verified_by',
+        'verified_at',
         'created_by',
         'updated_by',
     ];
@@ -30,7 +37,20 @@ class Pasal extends Model
     {
         return [
             'is_active' => 'boolean',
+            'verified_at' => 'datetime',
         ];
+    }
+
+    /** Atribut untuk menandai pasal sudah dicek admin terhadap naskah resmi. */
+    public static function verifiedBy(?string $adminId): array
+    {
+        return ['verification_status' => self::VERIFIED, 'verified_by' => $adminId, 'verified_at' => now()];
+    }
+
+    /** Atribut untuk mengembalikan pasal ke antrean verifikasi. */
+    public static function unverified(): array
+    {
+        return ['verification_status' => self::UNVERIFIED, 'verified_by' => null, 'verified_at' => null];
     }
 
     public function getKeywordsAttribute(mixed $value): array
@@ -57,5 +77,10 @@ class Pasal extends Model
     public function undangUndang(): BelongsTo
     {
         return $this->belongsTo(UndangUndang::class);
+    }
+
+    public function verifier(): BelongsTo
+    {
+        return $this->belongsTo(AdminUser::class, 'verified_by');
     }
 }
