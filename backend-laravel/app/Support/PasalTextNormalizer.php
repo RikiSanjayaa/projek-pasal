@@ -58,7 +58,9 @@ class PasalTextNormalizer
         $text = preg_replace('/\s+([,.;:])/', '$1', $text) ?? $text;
         $text = preg_replace('/([\(\[])\s+/', '$1', $text) ?? $text;
         $text = preg_replace('/\s+([)\]])/', '$1', $text) ?? $text;
-        $text = preg_replace('/[ \t]+((?:\([0-9ivxlcdm]+[a-z]?\)|[0-9]+[a-z]?\.|\([a-z]\)|[a-z]\.)\s+)/i', "\n$1", $text) ?? $text;
+        // Pisahkan butir "(1) ", "a. ", "1. " yang menempel di tengah baris (hasil OCR), tapi jangan
+        // memotong rujukan seperti "ayat (1)", "huruf a.", "kategori I.", "5 (lima)", atau tahun "1984.".
+        $text = preg_replace('/(?<!\bayat|\bhuruf|\bangka|\bpasal|\bnomor|\bbutir|\bkategori|\bgolongan|\bbab|\bbuku|\bbagian|\bparagraf|\blampiran)(?<![ \t])[ \t]+((?:\((?:[0-9]+[a-z]?|[ivx]+)\)|[0-9]{1,3}[a-z]?\.|\([a-z]\)|[a-z]\.)\s+)/i', "\n$1", $text) ?? $text;
 
         $lines = array_values(array_filter(array_map(
             fn ($line) => trim((string) preg_replace('/[ \t]+/', ' ', $line)),
@@ -85,7 +87,7 @@ class PasalTextNormalizer
 
         $blocks = [];
         foreach ($lines as $line) {
-            if (empty($blocks) || self::startsNewBlock($line)) {
+            if (empty($blocks) || self::startsNewBlock($line, $blocks[count($blocks) - 1])) {
                 $blocks[] = $line;
             } else {
                 $blocks[count($blocks) - 1] = trim((string) preg_replace('/[ \t]+/', ' ', $blocks[count($blocks) - 1].' '.$line));
@@ -106,11 +108,16 @@ class PasalTextNormalizer
         return $text;
     }
 
-    private static function startsNewBlock(string $line): bool
+    private static function startsNewBlock(string $line, string $previous): bool
     {
         return (bool) preg_match(
-            '/^(Pasal|Nom[oe]r)\s+[0-9]|^(Penjelasan|Pendapat\s+Ahli|Catatan\s+Ahli)\s*:?|^(\([0-9ivxlcdm]+[a-z]?\)|[0-9]+[a-z]?\.|\([a-z]\)|[a-z]\.)\s+/i',
+            '/^(Pasal|Nom[oe]r)\s+[0-9]|^(Penjelasan|Pendapat\s+Ahli|Catatan\s+Ahli)\s*:?|^(\((?:[0-9]+[a-z]?|[ivx]+)\)|[0-9]{1,3}[a-z]?\.|\([a-z]\)|[a-z]\.)\s+/i',
             $line,
-        );
+        )
+            // Label penjelasan resmi ("Ayat (1)", "Huruf a", "Angka 1"). Peka huruf besar supaya
+            // potongan baris OCR seperti "ayat (1) berlaku" tetap disambung.
+            || (bool) preg_match('/^(Ayat\s+\([0-9]+[a-z]?\)|Huruf\s+[a-z]{1,2}|Angka\s+[0-9]+[a-z]?)(\s|$)/', $line)
+            // Paragraf baru: baris sebelumnya selesai satu kalimat dan baris ini diawali huruf besar.
+            || ((bool) preg_match('/[.:;]$/', $previous) && (bool) preg_match('/^[A-Z]/', $line));
     }
 }

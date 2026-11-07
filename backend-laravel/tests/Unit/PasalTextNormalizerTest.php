@@ -25,4 +25,36 @@ class PasalTextNormalizerTest extends TestCase
         $this->assertStringNotContainsString('tahy', $text);
         $this->assertStringNotContainsString('   ', $text);
     }
+
+    public function test_it_keeps_inline_references_to_ayat_and_huruf(): void
+    {
+        $isi = "(1) Ketentuan sebagaimana dimaksud dalam Pasal 1 ayat (1) tidak mengurangi berlakunya hukum.\n"
+            ."(2) Pidana denda paling banyak kategori I. Ketentuan pada ayat (2) huruf c. tidak berlaku.\n"
+            ."a. melakukan Tindak Pidana kembali dalam waktu 5 (lima) tahun setelah menjalani pidana.\n"
+            .'b. konvensi yang disahkan pada tanggal 10 Desember 1984. Indonesia telah meratifikasinya.';
+
+        $this->assertSame($isi, PasalTextNormalizer::normalizeBody($isi));
+    }
+
+    public function test_it_still_splits_list_items_flattened_by_ocr(): void
+    {
+        $text = PasalTextNormalizer::normalizeBody('Pidana denda dijatuhkan jika: a. tanpa Korban; b. Korban tidak mempermasalahkan.');
+
+        $this->assertSame("Pidana denda dijatuhkan jika:\na. tanpa Korban;\nb. Korban tidak mempermasalahkan.", $text);
+    }
+
+    public function test_it_keeps_penjelasan_labels_and_paragraphs_on_their_own_lines(): void
+    {
+        $penjelasan = "Ayat (1) Cukup jelas.\nAyat (2)\nHuruf a Cukup jelas.\nHuruf b Yang dimaksud dengan \"makam\" adalah liang.\n"
+            ."Ayat ini mengandung pedoman dalam menetapkan hukum pidana adat.\nCatatan Putusan MK Nomor 1/PUU-I/2026: tidak mengikat.";
+
+        $this->assertSame($penjelasan, PasalTextNormalizer::normalizeBody($penjelasan));
+    }
+
+    public function test_it_rejoins_ocr_line_wraps_inside_a_sentence(): void
+    {
+        $text = PasalTextNormalizer::normalizeBody("(1) Hukum sebagaimana dimaksud pada\nayat (1) berlaku dalam tempat hukum itu hidup.");
+
+        $this->assertSame('(1) Hukum sebagaimana dimaksud pada ayat (1) berlaku dalam tempat hukum itu hidup.', $text);
+    }
 }
