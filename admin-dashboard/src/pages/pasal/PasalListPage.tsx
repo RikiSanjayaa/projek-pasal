@@ -254,12 +254,12 @@ export function PasalListPage() {
     [debouncedSearch, smartSuggestions, sort]
   )
 
-  // Fetch undang-undang for filter (include inactive UU)
+  // UU untuk filter: termasuk yang nonaktif, tapi bukan yang sudah dihapus (Ujicoba, KUHAP 1981).
   const { data: undangUndangList } = useQuery({
-    queryKey: ['undang_undang', 'list', 'all'],
+    queryKey: ['undang_undang', 'list', 'filter'],
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<{ id: string; kode: string; nama: string; is_active: boolean }>>(
-        '/admin/undang-undang?with_trashed=1&per_page=200'
+        '/admin/undang-undang?per_page=200'
       )
       return response.data
     },
