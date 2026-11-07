@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   ActionIcon,
   Alert,
+  Anchor,
   Badge,
   Box,
   Button,
@@ -74,6 +76,7 @@ interface ImportResult {
     success: number
     failed: number
     errors: { nomor: string; error: string }[]
+    needsVerification: number
   }
   links: {
     success: number
@@ -549,6 +552,7 @@ export function BulkImportPage() {
         created: number
         updated: number
         errors: { row: number; message: string }[]
+        needs_verification: number
         links?: { created: number; errors: { source: string; target: string; message: string }[] }
       }>('/admin/pasal/bulk-import', {
         rows: sourceRows.map((item) => ({ ...item, undang_undang_id: selectedUU })),
@@ -562,6 +566,7 @@ export function BulkImportPage() {
           success: response.created + response.updated,
           failed: response.errors.length,
           errors: response.errors.map((error) => ({ nomor: `Baris ${error.row}`, error: error.message })),
+          needsVerification: response.needs_verification,
         },
         links: {
           success: response.links?.created || 0,
@@ -969,6 +974,15 @@ export function BulkImportPage() {
                 {` | Link berhasil: ${importResult.links.success}`}
                 {importResult.links.failed > 0 && ` | Link gagal: ${importResult.links.failed}`}
               </Text>
+              {importResult.pasal.needsVerification > 0 && (
+                <Text size="sm" mt={4}>
+                  {importResult.pasal.needsVerification} pasal baru/berubah masuk antrean{' '}
+                  <Anchor component={Link} to="/verifikasi" size="sm">
+                    Verifikasi
+                  </Anchor>
+                  . Pasal tetap tampil di mobile dengan label "Belum diverifikasi admin".
+                </Text>
+              )}
             </Alert>
           )}
 

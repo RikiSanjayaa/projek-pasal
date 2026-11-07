@@ -14,10 +14,12 @@ import {
   IconScale,
   IconBook,
   IconHistory,
+  IconChecklist,
 } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { api } from '@/lib/api'
+import type { VerificationSummaryRow } from '@/lib/database.types'
 
 const CombinedAnalyticsChart = lazy(() =>
   import('@/components/charts/CombinedAnalyticsChart').then((module) => ({ default: module.CombinedAnalyticsChart }))
@@ -103,6 +105,13 @@ export function DashboardPage() {
   const totalChangesToday = dashboardData?.totalChangesToday
   const auditLogsAnalytics = dashboardData?.auditLogsAnalytics || []
 
+  const { data: verificationSummary } = useQuery({
+    queryKey: ['pasal', 'verification-summary'],
+    queryFn: async () => (await api.get<{ data: VerificationSummaryRow[] }>('/admin/pasal-verification-summary')).data,
+    staleTime: 30 * 1000,
+  })
+  const pendingVerification = verificationSummary?.reduce((total, row) => total + row.total - row.verified, 0)
+
   // Get recent contributor name
 
   return (
@@ -149,6 +158,18 @@ export function DashboardPage() {
             onClick={() => navigate('/audit-log')}
           >
             {loadingDashboard ? '...' : `${totalChangesToday || 0} Perubahan Hari Ini`}
+          </Button>
+
+          <Button
+            variant="light"
+            color={pendingVerification ? 'yellow' : 'green'}
+            size="md"
+            radius="xl"
+            fullWidth={isMobile}
+            leftSection={<IconChecklist size={20} />}
+            onClick={() => navigate('/verifikasi')}
+          >
+            {pendingVerification === undefined ? '...' : `${pendingVerification} Perlu Verifikasi`}
           </Button>
         </Group>
       </Group>

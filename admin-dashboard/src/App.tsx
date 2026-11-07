@@ -16,6 +16,7 @@ const PasalCreatePage = lazy(() => import('./pages/pasal/PasalCreatePage').then(
 const PasalEditPage = lazy(() => import('./pages/pasal/PasalEditPage').then((module) => ({ default: module.PasalEditPage })))
 const PasalTrashPage = lazy(() => import('./pages/pasal/PasalTrashPage').then((module) => ({ default: module.PasalTrashPage })))
 const PasalDetailPage = lazy(() => import('./pages/pasal/PasalDetailPage').then((module) => ({ default: module.PasalDetailPage })))
+const VerificationQueuePage = lazy(() => import('./pages/pasal/VerificationQueuePage').then((module) => ({ default: module.VerificationQueuePage })))
 const UndangUndangListPage = lazy(() => import('./pages/undang-undang/UndangUndangListPage').then((module) => ({ default: module.UndangUndangListPage })))
 const BulkImportPage = lazy(() => import('./pages/BulkImportPage').then((module) => ({ default: module.BulkImportPage })))
 const AuditLogPage = lazy(() => import('./pages/AuditLogPage').then((module) => ({ default: module.AuditLogPage })))
@@ -79,6 +80,7 @@ function App() {
           <Route path="pasal/:id" element={<PasalDetailPage />} />
           <Route path="pasal/trash" element={<PasalTrashPage />} />
           <Route path="pasal/:id/edit" element={<PasalEditPage />} />
+          <Route path="verifikasi" element={<VerificationQueuePage />} />
           <Route path="undang-undang" element={<UndangUndangListPage />} />
           <Route path="bulk-import" element={<BulkImportPage />} />
           <Route path="audit-log" element={<WithDataMapping><AuditLogPage /></WithDataMapping>} />

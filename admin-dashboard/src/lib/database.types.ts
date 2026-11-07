@@ -11,6 +11,7 @@ export type Json =
 
 export type AdminRole = 'admin' | 'super_admin'
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE'
+export type VerificationStatus = 'perlu_verifikasi' | 'terverifikasi'
 
 export interface Database {
   public: {
@@ -24,6 +25,8 @@ export interface Database {
           deskripsi: string | null
           tahun: number | null
           is_active: boolean
+          official_url: string | null
+          source_url: string | null
           created_at: string
           updated_at: string
         }
@@ -35,6 +38,8 @@ export interface Database {
           deskripsi?: string | null
           tahun?: number | null
           is_active?: boolean
+          official_url?: string | null
+          source_url?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -46,6 +51,8 @@ export interface Database {
           deskripsi?: string | null
           tahun?: number | null
           is_active?: boolean
+          official_url?: string | null
+          source_url?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -60,6 +67,9 @@ export interface Database {
           penjelasan: string | null
           keywords: string[]
           is_active: boolean
+          verification_status: VerificationStatus
+          verified_by: string | null
+          verified_at: string | null
           deleted_at: string | null
           created_at: string
           updated_at: string
@@ -361,6 +371,16 @@ export type AdminDeviceUpdate = Database['public']['Tables']['admin_devices']['U
 // Extended types with relations
 export interface PasalWithUndangUndang extends Pasal {
   undang_undang: UndangUndang
+  verifier?: Pick<AdminUser, 'id' | 'nama' | 'email'> | null
+}
+
+/** Baris dari GET /admin/pasal-verification-summary. */
+export interface VerificationSummaryRow {
+  undang_undang_id: string
+  kode: string
+  nama: string
+  total: number
+  verified: number
 }
 
 export interface AuditLogWithAdmin extends AuditLog {

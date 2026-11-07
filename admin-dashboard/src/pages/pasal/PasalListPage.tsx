@@ -28,6 +28,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DataTable, type Column } from '@/components/DataTable'
 import { SearchHighlight } from '@/components/SearchHighlight'
+import { VERIFICATION_OPTIONS, VerificationBadge } from '@/components/VerificationBadge'
 import { api, toQueryString, type PaginatedResponse } from '@/lib/api'
 import type { PasalWithUndangUndang } from '@/lib/database.types'
 import { formatPasalLabel } from '@/lib/pasal-format'
@@ -134,6 +135,19 @@ const getPasalColumns = (searchQuery: string, extraTerms: string[]): Column<Pasa
       )
     },
   },
+  {
+    key: 'verification_status',
+    title: 'Verifikasi',
+    width: 150,
+    render: (_, record) => (
+      <VerificationBadge
+        status={record.verification_status}
+        verifiedAt={record.verified_at}
+        verifierName={record.verifier?.nama}
+        size="xs"
+      />
+    ),
+  },
 ]
 
 export function PasalListPage() {
@@ -167,6 +181,18 @@ export function PasalListPage() {
       params.delete('uu')
     }
     // Reset page when filter changes
+    params.delete('page')
+    setSearchParams(params)
+  }
+
+  const filterVerification = searchParams.get('verifikasi')
+  const setFilterVerification = (value: string | null) => {
+    const params = new URLSearchParams(searchParams)
+    if (value) {
+      params.set('verifikasi', value)
+    } else {
+      params.delete('verifikasi')
+    }
     params.delete('page')
     setSearchParams(params)
   }
@@ -211,11 +237,7 @@ export function PasalListPage() {
   // Fetch keywords for filter
   const { data: keywordsList } = useQuery({
     queryKey: ['keywords', 'list'],
-    queryFn: async () => {
-      const response = await api.get<PaginatedResponse<{ keywords: string[] | null }>>('/admin/pasal?is_active=1&per_page=500')
-      const allKeywords = response.data.flatMap(p => p.keywords || []).filter(Boolean)
-      return [...new Set(allKeywords)].sort()
-    },
+    queryFn: async () => (await api.get<{ keywords: string[] }>('/admin/pasal-keywords')).keywords,
   })
 
   // Track previous values to only reset page on actual changes
@@ -241,7 +263,7 @@ export function PasalListPage() {
 
   // Fetch pasal with pagination
   const { data: pasalData, isLoading } = useQuery({
-    queryKey: ['pasal', 'list', page, pageSize, debouncedSearch, filterUU, selectedKeywords],
+    queryKey: ['pasal', 'list', page, pageSize, debouncedSearch, filterUU, filterVerification, selectedKeywords],
     queryFn: async () => {
       // Handle "pasal" prefix - extract just the number/identifier
       let searchTerm = debouncedSearch.toLowerCase().trim()
@@ -255,6 +277,7 @@ export function PasalListPage() {
           per_page: pageSize,
           search: searchTerm,
           undang_undang_id: filterUU,
+          verification_status: filterVerification,
           keywords: selectedKeywords,
         })}`
       )
@@ -424,6 +447,14 @@ export function PasalListPage() {
               onChange={setFilterUU}
               clearable
               w={{ base: '100%', sm: 250 }}
+            />
+            <Select
+              placeholder="Status verifikasi"
+              data={VERIFICATION_OPTIONS}
+              value={filterVerification}
+              onChange={setFilterVerification}
+              clearable
+              w={{ base: '100%', sm: 200 }}
             />
           </Group>
         </Stack>

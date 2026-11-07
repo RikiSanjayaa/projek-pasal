@@ -36,6 +36,7 @@ import {
   IconChevronRight,
   IconShieldCheck,
   IconSparkles,
+  IconChecklist,
 } from '@tabler/icons-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { requestPasswordRecovery } from '@/lib/auth'
@@ -44,6 +45,7 @@ import AdminActiveAlert from '@/components/AdminActiveAlert'
 const navItems = [
   { label: 'Dashboard', icon: IconHome, path: '/' },
   { label: 'Pasal', icon: IconScale, path: '/pasal' },
+  { label: 'Verifikasi', icon: IconChecklist, path: '/verifikasi' },
   { label: 'Undang-Undang', icon: IconBook, path: '/undang-undang' },
   { label: 'Import Data', icon: IconUpload, path: '/bulk-import' },
   { label: 'Kelola Pengguna', icon: IconUsers, path: '/manage-users' },

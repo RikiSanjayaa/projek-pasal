@@ -76,6 +76,8 @@ export function UndangUndangListPage() {
       nama_lengkap: '',
       deskripsi: '',
       tahun: undefined,
+      official_url: '',
+      source_url: '',
     },
     validate: {
       kode: (value) => (!value ? 'Kode wajib diisi' : null),
@@ -91,6 +93,8 @@ export function UndangUndangListPage() {
       nama_lengkap: '',
       deskripsi: '',
       tahun: undefined,
+      official_url: '',
+      source_url: '',
       is_active: true,
     },
   })
@@ -150,6 +154,8 @@ export function UndangUndangListPage() {
       nama_lengkap: uu.nama_lengkap || '',
       deskripsi: uu.deskripsi || '',
       tahun: uu.tahun || undefined,
+      official_url: uu.official_url || '',
+      source_url: uu.source_url || '',
       is_active: uu.is_active,
     })
     openEdit()
@@ -338,6 +344,18 @@ export function UndangUndangListPage() {
               placeholder="Contoh: 1946"
               {...createForm.getInputProps('tahun')}
             />
+            <TextInput
+              label="Link naskah resmi"
+              description="Dipakai admin saat verifikasi dan ditampilkan di mobile, contoh halaman JDIH BPK"
+              placeholder="https://peraturan.bpk.go.id/Details/..."
+              {...createForm.getInputProps('official_url')}
+            />
+            <TextInput
+              label="Sumber teks"
+              description="Asal teks yang diimport (tidak resmi), contoh datahukum.com"
+              placeholder="https://www.datahukum.com/peraturan/..."
+              {...createForm.getInputProps('source_url')}
+            />
             <Group justify="flex-end" mt="md" grow={isMobile}>
               <Button variant="default" onClick={closeCreate}>
                 Batal
@@ -391,6 +409,18 @@ export function UndangUndangListPage() {
               label="Tahun"
               placeholder="Contoh: 1946"
               {...editForm.getInputProps('tahun')}
+            />
+            <TextInput
+              label="Link naskah resmi"
+              description="Dipakai admin saat verifikasi dan ditampilkan di mobile, contoh halaman JDIH BPK"
+              placeholder="https://peraturan.bpk.go.id/Details/..."
+              {...editForm.getInputProps('official_url')}
+            />
+            <TextInput
+              label="Sumber teks"
+              description="Asal teks yang diimport (tidak resmi), contoh datahukum.com"
+              placeholder="https://www.datahukum.com/peraturan/..."
+              {...editForm.getInputProps('source_url')}
             />
             <Switch
               label="Aktif"
