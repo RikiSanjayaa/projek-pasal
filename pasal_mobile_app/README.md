@@ -66,7 +66,7 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 2. **Smart Search:** Pencarian instan berdasarkan nomor, isi, atau judul pasal.
 3. **Strict Keyword Filter:** Filter menggunakan Tag (AND Logic). "Judi" + "Online" hanya menampilkan pasal yang mengandung keduanya.
 4. **Dark Mode:** Otomatis menyimpan preferensi pengguna.
-5. **Auto-Check Update:** Setiap app dibuka, app menanyakan server apakah ada data baru. Banner hanya muncul kalau memang ada perubahan. Pengaturan menampilkan "Data diperbarui" (tanggal terakhir admin mengubah data di server) dan "Sync terakhir" (kapan HP ini terakhir sync). Tidak ada jadwal pembaruan data mingguan.
+5. **Auto-Check Update:** Setiap app dibuka, app menanyakan server apakah ada data baru. Banner hanya muncul kalau memang ada perubahan. Pengaturan menampilkan "Data diperbarui" (tanggal terakhir admin mengubah data di server) dan "Sync terakhir" (kapan HP ini terakhir sync). Tidak ada jadwal pembaruan data mingguan. Alias pencarian dari dashboard ikut diperbarui pada pengecekan ini.
 6. **Pasal Terkait:** Menampilkan link ke pasal-pasal yang berhubungan (jika ada di database).
 7. **Deskripsi UU:** Menampilkan informasi tentang undang-undang di halaman detail.
 8. **Error Handling:** Pesan error yang jelas dalam Bahasa Indonesia untuk masalah jaringan, server, atau database.

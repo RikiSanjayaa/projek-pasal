@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pasal_mobile_app/core/services/sync_manager.dart';
 import 'package:pasal_mobile_app/core/services/sync_progress.dart';
+import 'package:pasal_mobile_app/core/utils/search_utils.dart';
 import '../../mocks/shared_preferences_mock.dart';
 
 void main() {
@@ -51,28 +52,49 @@ void main() {
       });
     });
 
-    group('dataUpdatedAt', () {
+    group('recordServerMeta', () {
       test('formats server timestamp as Indonesian date', () async {
-        await manager.recordDataUpdatedAt('2026-11-07T13:20:00.000Z');
+        await manager.recordServerMeta({'data_updated_at': '2026-11-07T13:20:00.000Z'});
 
         expect(manager.dataUpdatedAt, DateTime.utc(2026, 11, 7, 13, 20));
         expect(manager.dataUpdatedText, '7 Nov 2026');
       });
 
-      test('keeps previous value when server sends nothing usable', () async {
-        await manager.recordDataUpdatedAt('2026-08-31T05:00:00.000Z');
-        await manager.recordDataUpdatedAt(null);
-        await manager.recordDataUpdatedAt('bukan tanggal');
+      test('keeps previous date when server sends nothing usable', () async {
+        await manager.recordServerMeta({'data_updated_at': '2026-08-31T05:00:00.000Z'});
+        await manager.recordServerMeta({'data_updated_at': null});
+        await manager.recordServerMeta({'data_updated_at': 'bukan tanggal'});
 
         expect(manager.dataUpdatedText, '31 Agu 2026');
       });
 
-      test('is restored from storage on initialize', () async {
-        setupMockSharedPreferences({'data_updated_at': '2026-01-02T08:00:00.000Z'});
+      test('restores date and aliases from storage on initialize', () async {
+        setupMockSharedPreferences({
+          'data_updated_at': '2026-01-02T08:00:00.000Z',
+          'search_aliases':
+              '[{"term":"begal","aliases":["pencurian dengan kekerasan"]}]',
+        });
 
         await manager.initialize();
 
         expect(manager.dataUpdatedText, '2 Jan 2026');
+        expect(
+          SearchUtils.expandQuery('begal'),
+          contains('pencurian dengan kekerasan'),
+        );
+      });
+
+      test('server aliases extend search without dropping built-in synonyms', () async {
+        await manager.recordServerMeta({
+          'search_aliases': [
+            {'term': 'Jambret', 'aliases': ['pencurian', 'merampas']},
+            {'term': 'maling', 'aliases': ['pencurian']},
+          ],
+        });
+
+        expect(SearchUtils.expandQuery('jambret'), containsAll(['pencurian', 'merampas']));
+        expect(SearchUtils.expandQuery('maling'), isNot(contains('mengambil barang')));
+        expect(SearchUtils.expandQuery('narkoba'), contains('narkotika'));
       });
     });
 

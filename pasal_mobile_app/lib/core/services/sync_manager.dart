@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/search_utils.dart';
 import 'auth_service.dart';
 import 'data_service.dart';
 import 'sync_progress.dart';
@@ -12,6 +15,7 @@ class SyncManager {
 
   static const String _lastSyncKey = 'last_sync_timestamp';
   static const String _dataUpdatedKey = 'data_updated_at';
+  static const String _searchAliasesKey = 'search_aliases';
 
   static const List<String> _monthNames = [
     'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
@@ -50,21 +54,34 @@ class SyncManager {
       }
       final dataUpdated = prefs.getString(_dataUpdatedKey);
       _dataUpdatedAt = dataUpdated == null ? null : DateTime.tryParse(dataUpdated);
+      final aliases = prefs.getString(_searchAliasesKey);
+      if (aliases != null) {
+        SearchUtils.applyServerAliases(jsonDecode(aliases) as List<dynamic>);
+      }
     } catch (e) {
       print("Error loading last sync time: $e");
     }
   }
 
-  /// Simpan `data_updated_at` dari respons server (format ISO 8601).
-  Future<void> recordDataUpdatedAt(Object? serverValue) async {
-    final parsed = serverValue is String ? DateTime.tryParse(serverValue) : null;
-    if (parsed == null) return;
-    _dataUpdatedAt = parsed;
+  /// Simpan metadata dari respons sync/check, sync/updates, atau sync/full:
+  /// `data_updated_at` (ISO 8601) dan `search_aliases` (alias pencarian dari dashboard).
+  Future<void> recordServerMeta(Map<String, dynamic>? body) async {
+    if (body == null) return;
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_dataUpdatedKey, parsed.toIso8601String());
+      final updated = body['data_updated_at'];
+      final parsed = updated is String ? DateTime.tryParse(updated) : null;
+      if (parsed != null) {
+        _dataUpdatedAt = parsed;
+        await prefs.setString(_dataUpdatedKey, parsed.toIso8601String());
+      }
+      final aliases = body['search_aliases'];
+      if (aliases is List) {
+        SearchUtils.applyServerAliases(aliases);
+        await prefs.setString(_searchAliasesKey, jsonEncode(aliases));
+      }
     } catch (e) {
-      print("Error saving data updated time: $e");
+      print("Error saving server sync metadata: $e");
     }
   }
 

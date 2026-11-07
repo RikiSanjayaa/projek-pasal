@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Pasal;
 use App\Models\PasalLink;
+use App\Models\SearchAlias;
 use App\Models\UndangUndang;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -41,6 +42,22 @@ class SyncService
         return $latest?->toISOString();
     }
 
+    /**
+     * Alias pencarian aktif dari dashboard. Selalu dikirim utuh (daftarnya kecil) supaya alias
+     * yang dihapus juga ikut hilang di perangkat tanpa perlu melacak penghapusan.
+     *
+     * @return array<int, array{term: string, aliases: array<int, string>}>
+     */
+    public function searchAliases(): array
+    {
+        return SearchAlias::query()
+            ->where('is_active', true)
+            ->orderBy('term')
+            ->get(['term', 'aliases'])
+            ->map(fn (SearchAlias $alias) => ['term' => $alias->term, 'aliases' => array_values($alias->aliases ?? [])])
+            ->all();
+    }
+
     public function updates(?string $since): array
     {
         $time = $since ? $this->since($since) : null;
@@ -54,6 +71,7 @@ class SyncService
             'deleted_uu_ids' => $this->deletedIds(UndangUndang::class, $time),
             'deleted_pasal_ids' => $this->deletedIds(Pasal::class, $time),
             'deleted_link_ids' => $this->deletedIds(PasalLink::class, $time),
+            'search_aliases' => $this->searchAliases(),
         ];
     }
 
@@ -65,6 +83,7 @@ class SyncService
             'undang_undang' => UndangUndang::query()->where('is_active', true)->orderByDesc('tahun')->get(),
             'pasal' => Pasal::query()->where('is_active', true)->get(),
             'pasal_links' => PasalLink::query()->where('is_active', true)->get(),
+            'search_aliases' => $this->searchAliases(),
         ];
     }
 

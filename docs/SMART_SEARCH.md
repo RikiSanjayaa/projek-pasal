@@ -10,7 +10,7 @@ Smart Search dibuat agar pencarian pasal tetap cepat, bisa dipakai offline di mo
 - Nomor pasal selalu diprioritaskan.
 - Keyword, judul, isi pasal, dan penjelasan ikut dihitung dalam ranking.
 - Sinonim hukum umum ditambahkan sebagai content-aware search ringan.
-- Super admin bisa mengelola sinonim/alias dari dashboard tanpa deploy ulang.
+- Super admin bisa mengelola sinonim/alias dari dashboard tanpa deploy ulang; alias ikut terkirim ke mobile lewat sync.
 - Jika hasil kosong, UI memberi saran kata hukum yang bisa dicoba.
 - Kata yang cocok di hasil pencarian diberi highlight supaya alasan hasilnya jelas.
 
@@ -89,6 +89,11 @@ Kategori: Pidana umum
 ```
 
 Saat user mencari `maling`, backend ikut mencari `pencurian`, `mencuri`, dan `mengambil barang`. Kalau hasil kosong, frontend memberi saran kata target tersebut.
+
+Alias aktif juga dikirim utuh di `/mobile/sync/check`, `/mobile/sync/updates`, dan `/mobile/sync/full`
+(`search_aliases`). App menyimpannya dan menggabungkannya dengan sinonim bawaan di `search_utils.dart`:
+untuk istilah yang sama, daftar dari dashboard menggantikan daftar bawaan. Karena `sync/check`
+dipanggil setiap app dibuka, alias baru berlaku di HP pada pembukaan app berikutnya.
 
 ## Deployment
 
