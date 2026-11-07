@@ -372,6 +372,25 @@ export type AdminDeviceUpdate = Database['public']['Tables']['admin_devices']['U
 export interface PasalWithUndangUndang extends Pasal {
   undang_undang: UndangUndang
   verifier?: Pick<AdminUser, 'id' | 'nama' | 'email'> | null
+  /** Versi riwayat terakhir (rumusan berlaku). Null bila pasal belum pernah diubah UU lain. */
+  versi_terakhir?: Pick<PasalVersi, 'id' | 'urutan' | 'status' | 'sumber' | 'judul_sumber' | 'naskah_resmi'> | null
+}
+
+export type PasalVersiStatus = 'asli' | 'diubah' | 'disisipkan' | 'dihapus'
+
+/** Baris dari GET /admin/pasal/{id}/riwayat, urut dari yang paling lama. */
+export interface PasalVersi {
+  id: string
+  pasal_id: string
+  urutan: number
+  status: PasalVersiStatus
+  sumber: string
+  judul_sumber: string | null
+  diundangkan: string | null
+  berlaku_sejak: string | null
+  naskah_resmi: string | null
+  isi: string
+  penjelasan: string | null
 }
 
 /** Baris dari GET /admin/pasal-verification-summary. */

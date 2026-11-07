@@ -4,6 +4,7 @@ import { IconAlertTriangle, IconCircleCheck, IconExternalLink } from '@tabler/ic
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type { PasalWithUndangUndang } from '@/lib/database.types'
+import { isAmended, officialSourceFor, VERSI_STATUS } from '@/lib/pasal-versi'
 import { invalidatePasalData } from '@/lib/query-invalidation'
 
 interface VerificationPanelProps {
@@ -31,10 +32,12 @@ export function VerificationPanel({ pasal }: VerificationPanelProps) {
   const verifiedAt = pasal.verified_at
     ? new Date(pasal.verified_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
     : null
+  const official = officialSourceFor(pasal)
   const links = [
-    pasal.undang_undang?.official_url && { href: pasal.undang_undang.official_url, label: 'Buka naskah resmi' },
+    official,
     pasal.undang_undang?.source_url && { href: pasal.undang_undang.source_url, label: 'Sumber teks' },
   ].filter(Boolean) as { href: string; label: string }[]
+  const versi = pasal.versi_terakhir
 
   return (
     <Alert
@@ -49,6 +52,12 @@ export function VerificationPanel({ pasal }: VerificationPanelProps) {
             ? `Dicek terhadap naskah resmi${pasal.verifier?.nama ? ` oleh ${pasal.verifier.nama}` : ''}${verifiedAt ? ` pada ${verifiedAt}` : ''}.`
             : 'Teks berasal dari import dan belum dicocokkan dengan naskah resmi. Pasal tetap tampil di mobile dengan label "Belum diverifikasi admin".'}
         </Text>
+        {versi && isAmended(pasal) && (
+          <Text size="sm" fw={500}>
+            Rumusan ini {VERSI_STATUS[versi.status].label.toLowerCase()} oleh {versi.judul_sumber ?? versi.sumber}. Cocokkan
+            dengan naskah {versi.sumber}, bukan naskah awal {pasal.undang_undang?.kode}.
+          </Text>
+        )}
         {links.length > 0 && (
           <Group gap="md">
             {links.map((link) => (

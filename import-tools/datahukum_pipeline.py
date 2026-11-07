@@ -59,6 +59,10 @@ class Amendment:
     label: str  # contoh "UU 1/2026"
     title: str  # contoh "UU 1/2026 (Penyesuaian Pidana)"
     pdf: Path  # PDF resmi UU perubahan, pembanding rumusan baru
+    full_title: str  # contoh "Undang-Undang Nomor 1 Tahun 2026 tentang Penyesuaian Pidana"
+    official_url: str  # halaman naskah resmi (JDIH BPK)
+    diundangkan: str  # YYYY-MM-DD
+    berlaku_sejak: str  # YYYY-MM-DD
     # Pasal yang dihapus UU perubahan. HTML datahukum masih memuat teks lamanya tanpa penanda.
     repealed: tuple[str, ...] = ()
 
@@ -79,6 +83,8 @@ class LawConfig:
     body_pages: tuple[int, int]  # halaman PDF BPK (1-based) batang tubuh
     penjelasan_pages: tuple[int, int]  # halaman PDF BPK (1-based) penjelasan
     amendment: Amendment | None = None
+    diundangkan: str = ""  # YYYY-MM-DD, untuk sheet riwayat
+    berlaku_sejak: str = ""  # YYYY-MM-DD, untuk sheet riwayat
     mk_notes: dict[str, str] = field(default_factory=dict)
     # (kolom, teks salah, teks benar); skrip berhenti kalau teks salahnya tidak ditemukan.
     text_fixes: dict[str, list[tuple[str, str, str]]] = field(default_factory=dict)
@@ -573,6 +579,64 @@ def status_label(record: PasalRecord, config: LawConfig) -> str:
     return f"{record.status} {config.amendment.label}" if config.amendment else record.status
 
 
+RIWAYAT_HEADERS = [
+    "nomor",
+    "urutan",
+    "status",
+    "sumber",
+    "judul_sumber",
+    "diundangkan",
+    "berlaku_sejak",
+    "naskah_resmi",
+    "isi",
+    "penjelasan",
+]
+
+
+def history_rows(config: LawConfig, records: list[PasalRecord]) -> list[dict[str, object]]:
+    """Versi per pasal yang pernah berubah: rumusan asli lalu rumusan UU perubahan."""
+    amendment = config.amendment
+    if amendment is None:
+        return []
+    rows: list[dict[str, object]] = []
+    for record in records:
+        if record.status == ORIGINAL:
+            continue
+        urutan = 1
+        if record.status != INSERTED:
+            rows.append(
+                {
+                    "nomor": record.nomor,
+                    "urutan": urutan,
+                    "status": "asli",
+                    "sumber": config.label,
+                    "judul_sumber": config.nama_lengkap,
+                    "diundangkan": config.diundangkan,
+                    "berlaku_sejak": config.berlaku_sejak,
+                    "naskah_resmi": config.bpk_detail_url,
+                    "isi": record.original_isi,
+                    "penjelasan": record.original_penjelasan,
+                }
+            )
+            urutan += 1
+        status = {REPEALED: "dihapus", INSERTED: "disisipkan"}.get(record.status, "diubah")
+        rows.append(
+            {
+                "nomor": record.nomor,
+                "urutan": urutan,
+                "status": status,
+                "sumber": amendment.label,
+                "judul_sumber": amendment.full_title,
+                "diundangkan": amendment.diundangkan,
+                "berlaku_sejak": amendment.berlaku_sejak,
+                "naskah_resmi": amendment.official_url,
+                "isi": record.isi,
+                "penjelasan": record.penjelasan,
+            }
+        )
+    return rows
+
+
 def write_xlsx(config: LawConfig, records: list[PasalRecord], review: list[dict[str, object]]) -> dict[str, list]:
     wb = Workbook()
     ws = wb.active
@@ -596,16 +660,27 @@ def write_xlsx(config: LawConfig, records: list[PasalRecord], review: list[dict[
     for row in review:
         review_ws.append([row[h] for h in review_headers])
 
+    history_ws = None
+    if config.amendment:
+        history_ws = wb.create_sheet("riwayat")
+        history_ws.append(RIWAYAT_HEADERS)
+        for row in history_rows(config, records):
+            history_ws.append([row[h] for h in RIWAYAT_HEADERS])
+
     meta = wb.create_sheet("catatan")
     suffix = f" (konsolidasi dengan {config.amendment.label})" if config.amendment else ""
     meta.append(["Judul", config.nama_lengkap + suffix])
     meta.append(["Jumlah pasal", len(records)])
     meta.append(["Sumber teks", config.datahukum_url])
     meta.append(["Pembanding resmi", config.bpk_detail_url])
-    meta.append(["Catatan", f"Upload sheet pertama ('import') lewat menu Import Data. Pilih UU kode {config.kode} sebelum import."])
+    meta.append(["Catatan", f"Upload file ini lewat menu Import Data. Pilih UU kode {config.kode} sebelum import."])
+    if history_ws is not None:
+        meta.append(["Riwayat", "Sheet 'riwayat' ikut dibaca saat import: versi lama dan versi perubahan tiap pasal yang berubah."])
 
     header_fill = PatternFill("solid", fgColor="1F4E78")
-    for sheet in (ws, review_ws):
+    for sheet in (ws, review_ws, history_ws):
+        if sheet is None:
+            continue
         for cell in sheet[1]:
             cell.font = Font(bold=True, color="FFFFFF")
             cell.fill = header_fill
@@ -618,6 +693,9 @@ def write_xlsx(config: LawConfig, records: list[PasalRecord], review: list[dict[
         ws.column_dimensions[column].width = width
     for column, width in {"A": 10, "B": 22, "C": 48, "D": 16, "E": 20, "F": 12, "G": 90}.items():
         review_ws.column_dimensions[column].width = width
+    if history_ws is not None:
+        for column, width in {"A": 10, "B": 8, "C": 12, "D": 12, "E": 48, "F": 14, "G": 14, "H": 40, "I": 90, "J": 70}.items():
+            history_ws.column_dimensions[column].width = width
     meta.column_dimensions["A"].width = 20
     meta.column_dimensions["B"].width = 100
 
@@ -649,6 +727,9 @@ def write_readme(config: LawConfig, records: list[PasalRecord], review: list[dic
             f"  - hanya penjelasan diubah ({len(pj_changed)}): {', '.join(pj_changed)}\n"
             f"  - pasal sisipan ({len(inserted)}): {', '.join(inserted)}\n"
             f"  - pasal dihapus, isinya \"{REPEALED_TEXT}\" ({len(repealed)}): {', '.join(repealed)}\n"
+            f"- Sheet `riwayat` berisi {len(history_rows(config, records))} versi untuk pasal di atas: rumusan "
+            f"{config.label} lalu rumusan {config.amendment.label}, masing-masing dengan link naskah resminya. "
+            "Import menyimpannya sebagai riwayat pasal (tampil di admin).\n"
         )
         sources.append(f"3. Rumusan perubahan {config.amendment.title}: `{config.amendment.pdf.name}`")
     mk = ""

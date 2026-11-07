@@ -16,6 +16,7 @@ import { useQuery } from '@tanstack/react-query'
 import { IconArrowLeft, IconEdit, IconTrash, IconAlertCircle } from '@tabler/icons-react'
 import { api } from '@/lib/api'
 import { LegalText } from '@/components/LegalText'
+import { PasalHistory } from '@/components/PasalHistory'
 import { PasalLinksSidebar } from '@/components/PasalLinksSidebar'
 import { VerificationPanel } from '@/components/VerificationPanel'
 import type { PasalWithUndangUndang } from '@/lib/database.types'
@@ -178,6 +179,9 @@ export function PasalDetailPage() {
               )}
             </Stack>
           </Card>
+          <Box mt="lg">
+            <PasalHistory pasalId={pasal.id} />
+          </Box>
         </Grid.Col>
 
         <Grid.Col span={{ base: 12, md: 4 }}>

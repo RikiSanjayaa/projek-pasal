@@ -42,6 +42,7 @@ Route::middleware(['auth:sanctum', 'role:admin,super_admin'])->prefix('admin')->
     Route::patch('/pasal/{id}/restore', [PasalController::class, 'restore']);
     Route::post('/pasal/{id}/verify', [PasalController::class, 'verify']);
     Route::post('/pasal/{id}/unverify', [PasalController::class, 'unverify']);
+    Route::get('/pasal/{id}/riwayat', [PasalController::class, 'history']);
     Route::get('/pasal/{id}/links', [PasalLinkController::class, 'index']);
     Route::post('/pasal/{id}/links', [PasalLinkController::class, 'store']);
     Route::delete('/pasal-links/{id}', [PasalLinkController::class, 'destroy']);

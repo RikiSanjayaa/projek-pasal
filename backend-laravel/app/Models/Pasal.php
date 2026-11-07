@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Pasal extends Model
@@ -98,5 +100,19 @@ class Pasal extends Model
     public function verifier(): BelongsTo
     {
         return $this->belongsTo(AdminUser::class, 'verified_by');
+    }
+
+    /** Riwayat rumusan, urut dari yang paling lama. */
+    public function versi(): HasMany
+    {
+        return $this->hasMany(PasalVersi::class)->orderBy('urutan');
+    }
+
+    /** Versi terakhir = rumusan yang berlaku; dipakai untuk link naskah resmi saat verifikasi. */
+    public function versiTerakhir(): HasOne
+    {
+        // Bukan ofMany(): Laravel menambah max(id) sebagai pemecah seri, dan Postgres tidak punya max(uuid).
+        // Eager load hasOne mengambil baris pertama per pasal, jadi urutan menurun memberi versi terakhir.
+        return $this->hasOne(PasalVersi::class)->orderByDesc('urutan');
     }
 }

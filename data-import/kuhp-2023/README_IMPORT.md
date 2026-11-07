@@ -13,6 +13,7 @@ File ini dibuat oleh `import-tools/prepare_import.py kuhp-2023`. Jangan edit man
   - hanya penjelasan diubah (4): 48, 433, 458, 466
   - pasal sisipan (1): 599A
   - pasal dihapus, isinya "Dihapus." (2): 615, 616
+- Sheet `riwayat` berisi 109 versi untuk pasal di atas: rumusan UU 1/2023 lalu rumusan UU 1/2026, masing-masing dengan link naskah resminya. Import menyimpannya sebagai riwayat pasal (tampil di admin).
 - `judul` diisi judul paragraf/bagian/bab tempat pasal berada (tidak ada judul per pasal).
 - `penjelasan` diisi penjelasan resmi.
 - Pasal 220, 237 diberi catatan Putusan MK di kolom penjelasan.

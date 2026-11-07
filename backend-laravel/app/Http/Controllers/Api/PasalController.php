@@ -21,7 +21,12 @@ class PasalController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Pasal::query()->with(['undangUndang', 'verifier:id,nama,email']);
+        $query = Pasal::query()->with([
+            'undangUndang',
+            'verifier:id,nama,email',
+            // Tanpa isi: cukup untuk label status dan link naskah resmi di daftar/antrean verifikasi.
+            'versiTerakhir:pasal_versi.id,pasal_versi.pasal_id,pasal_versi.urutan,pasal_versi.status,pasal_versi.sumber,pasal_versi.judul_sumber,pasal_versi.naskah_resmi',
+        ]);
         if ($request->boolean('with_trashed') || $request->boolean('trash')) {
             $query->withTrashed();
         }
@@ -85,7 +90,14 @@ class PasalController extends Controller
 
     public function show(string $id): JsonResponse
     {
-        return response()->json(Pasal::withTrashed()->with(['undangUndang', 'verifier:id,nama,email'])->findOrFail($id));
+        return response()->json(
+            Pasal::withTrashed()->with(['undangUndang', 'verifier:id,nama,email', 'versiTerakhir'])->findOrFail($id)
+        );
+    }
+
+    public function history(string $id): JsonResponse
+    {
+        return response()->json(Pasal::withTrashed()->findOrFail($id)->versi()->get());
     }
 
     /** Semua keyword/topik yang dipakai pasal aktif, untuk pilihan filter di admin. */
@@ -272,11 +284,12 @@ class PasalController extends Controller
     {
         $request->validate([
             'file' => ['nullable', 'file', 'mimes:xlsx,xls,csv'],
+            'undang_undang_id' => ['nullable', 'uuid', 'exists:undang_undang,id'],
             'rows' => ['nullable', 'array'],
         ]);
 
         $result = $request->hasFile('file')
-            ? $importer->importFile($request->file('file'), $request->user()?->id)
+            ? $importer->importFile($request->file('file'), $request->user()?->id, $request->input('undang_undang_id'))
             : $importer->importRows($request->input('rows', []), $request->user()?->id);
 
         $audit->log($request, 'IMPORT', 'pasal', null, null, null, $result);

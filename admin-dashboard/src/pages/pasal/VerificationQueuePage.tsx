@@ -28,6 +28,7 @@ import { notifications } from '@mantine/notifications'
 import { IconCircleCheck, IconEdit, IconExternalLink, IconSearch } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { LegalText } from '@/components/LegalText'
+import { isAmended, officialSourceFor, VERSI_STATUS } from '@/lib/pasal-versi'
 import { api, toQueryString, type PaginatedResponse } from '@/lib/api'
 import type { PasalWithUndangUndang, VerificationSummaryRow } from '@/lib/database.types'
 import { formatPasalLabel } from '@/lib/pasal-format'
@@ -194,6 +195,11 @@ export function VerificationQueuePage() {
                       <Group gap="xs">
                         <Badge variant="light">{pasal.undang_undang?.kode}</Badge>
                         <Text fw={600}>{formatPasalLabel(pasal.nomor)}</Text>
+                        {pasal.versi_terakhir && isAmended(pasal) && (
+                          <Badge variant="outline" color={VERSI_STATUS[pasal.versi_terakhir.status].color} size="sm">
+                            {VERSI_STATUS[pasal.versi_terakhir.status].label} {pasal.versi_terakhir.sumber}
+                          </Badge>
+                        )}
                       </Group>
                       {pasal.judul && (
                         <Text size="sm" c="dimmed">
@@ -233,13 +239,13 @@ export function VerificationQueuePage() {
                   </Spoiler>
                 )}
 
-                {(pasal.undang_undang?.official_url || pasal.undang_undang?.source_url) && (
+                {(officialSourceFor(pasal) || pasal.undang_undang?.source_url) && (
                   <Group gap="md">
-                    {pasal.undang_undang?.official_url && (
-                      <Anchor href={pasal.undang_undang.official_url} target="_blank" rel="noreferrer" size="sm">
+                    {officialSourceFor(pasal) && (
+                      <Anchor href={officialSourceFor(pasal)!.href} target="_blank" rel="noreferrer" size="sm">
                         <Group gap={4}>
                           <IconExternalLink size={14} />
-                          Naskah resmi
+                          {officialSourceFor(pasal)!.label}
                         </Group>
                       </Anchor>
                     )}
