@@ -14,7 +14,12 @@ skripnya lalu jalankan ulang.
   - pasal sisipan (1): 599A
 - `judul` diisi judul paragraf/bagian/bab tempat pasal berada (KUHP tidak punya judul per pasal).
 - `penjelasan` diisi penjelasan resmi. Pasal 220 dan 237 diberi catatan Putusan MK.
-- `keywords`: `KUHP 2023`, judul bab, dan `UU 1 2026` untuk pasal yang tersentuh perubahan.
+- `keywords` (topik): judul bab dan bagian tempat pasal berada, contoh
+  `tindak pidana terhadap tubuh, penganiayaan`. Tidak perlu diisi manual.
+- `linkN_*` (pasal terkait): rujukan ke pasal KUHP lain yang disebut di isi pasal, misalnya
+  "sebagaimana dimaksud dalam Pasal 54". Rujukan yang diikuti nama undang-undang lain dilewati,
+  begitu juga Bab Ketentuan Peralihan dan Ketentuan Penutup (isinya memetakan pasal UU lain).
+  Maksimal 20 per pasal.
 
 ## Sumber
 

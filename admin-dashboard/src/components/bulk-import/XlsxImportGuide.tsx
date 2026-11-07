@@ -124,7 +124,7 @@ export function XlsxImportGuide() {
         <div>
           <Text fw={600} mb="xs">Kolom Link (Menghubungkan ke Pasal Lain):</Text>
           <Text size="sm" c="dimmed" mb="sm">
-            Setiap pasal dapat memiliki hingga 5 link ke pasal lain. Kolom link bersifat opsional.
+            Setiap pasal dapat memiliki hingga 20 link ke pasal lain. Kolom link bersifat opsional.
           </Text>
           <ScrollArea>
             <Table striped withTableBorder withColumnBorders>
@@ -153,7 +153,7 @@ export function XlsxImportGuide() {
                 </Table.Tr>
                 <Table.Tr>
                   <Table.Td><Code>link2_targetUU</Code>, dst...</Table.Td>
-                  <Table.Td colSpan={2}>Sama seperti link1, untuk link ke-2 sampai ke-5</Table.Td>
+                  <Table.Td colSpan={2}>Sama seperti link1, untuk link ke-2 sampai ke-20</Table.Td>
                 </Table.Tr>
               </Table.Tbody>
             </Table>

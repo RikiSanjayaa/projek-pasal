@@ -134,6 +134,9 @@ SMALL_WORDS = {
 
 REVIEW_COVERAGE_THRESHOLD = 0.90
 
+# Sama dengan MAX_LINKS_PER_PASAL di admin-dashboard/src/pages/BulkImportPage.tsx.
+MAX_LINKS_PER_PASAL = 20
+
 
 @dataclass
 class Heading:
@@ -532,24 +535,83 @@ def judul_for(record: PasalRecord) -> str:
 
 
 def keywords_for(record: PasalRecord) -> str:
-    words = ["KUHP 2023"]
-    bab = next((h for h in record.headings if h.kind == "bab"), None)
-    if bab:
-        # Koma adalah pemisah keyword di format import, jadi dibuang dari judul bab.
-        words.append(title_case(bab.title).lower().replace(",", ""))
-    if record.status != "asli UU 1/2023":
-        words.append("UU 1 2026")
-    return ", ".join(words)
+    """Topik pasal = judul bab dan bagian tempat pasal berada (huruf kecil)."""
+    topics = []
+    for heading in record.headings:
+        if heading.kind in {"bab", "bagian"} and heading.title:
+            # Koma adalah pemisah keyword di format import, jadi dibuang dari judul.
+            topic = heading.title.lower().replace(",", "")
+            if topic not in topics:
+                topics.append(topic)
+    return ", ".join(topics)
+
+
+# Bab peralihan dan penutup memetakan pasal undang-undang lain ("Pasal 2 ... diganti dengan
+# Pasal 306"), jadi nomor di sana tidak bisa dibaca sebagai rujukan ke KUHP.
+NO_LINK_BAB_TITLES = {"KETENTUAN PERALIHAN", "KETENTUAN PENUTUP"}
+PASAL_MENTION = re.compile(r"\bPasal\s+(\d+[A-Z]?)\b((?:\s+ayat\s*\(\d+[a-z]?\))?(?:\s+huruf\s+[a-z]{1,2}\b)?(?:\s+angka\s+\d+\b)?)")
+CHAIN_GAP = re.compile(
+    r"(?:\s*(?:ayat\s*\(\d+[a-z]?\)|huruf\s+[a-z]{1,2}\b|angka\s+\d+\b|,|dan/atau|dan|atau|serta|sampai\s+dengan)\s*)*",
+    re.I,
+)
+EXTERNAL_LAW = re.compile(r"\s*(?:Undang-Undang|UU\b|Peraturan|Kitab|Ordonnantie|Wetboek|Staatsblad|Stbl|Perppu)", re.I)
+
+
+def cross_references(record: PasalRecord, known: set[str]) -> list[tuple[str, str]]:
+    """Rujukan ke pasal lain di KUHP yang disebut dalam isi: [(nomor_tujuan, potongan_rujukan)].
+
+    Sebutan yang berurutan ("Pasal 218 dan Pasal 219", "Pasal 51 sampai dengan Pasal 54") dibaca
+    sebagai satu rangkaian. Rangkaian yang langsung diikuti nama undang-undang lain dilewati.
+    """
+    if any(h.kind == "bab" and h.title in NO_LINK_BAB_TITLES for h in record.headings):
+        return []
+    mentions = list(PASAL_MENTION.finditer(record.isi))
+    chains: list[list[re.Match[str]]] = []
+    for mention in mentions:
+        if chains and CHAIN_GAP.fullmatch(record.isi[chains[-1][-1].end() : mention.start()]):
+            chains[-1].append(mention)
+        else:
+            chains.append([mention])
+
+    found: list[tuple[str, str]] = []
+    for chain in chains:
+        tail = record.isi[chain[-1].end() :]
+        tail = tail[CHAIN_GAP.match(tail).end() :]
+        if EXTERNAL_LAW.match(tail):
+            continue
+        targets: list[tuple[str, str]] = []
+        for index, mention in enumerate(chain):
+            targets.append((mention.group(1), squash(mention.group(0))))
+            following = chain[index + 1] if index + 1 < len(chain) else None
+            gap = record.isi[mention.end() : following.start()] if following else ""
+            if following and re.search(r"sampai\s+dengan", gap, re.I) and mention.group(1).isdigit() and following.group(1).isdigit():
+                start, end = int(mention.group(1)), int(following.group(1))
+                phrase = f"Pasal {start} sampai dengan Pasal {end}"
+                targets[-1] = (mention.group(1), phrase)
+                if 0 < end - start <= 10:
+                    targets.extend((str(n), phrase) for n in range(start + 1, end))
+        for nomor, phrase in targets:
+            if nomor != record.nomor and nomor in known and nomor not in {n for n, _ in found}:
+                found.append((nomor, phrase))
+    return found[:MAX_LINKS_PER_PASAL]
 
 
 def write_xlsx(path: Path, records: list[PasalRecord], review: list[dict[str, object]]) -> None:
     wb = Workbook()
     ws = wb.active
     ws.title = "import"
+    known = {record.nomor for record in records}
+    links = {record.nomor: cross_references(record, known) for record in records}
+    link_slots = max((len(found) for found in links.values()), default=0)
     headers = ["nomor", "judul", "isi", "penjelasan", "keywords"]
+    for slot in range(1, link_slots + 1):
+        headers += [f"link{slot}_targetUU", f"link{slot}_targetNomor", f"link{slot}_keterangan"]
     ws.append(headers)
     for record in records:
-        ws.append([record.nomor, judul_for(record), record.isi, record.penjelasan, keywords_for(record)])
+        row = [record.nomor, judul_for(record), record.isi, record.penjelasan, keywords_for(record)]
+        for nomor, phrase in links[record.nomor]:
+            row += [UU_RECORD["kode"], nomor, f"Disebut dalam isi: {phrase}"]
+        ws.append(row)
 
     review_ws = wb.create_sheet("review")
     review_headers = ["nomor", "status_teks", "bab", "cakupan_isi_pdf", "cakupan_penjelasan_pdf", "perlu_review", "catatan"]
@@ -607,7 +669,12 @@ skripnya lalu jalankan ulang.
   - pasal sisipan ({len(inserted)}): {", ".join(inserted)}
 - `judul` diisi judul paragraf/bagian/bab tempat pasal berada (KUHP tidak punya judul per pasal).
 - `penjelasan` diisi penjelasan resmi. Pasal 220 dan 237 diberi catatan Putusan MK.
-- `keywords`: `KUHP 2023`, judul bab, dan `UU 1 2026` untuk pasal yang tersentuh perubahan.
+- `keywords` (topik): judul bab dan bagian tempat pasal berada, contoh
+  `tindak pidana terhadap tubuh, penganiayaan`. Tidak perlu diisi manual.
+- `linkN_*` (pasal terkait): rujukan ke pasal KUHP lain yang disebut di isi pasal, misalnya
+  "sebagaimana dimaksud dalam Pasal 54". Rujukan yang diikuti nama undang-undang lain dilewati,
+  begitu juga Bab Ketentuan Peralihan dan Ketentuan Penutup (isinya memetakan pasal UU lain).
+  Maksimal {MAX_LINKS_PER_PASAL} per pasal.
 
 ## Sumber
 

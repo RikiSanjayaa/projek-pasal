@@ -47,7 +47,7 @@ import {
 } from '@/lib/pasal-quality'
 import { invalidatePasalData } from '@/lib/query-invalidation'
 
-const MAX_LINKS_PER_PASAL = 5
+const MAX_LINKS_PER_PASAL = 20
 
 interface PasalLink {
   targetUU: string
