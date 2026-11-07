@@ -2,8 +2,73 @@
 
 from datahukum_pipeline import LawConfig
 
-# Typo per pasal: (kolom, teks salah, teks benar). Setiap entri sudah dicek ke PDF resmi BPK.
-TEXT_FIXES: dict[str, list[tuple[str, str, str]]] = {}
+# Typo OCR di teks datahukum.com: (kolom, teks salah, teks benar). Setiap entri dicek ke PDF
+# resmi BPK (2026-11-07). Skrip berhenti kalau teks salahnya tidak ditemukan.
+TEXT_FIXES: dict[str, list[tuple[str, str, str]]] = {
+    "1": [
+        ("isi", "alau hak terpidana", "atau hak terpidana"),
+        ("isi", "a\u00cdau korban", "atau korban"),
+        ("isi", "badan u saha milik daerah", "badan usaha milik daerah"),
+    ],
+    "4": [("penjelasan", "menem\u0131\u0131kan", "menemukan")],
+    "6": [("isi", "Terlentu", "Tertentu"), ("isi", "sertif\u0131kasi", "sertifikasi")],
+    "7": [
+        ("isi", "atau Banda pengenal", "atau tanda pengenal"),
+        ("isi", "Tindak mdana Korupsi", "Tindak Pidana Korupsi"),
+        ("penjelasan", "poiice line", "police line"),
+    ],
+    "31": [("isi", "Advokat afiau", "Advokat atau")],
+    "45": [("isi", "Keloarganya", "Keluarganya")],
+    "56": [("isi", "yang hans mendapat", "yang harus mendapat")],
+    "64": [("penjelasan", "Penunlutan", "Penuntutan")],
+    "71": [("isi", "Penuntulan", "Penuntutan")],
+    "87": [("isi", "Pt\u0131tusan", "Putusan")],
+    "95": [("isi", "Pembanlu", "Pembantu")],
+    "106": [("isi", "Mahkamah Agiing", "Mahkamah Agung")],
+    "108": [("isi", "orusan", "urusan"), ("isi", "pemerinlahan", "pemerintahan")],
+    "120": [("isi", "siluasi", "situasi")],
+    "127": [("isi", "Penyilaan", "Penyitaan")],
+    "143": [("isi", "maupon", "maupun"), ("isi", "transporlasi", "transportasi")],
+    "144": [("isi", "sampai balas pelindungan", "sampai batas pelindungan")],
+    "146": [("isi", "pertanggun\u011fawaban", "pertanggungjawaban")],
+    "147": [("penjelasan", ") lahun", ") tahun")],
+    "148": [("isi", "flsik", "fisik")],
+    "156": [("isi", "menandalangani", "menandatangani")],
+    "167": [("isi", "\u00fbndak", "tindak"), ("isi", "d\u00fcakukan", "dilakukan")],
+    "169": [("isi", "peninjaoan", "peninjauan")],
+    "178": [("isi", "danJ atau", "dan/atau")],
+    "189": [("isi", "dapa\u00cd", "dapat")],
+    "190": [("isi", "guga\u00a3an", "gugatan")],
+    "196": [("penjelasan", "pelimpahan bara", "pelimpahan baru")],
+    "201": [("isi", "danJ atau", "dan/atau")],
+    "204": [("isi", "bakan merupakan", "bukan merupakan"), ("isi", "tindakpidana", "tindak pidana")],
+    "205": [("isi", "f\u0131sik", "fisik")],
+    "214": [("isi", "mengklarif\u0131kasi", "mengklarifikasi"), ("penjelasan", "mengcilur", "mengulur")],
+    "216": [("isi", "Terdakwa alan Saksi", "Terdakwa atau Saksi")],
+    "235": [
+        ("isi", "hokum", "hukum"),
+        ("penjelasan", "eridence", "evidence"),
+        ("penjelasan", "physico/evidence", "physical evidence"),
+    ],
+    "239": [("isi", "ketalalaksanaan", "ketatalaksanaan")],
+    "240": [("isi", "buk\u00fb", "bukti")],
+    "245": [("isi", "Penuntufi", "Penuntut")],
+    "246": [("isi", "yaito", "yaitu")],
+    "250": [("isi", "kualif\u0131kasinya", "kualifikasinya"), ("isi", "di maria letaknya", "di mana letaknya")],
+    "257": [("isi", "gina kepentingan", "guna kepentingan")],
+    "260": [("isi", "lertulis", "tertulis")],
+    "269": [("penjelasan", "timbolnya", "timbulnya")],
+    "281": [("isi", "lerletak", "terletak")],
+    "306": [("isi", "Hakilll", "Hakim")],
+    "326": [("isi", "Pertanggun\u011fawaban", "Pertanggungjawaban")],
+    "328": [("isi", "Hakim nutuk", "Hakim untuk")],
+    "329": [("isi", "aktapendirian", "akta pendirian")],
+    "330": [("isi", "pertanggun\u011fawaban", "pertanggungjawaban")],
+    "341": [("isi", "Peratiiran", "Peraturan")],
+    "344": [("penjelasan", "un\u00cduk", "untuk")],
+    "349": [("isi", "danpembimbingan", "dan pembimbingan")],
+    "353": [("isi", "selako", "selaku")],
+}
 
 # Pasal berskor rendah yang sudah dicek manual terhadap PDF BPK.
 MANUAL_REVIEW: dict[str, str] = {}

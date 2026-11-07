@@ -673,6 +673,8 @@ File ini dibuat oleh `{SCRIPT} {config.slug}`. Jangan edit manual; perbaiki konf
 Kesalahan sumber HTML yang diperbaiki otomatis: butir ayat/huruf yang hilang, label penjelasan yang
 menempel ke paragraf lain, kalimat yang terpotong jadi dua paragraf, dan judul bagian yang tergeser satu
 pasal (dicek ke PDF). Typo per pasal ada di `text_fixes` ({sum(len(v) for v in config.text_fixes.values())} perbaikan, tiap entri dicek ke PDF).
+Typo dicari dari kata yang tidak dikenal kamus dan tidak ada di PDF. Typo yang kebetulan membentuk kata
+lain yang sah tidak bisa dipastikan otomatis, jadi verifikasi admin terhadap PDF resmi tetap diperlukan.
 
 `cakupan_*_pdf` = porsi huruf pada teks kita yang ditemukan di PDF resmi (rumusan asli dicek ke PDF
 {comparison}. Nilai di bawah {REVIEW_COVERAGE_THRESHOLD:.0%} atau butir ayat/huruf yang kosong ditandai
