@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -51,6 +52,21 @@ class Pasal extends Model
     public static function unverified(): array
     {
         return ['verification_status' => self::UNVERIFIED, 'verified_by' => null, 'verified_at' => null];
+    }
+
+    /**
+     * Urutan nomor pasal seperti di naskah: 1, 2, 10, 599, 599A, 600.
+     * Nomor tetap teks karena pasal sisipan memakai huruf (599A), jadi urutan string biasa salah (1, 10, 100).
+     */
+    public function scopeOrderByNomor(Builder $query, string $direction = 'asc'): Builder
+    {
+        $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
+        $column = $query->qualifyColumn('nomor');
+        $number = $query->getConnection()->getDriverName() === 'pgsql'
+            ? "NULLIF(substring({$column} from '^[0-9]+'), '')::int"
+            : "CAST({$column} AS INTEGER)";
+
+        return $query->orderByRaw("{$number} {$direction} NULLS LAST")->orderBy($column, $direction);
     }
 
     public function getKeywordsAttribute(mixed $value): array

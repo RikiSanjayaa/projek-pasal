@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Pasal;
 use App\Models\PasalLink;
 use App\Models\SearchAlias;
+use App\Models\UndangUndang;
 use App\Services\AuditService;
 use App\Services\ImportPasalService;
 use App\Support\PasalTextNormalizer;
@@ -52,13 +53,19 @@ class PasalController extends Controller
             });
         }
 
-        $sort = $request->boolean('trash') ? 'deleted_at' : ($search !== '' ? 'relevance' : 'nomor');
-        $direction = $request->boolean('trash') ? 'desc' : 'asc';
-
-        if ($sort === 'relevance') {
-            $query->orderByDesc('search_score')->orderBy('nomor');
+        $sort = (string) $request->query('sort', 'nomor');
+        if ($request->boolean('trash')) {
+            $query->orderByDesc('deleted_at');
+        } elseif (in_array($sort, ['updated_at', 'created_at', 'verified_at'], true)) {
+            // Terbaru dulu; pasal yang belum pernah diverifikasi (verified_at null) di akhir.
+            $query->orderByRaw($query->qualifyColumn($sort).' DESC NULLS LAST')->orderByNomor();
+        } elseif ($search !== '') {
+            $query->orderByDesc('search_score')->orderByNomor();
         } else {
-            $query->orderBy($sort, $direction);
+            // Kelompokkan per undang-undang, lalu urut nomor seperti di naskah.
+            $query->orderBy(
+                UndangUndang::withTrashed()->select('kode')->whereColumn('undang_undang.id', 'pasal.undang_undang_id')
+            )->orderByNomor();
         }
 
         return response()->json($query->paginate((int) $request->query('per_page', 20)));

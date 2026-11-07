@@ -24,7 +24,7 @@ class UndangUndangController extends Controller
         }
 
         if ($request->boolean('with_pasal')) {
-            $query->with(['pasal' => fn ($query) => $query->select('id', 'undang_undang_id', 'nomor')->orderBy('nomor')]);
+            $query->with(['pasal' => fn ($query) => $query->select('id', 'undang_undang_id', 'nomor')->orderByNomor()]);
         }
 
         return response()->json($query->orderBy('kode')->paginate((int) $request->query('per_page', 100)));
