@@ -15,6 +15,9 @@ class PasalVersi extends Model
 
     public const STATUSES = ['asli', 'diubah', 'disisipkan', 'dihapus'];
 
+    /** Perubahan riwayat menyentuh updated_at pasal supaya ikut sync ke mobile. */
+    protected $touches = ['pasal'];
+
     protected $fillable = [
         'pasal_id',
         'urutan',

@@ -207,11 +207,24 @@ class ImportPasalService
             ];
         }
 
+        // Import ulang dengan riwayat yang sama tidak boleh menyentuh pasal (memicu sync ulang di mobile).
+        $fields = array_keys($rows[0] ?? ['urutan' => null]);
+        $existing = $pasal->versi()->get()
+            ->map(fn (PasalVersi $versi) => array_map(
+                fn ($value) => $value instanceof \DateTimeInterface ? $value->format('Y-m-d') : $value,
+                $versi->only($fields),
+            ))
+            ->all();
+        if ($existing == $rows) {
+            return count($rows);
+        }
+
         DB::transaction(function () use ($pasal, $rows) {
             $pasal->versi()->delete();
             foreach ($rows as $row) {
                 $pasal->versi()->create($row);
             }
+            $pasal->touch();
         });
 
         return count($rows);

@@ -13,6 +13,7 @@ import {
   SimpleGrid,
   Spoiler,
   Stack,
+  Switch,
   Text,
   Textarea,
   TextInput,
@@ -24,6 +25,7 @@ import { modals } from '@mantine/modals'
 import { notifications } from '@mantine/notifications'
 import { IconEdit, IconExternalLink, IconHistory, IconPlus, IconTrash } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { DiffText } from '@/components/DiffText'
 import { IconAction } from '@/components/IconAction'
 import { LegalText } from '@/components/LegalText'
 import { api } from '@/lib/api'
@@ -102,6 +104,15 @@ export function PasalHistory({ pasal }: PasalHistoryProps) {
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState<Editing | null>(null)
   const [form, setForm] = useState<VersiForm | null>(null)
+  // Versi yang ditampilkan sebagai teks biasa (tanpa tanda perubahan dari versi sebelumnya).
+  const [plainIds, setPlainIds] = useState<Set<string>>(() => new Set())
+  const togglePlain = (id: string) =>
+    setPlainIds((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
 
   const { data: versions = [], isLoading } = useQuery({
     queryKey: ['pasal', 'riwayat', pasal.id],
@@ -208,6 +219,8 @@ export function PasalHistory({ pasal }: PasalHistoryProps) {
           {versions.map((versi, index) => {
             const status = VERSI_STATUS[versi.status]
             const current = index === versions.length - 1
+            const previous = index > 0 ? versions[index - 1] : null
+            const showDiff = !!previous && !plainIds.has(versi.id)
             const diundangkan = formatTanggal(versi.diundangkan)
             const berlaku = formatTanggal(versi.berlaku_sejak)
             return (
@@ -258,15 +271,31 @@ export function PasalHistory({ pasal }: PasalHistoryProps) {
                       </Group>
                     </Anchor>
                   )}
-                  <Spoiler maxHeight={current ? 0 : 140} showLabel={current ? 'Lihat rumusan' : 'Lihat rumusan lengkap'} hideLabel="Sembunyikan">
+                  {previous && (
+                    <Switch
+                      size="xs"
+                      checked={showDiff}
+                      onChange={() => togglePlain(versi.id)}
+                      label={`Tandai perubahan dari ${previous.sumber}`}
+                    />
+                  )}
+                  <Spoiler
+                    maxHeight={current && !previous ? 0 : 220}
+                    showLabel={current && !previous ? 'Lihat rumusan' : 'Lihat rumusan lengkap'}
+                    hideLabel="Sembunyikan"
+                  >
                     <Box p="sm" bg="var(--mantine-color-default-hover)" style={{ borderRadius: 'var(--mantine-radius-md)' }}>
-                      <LegalText text={versi.isi} size="sm" />
-                      {versi.penjelasan && (
+                      {showDiff && previous ? <DiffText before={previous.isi} after={versi.isi} /> : <LegalText text={versi.isi} size="sm" />}
+                      {(versi.penjelasan || (showDiff && previous?.penjelasan)) && (
                         <Box mt="sm">
                           <Text size="xs" fw={700} c="dimmed" tt="uppercase" mb={4}>
                             Penjelasan
                           </Text>
-                          <LegalText text={versi.penjelasan} size="sm" />
+                          {showDiff && previous ? (
+                            <DiffText before={previous.penjelasan ?? ''} after={versi.penjelasan ?? ''} />
+                          ) : (
+                            <LegalText text={versi.penjelasan ?? ''} size="sm" />
+                          )}
                         </Box>
                       )}
                     </Box>
