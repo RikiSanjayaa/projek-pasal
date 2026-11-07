@@ -50,7 +50,7 @@ const routerBasename = import.meta.env.VITE_APP_BASE_PATH?.replace(/\/$/, '') ||
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <MantineProvider theme={theme} defaultColorScheme="light">
+      <MantineProvider theme={theme} defaultColorScheme="auto">
         <DatesProvider settings={{ locale: 'id', firstDayOfWeek: 1 }}>
           <Notifications position="top-right" />
           <ModalsProvider>

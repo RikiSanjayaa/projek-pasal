@@ -183,8 +183,8 @@ export function ManageAdminPage() {
     <Stack gap="lg">
       <Group justify="space-between" wrap="wrap">
         <div>
-          <Title order={2}>Kelola Admin</Title>
-          <Text c="dimmed">Akun admin dashboard</Text>
+          <Title order={2}>Akun Admin</Title>
+          <Text c="dimmed">Akun untuk masuk ke dashboard admin</Text>
         </div>
         <Button leftSection={<IconUserPlus size={16} />} onClick={addModal.open} fullWidth={isMobile}>
           Tambah Admin

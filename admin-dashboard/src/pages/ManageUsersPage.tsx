@@ -289,7 +289,7 @@ export function ManageUsersPage() {
     <Stack gap="lg">
       <Group justify="space-between" wrap="wrap">
         <div>
-          <Title order={2}>Kelola Pengguna</Title>
+          <Title order={2}>Pengguna Mobile</Title>
           <Text c="dimmed">Akun pengguna aplikasi mobile</Text>
         </div>
         <Button leftSection={<IconUserPlus size={16} />} onClick={addModal.open} fullWidth={isMobile}>

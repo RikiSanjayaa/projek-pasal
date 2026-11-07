@@ -30,9 +30,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { LegalText } from '@/components/LegalText'
 import { isAmended, officialSourceFor, VERSI_STATUS } from '@/lib/pasal-versi'
 import { api, toQueryString, type PaginatedResponse } from '@/lib/api'
-import type { PasalWithUndangUndang, VerificationSummaryRow } from '@/lib/database.types'
+import type { PasalWithUndangUndang } from '@/lib/database.types'
 import { formatPasalLabel } from '@/lib/pasal-format'
 import { invalidatePasalData } from '@/lib/query-invalidation'
+import { verificationSummaryQuery } from '@/lib/verification'
 
 const PAGE_SIZE = 10
 
@@ -56,10 +57,7 @@ export function VerificationQueuePage() {
     setSelected([])
   }
 
-  const { data: summary } = useQuery({
-    queryKey: ['pasal', 'verification-summary'],
-    queryFn: async () => (await api.get<{ data: VerificationSummaryRow[] }>('/admin/pasal-verification-summary')).data,
-  })
+  const { data: summary } = useQuery(verificationSummaryQuery)
 
   const { data: queue, isLoading } = useQuery({
     queryKey: ['pasal', 'verification-queue', filterUU, debouncedSearch, page],

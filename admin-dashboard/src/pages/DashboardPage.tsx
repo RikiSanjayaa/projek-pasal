@@ -19,7 +19,7 @@ import {
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { api } from '@/lib/api'
-import type { VerificationSummaryRow } from '@/lib/database.types'
+import { pendingVerificationCount, verificationSummaryQuery } from '@/lib/verification'
 
 const CombinedAnalyticsChart = lazy(() =>
   import('@/components/charts/CombinedAnalyticsChart').then((module) => ({ default: module.CombinedAnalyticsChart }))
@@ -105,12 +105,8 @@ export function DashboardPage() {
   const totalChangesToday = dashboardData?.totalChangesToday
   const auditLogsAnalytics = dashboardData?.auditLogsAnalytics || []
 
-  const { data: verificationSummary } = useQuery({
-    queryKey: ['pasal', 'verification-summary'],
-    queryFn: async () => (await api.get<{ data: VerificationSummaryRow[] }>('/admin/pasal-verification-summary')).data,
-    staleTime: 30 * 1000,
-  })
-  const pendingVerification = verificationSummary?.reduce((total, row) => total + row.total - row.verified, 0)
+  const { data: verificationSummary } = useQuery(verificationSummaryQuery)
+  const pendingVerification = verificationSummary ? pendingVerificationCount(verificationSummary) : undefined
 
   // Get recent contributor name
 
