@@ -24,6 +24,7 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 
 | File                     | Fungsi                                                                                                      |
 | :----------------------- | :---------------------------------------------------------------------------------------------------------- |
+| **`law_content_formatter.dart`** | Pemformat teks hukum (daftar `(1)`, `a.`, `1.`, indentasi, highlight pencarian). Dipakai untuk **Isi** dan **Penjelasan**; label penjelasan (`Ayat (n)`, `Huruf x`, `Angka n`) menjadi sub-judul. Ekspor PDF memakai logika pemisahan yang sama. |
 | **`main_layout.dart`**   | Wrapper utama semua halaman. Menghandle Background Color & Dark Mode Listener agar konsisten.               |
 | **`pasal_card.dart`**    | Komponen UI Kartu Pasal. Digunakan berulang-ulang di Home, DetailUU, dan Search Result.                     |
 | **`update_banner.dart`** | Banner notifikasi update. Muncul otomatis jika ada data baru di server dan sync sudah lama tidak dilakukan. |
@@ -48,6 +49,7 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 | :--------------------------------- | :-------------------------------------------------------------------------------------------------- |
 | **`utils/highlight_text.dart`**    | Widget khusus untuk mewarnai teks (kuning) sesuai kata kunci pencarian.                             |
 | **`utils/image_helper.dart`**      | Mengatur logika gambar cover buku dan warna tema per buku (Merah untuk KUHP, Hijau untuk ITE, dll). |
+| **`config/app_theme.dart`**        | Satu-satunya definisi tema Material 3 (terang + gelap), dibangun dari warna merek di `app_colors.dart`. |
 | **`config/theme_controller.dart`** | Mengatur State Dark Mode/Light Mode dan menyimpannya ke memori HP (Shared Preferences).             |
 | **`config/env.dart`**              | Konfigurasi environment (Supabase URL dan Anon Key).                                                |
 
@@ -96,6 +98,37 @@ App Launch
 ---
 
 ## Catatan Pengembang
+
+### Toolchain Flutter
+
+- Flutter **3.47.9** (stable), Dart 3.13. Versi ini dipatok di `Dockerfile` (`ARG FLUTTER_VERSION`,
+  tarball resmi). Image `ghcr.io/cirruslabs/flutter:stable` tertinggal, jadi tidak dipakai.
+- UI memakai paket mandiri **`material_ui`** (pengganti `package:flutter/material.dart`).
+  Impor dengan `import 'package:material_ui/material_ui.dart';`. Aplikasi ini tidak memakai
+  widget Cupertino, sehingga `cupertino_ui` hanya masuk sebagai dependensi transitif.
+- `showcaseview` dan `printing` masih mengimpor `package:flutter/material.dart`, jadi `main.dart`
+  membungkus aplikasi dengan `MaterialUiCompatibilityBridge` di `MaterialApp.builder`. Hapus
+  pembungkus itu setelah kedua paket bermigrasi ke `material_ui`.
+- Lokalisasi memakai `GlobalMaterialLocalizations.delegates` dengan locale `id`.
+
+Menjalankan analisis/tes tanpa memasang Flutter di host (jalankan pada salinan proyek karena
+Docker membuat berkas milik root):
+
+```bash
+docker build --target flutter-sdk -t caripasal-flutter:3.47.9 pasal_mobile_app
+docker run --rm -v "$PWD/pasal_mobile_app:/app" -w /app caripasal-flutter:3.47.9 \
+  sh -c 'flutter pub get && flutter analyze && flutter test'
+```
+
+Build web (Docker, stage `build` lalu Nginx): `docker build -t caripasal-mobile-web pasal_mobile_app`.
+
+### Tema
+
+Semua gaya global ada di `lib/core/config/app_theme.dart` (`AppTheme.light` / `AppTheme.dark`):
+skema warna dari `ColorScheme.fromSeed` dengan primary/secondary/permukaan dipaksa ke
+`AppColors`, skala teks untuk bacaan panjang (badan 16/14 dengan tinggi baris 1.6-1.7), dan bentuk
+seragam (kartu 16, tombol 14, input 12, sheet/dialog 20, chip 20). Tambahkan warna baru di
+`app_colors.dart`, jangan hardcode di widget.
 
 ### Regenerate Database Code
 

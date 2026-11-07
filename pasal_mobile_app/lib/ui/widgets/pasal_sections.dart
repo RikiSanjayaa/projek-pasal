@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../core/config/app_colors.dart';
 import '../../core/services/query_service.dart';
 import '../../models/pasal_model.dart';
@@ -20,8 +20,10 @@ class PenjelasanSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final normalizedPenjelasan = normalizeLegalDisplayText(penjelasan);
-    if (normalizedPenjelasan.length <= 3) return const SizedBox.shrink();
+    if (normalizeLegalDisplayText(penjelasan).length <= 3) {
+      return const SizedBox.shrink();
+    }
+    final blocks = splitPenjelasanBlocks(penjelasan);
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final subTextColor = AppColors.textSecondary(isDark);
@@ -58,19 +60,29 @@ class PenjelasanSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          LayoutBuilder(
-            builder: (context, constraints) => HighlightText(
-              text: normalizedPenjelasan,
-              query: searchQuery,
-              textAlign: smartLegalTextAlign(
-                requested: TextAlign.justify,
-                text: normalizedPenjelasan,
-                maxWidth: constraints.maxWidth,
-                fontSize: 14,
+          for (final block in blocks) ...[
+            if (block.label != null) ...[
+              HighlightText(
+                text: block.label!,
+                query: searchQuery,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary.withValues(alpha: 0.9),
+                  letterSpacing: 0.3,
+                ),
               ),
-              style: TextStyle(fontSize: 14, height: 1.6, color: subTextColor),
+              const SizedBox(height: 4),
+            ],
+            LawContentFormatter(
+              content: block.body,
+              searchQuery: searchQuery,
+              fontSize: 15,
+              height: 1.7,
+              color: subTextColor,
             ),
-          ),
+            const SizedBox(height: 8),
+          ],
         ],
       ),
     );

@@ -1,5 +1,24 @@
-# Stage 1: Build Flutter Web
-FROM ghcr.io/cirruslabs/flutter:stable AS build
+# Stage 1a: Flutter toolchain (also usable on its own for analyze/test:
+#   docker build --target flutter-sdk -t caripasal-flutter:3.47.9 .)
+FROM debian:bookworm-slim AS flutter-sdk
+
+ARG FLUTTER_VERSION=3.47.9
+ENV FLUTTER_HOME=/opt/flutter
+ENV PATH="${FLUTTER_HOME}/bin:${PATH}"
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates curl git xz-utils unzip && \
+    rm -rf /var/lib/apt/lists/*
+
+# Official Flutter tarball (pinned; the cirruslabs "stable" image lags behind).
+RUN curl -fsSL "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz" \
+      | tar -xJ -C /opt && \
+    git config --global --add safe.directory "${FLUTTER_HOME}" && \
+    flutter config --no-analytics --no-cli-animations && \
+    flutter precache --web
+
+# Stage 1b: Build Flutter Web
+FROM flutter-sdk AS build
 
 WORKDIR /app
 

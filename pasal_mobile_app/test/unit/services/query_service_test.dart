@@ -338,6 +338,24 @@ void main() {
         expect(result.every((p) => p.undangUndangId == 'uu-1'), true);
       });
 
+      test('orders pasal numerically, not alphabetically', () async {
+        final testData = [
+          for (final nomor in ['100', '10', '2', '79A', '79', '1'])
+            TestDataFactory.createPasal(
+              id: 'pasal-$nomor',
+              nomor: nomor,
+              undangUndangId: 'uu-1',
+            ),
+        ];
+        when(
+          mockDatabase.getActivePasalByUndangUndang('uu-1'),
+        ).thenAnswer((_) async => testData);
+
+        final result = await QueryService.getPasalByUU('uu-1');
+
+        expect(result.map((p) => p.nomor), ['1', '2', '10', '79', '79A', '100']);
+      });
+
       test('returns empty list when UU has no pasal', () async {
         when(
           mockDatabase.getActivePasalByUndangUndang('uu-empty'),

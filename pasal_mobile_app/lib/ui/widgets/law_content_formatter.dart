@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../utils/highlight_text.dart';
 
 String normalizeLegalDisplayText(String value) {
@@ -11,7 +11,7 @@ String normalizeLegalDisplayText(String value) {
       )
       .replaceAllMapped(
         RegExp(
-          r'[ \t]+((?:\([0-9ivxlcdm]+[a-z]?\)|[0-9]+[a-z]?\.|\([a-z]\)|[a-z]\.)\s+)',
+          r'[ \t]+((?:\((?:[0-9]+[a-z]?|[ivxlcdm]{1,4})\)|[0-9]+[a-z]?\.|\([a-z]\)|[a-z]\.)\s+)',
           caseSensitive: false,
         ),
         (match) => '\n${match.group(1)}',
@@ -25,13 +25,22 @@ String normalizeLegalDisplayText(String value) {
 
   bool startsNewBlock(String line) {
     return RegExp(
-      r'^(Pasal|Nom[oe]r)\s+[0-9]|^(Penjelasan|Pendapat\s+Ahli|Catatan\s+Ahli)\s*:?|^(\([0-9ivxlcdm]+[a-z]?\)|[0-9]+[a-z]?\.|\([a-z]\)|[a-z]\.)\s+',
+      r'^(Pasal|Nom[oe]r)\s+[0-9]|^(Penjelasan|Pendapat\s+Ahli|Catatan\s+Ahli)\s*:?|^(\((?:[0-9]+[a-z]?|[ivxlcdm]{1,4})\)|[0-9]+[a-z]?\.|\([a-z]\)|[a-z]\.)\s+',
       caseSensitive: false,
     ).hasMatch(line);
   }
 
+  // A line that follows a finished sentence and starts with a capital letter
+  // is a new paragraph, not a hard-wrapped continuation.
+  bool startsNewParagraph(String previous, String line) {
+    return RegExp(r'[.:;]$').hasMatch(previous) &&
+        RegExp(r'^[A-Z"\u201C]').hasMatch(line);
+  }
+
   for (final line in lines) {
-    if (blocks.isEmpty || startsNewBlock(line)) {
+    if (blocks.isEmpty ||
+        startsNewBlock(line) ||
+        startsNewParagraph(blocks.last, line)) {
       blocks.add(line);
     } else {
       blocks[blocks.length - 1] = '${blocks.last} $line'
@@ -41,6 +50,62 @@ String normalizeLegalDisplayText(String value) {
   }
 
   return blocks.join('\n').trim();
+}
+
+/// One explanation block of a Penjelasan, optionally introduced by a label
+/// such as `Ayat (2)`, `Huruf b` or `Angka 3`.
+class PenjelasanBlock {
+  final String? label;
+  final String body;
+
+  const PenjelasanBlock({this.label, required this.body});
+}
+
+const String _penjelasanLabelSource =
+    r'(?:Ayat\s+\([0-9]+[a-z]?\)|Huruf\s+[a-z]|Angka\s+[0-9]+[a-z]?)';
+final RegExp _penjelasanLabelAtStart = RegExp(
+  '^($_penjelasanLabelSource)(?=\\s|\$)',
+);
+final RegExp _penjelasanInlineLabel = RegExp(
+  '([.:;!?])\\s+(?=$_penjelasanLabelSource\\s)',
+);
+
+/// Splits Penjelasan text into blocks at line-leading labels (`Ayat (1)`,
+/// `Huruf a`, `Angka 1`). Text without a label stays in an unlabeled block.
+List<PenjelasanBlock> splitPenjelasanBlocks(String value) {
+  final lines = value
+      .replaceAll('\r\n', '\n')
+      .replaceAll('\r', '\n')
+      .replaceAllMapped(_penjelasanInlineLabel, (m) => '${m.group(1)}\n')
+      .split('\n')
+      .map((l) => l.trim())
+      .where((l) => l.isNotEmpty);
+
+  final blocks = <PenjelasanBlock>[];
+  String? label;
+  final body = <String>[];
+
+  void flush() {
+    if (label != null || body.isNotEmpty) {
+      blocks.add(PenjelasanBlock(label: label, body: body.join('\n')));
+    }
+    label = null;
+    body.clear();
+  }
+
+  for (final line in lines) {
+    final match = _penjelasanLabelAtStart.firstMatch(line);
+    if (match != null) {
+      flush();
+      label = match.group(1)!.replaceAll(RegExp(r'\s+'), ' ');
+      final rest = line.substring(match.end).trim();
+      if (rest.isNotEmpty) body.add(rest);
+    } else {
+      body.add(line);
+    }
+  }
+  flush();
+  return blocks;
 }
 
 TextAlign smartLegalTextAlign({
@@ -115,6 +180,15 @@ class LawContentFormatter extends StatelessWidget {
         final matches = pattern.allMatches(normalizedContent);
 
         if (matches.isEmpty) {
+          if (normalizedContent.contains('\n')) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final line in normalizedContent.split('\n'))
+                  _buildParagraph(line, 0, maxWidth),
+              ],
+            );
+          }
           return _buildHighlightedParagraph(normalizedContent, maxWidth);
         }
 
@@ -167,9 +241,16 @@ class LawContentFormatter extends StatelessWidget {
             indentLevel = 1;
           }
 
+          // Text after the first line break is a paragraph of its own, not
+          // part of the list item.
+          final bodyLines = body.trim().split('\n');
           children.add(
-            _buildListItem(markerStr, body.trim(), indentLevel, maxWidth),
+            _buildListItem(markerStr, bodyLines.first, indentLevel, maxWidth),
           );
+          for (final extra in bodyLines.skip(1)) {
+            if (extra.trim().isEmpty) continue;
+            children.add(_buildParagraph(extra.trim(), 0, maxWidth));
+          }
         }
 
         return Column(

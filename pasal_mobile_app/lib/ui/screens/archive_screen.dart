@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../core/config/app_colors.dart';
 import '../../core/services/archive_service.dart';
 import '../../core/services/query_service.dart';
@@ -218,6 +218,17 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                                   : "Belum ada pasal tersimpan.",
                               style: TextStyle(color: Colors.grey[500]),
                             ),
+                            if (_searchQuery.isEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                'Ketuk ikon penanda di halaman baca pasal untuk menyimpan.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       )

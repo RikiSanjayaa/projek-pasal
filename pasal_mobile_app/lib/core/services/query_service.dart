@@ -118,10 +118,25 @@ class QueryService {
     }
   }
 
+  /// Natural order for pasal numbers: 1, 2, 10, 79, 79A, 100 (not 1, 10, 100, 2).
+  static int compareNomor(String a, String b) {
+    final pattern = RegExp(r'^\s*(\d+)\s*(.*)$');
+    final ma = pattern.firstMatch(a);
+    final mb = pattern.firstMatch(b);
+    if (ma == null || mb == null) {
+      if (ma == null && mb == null) return a.compareTo(b);
+      return ma == null ? 1 : -1;
+    }
+    final byNumber = int.parse(ma.group(1)!).compareTo(int.parse(mb.group(1)!));
+    if (byNumber != 0) return byNumber;
+    return ma.group(2)!.toLowerCase().compareTo(mb.group(2)!.toLowerCase());
+  }
+
   static Future<List<PasalModel>> getPasalByUU(String uuId) async {
     try {
       final data = await _database.getActivePasalByUndangUndang(uuId);
-      return data.map((row) => _rowToPasalModel(row)).toList();
+      return data.map((row) => _rowToPasalModel(row)).toList()
+        ..sort((a, b) => compareNomor(a.nomor, b.nomor));
     } catch (e) {
       print("Error getting pasal by UU: $e");
       return [];

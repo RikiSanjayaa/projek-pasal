@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../core/services/pdf_export_service.dart';
 import '../../core/config/app_colors.dart';
 import '../../models/pasal_model.dart';
@@ -31,7 +31,8 @@ class _HomeScreenState extends State<HomeScreen> {
   List<UndangUndangModel> _listUU = [];
 
   List<String> _allAvailableKeywords = [];
-  List<String> _popularKeywords = [];
+  List<String> _topKeywords = [];
+  Map<String, int> _keywordCounts = {};
 
   String _selectedFilterUUId = 'ALL';
   List<String> _selectedKeywords = [];
@@ -129,7 +130,8 @@ class _HomeScreenState extends State<HomeScreen> {
       _listUU = listUU;
       _allPasalCache = allPasal;
       _allAvailableKeywords = allAvailableKeywords;
-      _popularKeywords = sortedByUsage.take(15).map((e) => e.key).toList();
+      _topKeywords = sortedByUsage.take(15).map((e) => e.key).toList();
+      _keywordCounts = keywordCount;
     });
 
     _applyFilterAndSearch();
@@ -283,7 +285,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<String> _getKeywordSuggestions() {
     if (_searchQuery.isEmpty) {
-      return _popularKeywords
+      return _topKeywords
           .where((k) => !_selectedKeywords.contains(k))
           .take(5)
           .toList();
@@ -324,7 +326,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final keywordSuggestions = _getKeywordSuggestions();
 
     // Only show overlay when user is typing (Match Screenshot behavior)
-    // Remove "Popular Keywords" (Zero State) as requested
+    // No zero-state keyword suggestions: overlay only shows while typing
     if (_searchQuery.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -902,7 +904,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildKeywordChipsRow(bool isDark) {
-    final displayKeywords = _popularKeywords
+    final displayKeywords = _topKeywords
         .where((k) => !_selectedKeywords.contains(k))
         .take(_visibleKeywordChipsCount)
         .toList();
@@ -1035,7 +1037,8 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       allKeywords: _allAvailableKeywords,
       selectedKeywords: _selectedKeywords,
-      popularKeywords: _popularKeywords,
+      topKeywords: _topKeywords,
+      keywordCounts: _keywordCounts,
       autoFocus: autoFocus,
       onKeywordToggle: (keyword) {
         _toggleKeyword(keyword);

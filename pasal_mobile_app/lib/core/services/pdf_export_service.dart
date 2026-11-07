@@ -91,7 +91,7 @@ class PdfExportService {
                   style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
                 ),
                 pw.SizedBox(height: 4),
-                ..._buildFormattedContent(pasal.penjelasan!, terms),
+                ..._buildPenjelasanContent(pasal.penjelasan!, terms),
               ],
             ],
           );
@@ -218,7 +218,7 @@ class PdfExportService {
                         ),
                       ),
                       pw.SizedBox(height: 4),
-                      ..._buildFormattedContent(pasal.penjelasan!, terms),
+                      ..._buildPenjelasanContent(pasal.penjelasan!, terms),
                     ],
                   ],
                 ),
@@ -235,6 +235,34 @@ class PdfExportService {
     );
   }
 
+  /// Penjelasan uses the same list formatter as isi; labels such as
+  /// `Ayat (1)` / `Huruf a` / `Angka 1` become small bold sub-headings.
+  static List<pw.Widget> _buildPenjelasanContent(
+    String content,
+    List<String> terms,
+  ) {
+    final widgets = <pw.Widget>[];
+    for (final block in splitPenjelasanBlocks(content)) {
+      if (block.label != null) {
+        widgets.add(
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(top: 2, bottom: 2),
+            child: pw.Text(
+              block.label!,
+              style: pw.TextStyle(
+                fontSize: 9,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.blue800,
+              ),
+            ),
+          ),
+        );
+      }
+      widgets.addAll(_buildFormattedContent(block.body, terms));
+    }
+    return widgets;
+  }
+
   static List<pw.Widget> _buildFormattedContent(String content, List<String> terms) {
     if (content.isEmpty) return [];
 
@@ -246,7 +274,15 @@ class PdfExportService {
 
     final matches = pattern.allMatches(normalized);
     if (matches.isEmpty) {
-      return [_buildHighlightText(normalized, terms)];
+      final paragraphs = normalized.split('\n');
+      if (paragraphs.length == 1) return [_buildHighlightText(normalized, terms)];
+      return [
+        for (final line in paragraphs)
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 6),
+            child: _buildHighlightText(line, terms),
+          ),
+      ];
     }
 
     final List<pw.Widget> widgets = [];
@@ -278,7 +314,8 @@ class PdfExportService {
         bodyEnd = nextMatch.start + nextFullMatchStr.indexOf(nextMarkerStr);
       }
 
-      String body = normalized.substring(bodyStart, bodyEnd);
+      final bodyLines = normalized.substring(bodyStart, bodyEnd).trim().split('\n');
+      final String body = bodyLines.first;
       double indent = 0;
       if (RegExp(r'^\(?[a-z]\)?\.?$').hasMatch(markerStr)) {
         indent = 12;
@@ -307,6 +344,15 @@ class PdfExportService {
           ),
         ),
       );
+      for (final extra in bodyLines.skip(1)) {
+        if (extra.trim().isEmpty) continue;
+        widgets.add(
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 6),
+            child: _buildHighlightText(extra.trim(), terms),
+          ),
+        );
+      }
     }
 
     return widgets;
