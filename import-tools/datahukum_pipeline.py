@@ -1,17 +1,13 @@
-"""Siapkan file import KUHP (UU Nomor 1 Tahun 2023) untuk Bulk Import admin.
+"""Mesin import undang-undang dari datahukum.com untuk Bulk Import admin.
 
-Sumber teks:
-- datahukum.com: HTML terstruktur (buku/bab/bagian/paragraf, ayat, huruf, penjelasan)
-  yang memuat rumusan asli UU 1/2023 dan rumusan setelah diubah UU 1/2026.
-- JDIH BPK: PDF salinan resmi UU 1/2023 (hasil scan + OCR), dipakai sebagai pembanding.
+Alur per undang-undang (lihat konfigurasi di `laws/`):
+1. Ambil HTML terstruktur datahukum.com (buku/bab/bagian/paragraf, ayat, huruf, penjelasan).
+2. Kalau UU pernah diubah, pakai rumusan versi perubahan yang tersedia di HTML yang sama.
+3. Bandingkan tiap pasal dengan PDF resmi JDIH BPK (hasil scan + OCR) dan PDF UU perubahan.
+4. Tulis xlsx siap upload (sheet `import`), hasil cek (sheet `review`), dan README_IMPORT.md.
 
-Output (data-import/kuhp-2023/):
-- 01_kuhp_2023_konsolidasi_ready.xlsx  sheet "import" siap upload, sheet "review" hasil cek.
-- README_IMPORT.md                      cara import + daftar pasal yang perlu dicek manual.
-
-Jalankan:
-    python -m venv .venv && .venv/bin/pip install pymupdf openpyxl beautifulsoup4
-    .venv/bin/python import-tools/prepare_kuhp_2023_import.py
+`keywords` diisi topik (judul bab dan bagian), `linkN_*` diisi rujukan ke pasal lain di UU yang
+sama yang disebut dalam isi pasal. Tidak ada kolom yang perlu diisi manual.
 """
 
 from __future__ import annotations
@@ -31,111 +27,66 @@ from openpyxl.styles import Alignment, Font, PatternFill
 
 ROOT = Path(__file__).resolve().parents[1]
 CACHE_DIR = Path(__file__).resolve().parent / ".cache"
-OUTPUT_DIR = ROOT / "data-import" / "kuhp-2023"
+SCRIPT = "import-tools/prepare_import.py"
 
-DATAHUKUM_URL = "https://www.datahukum.com/peraturan/UU_1_Tahun_2023.html"
-BPK_DETAIL_URL = "https://peraturan.bpk.go.id/Details/234935/uu-no-1-tahun-2023"
-BPK_PDF_URL = "https://peraturan.bpk.go.id/Download/287456/UU%20Nomor%201%20Tahun%202023.pdf"
-UU_2026_PDF = ROOT / "uu-nomor-1-tahun-2026.pdf"
+REVIEW_COVERAGE_THRESHOLD = 0.90
 
-# Halaman PDF BPK (1-based): batang tubuh 2-229, penjelasan 230-345.
-PDF_BODY_PAGES = (2, 229)
-PDF_PENJELASAN_PAGES = (230, 345)
+# Sama dengan MAX_LINKS_PER_PASAL di admin-dashboard/src/pages/BulkImportPage.tsx.
+MAX_LINKS_PER_PASAL = 20
 
-UU_RECORD = {
-    "kode": "KUHP",
-    "nama": "Kitab Undang-Undang Hukum Pidana",
-    "nama_lengkap": "Undang-Undang Nomor 1 Tahun 2023 tentang Kitab Undang-Undang Hukum Pidana",
-    "tahun": 2023,
-}
-
-# Putusan MK yang tercatat di JDIH BPK untuk UU 1/2023 (dicek 2026-11-07).
-MK_NOTES = {
-    "220": (
-        "Catatan Putusan MK Nomor 275/PUU-XXIII/2025: Pasal 220 ayat (1) bertentangan dengan UUD 1945 "
-        "dan tidak mempunyai kekuatan hukum mengikat secara bersyarat sepanjang tidak dimaknai "
-        '"(1) Tindak Pidana sebagaimana dimaksud dalam Pasal 218 dan Pasal 219 hanya dapat dituntut '
-        'berdasarkan aduan oleh Presiden dan/atau Wakil Presiden".'
-    ),
-    "237": (
-        "Catatan Putusan MK Nomor 27/PUU-XXIV/2026: Pasal 237 huruf c bertentangan dengan UUD 1945 "
-        "dan tidak mempunyai kekuatan hukum mengikat."
-    ),
-}
-
-# Typo OCR yang berulang pada rumusan UU 1/2026 di sumber HTML.
+# Typo OCR yang berulang pada rumusan perubahan di sumber HTML.
 OCR_FIXES = {
     r"\bbarn\b": "baru",
     r"\bbam\b": "baru",
 }
-
-# Typo per pasal: (kolom, teks salah, teks benar). Setiap entri sudah dicek ke PDF resmi
-# (BPK untuk rumusan 2023, uu-nomor-1-tahun-2026.pdf untuk rumusan perubahan). Skrip berhenti
-# kalau teks salahnya tidak ditemukan, supaya daftar ini tidak diam-diam basi.
-TEXT_FIXES: dict[str, list[tuple[str, str, str]]] = {
-    "3": [("isi", "sesuai dengan Tingkat pemeriksaan", "sesuai dengan tingkat pemeriksaan")],
-    "46": [("penjelasan", "termasuk yang berkedudukan.\nberkedudukan sebagai", "termasuk yang berkedudukan sebagai")],
-    "66": [
-        ("isi", "pencabutan izin Tertentu", "pencabutan izin tertentu"),
-        ("penjelasan", "perlindongan", "perlindungan"),
-    ],
-    "76": [
-        ("penjelasan", 'Tindak Pidana iti"', 'Tindak Pidana itu"'),
-        ("penjelasan", "pemasyarakalan", "pemasyarakatan"),
-    ],
-    "79": [
-        ("penjelasan", "moneter. Penetapan tingkatan", "moneter.\nPenetapan tingkatan"),
-        ("penjelasan", "\nc. Maksimum kategori denda", "\na. Maksimum kategori denda"),
-        ("penjelasan", "\nd. Untuk kategori II adalah", "\nb. Untuk kategori II adalah"),
-        ("penjelasan", "\ne. Untuk kategori V sampai", "\nc. Untuk kategori V sampai"),
-    ],
-    "81": [("penjelasan", "antara lain\u2022", "antara lain:")],
-    "90": [
-        ("isi", "\nKetentuan sebagaimana dimaksud pada ayat (1) huruf b", "\n(2) Ketentuan sebagaimana dimaksud pada ayat (1) huruf b"),
-        ("isi", "\n(2) Pidana pencabutan hak mulai berlaku", "\n(3) Pidana pencabutan hak mulai berlaku"),
-    ],
-    "95": [("isi", "d\u00fbakukan", "dilakukan")],
-    "103": [("isi", "dan/alan", "dan/atau")],
-    "196": [("isi", "den\u011fan", "dengan")],
-    "269": [("penjelasan", 'adalah hang atau ruang', 'adalah liang atau ruang')],
-    "300": [("isi", "terlulis", "tertulis")],
-    "407": [("penjelasan", "contemporariy", "contemporary")],
-    "433": [("penjelasan", "kehormalan", "kehormatan")],
-    "457": [("isi", "palsu, atar tanpa", "palsu, atau tanpa")],
-    "473": [("isi", "memberi atar menjanjikan", "memberi atau menjanjikan")],
-    "622": [
-        ("isi", "Nomor O Tahun 2023", "Nomor 6 Tahun 2023"),
-        ("isi", "tentang Pembahan atas", "tentang Perubahan atas"),
-        ("isi", "dalam mtab Undang-Undang", "dalam Kitab Undang-Undang"),
-        ("isi", "Nomor l3 Tahun 2006", "Nomor 13 Tahun 2006"),
-        ("isi", "Tahun 2023 Nomor 4 1,", "Tahun 2023 Nomor 41,"),
-        ("isi", "Nomor 49 19)", "Nomor 4919)"),
-        ("isi", "Nomor S 164)", "Nomor 5164)"),
-        ("isi", "6OD", "606"),
-        ("isi", "\nCC. ", "\ncc. "),
-    ],
-}
-
-# Pasal yang skor cakupannya rendah tapi sudah dicek manual terhadap PDF (2026-11-07).
-# Selisihnya berasal dari OCR PDF (kata hilang di ujung baris rata kanan, huruf rusak).
-MANUAL_REVIEW = {
-    nomor: "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai"
-    for nomor in (
-        "6", "25", "69", "82", "95", "120", "121", "196", "200", "203", "209",
-        "269", "281", "296", "332", "353", "375", "382", "403", "407",
-    )
-}
-MANUAL_REVIEW["90"] = "Dicek manual: penomoran ayat (2) dan (3) diperbaiki sesuai PDF UU 1/2026"
 
 SMALL_WORDS = {
     "dan", "atau", "yang", "di", "ke", "dari", "dalam", "untuk", "oleh", "dengan", "tentang",
     "pada", "bagi", "serta", "terhadap", "atas", "sebagai", "secara", "tanpa", "kepada",
 }
 
-REVIEW_COVERAGE_THRESHOLD = 0.90
+ORIGINAL = "asli"
+INSERTED = "disisipkan"
 
-# Sama dengan MAX_LINKS_PER_PASAL di admin-dashboard/src/pages/BulkImportPage.tsx.
-MAX_LINKS_PER_PASAL = 20
+
+@dataclass(frozen=True)
+class Amendment:
+    """UU yang mengubah UU utama dan rumusannya tersedia di HTML datahukum.com."""
+
+    doc_class: str  # class section versi perubahan di HTML, contoh "uu-12026"
+    label: str  # contoh "UU 1/2026"
+    title: str  # contoh "UU 1/2026 (Penyesuaian Pidana)"
+    pdf: Path  # PDF resmi UU perubahan, pembanding rumusan baru
+
+
+@dataclass(frozen=True)
+class LawConfig:
+    slug: str  # nama folder output dan argumen CLI, contoh "kuhp-2023"
+    xlsx_name: str
+    kode: str
+    label: str  # sebutan singkat, contoh "UU 1/2023"
+    nama: str
+    nama_lengkap: str
+    tahun: int
+    datahukum_url: str
+    bpk_detail_url: str
+    bpk_pdf_url: str
+    doc_class: str  # class section versi asli di HTML, contoh "uu-12023"
+    body_pages: tuple[int, int]  # halaman PDF BPK (1-based) batang tubuh
+    penjelasan_pages: tuple[int, int]  # halaman PDF BPK (1-based) penjelasan
+    amendment: Amendment | None = None
+    mk_notes: dict[str, str] = field(default_factory=dict)
+    # (kolom, teks salah, teks benar); skrip berhenti kalau teks salahnya tidak ditemukan.
+    text_fixes: dict[str, list[tuple[str, str, str]]] = field(default_factory=dict)
+    # Pasal berskor rendah yang sudah dicek manual ke PDF.
+    manual_review: dict[str, str] = field(default_factory=dict)
+    # Bab yang isinya memetakan pasal UU lain, jadi nomornya tidak dibaca sebagai rujukan internal.
+    no_link_bab_titles: frozenset[str] = frozenset({"KETENTUAN PERALIHAN", "KETENTUAN PENUTUP"})
+    readme_notes: tuple[str, ...] = ()
+
+    @property
+    def output_dir(self) -> Path:
+        return ROOT / "data-import" / self.slug
 
 
 @dataclass
@@ -148,7 +99,6 @@ class Heading:
 @dataclass
 class PasalRecord:
     nomor: str
-    order: int
     headings: list[Heading]
     isi: str
     penjelasan: str
@@ -174,6 +124,10 @@ def squash(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def letters(text: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", text.lower())
+
+
 class TextCleaner:
     """Gabungkan pemenggalan kata ("perundang- undangan") memakai kosakata korpus sendiri."""
 
@@ -197,6 +151,9 @@ class TextCleaner:
         text = re.sub(r"\( ", "(", text)
         text = re.sub(r" \)", ")", text)
         return text
+
+
+# --- Render HTML ke teks ----------------------------------------------------------------
 
 
 def list_marker(ol: Tag, index: int, li: Tag) -> str:
@@ -303,35 +260,39 @@ def tidy_lines(lines: list[str]) -> list[str]:
     return result
 
 
-def render_section(parent: Tag | None, doc_class: str, clean: TextCleaner) -> str:
-    section = parent.find("section", class_=doc_class, recursive=False) if parent else None
+def render_section(parent: Tag | None, doc_class: str | None, clean: TextCleaner) -> str:
+    if parent is None or doc_class is None:
+        return ""
+    section = parent.find("section", class_=doc_class, recursive=False)
     return "\n".join(tidy_lines(render_flow(section, clean))) if section else ""
 
 
-def letters(text: str) -> str:
-    return re.sub(r"[^a-z0-9]", "", text.lower())
-
-
-
 def parse_heading(tag: Tag) -> Heading:
-    header = tag.find(["h1", "h2", "h3", "h4"], recursive=False)
+    # Judul bisa berupa anak langsung (<h2>) atau dibungkus <section> (format HTML yang lebih baru).
+    header = None
+    for child in tag.find_all(True, recursive=False):
+        if child.name in {"h1", "h2", "h3", "h4"}:
+            header = child
+        elif child.name == "section":
+            header = child.find(["h1", "h2", "h3", "h4"])
+        if header is not None or child.name == "div":
+            break
     text = squash(header.get_text(" ")) if header else ""
     label, _, title = text.partition(" - ")
     kind = {"buku": "buku", "bab": "bab", "bag": "bagian", "para": "paragraf"}[tag["class"][0]]
     return Heading(kind=kind, label=label.strip(), title=title.strip())
 
 
-def parse_datahukum(path: Path) -> list[PasalRecord]:
+def parse_datahukum(path: Path, config: LawConfig) -> list[PasalRecord]:
     soup = BeautifulSoup(path.read_text(encoding="utf-8"), "html.parser")
     clean = TextCleaner(soup.select_one("div.batangtubuh").get_text(" "))
-    headings = {tag["data-node-id"]: parse_heading(tag) for tag in soup.select("div.buku, div.bab, div.bag, div.para")}
-    parents = {
-        tag["data-node-id"]: tag.get("data-parent-id", "")
-        for tag in soup.select("div.buku, div.bab, div.bag, div.para")
-    }
+    structure = soup.select("div.buku, div.bab, div.bag, div.para")
+    headings = {tag["data-node-id"]: parse_heading(tag) for tag in structure}
+    parents = {tag["data-node-id"]: tag.get("data-parent-id", "") for tag in structure}
+    amended_class = config.amendment.doc_class if config.amendment else None
 
-    records = []
-    for order, pasal in enumerate(soup.select("div.pasal")):
+    records: list[PasalRecord] = []
+    for pasal in soup.select("div.pasal"):
         nomor = squash(pasal.select_one(".pasal-header h5").get_text(" ")).removeprefix("Pasal ").strip()
 
         chain = []
@@ -341,53 +302,53 @@ def parse_datahukum(path: Path) -> list[PasalRecord]:
             parent = parents.get(parent, "")
         chain.reverse()
         if not chain and records:
-            # Pasal sisipan (599A) tidak punya induk di HTML; ikut struktur pasal sebelumnya.
+            # Pasal sisipan (contoh 599A) tidak punya induk di HTML; ikut struktur pasal sebelumnya.
             chain = list(records[-1].headings)
 
         content = pasal.select_one("div.content")
         explanation = pasal.select_one("div.penjelasan")
-        isi_original = render_section(content, "uu-12023", clean)
-        isi_amended = render_section(content, "uu-12026", clean)
-        pj_original = render_section(explanation, "uu-12023", clean)
-        pj_amended = render_section(explanation, "uu-12026", clean)
+        isi_original = render_section(content, config.doc_class, clean)
+        isi_amended = render_section(content, amended_class, clean)
+        pj_original = render_section(explanation, config.doc_class, clean)
+        pj_amended = render_section(explanation, amended_class, clean)
 
-        # Sumber HTML menyalin ulang isi pasal ke versi 2026 walau yang diubah hanya penjelasannya.
+        # Sumber HTML menyalin ulang isi pasal ke versi perubahan walau yang diubah hanya penjelasannya.
         isi_changed = bool(isi_original and isi_amended) and letters(isi_original) != letters(isi_amended)
         pj_changed = bool(pj_amended) and letters(pj_original) != letters(pj_amended)
         if isi_amended and not isi_original:
-            status = "disisipkan UU 1/2026"
+            status = INSERTED
         elif isi_changed and pj_changed:
-            status = "isi & penjelasan diubah UU 1/2026"
+            status = "isi & penjelasan diubah"
         elif isi_changed:
-            status = "isi diubah UU 1/2026"
+            status = "isi diubah"
         elif pj_changed:
-            status = "penjelasan diubah UU 1/2026"
+            status = "penjelasan diubah"
         else:
-            status = "asli UU 1/2023"
+            status = ORIGINAL
 
         fields = {
             "isi": isi_amended if (isi_changed or not isi_original) else isi_original,
             "penjelasan": pj_amended if pj_changed else pj_original,
         }
-        for column, wrong, right in TEXT_FIXES.get(nomor, []):
+        for column, wrong, right in config.text_fixes.get(nomor, []):
             if wrong not in fields[column]:
-                raise ValueError(f"TEXT_FIXES Pasal {nomor}: {wrong!r} tidak ditemukan di {column}")
+                raise ValueError(f"text_fixes Pasal {nomor}: {wrong!r} tidak ditemukan di {column}")
             fields[column] = fields[column].replace(wrong, right)
-        isi, penjelasan = fields["isi"], fields["penjelasan"]
-        if nomor in MK_NOTES:
-            penjelasan = f"{penjelasan}\n{MK_NOTES[nomor]}".strip()
+        penjelasan = fields["penjelasan"]
+        mk_note = config.mk_notes.get(nomor)
+        if mk_note:
+            penjelasan = f"{penjelasan}\n{mk_note}".strip()
 
         records.append(
             PasalRecord(
                 nomor=nomor,
-                order=order,
                 headings=chain,
-                isi=isi,
+                isi=fields["isi"],
                 penjelasan=penjelasan,
                 status=status,
                 original_isi=isi_original,
                 original_penjelasan=pj_original,
-                notes=[MK_NOTES[nomor].split(":")[0]] if nomor in MK_NOTES else [],
+                notes=[mk_note.split(":")[0]] if mk_note else [],
             )
         )
     return records
@@ -396,10 +357,16 @@ def parse_datahukum(path: Path) -> list[PasalRecord]:
 # --- Pembanding PDF resmi -------------------------------------------------------------
 
 PDF_HEADER = re.compile(r"^\s*Pa\s?[s5]\s?a\s?[l1I|i]\s+([0-9lIOoSB]{1,3})\s*([A-Z])?\s*$")
+OCR_CONFUSABLE = str.maketrans({"1": "l", "i": "l", "0": "o", "5": "s"})
 
 
 def ocr_digits(value: str) -> str:
     return value.translate(str.maketrans({"l": "1", "I": "1", "i": "1", "O": "0", "o": "0", "S": "5", "B": "8"}))
+
+
+def ocr_fold(text: str) -> str:
+    """Huruf/angka saja, dengan karakter yang sering tertukar OCR (1/l/I, 0/O, 5/S) disamakan."""
+    return letters(text).translate(OCR_CONFUSABLE)
 
 
 @dataclass
@@ -421,6 +388,8 @@ class PdfIndex:
 
     def chunk(self, nomor: str, order: list[str]) -> list[str] | None:
         """Baris dari header pasal ini sampai header pasal berikutnya, kalau keduanya terbaca."""
+        if nomor not in order:
+            return None
         position = order.index(nomor)
         if position + 1 >= len(order) or nomor not in self.starts or order[position + 1] not in self.starts:
             return None
@@ -454,14 +423,6 @@ def char_coverage(ours: str, official: str) -> float:
         return 1.0
     matcher = difflib.SequenceMatcher(None, a, b, autojunk=False)
     return sum(block.size for block in matcher.get_matching_blocks()) / len(a)
-
-
-OCR_CONFUSABLE = str.maketrans({"1": "l", "i": "l", "0": "o", "5": "s"})
-
-
-def ocr_fold(text: str) -> str:
-    """Huruf/angka saja, dengan karakter yang sering tertukar OCR (1/l/I, 0/O, 5/S) disamakan."""
-    return letters(text).translate(OCR_CONFUSABLE)
 
 
 def fragment_coverage(ours: str, haystack_folded: str, size: int = 25, step: int = 40) -> float:
@@ -519,7 +480,7 @@ def fix_heading_placement(records: list[PasalRecord], body: PdfIndex) -> dict[st
     return fixes
 
 
-# --- Output ---------------------------------------------------------------------------
+# --- Kolom turunan: judul, topik, pasal terkait -----------------------------------------
 
 
 def title_case(text: str) -> str:
@@ -546,9 +507,6 @@ def keywords_for(record: PasalRecord) -> str:
     return ", ".join(topics)
 
 
-# Bab peralihan dan penutup memetakan pasal undang-undang lain ("Pasal 2 ... diganti dengan
-# Pasal 306"), jadi nomor di sana tidak bisa dibaca sebagai rujukan ke KUHP.
-NO_LINK_BAB_TITLES = {"KETENTUAN PERALIHAN", "KETENTUAN PENUTUP"}
 PASAL_MENTION = re.compile(r"\bPasal\s+(\d+[A-Z]?)\b((?:\s+ayat\s*\(\d+[a-z]?\))?(?:\s+huruf\s+[a-z]{1,2}\b)?(?:\s+angka\s+\d+\b)?)")
 CHAIN_GAP = re.compile(
     r"(?:\s*(?:ayat\s*\(\d+[a-z]?\)|huruf\s+[a-z]{1,2}\b|angka\s+\d+\b|,|dan/atau|dan|atau|serta|sampai\s+dengan)\s*)*",
@@ -557,13 +515,13 @@ CHAIN_GAP = re.compile(
 EXTERNAL_LAW = re.compile(r"\s*(?:Undang-Undang|UU\b|Peraturan|Kitab|Ordonnantie|Wetboek|Staatsblad|Stbl|Perppu)", re.I)
 
 
-def cross_references(record: PasalRecord, known: set[str]) -> list[tuple[str, str]]:
-    """Rujukan ke pasal lain di KUHP yang disebut dalam isi: [(nomor_tujuan, potongan_rujukan)].
+def cross_references(record: PasalRecord, known: set[str], config: LawConfig) -> list[tuple[str, str]]:
+    """Rujukan ke pasal lain di UU yang sama yang disebut dalam isi: [(nomor_tujuan, potongan_rujukan)].
 
     Sebutan yang berurutan ("Pasal 218 dan Pasal 219", "Pasal 51 sampai dengan Pasal 54") dibaca
     sebagai satu rangkaian. Rangkaian yang langsung diikuti nama undang-undang lain dilewati.
     """
-    if any(h.kind == "bab" and h.title in NO_LINK_BAB_TITLES for h in record.headings):
+    if any(h.kind == "bab" and h.title in config.no_link_bab_titles for h in record.headings):
         return []
     mentions = list(PASAL_MENTION.finditer(record.isi))
     chains: list[list[re.Match[str]]] = []
@@ -596,12 +554,21 @@ def cross_references(record: PasalRecord, known: set[str]) -> list[tuple[str, st
     return found[:MAX_LINKS_PER_PASAL]
 
 
-def write_xlsx(path: Path, records: list[PasalRecord], review: list[dict[str, object]]) -> None:
+# --- Output ---------------------------------------------------------------------------
+
+
+def status_label(record: PasalRecord, config: LawConfig) -> str:
+    if record.status == ORIGINAL:
+        return f"asli {config.label}"
+    return f"{record.status} {config.amendment.label}" if config.amendment else record.status
+
+
+def write_xlsx(config: LawConfig, records: list[PasalRecord], review: list[dict[str, object]]) -> dict[str, list]:
     wb = Workbook()
     ws = wb.active
     ws.title = "import"
     known = {record.nomor for record in records}
-    links = {record.nomor: cross_references(record, known) for record in records}
+    links = {record.nomor: cross_references(record, known, config) for record in records}
     link_slots = max((len(found) for found in links.values()), default=0)
     headers = ["nomor", "judul", "isi", "penjelasan", "keywords"]
     for slot in range(1, link_slots + 1):
@@ -610,7 +577,7 @@ def write_xlsx(path: Path, records: list[PasalRecord], review: list[dict[str, ob
     for record in records:
         row = [record.nomor, judul_for(record), record.isi, record.penjelasan, keywords_for(record)]
         for nomor, phrase in links[record.nomor]:
-            row += [UU_RECORD["kode"], nomor, f"Disebut dalam isi: {phrase}"]
+            row += [config.kode, nomor, f"Disebut dalam isi: {phrase}"]
         ws.append(row)
 
     review_ws = wb.create_sheet("review")
@@ -620,11 +587,12 @@ def write_xlsx(path: Path, records: list[PasalRecord], review: list[dict[str, ob
         review_ws.append([row[h] for h in review_headers])
 
     meta = wb.create_sheet("catatan")
-    meta.append(["Judul", UU_RECORD["nama_lengkap"] + " (konsolidasi dengan UU 1/2026)"])
+    suffix = f" (konsolidasi dengan {config.amendment.label})" if config.amendment else ""
+    meta.append(["Judul", config.nama_lengkap + suffix])
     meta.append(["Jumlah pasal", len(records)])
-    meta.append(["Sumber teks", DATAHUKUM_URL])
-    meta.append(["Pembanding resmi", BPK_DETAIL_URL])
-    meta.append(["Catatan", "Upload sheet pertama ('import') lewat menu Import Data. Pilih UU kode KUHP sebelum import."])
+    meta.append(["Sumber teks", config.datahukum_url])
+    meta.append(["Pembanding resmi", config.bpk_detail_url])
+    meta.append(["Catatan", f"Upload sheet pertama ('import') lewat menu Import Data. Pilih UU kode {config.kode} sebelum import."])
 
     header_fill = PatternFill("solid", fgColor="1F4E78")
     for sheet in (ws, review_ws):
@@ -643,66 +611,86 @@ def write_xlsx(path: Path, records: list[PasalRecord], review: list[dict[str, ob
     meta.column_dimensions["A"].width = 20
     meta.column_dimensions["B"].width = 100
 
-    path.parent.mkdir(parents=True, exist_ok=True)
-    wb.save(path)
+    config.output_dir.mkdir(parents=True, exist_ok=True)
+    wb.save(config.output_dir / config.xlsx_name)
+    return links
 
 
-def write_readme(records: list[PasalRecord], review: list[dict[str, object]]) -> None:
+def write_readme(config: LawConfig, records: list[PasalRecord], review: list[dict[str, object]], links: dict[str, list]) -> None:
     flagged = [row for row in review if row["perlu_review"] == "ya"]
-    isi_changed = [r.nomor for r in records if r.status.startswith("isi")]
-    pj_changed = [r.nomor for r in records if r.status == "penjelasan diubah UU 1/2026"]
-    inserted = [r.nomor for r in records if r.status == "disisipkan UU 1/2026"]
     flagged_lines = "\n".join(f"| {row['nomor']} | {row['catatan']} |" for row in flagged) or "| - | - |"
-    readme = f"""# Import KUHP (UU Nomor 1 Tahun 2023)
+    inserted = [r.nomor for r in records if r.status == INSERTED]
+    numbered = [r.nomor for r in records if r.status != INSERTED]
+    span = f"Pasal {numbered[0]} sampai {numbered[-1]}" + (f" ditambah Pasal {', '.join(inserted)}" if inserted else "")
+    link_count = sum(len(found) for found in links.values())
 
-File ini dibuat oleh `import-tools/prepare_kuhp_2023_import.py`. Jangan edit manual; perbaiki
-skripnya lalu jalankan ulang.
+    consolidation = ""
+    sources = [
+        f"1. Teks terstruktur: {config.datahukum_url} (pihak ketiga, bukan sumber resmi)",
+        f"2. Pembanding resmi: {config.bpk_detail_url} (PDF salinan, hasil scan/OCR)",
+    ]
+    if config.amendment:
+        isi_changed = [r.nomor for r in records if r.status.startswith("isi")]
+        pj_changed = [r.nomor for r in records if r.status == "penjelasan diubah"]
+        consolidation = (
+            f"- Teks sudah dikonsolidasi dengan {config.amendment.title}:\n"
+            f"  - isi pasal diubah ({len(isi_changed)}): {', '.join(isi_changed)}\n"
+            f"  - hanya penjelasan diubah ({len(pj_changed)}): {', '.join(pj_changed)}\n"
+            f"  - pasal sisipan ({len(inserted)}): {', '.join(inserted)}\n"
+        )
+        sources.append(f"3. Rumusan perubahan {config.amendment.title}: `{config.amendment.pdf.name}`")
+    mk = ""
+    if config.mk_notes:
+        mk = f"- Pasal {', '.join(config.mk_notes)} diberi catatan Putusan MK di kolom penjelasan.\n"
+    extra = "".join(f"- {note}\n" for note in config.readme_notes)
+    no_link = " dan ".join(title_case(t) for t in sorted(config.no_link_bab_titles))
+    comparison = (
+        f"BPK, rumusan perubahan ke PDF {config.amendment.label})" if config.amendment else "BPK)"
+    )
+
+    readme = f"""# Import {config.kode} ({config.nama_lengkap})
+
+File ini dibuat oleh `{SCRIPT} {config.slug}`. Jangan edit manual; perbaiki konfigurasi di
+`import-tools/laws/` atau mesinnya di `import-tools/datahukum_pipeline.py`, lalu jalankan ulang.
 
 ## Isi
 
-- `01_kuhp_2023_konsolidasi_ready.xlsx`
-  - sheet `import`: {len(records)} pasal (Pasal 1 sampai 624 ditambah Pasal 599A).
-  - sheet `review`: hasil pembandingan tiap pasal dengan PDF resmi JDIH BPK.
-- Teks sudah dikonsolidasi dengan UU 1/2026 (Penyesuaian Pidana):
-  - isi pasal diubah ({len(isi_changed)}): {", ".join(isi_changed)}
-  - hanya penjelasan diubah ({len(pj_changed)}): {", ".join(pj_changed)}
-  - pasal sisipan ({len(inserted)}): {", ".join(inserted)}
-- `judul` diisi judul paragraf/bagian/bab tempat pasal berada (KUHP tidak punya judul per pasal).
-- `penjelasan` diisi penjelasan resmi. Pasal 220 dan 237 diberi catatan Putusan MK.
-- `keywords` (topik): judul bab dan bagian tempat pasal berada, contoh
-  `tindak pidana terhadap tubuh, penganiayaan`. Tidak perlu diisi manual.
-- `linkN_*` (pasal terkait): rujukan ke pasal KUHP lain yang disebut di isi pasal, misalnya
-  "sebagaimana dimaksud dalam Pasal 54". Rujukan yang diikuti nama undang-undang lain dilewati,
-  begitu juga Bab Ketentuan Peralihan dan Ketentuan Penutup (isinya memetakan pasal UU lain).
+- `{config.xlsx_name}`
+  - sheet `import`: {len(records)} pasal ({span}).
+  - sheet `review`: hasil pembandingan tiap pasal dengan PDF resmi.
+{consolidation}- `judul` diisi judul paragraf/bagian/bab tempat pasal berada (tidak ada judul per pasal).
+- `penjelasan` diisi penjelasan resmi.
+{mk}- `keywords` (topik): judul bab dan bagian tempat pasal berada. Tidak perlu diisi manual.
+- `linkN_*` (pasal terkait, {link_count} link): rujukan ke pasal lain di {config.kode} yang disebut di isi
+  pasal, misalnya "sebagaimana dimaksud dalam Pasal 54". Rujukan yang diikuti nama undang-undang lain
+  dilewati, begitu juga Bab {no_link} (isinya memetakan pasal UU lain).
   Maksimal {MAX_LINKS_PER_PASAL} per pasal.
-
+{extra}
 ## Sumber
 
-1. Teks terstruktur: {DATAHUKUM_URL} (pihak ketiga, bukan sumber resmi)
-2. Pembanding resmi: {BPK_DETAIL_URL} (PDF salinan, hasil scan/OCR)
-3. Rumusan perubahan: `uu-nomor-1-tahun-2026.pdf` (Penyesuaian Pidana)
+{chr(10).join(sources)}
 
-Kesalahan sumber HTML yang diperbaiki skrip: butir ayat/huruf yang hilang, label penjelasan yang
-menempel ke paragraf lain, judul bagian yang tergeser satu pasal (dicek ke PDF), dan typo OCR pada
-rumusan UU 1/2026 (`TEXT_FIXES`, tiap entri dicek ke PDF).
+Kesalahan sumber HTML yang diperbaiki otomatis: butir ayat/huruf yang hilang, label penjelasan yang
+menempel ke paragraf lain, kalimat yang terpotong jadi dua paragraf, dan judul bagian yang tergeser satu
+pasal (dicek ke PDF). Typo per pasal ada di `text_fixes` ({sum(len(v) for v in config.text_fixes.values())} perbaikan, tiap entri dicek ke PDF).
 
 `cakupan_*_pdf` = porsi huruf pada teks kita yang ditemukan di PDF resmi (rumusan asli dicek ke PDF
-BPK, rumusan perubahan ke PDF UU 1/2026). Nilai di bawah {REVIEW_COVERAGE_THRESHOLD:.0%} atau butir
-ayat/huruf yang kosong ditandai `perlu_review`. PDF resmi adalah hasil scan, jadi skor rendah biasanya
-berasal dari OCR PDF (kata hilang di ujung baris). Pasal dengan skor rendah yang sudah dicek manual
-tercatat di `MANUAL_REVIEW` dan kolom `catatan`.
+{comparison}. Nilai di bawah {REVIEW_COVERAGE_THRESHOLD:.0%} atau butir ayat/huruf yang kosong ditandai
+`perlu_review`. PDF resmi adalah hasil scan, jadi skor rendah biasanya berasal dari OCR PDF (kata hilang
+di ujung baris). Pasal berskor rendah yang sudah dicek manual tercatat di `manual_review` dan kolom
+`catatan`.
 
 ## Cara import
 
-1. Admin dashboard → menu `Undang-Undang`. Pastikan ada UU kode `{UU_RECORD['kode']}`:
-   - Nama: `{UU_RECORD['nama']}`
-   - Nama lengkap: `{UU_RECORD['nama_lengkap']}`
-   - Tahun: `{UU_RECORD['tahun']}`
-2. Menu `Import Data` → mode XLSX → pilih UU `KUHP` → upload file xlsx.
+1. Admin dashboard → menu `Undang-Undang`. Pastikan ada UU kode `{config.kode}`:
+   - Nama: `{config.nama}`
+   - Nama lengkap: `{config.nama_lengkap}`
+   - Tahun: `{config.tahun}`
+2. Menu `Import Data` → mode XLSX → pilih UU `{config.kode}` → upload file xlsx.
 3. Import memakai `updateOrCreate` per (UU, nomor): pasal yang sudah ada akan ditimpa,
    pasal lain di UU yang sama tidak dihapus.
 4. Nomor disimpan tanpa awalan "Pasal" (contoh `1`, `599A`). Data lama dengan nomor `Pasal 1`
-   tidak akan tertimpa dan jadi dobel, jadi hapus dulu pasal KUHP lama sebelum import.
+   tidak akan tertimpa dan jadi dobel, jadi hapus dulu pasal lama sebelum import.
 
 Catatan tampilan: normalizer import menggabungkan anak kalimat penutup setelah daftar huruf
 (misalnya "..., pidananya dapat ditambah 1/3") ke butir huruf terakhir. Isi teks tetap lengkap.
@@ -713,23 +701,24 @@ Catatan tampilan: normalizer import menggabungkan anak kalimat penutup setelah d
 |---|---|
 {flagged_lines}
 """
-    (OUTPUT_DIR / "README_IMPORT.md").write_text(readme, encoding="utf-8")
+    (config.output_dir / "README_IMPORT.md").write_text(readme, encoding="utf-8")
 
 
-def main() -> None:
-    html_path = fetch(DATAHUKUM_URL, CACHE_DIR / "datahukum_uu_1_2023.html")
-    pdf_path = fetch(BPK_PDF_URL, CACHE_DIR / "bpk_uu_1_2023.pdf")
-    if not UU_2026_PDF.exists():
-        raise FileNotFoundError(f"PDF UU 1/2026 tidak ditemukan: {UU_2026_PDF}")
+def run(config: LawConfig) -> None:
+    html_path = fetch(config.datahukum_url, CACHE_DIR / f"datahukum_{config.slug}.html")
+    pdf_path = fetch(config.bpk_pdf_url, CACHE_DIR / f"bpk_{config.slug}.pdf")
+    if config.amendment and not config.amendment.pdf.exists():
+        raise FileNotFoundError(f"PDF {config.amendment.label} tidak ditemukan: {config.amendment.pdf}")
 
-    records = parse_datahukum(html_path)
-    original_order = [r.nomor for r in records if r.status != "disisipkan UU 1/2026"]
+    records = parse_datahukum(html_path, config)
+    original_order = [r.nomor for r in records if r.status != INSERTED]
 
-    pdf = pymupdf.open(pdf_path)
-    pages = [page.get_text() for page in pdf]
-    body = index_pdf(pages[PDF_BODY_PAGES[0] - 1 : PDF_BODY_PAGES[1]], original_order)
-    explanation = index_pdf(pages[PDF_PENJELASAN_PAGES[0] - 1 : PDF_PENJELASAN_PAGES[1]], original_order)
-    uu_2026_folded = ocr_fold("\n".join(page.get_text() for page in pymupdf.open(UU_2026_PDF)))
+    pages = [page.get_text() for page in pymupdf.open(pdf_path)]
+    body = index_pdf(pages[config.body_pages[0] - 1 : config.body_pages[1]], original_order)
+    explanation = index_pdf(pages[config.penjelasan_pages[0] - 1 : config.penjelasan_pages[1]], original_order)
+    amendment_folded = (
+        ocr_fold("\n".join(page.get_text() for page in pymupdf.open(config.amendment.pdf))) if config.amendment else ""
+    )
     heading_fixes = fix_heading_placement(records, body)
 
     review = []
@@ -738,40 +727,38 @@ def main() -> None:
         if record.nomor in heading_fixes:
             notes.append(heading_fixes[record.nomor])
 
-        # Bandingkan rumusan asli 2023 dengan PDF BPK, rumusan baru dengan PDF UU 1/2026.
-        if record.original_isi:
-            isi_cov = official_coverage(record.original_isi, body, record.nomor, original_order)
-        else:
-            isi_cov = 1.0
-        if record.status.startswith("isi") or record.status == "disisipkan UU 1/2026":
-            amended = fragment_coverage(record.isi, uu_2026_folded)
-            notes.append(f"Isi versi UU 1/2026 cocok {amended:.0%} dengan PDF UU 1/2026")
+        # Rumusan asli dicek ke PDF BPK, rumusan perubahan ke PDF UU perubahan.
+        isi_cov = official_coverage(record.original_isi, body, record.nomor, original_order) if record.original_isi else 1.0
+        if config.amendment and (record.status.startswith("isi") or record.status == INSERTED):
+            amended = fragment_coverage(record.isi, amendment_folded)
+            notes.append(f"Isi versi {config.amendment.label} cocok {amended:.0%} dengan PDF {config.amendment.label}")
             isi_cov = min(isi_cov, amended)
 
-        if record.original_penjelasan:
-            pj_cov = official_coverage(record.original_penjelasan, explanation, record.nomor, original_order)
-        else:
-            pj_cov = 1.0
-        if "penjelasan" in record.status or (record.status == "disisipkan UU 1/2026" and record.penjelasan):
-            amended = fragment_coverage(record.penjelasan, uu_2026_folded)
-            notes.append(f"Penjelasan versi UU 1/2026 cocok {amended:.0%} dengan PDF UU 1/2026")
+        pj_cov = (
+            official_coverage(record.original_penjelasan, explanation, record.nomor, original_order)
+            if record.original_penjelasan
+            else 1.0
+        )
+        if config.amendment and ("penjelasan" in record.status or (record.status == INSERTED and record.penjelasan)):
+            amended = fragment_coverage(record.penjelasan, amendment_folded)
+            notes.append(f"Penjelasan versi {config.amendment.label} cocok {amended:.0%} dengan PDF {config.amendment.label}")
             pj_cov = min(pj_cov, amended)
 
-        if re.search(r"^(\(\d+[a-z]?\)|[a-z]\.|\d+\.)$", record.isi + "\n" + record.penjelasan, re.M):
+        empty_item = bool(re.search(r"^(\(\d+[a-z]?\)|[a-z]\.|\d+\.)$", record.isi + "\n" + record.penjelasan, re.M))
+        if empty_item:
             notes.append("Ada butir ayat/huruf kosong")
         low = min(isi_cov, pj_cov) < REVIEW_COVERAGE_THRESHOLD
         if low:
             notes.append("Cakupan teks terhadap PDF rendah")
-        empty_item = "Ada butir ayat/huruf kosong" in notes
         needs_review = low or empty_item
-        if record.nomor in MANUAL_REVIEW:
-            notes.append(MANUAL_REVIEW[record.nomor])
+        if record.nomor in config.manual_review:
+            notes.append(config.manual_review[record.nomor])
             needs_review = empty_item
         bab = next((h for h in record.headings if h.kind == "bab"), None)
         review.append(
             {
                 "nomor": record.nomor,
-                "status_teks": record.status,
+                "status_teks": status_label(record, config),
                 "bab": f"{bab.label} {title_case(bab.title)}" if bab else "",
                 "cakupan_isi_pdf": round(isi_cov, 3),
                 "cakupan_penjelasan_pdf": round(pj_cov, 3),
@@ -780,14 +767,10 @@ def main() -> None:
             }
         )
 
-    write_xlsx(OUTPUT_DIR / "01_kuhp_2023_konsolidasi_ready.xlsx", records, review)
-    write_readme(records, review)
+    links = write_xlsx(config, records, review)
+    write_readme(config, records, review, links)
 
     flagged = sum(1 for row in review if row["perlu_review"] == "ya")
-    print(f"Output: {OUTPUT_DIR}")
-    print(f"Pasal: {len(records)} | perlu review: {flagged}")
-    print(f"Header pasal terbaca di PDF: batang tubuh {len(body.starts)}, penjelasan {len(explanation.starts)}")
-
-
-if __name__ == "__main__":
-    main()
+    print(f"[{config.slug}] output: {config.output_dir}")
+    print(f"[{config.slug}] pasal: {len(records)} | link: {sum(len(v) for v in links.values())} | perlu review: {flagged}")
+    print(f"[{config.slug}] header pasal terbaca di PDF: batang tubuh {len(body.starts)}, penjelasan {len(explanation.starts)}")
