@@ -423,8 +423,10 @@ QueryExecutor _openConnection() {
     name: 'pasal_database',
     native: const DriftNativeOptions(shareAcrossIsolates: false),
     web: DriftWebOptions(
-      sqlite3Wasm: Uri.parse('sqlite3.wasm'),
-      driftWorker: Uri.parse('drift_worker.dart.js'),
+      // URL absolut: worker drift tidak punya base URL, jadi path relatif gagal dibuat
+      // ("Failed to construct 'URL'") di browser tanpa SharedWorker, misalnya Safari iOS.
+      sqlite3Wasm: Uri.base.resolve('sqlite3.wasm'),
+      driftWorker: Uri.base.resolve('drift_worker.dart.js'),
     ),
   );
 }
