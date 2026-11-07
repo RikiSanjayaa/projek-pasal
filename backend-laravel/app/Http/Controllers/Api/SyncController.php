@@ -15,6 +15,7 @@ class SyncController extends Controller
 
         return response()->json([
             'has_updates' => $sync->hasUpdates($request->query('since')),
+            'data_updated_at' => $sync->dataUpdatedAt(),
             'server_time' => now()->toISOString(),
         ]);
     }

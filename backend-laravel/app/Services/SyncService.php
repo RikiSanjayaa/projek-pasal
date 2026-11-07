@@ -16,19 +16,38 @@ class SyncService
             return true;
         }
 
-        $time = CarbonImmutable::parse($since);
+        $time = $this->since($since);
 
         return UndangUndang::withTrashed()->where('updated_at', '>', $time)->orWhere('deleted_at', '>', $time)->exists()
             || Pasal::withTrashed()->where('updated_at', '>', $time)->orWhere('deleted_at', '>', $time)->exists()
             || PasalLink::withTrashed()->where('updated_at', '>', $time)->orWhere('deleted_at', '>', $time)->exists();
     }
 
+    /**
+     * Waktu terakhir admin mengubah data apa pun yang ikut tersinkron (UU, pasal, atau relasi).
+     * Berbeda dengan waktu sync perangkat: ini yang dipakai app untuk menunjukkan umur data.
+     */
+    public function dataUpdatedAt(): ?string
+    {
+        $latest = collect([UndangUndang::class, Pasal::class, PasalLink::class])
+            ->flatMap(fn (string $model) => [
+                $model::withTrashed()->max('updated_at'),
+                $model::withTrashed()->max('deleted_at'),
+            ])
+            ->filter()
+            ->map(fn ($value) => CarbonImmutable::parse($value))
+            ->max();
+
+        return $latest?->toISOString();
+    }
+
     public function updates(?string $since): array
     {
-        $time = $since ? CarbonImmutable::parse($since) : null;
+        $time = $since ? $this->since($since) : null;
 
         return [
             'server_time' => now()->toISOString(),
+            'data_updated_at' => $this->dataUpdatedAt(),
             'updated_uu' => $this->updated(UndangUndang::class, $time)->values(),
             'updated_pasal' => $this->updated(Pasal::class, $time)->values(),
             'updated_links' => $this->updated(PasalLink::class, $time)->values(),
@@ -42,10 +61,20 @@ class SyncService
     {
         return [
             'server_time' => now()->toISOString(),
+            'data_updated_at' => $this->dataUpdatedAt(),
             'undang_undang' => UndangUndang::query()->where('is_active', true)->orderByDesc('tahun')->get(),
             'pasal' => Pasal::query()->where('is_active', true)->get(),
             'pasal_links' => PasalLink::query()->where('is_active', true)->get(),
         ];
+    }
+
+    /**
+     * Klien mengirim waktu ISO 8601 (biasanya UTC). Laravel mengikat Carbon ke query sebagai jam
+     * dinding tanpa offset, jadi samakan dulu dengan zona session DB (APP_TIMEZONE).
+     */
+    private function since(string $value): CarbonImmutable
+    {
+        return CarbonImmutable::parse($value)->setTimezone(config('app.timezone'));
     }
 
     private function updated(string $model, ?CarbonImmutable $time): Collection

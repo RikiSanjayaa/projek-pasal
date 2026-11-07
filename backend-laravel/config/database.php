@@ -97,6 +97,9 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Laravel menulis timestamp tanpa offset dalam APP_TIMEZONE. Session Postgres harus
+            // memakai zona yang sama, kalau tidak kolom timestamptz tergeser (Asia/Makassar: +8 jam).
+            'timezone' => env('DB_TIMEZONE', env('APP_TIMEZONE', 'UTC')),
         ],
 
         'sqlsrv' => [
