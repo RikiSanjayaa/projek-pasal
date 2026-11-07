@@ -10,10 +10,12 @@ import {
   Grid,
   Loader,
   Alert,
+  Box,
 } from '@mantine/core'
 import { useQuery } from '@tanstack/react-query'
 import { IconArrowLeft, IconEdit, IconTrash, IconAlertCircle } from '@tabler/icons-react'
 import { api } from '@/lib/api'
+import { LegalText } from '@/components/LegalText'
 import { PasalLinksSidebar } from '@/components/PasalLinksSidebar'
 import { VerificationPanel } from '@/components/VerificationPanel'
 import type { PasalWithUndangUndang } from '@/lib/database.types'
@@ -148,17 +150,17 @@ export function PasalDetailPage() {
 
               <div>
                 <Text size="sm" c="dimmed" mb={4}>Isi Pasal</Text>
-                <Card withBorder padding="sm" bg="var(--mantine-color-default-hover)">
-                  <Text style={{ whiteSpace: 'pre-wrap' }}>{pasal.isi}</Text>
-                </Card>
+                <Box p="md" bg="var(--mantine-color-default-hover)" style={{ borderRadius: 'var(--mantine-radius-md)' }}>
+                  <LegalText text={pasal.isi} />
+                </Box>
               </div>
 
               {pasal.penjelasan && (
                 <div>
                   <Text size="sm" c="dimmed" mb={4}>Penjelasan</Text>
-                  <Card withBorder padding="sm" bg="var(--mantine-color-blue-light)">
-                    <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{pasal.penjelasan}</Text>
-                  </Card>
+                  <Box p="md" bg="var(--mantine-color-blue-light)" style={{ borderRadius: 'var(--mantine-radius-md)' }}>
+                    <LegalText text={pasal.penjelasan} size="sm" />
+                  </Box>
                 </div>
               )}
 

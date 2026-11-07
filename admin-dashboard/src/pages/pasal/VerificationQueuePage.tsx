@@ -4,9 +4,11 @@ import {
   Alert,
   Anchor,
   Badge,
+  Box,
   Button,
   Card,
   Checkbox,
+  Divider,
   Group,
   Loader,
   Modal,
@@ -19,11 +21,13 @@ import {
   Text,
   TextInput,
   Title,
+  UnstyledButton,
 } from '@mantine/core'
 import { useDebouncedValue, useDisclosure } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { IconCircleCheck, IconEdit, IconExternalLink, IconSearch } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { LegalText } from '@/components/LegalText'
 import { api, toQueryString, type PaginatedResponse } from '@/lib/api'
 import type { PasalWithUndangUndang, VerificationSummaryRow } from '@/lib/database.types'
 import { formatPasalLabel } from '@/lib/pasal-format'
@@ -97,73 +101,78 @@ export function VerificationQueuePage() {
         </Text>
       </div>
 
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
-        {summary?.map((row) => {
-          const percent = row.total ? Math.round((row.verified / row.total) * 100) : 0
-          return (
-            <Card
-              key={row.undang_undang_id}
-              withBorder
-              padding="md"
-              radius="md"
-              style={{ cursor: 'pointer', borderColor: filterUU === row.undang_undang_id ? 'var(--mantine-color-blue-filled)' : undefined }}
-              onClick={() => setParam('uu', filterUU === row.undang_undang_id ? null : row.undang_undang_id)}
-            >
-              <Group justify="space-between" mb="xs">
-                <Badge variant="light">{row.kode}</Badge>
-                <Text size="sm" c="dimmed">
-                  {row.verified} / {row.total} terverifikasi
-                </Text>
-              </Group>
-              <Progress value={percent} color={percent === 100 ? 'green' : 'yellow'} />
-              <Text size="xs" c="dimmed" mt={6}>
-                {row.total - row.verified} pasal menunggu
+      <Card padding="md">
+        <Stack gap="md">
+          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="sm">
+            {summary?.map((row) => {
+              const percent = row.total ? Math.round((row.verified / row.total) * 100) : 0
+              const active = filterUU === row.undang_undang_id
+              return (
+                <UnstyledButton
+                  key={row.undang_undang_id}
+                  p="sm"
+                  aria-pressed={active}
+                  onClick={() => setParam('uu', active ? null : row.undang_undang_id)}
+                  style={{
+                    borderRadius: 'var(--mantine-radius-md)',
+                    border: `1px solid ${active ? 'var(--mantine-color-blue-filled)' : 'var(--mantine-color-default-border)'}`,
+                    background: active ? 'var(--mantine-color-blue-light)' : undefined,
+                  }}
+                >
+                  <Group justify="space-between" mb={6}>
+                    <Badge variant="light">{row.kode}</Badge>
+                    <Text size="sm" c="dimmed">
+                      {row.verified} / {row.total} terverifikasi
+                    </Text>
+                  </Group>
+                  <Progress value={percent} color={percent === 100 ? 'green' : 'yellow'} size="sm" />
+                </UnstyledButton>
+              )
+            })}
+          </SimpleGrid>
+
+          <Group wrap="wrap" align="flex-end">
+            <TextInput
+              placeholder="Cari nomor atau isi pasal..."
+              leftSection={<IconSearch size={16} />}
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value)
+                setParam('page', null)
+              }}
+              style={{ flex: 1 }}
+            />
+            <Select
+              placeholder="Semua undang-undang"
+              data={summary?.map((row) => ({ value: row.undang_undang_id, label: `${row.kode} - ${row.nama}` })) ?? []}
+              value={filterUU}
+              onChange={(value) => setParam('uu', value)}
+              clearable
+              w={{ base: '100%', sm: 280 }}
+            />
+          </Group>
+
+          <Divider />
+
+          <Group justify="space-between">
+            <Checkbox
+              label={`Pilih semua di halaman ini (${items.length})`}
+              checked={allSelected}
+              indeterminate={!allSelected && selected.length > 0}
+              onChange={() => setSelected(allSelected ? [] : items.map((item) => item.id))}
+              disabled={items.length === 0}
+            />
+            <Group gap="xs">
+              <Text size="sm" c="dimmed">
+                {queue?.total ?? 0} pasal menunggu verifikasi
               </Text>
-            </Card>
-          )
-        })}
-      </SimpleGrid>
-
-      <Card withBorder padding="md" radius="md">
-        <Group wrap="wrap" align="flex-end">
-          <TextInput
-            placeholder="Cari nomor atau isi pasal..."
-            leftSection={<IconSearch size={16} />}
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value)
-              setParam('page', null)
-            }}
-            style={{ flex: 1 }}
-          />
-          <Select
-            placeholder="Semua undang-undang"
-            data={summary?.map((row) => ({ value: row.undang_undang_id, label: `${row.kode} - ${row.nama}` })) ?? []}
-            value={filterUU}
-            onChange={(value) => setParam('uu', value)}
-            clearable
-            w={{ base: '100%', sm: 280 }}
-          />
-        </Group>
+              <Button color="green" leftSection={<IconCircleCheck size={16} />} disabled={selected.length === 0} onClick={openConfirm}>
+                Verifikasi {selected.length > 0 ? `${selected.length} terpilih` : 'terpilih'}
+              </Button>
+            </Group>
+          </Group>
+        </Stack>
       </Card>
-
-      <Group justify="space-between">
-        <Checkbox
-          label={`Pilih semua di halaman ini (${items.length})`}
-          checked={allSelected}
-          indeterminate={!allSelected && selected.length > 0}
-          onChange={() => setSelected(allSelected ? [] : items.map((item) => item.id))}
-          disabled={items.length === 0}
-        />
-        <Group gap="xs">
-          <Text size="sm" c="dimmed">
-            {queue?.total ?? 0} pasal menunggu verifikasi
-          </Text>
-          <Button color="green" leftSection={<IconCircleCheck size={16} />} disabled={selected.length === 0} onClick={openConfirm}>
-            Verifikasi {selected.length > 0 ? `${selected.length} terpilih` : 'terpilih'}
-          </Button>
-        </Group>
-      </Group>
 
       {isLoading ? (
         <Group justify="center" p="xl">
@@ -176,7 +185,7 @@ export function VerificationQueuePage() {
       ) : (
         <Stack gap="md">
           {items.map((pasal) => (
-            <Card key={pasal.id} withBorder padding="md" radius="md">
+            <Card key={pasal.id} padding="md">
               <Stack gap="sm">
                 <Group justify="space-between" align="flex-start" wrap="nowrap">
                   <Group gap="sm" align="flex-start" wrap="nowrap">
@@ -209,20 +218,18 @@ export function VerificationQueuePage() {
                   </Group>
                 </Group>
 
-                <Card withBorder padding="sm" bg="var(--mantine-color-default-hover)">
-                  <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
-                    {pasal.isi}
-                  </Text>
-                </Card>
+                <Spoiler maxHeight={220} showLabel="Lihat isi lengkap" hideLabel="Ringkas">
+                  <Box p="sm" bg="var(--mantine-color-default-hover)" style={{ borderRadius: 'var(--mantine-radius-md)' }}>
+                    <LegalText text={pasal.isi} size="sm" />
+                  </Box>
+                </Spoiler>
 
                 {pasal.penjelasan && (
-                  <Spoiler maxHeight={60} showLabel="Lihat penjelasan lengkap" hideLabel="Sembunyikan">
-                    <Text size="sm" c="dimmed" style={{ whiteSpace: 'pre-wrap' }}>
-                      <Text span fw={500}>
-                        Penjelasan:{' '}
-                      </Text>
-                      {pasal.penjelasan}
+                  <Spoiler maxHeight={90} showLabel="Lihat penjelasan lengkap" hideLabel="Sembunyikan">
+                    <Text size="xs" fw={700} c="dimmed" tt="uppercase" mb={4}>
+                      Penjelasan
                     </Text>
+                    <LegalText text={pasal.penjelasan} size="sm" />
                   </Spoiler>
                 )}
 

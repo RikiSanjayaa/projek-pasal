@@ -175,7 +175,7 @@ export function DashboardPage() {
       </Group>
 
       {/* Main Analytics Section */}
-      <Grid gutter="lg">
+      <Grid gap="lg">
         <Grid.Col span={{ base: 12, lg: 8 }}>
           <Suspense fallback={<AnalyticsSkeleton />}>
             <CombinedAnalyticsChart logs={auditLogsAnalytics} loading={loadingDashboard} />

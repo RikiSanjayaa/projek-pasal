@@ -1,10 +1,12 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { MantineProvider, createTheme } from '@mantine/core'
+import { Badge, Card, MantineProvider, Tooltip, createTheme } from '@mantine/core'
+import { DatesProvider } from '@mantine/dates'
 import { ModalsProvider } from '@mantine/modals'
 import { Notifications } from '@mantine/notifications'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
+import 'dayjs/locale/id'
 
 import '@mantine/core/styles.css'
 import '@mantine/dates/styles.css'
@@ -28,9 +30,18 @@ const queryClient = new QueryClient({
 
 const theme = createTheme({
   primaryColor: 'blue',
+  defaultRadius: 'md',
   fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
   headings: {
     fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
+  },
+  components: {
+    // Badge Mantine memotong label ("AK...") di sel tabel yang sempit; label pendek harus utuh.
+    Badge: Badge.extend({
+      styles: { root: { textTransform: 'none', minWidth: 'max-content' } },
+    }),
+    Card: Card.extend({ defaultProps: { withBorder: true, radius: 'md' } }),
+    Tooltip: Tooltip.extend({ defaultProps: { withArrow: true } }),
   },
 })
 
@@ -40,14 +51,16 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <MantineProvider theme={theme} defaultColorScheme="light">
-        <Notifications position="top-right" />
-        <ModalsProvider>
-          <BrowserRouter basename={routerBasename} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
-            <AuthProvider>
-              <App />
-            </AuthProvider>
-          </BrowserRouter>
-        </ModalsProvider>
+        <DatesProvider settings={{ locale: 'id', firstDayOfWeek: 1 }}>
+          <Notifications position="top-right" />
+          <ModalsProvider>
+            <BrowserRouter basename={routerBasename} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+              <AuthProvider>
+                <App />
+              </AuthProvider>
+            </BrowserRouter>
+          </ModalsProvider>
+        </DatesProvider>
       </MantineProvider>
     </QueryClientProvider>
   </StrictMode>

@@ -10,9 +10,7 @@ import {
   TextInput,
   Select,
   Badge,
-  ActionIcon,
   Modal,
-  Tooltip,
   Alert,
 } from '@mantine/core'
 import { useDebouncedValue, useDisclosure } from '@mantine/hooks'
@@ -26,6 +24,7 @@ import {
 } from '@tabler/icons-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DataTable, type Column } from '@/components/DataTable'
+import { IconAction } from '@/components/IconAction'
 import { api, toQueryString, type PaginatedResponse } from '@/lib/api'
 import { formatPasalLabel } from '@/lib/pasal-format'
 import { invalidatePasalData } from '@/lib/query-invalidation'
@@ -38,11 +37,12 @@ interface DeletedPasal {
   isi: string
   keywords: string[]
   deleted_at: string
+  // null bila undang-undangnya juga sudah dihapus
   undang_undang: {
     id: string
     kode: string
     nama: string
-  }
+  } | null
 }
 
 const PAGE_SIZE = 10
@@ -90,11 +90,16 @@ export function PasalTrashPage() {
       key: 'undang_undang',
       title: 'Undang-Undang',
       width: 120,
-      render: (_, record) => (
-        <Badge color="blue" variant="light">
-          {record.undang_undang.kode}
-        </Badge>
-      ),
+      render: (_, record) =>
+        record.undang_undang ? (
+          <Badge color="blue" variant="light">
+            {record.undang_undang.kode}
+          </Badge>
+        ) : (
+          <Badge color="gray" variant="light">
+            UU dihapus
+          </Badge>
+        ),
     },
     {
       key: 'nomor',
@@ -201,7 +206,7 @@ export function PasalTrashPage() {
       await invalidatePasalData(queryClient)
       notifications.show({
         title: 'Berhasil',
-        message: 'Pasal berhasil di-restore',
+        message: 'Pasal berhasil dipulihkan',
         color: 'green',
       })
       closeRestore()
@@ -247,7 +252,7 @@ export function PasalTrashPage() {
       await invalidatePasalData(queryClient)
       notifications.show({
         title: 'Berhasil',
-        message: `${selectedIds.length} pasal berhasil di-restore`,
+        message: `${selectedIds.length} pasal berhasil dipulihkan`,
         color: 'green',
       })
       setSelectedIds([])
@@ -301,134 +306,113 @@ export function PasalTrashPage() {
       <Group justify="space-between" align="flex-start">
         <div>
           <Title order={2}>Sampah</Title>
-          <Text c="dimmed">Pasal yang sudah dihapus. Restore atau hapus permanen.</Text>
+          <Text c="dimmed">Pasal yang sudah dihapus. Pulihkan atau hapus permanen.</Text>
         </div>
       </Group>
 
       <Alert icon={<IconAlertTriangle size={16} />} color="yellow" variant="light">
         Pasal di sampah akan dihapus permanen secara otomatis setelah 30 hari.
-        Anda dapat me-restore pasal atau menghapus permanen secara manual.
+        Anda dapat memulihkan pasal atau menghapusnya permanen secara manual.
       </Alert>
 
-      {/* Filters */}
-      <Card padding="md" radius="md" withBorder>
-        <Group>
-          <TextInput
-            placeholder="Cari nomor, judul, atau isi pasal..."
-            leftSection={<IconSearch size={16} />}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ flex: 1 }}
-          />
-          <Select
-            placeholder="Filter Undang-Undang"
-            data={
-              undangUndangList?.map((uu) => ({
-                value: uu.id,
-                label: `${uu.kode} - ${uu.nama}`,
-              })) || []
-            }
-            value={filterUU}
-            onChange={setFilterUU}
-            clearable
-            w={250}
-          />
-        </Group>
-      </Card>
-
-      {/* Bulk Actions */}
-      {selectedIds.length > 0 && (
-        <Card padding="sm" radius="md" withBorder bg="var(--mantine-color-blue-light)">
-          <Group justify="space-between">
-            <Text size="sm" fw={500}>
-              {selectedIds.length} pasal dipilih
-            </Text>
-            <Group gap="xs">
-              <Button
-                size="xs"
-                color="green"
-                leftSection={<IconRestore size={14} />}
-                onClick={openBulkRestore}
-              >
-                Restore Semua
-              </Button>
-              <Button
-                size="xs"
-                color="red"
-                leftSection={<IconTrash size={14} />}
-                onClick={openBulkDelete}
-              >
-                Hapus Permanen
-              </Button>
-            </Group>
+      <Card padding="md">
+        <Stack gap="md">
+          <Group>
+            <TextInput
+              placeholder="Cari nomor, judul, atau isi pasal..."
+              leftSection={<IconSearch size={16} />}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <Select
+              placeholder="Filter Undang-Undang"
+              data={
+                undangUndangList?.map((uu) => ({
+                  value: uu.id,
+                  label: `${uu.kode} - ${uu.nama}`,
+                })) || []
+              }
+              value={filterUU}
+              onChange={setFilterUU}
+              clearable
+              w={250}
+            />
           </Group>
-        </Card>
-      )}
 
-      {/* Table */}
-      <Card padding="md" radius="md" withBorder>
-        <DataTable
-          columns={pasalTrashColumns}
-          data={pasalData?.data || []}
-          loading={isLoading}
-          current={page}
-          pageSize={PAGE_SIZE}
-          total={pasalData?.count || 0}
-          onPageChange={setPage}
-          onPageSizeChange={() => { }} // Not used in trash page
-          selectable
-          selectedIds={selectedIds}
-          onSelect={setSelectedIds}
-          getRowId={(record) => record.id}
-          onRowClick={(pasal) => navigate(`/pasal/${pasal.id}`)}
-          rowActions={(pasal) => (
-            <Group gap={4}>
-              <Tooltip label="Restore">
-                <ActionIcon
-                  variant="subtle"
+          {selectedIds.length > 0 && (
+            <Group justify="space-between" p="xs" bg="var(--mantine-color-blue-light)" style={{ borderRadius: 'var(--mantine-radius-md)' }}>
+              <Text size="sm" fw={500}>
+                {selectedIds.length} pasal dipilih
+              </Text>
+              <Group gap="xs">
+                <Button size="xs" color="green" leftSection={<IconRestore size={14} />} onClick={openBulkRestore}>
+                  Pulihkan semua
+                </Button>
+                <Button size="xs" color="red" leftSection={<IconTrash size={14} />} onClick={openBulkDelete}>
+                  Hapus permanen
+                </Button>
+              </Group>
+            </Group>
+          )}
+
+          <DataTable
+            columns={pasalTrashColumns}
+            data={pasalData?.data || []}
+            loading={isLoading}
+            current={page}
+            pageSize={PAGE_SIZE}
+            total={pasalData?.count || 0}
+            onPageChange={setPage}
+            onPageSizeChange={() => { }} // Not used in trash page
+            selectable
+            selectedIds={selectedIds}
+            onSelect={setSelectedIds}
+            getRowId={(record) => record.id}
+            onRowClick={(pasal) => navigate(`/pasal/${pasal.id}`)}
+            rowActions={(pasal) => (
+              <Group gap={2} wrap="nowrap">
+                <IconAction
+                  label="Pulihkan"
+                  icon={<IconRestore size={18} />}
                   color="green"
                   onClick={() => {
                     setSelectedPasal(pasal)
                     openRestore()
                   }}
-                >
-                  <IconRestore size={16} />
-                </ActionIcon>
-              </Tooltip>
-              <Tooltip label="Hapus Permanen">
-                <ActionIcon
-                  variant="subtle"
+                />
+                <IconAction
+                  label="Hapus permanen"
+                  icon={<IconTrash size={18} />}
                   color="red"
                   onClick={() => {
                     setSelectedPasal(pasal)
                     openDelete()
                   }}
-                >
-                  <IconTrash size={16} />
-                </ActionIcon>
-              </Tooltip>
-            </Group>
-          )}
-          emptyText="Tidak ada pasal di sampah"
-        />
+                />
+              </Group>
+            )}
+            emptyText="Tidak ada pasal di sampah"
+          />
+        </Stack>
       </Card>
 
       {/* Restore Modal */}
-      <Modal opened={restoreModal} onClose={closeRestore} title="Restore Pasal">
+      <Modal opened={restoreModal} onClose={closeRestore} title="Pulihkan Pasal">
         <Stack gap="md">
           <Text>
-            Apakah Anda yakin ingin me-restore pasal ini?
+            Apakah Anda yakin ingin memulihkan pasal ini?
           </Text>
           <Card withBorder padding="sm">
             <Text fw={500}>
-              {selectedPasal?.undang_undang.kode} - {formatPasalLabel(selectedPasal?.nomor)}
+              {selectedPasal?.undang_undang?.kode ?? 'UU dihapus'} - {formatPasalLabel(selectedPasal?.nomor)}
             </Text>
             {selectedPasal?.judul && (
               <Text size="sm" c="dimmed">{selectedPasal.judul}</Text>
             )}
           </Card>
           <Text size="sm" c="dimmed">
-            Link pasal terkait juga akan di-restore (jika pasal target masih aktif).
+            Link pasal terkait juga akan dipulihkan (jika pasal target masih aktif).
           </Text>
           <Group justify="flex-end">
             <Button variant="default" onClick={closeRestore}>
@@ -439,7 +423,7 @@ export function PasalTrashPage() {
               loading={restoreMutation.isPending}
               onClick={() => selectedPasal && restoreMutation.mutate(selectedPasal.id)}
             >
-              Restore
+              Pulihkan
             </Button>
           </Group>
         </Stack>
@@ -456,7 +440,7 @@ export function PasalTrashPage() {
           </Alert>
           <Card withBorder padding="sm">
             <Text fw={500}>
-              {selectedPasal?.undang_undang.kode} - {formatPasalLabel(selectedPasal?.nomor)}
+              {selectedPasal?.undang_undang?.kode ?? 'UU dihapus'} - {formatPasalLabel(selectedPasal?.nomor)}
             </Text>
             {selectedPasal?.judul && (
               <Text size="sm" c="dimmed">{selectedPasal.judul}</Text>
@@ -478,13 +462,13 @@ export function PasalTrashPage() {
       </Modal>
 
       {/* Bulk Restore Modal */}
-      <Modal opened={bulkRestoreModal} onClose={closeBulkRestore} title="Restore Pasal">
+      <Modal opened={bulkRestoreModal} onClose={closeBulkRestore} title="Pulihkan Pasal">
         <Stack gap="md">
           <Text>
-            Apakah Anda yakin ingin me-restore <strong>{selectedIds.length} pasal</strong>?
+            Apakah Anda yakin ingin memulihkan <strong>{selectedIds.length} pasal</strong>?
           </Text>
           <Text size="sm" c="dimmed">
-            Link pasal terkait juga akan di-restore (jika pasal target masih aktif).
+            Link pasal terkait juga akan dipulihkan (jika pasal target masih aktif).
           </Text>
           <Group justify="flex-end">
             <Button variant="default" onClick={closeBulkRestore}>
@@ -495,7 +479,7 @@ export function PasalTrashPage() {
               loading={bulkRestoreMutation.isPending}
               onClick={() => bulkRestoreMutation.mutate(selectedIds)}
             >
-              Restore {selectedIds.length} Pasal
+              Pulihkan {selectedIds.length} Pasal
             </Button>
           </Group>
         </Stack>

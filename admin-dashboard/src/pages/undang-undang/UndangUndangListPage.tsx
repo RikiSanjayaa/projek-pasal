@@ -12,7 +12,6 @@ import {
   NumberInput,
   Table,
   Badge,
-  ActionIcon,
   Modal,
   Switch,
   Skeleton,
@@ -22,8 +21,9 @@ import {
 import { useForm } from '@mantine/form'
 import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
-import { IconPlus, IconEdit, IconAlertCircle } from '@tabler/icons-react'
+import { IconPlus, IconEdit, IconAlertCircle, IconList } from '@tabler/icons-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { IconAction } from '@/components/IconAction'
 import { api } from '@/lib/api'
 import type { UndangUndang, UndangUndangInsert, UndangUndangUpdate } from '@/lib/database.types'
 import { invalidateUndangUndangData } from '@/lib/query-invalidation'
@@ -206,16 +206,15 @@ export function UndangUndangListPage() {
                         </Text>
                       )}
                     </div>
-                    <ActionIcon
-                      variant="subtle"
+                    <IconAction
+                      label="Edit undang-undang"
+                      icon={<IconEdit size={18} />}
                       color="blue"
                       onClick={(event) => {
                         event.stopPropagation()
                         handleEdit(uu)
                       }}
-                    >
-                      <IconEdit size={16} />
-                    </ActionIcon>
+                    />
                   </Group>
 
                   <Text size="sm" c="dimmed" lineClamp={3}>
@@ -248,7 +247,7 @@ export function UndangUndangListPage() {
                     <Table.Th>Total Pasal</Table.Th>
                     <Table.Th>Tahun</Table.Th>
                     <Table.Th>Status</Table.Th>
-                    <Table.Th w={100}>Aksi</Table.Th>
+                    <Table.Th w={1}>Aksi</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -284,17 +283,24 @@ export function UndangUndangListPage() {
                         </Badge>
                       </Table.Td>
                       <Table.Td>
-                        <Group gap="xs">
-                          <ActionIcon
-                            variant="subtle"
+                        <Group gap={2} wrap="nowrap">
+                          <IconAction
+                            label="Lihat pasal"
+                            icon={<IconList size={18} />}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              navigate(`/pasal?uu=${uu.id}`)
+                            }}
+                          />
+                          <IconAction
+                            label="Edit undang-undang"
+                            icon={<IconEdit size={18} />}
                             color="blue"
                             onClick={(e) => {
                               e.stopPropagation()
                               handleEdit(uu)
                             }}
-                          >
-                            <IconEdit size={16} />
-                          </ActionIcon>
+                          />
                         </Group>
                       </Table.Td>
                     </Table.Tr>

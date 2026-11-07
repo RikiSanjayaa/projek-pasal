@@ -214,7 +214,7 @@ export function AdminLayout() {
                       style={{ borderRadius: 8 }}
                     />
                     <NavLink
-                      label="Manage Admin"
+                      label="Kelola Admin"
                       leftSection={<IconShieldCheck size={18} />}
                       active={location.pathname === '/manage-admin'}
                       onClick={() => {
@@ -290,7 +290,7 @@ export function AdminLayout() {
                 })}
                 {sidebarCollapsed && adminUser?.role === 'super_admin' && [
                   { path: '/smart-search', label: 'Smart Search', icon: IconSparkles },
-                  { path: '/manage-admin', label: 'Manage Admin', icon: IconShieldCheck },
+                  { path: '/manage-admin', label: 'Kelola Admin', icon: IconShieldCheck },
                 ].map((item) => {
                   const isActive = location.pathname === item.path
                   const isDark = colorScheme === 'dark'
@@ -389,7 +389,7 @@ export function AdminLayout() {
                   style={{ borderRadius: 8 }}
                 />
                 <NavLink
-                  label="Manage Admin"
+                  label="Kelola Admin"
                   leftSection={<IconShieldCheck size={18} />}
                   active={location.pathname === '/manage-admin'}
                   onClick={() => {
