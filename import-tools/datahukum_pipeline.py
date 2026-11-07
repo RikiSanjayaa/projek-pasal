@@ -688,11 +688,16 @@ di ujung baris). Pasal berskor rendah yang sudah dicek manual tercatat di `manua
    - Nama: `{config.nama}`
    - Nama lengkap: `{config.nama_lengkap}`
    - Tahun: `{config.tahun}`
+   - Link naskah resmi: `{config.bpk_detail_url}`
+   - Sumber teks: `{config.datahukum_url}`
 2. Menu `Import Data` → mode XLSX → pilih UU `{config.kode}` → upload file xlsx.
 3. Import memakai `updateOrCreate` per (UU, nomor): pasal yang sudah ada akan ditimpa,
    pasal lain di UU yang sama tidak dihapus.
 4. Nomor disimpan tanpa awalan "Pasal" (contoh `1`, `599A`). Data lama dengan nomor `Pasal 1`
    tidak akan tertimpa dan jadi dobel, jadi hapus dulu pasal lama sebelum import.
+5. Pasal baru atau yang teksnya berubah masuk menu `Verifikasi` dengan status "Perlu verifikasi".
+   Admin mencocokkan tiap pasal dengan naskah resmi lalu menekan "Verifikasi". Sebelum itu pasal
+   tetap tampil di mobile dengan label "Belum diverifikasi admin".
 
 Catatan tampilan: normalizer import menggabungkan anak kalimat penutup setelah daftar huruf
 (misalnya "..., pidananya dapat ditambah 1/3") ke butir huruf terakhir. Isi teks tetap lengkap.
