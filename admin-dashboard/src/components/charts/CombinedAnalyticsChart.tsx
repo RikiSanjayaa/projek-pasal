@@ -160,7 +160,6 @@ export function CombinedAnalyticsChart({ logs, loading }: CombinedAnalyticsChart
                 backgroundColor: isDark ? '#25262B' : '#FFFFFF',
                 borderColor: isDark ? '#373A40' : '#E9ECEF',
                 borderRadius: 8,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
               }}
             />
             <Legend wrapperStyle={{ paddingTop: 20 }} />

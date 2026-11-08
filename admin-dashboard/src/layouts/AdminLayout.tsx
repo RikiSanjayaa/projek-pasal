@@ -267,7 +267,7 @@ export function AdminLayout() {
           </Group>
 
           <Group gap="xs" wrap="nowrap">
-            <Menu shadow="sm" position="bottom-end">
+            <Menu position="bottom-end">
               <Menu.Target>
                 <ActionIcon variant="default" size="lg" aria-label="Tema tampilan">
                   <ThemeIcon size={18} />
@@ -288,7 +288,7 @@ export function AdminLayout() {
               </Menu.Dropdown>
             </Menu>
 
-            <Menu shadow="sm" position="bottom-end">
+            <Menu position="bottom-end">
               <Menu.Target>
                 <UnstyledButton aria-label="Menu akun">
                   <Group gap="xs" wrap="nowrap">

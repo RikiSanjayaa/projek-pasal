@@ -254,7 +254,6 @@ export function ImportRunPage() {
       {editable && (
         <Paper
           withBorder
-          shadow="md"
           p="md"
           style={{ position: 'sticky', bottom: 0, zIndex: 10 }}
         >
