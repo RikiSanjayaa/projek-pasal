@@ -20,6 +20,29 @@ class _PasalIndex {
   }) : searchable = [nomor, title, content, explanation, ...keywords].join(' ');
 }
 
+/// Nilai turunan dari satu dataset pasal. Berlaku selama daftar berisi objek [PasalModel] yang sama
+/// dengan urutan yang sama. Reload atau sync membuat objek baru, jadi cache dibangun ulang walaupun
+/// jumlah pasal tidak berubah. Pembandingan identitas O(n) jauh lebih murah dari membangun ulang.
+class _DatasetCache<T> {
+  List<PasalModel> _source = const [];
+  T? _value;
+
+  T get(List<PasalModel> list, T Function() build) {
+    final value = _value;
+    if (value != null && _sameObjects(list)) return value;
+    _source = List.of(list, growable: false);
+    return _value = build();
+  }
+
+  bool _sameObjects(List<PasalModel> list) {
+    if (list.length != _source.length) return false;
+    for (var i = 0; i < list.length; i++) {
+      if (!identical(list[i], _source[i])) return false;
+    }
+    return true;
+  }
+}
+
 /// Utility class for search-related operations
 ///
 /// Provides shared search functionality for both HomeScreen filtering
@@ -354,21 +377,14 @@ class SearchUtils {
     return scored.take(limit).map((e) => e.phrase).toList();
   }
 
-  static Map<String, int>? _phraseDfCache;
-  static int _phraseDfCacheLen = -1;
+  static final _suggestionCache = _DatasetCache<Map<String, int>>();
 
-  /// ponytail: dictionary cache is keyed by dataset length only — a sync
-  /// that keeps the same pasal count won't invalidate it; add force/epoch
-  /// param wired to the sync hook if staleness ever shows up.
-  static Map<String, int> _suggestionDictionary(
-    Iterable<PasalModel> pasalList, {
-    bool force = false,
-  }) {
+  static Map<String, int> _suggestionDictionary(Iterable<PasalModel> pasalList) {
     final list = pasalList.toList();
-    if (!force && _phraseDfCache != null && _phraseDfCacheLen == list.length) {
-      return _phraseDfCache!;
-    }
+    return _suggestionCache.get(list, () => _buildSuggestionDictionary(list));
+  }
 
+  static Map<String, int> _buildSuggestionDictionary(List<PasalModel> list) {
     final df = <String, int>{};
     void record(Set<String> seen, String phrase) {
       final p = normalize(phrase);
@@ -416,13 +432,9 @@ class SearchUtils {
       return wordCount == 1 ? e.value >= 2 : true;
     }).toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    final result = <String, int>{
+    return <String, int>{
       for (final e in kept.take(30000)) e.key: e.value,
     };
-
-    _phraseDfCache = result;
-    _phraseDfCacheLen = list.length;
-    return result;
   }
 
   /// Light typo tolerance: distance ≤1 for short words, ≤2 for long ones.
@@ -556,9 +568,15 @@ class SearchUtils {
     final scored = <({PasalModel pasal, int score, SearchMatchTier? tier})>[];
     for (final pasal in list) {
       final score = _score(pasal, q);
-      if (score > 0) {
-        scored.add((pasal: pasal, score: score, tier: tiered ? _tierOf(_indexOf(pasal), q) : null));
+      if (score <= 0) continue;
+      if (!tiered) {
+        scored.add((pasal: pasal, score: score, tier: null));
+        continue;
       }
+      // Skor juga naik karena potongan kata ("baik" di "perbaikan"); pasal seperti itu tidak
+      // memuat satu pun kata kueri, jadi tidak ditampilkan.
+      final tier = _tierOf(_indexOf(pasal), q);
+      if (tier != null) scored.add((pasal: pasal, score: score, tier: tier));
     }
 
     if (tiered) {
@@ -587,7 +605,8 @@ class SearchUtils {
   static bool _hasWordStart(String haystack, String needle) =>
       haystack.startsWith(needle) || haystack.contains(' $needle');
 
-  static SearchMatchTier _tierOf(_PasalIndex index, _PreparedQuery q) {
+  /// Null bila tidak ada kata kueri (atau padanannya) yang muncul di awal kata.
+  static SearchMatchTier? _tierOf(_PasalIndex index, _PreparedQuery q) {
     final fields = [index.title, index.content, index.explanation, ...index.keywords];
     if (fields.any((field) => _hasWordStart(field, q.normalized))) return SearchMatchTier.phrase;
     if (q.wholeQueryAliases.any((alias) => fields.any((field) => _hasWordStart(field, alias)))) {
@@ -596,7 +615,10 @@ class SearchUtils {
     if (q.tokens.length > 1 && q.tokens.every((token) => _hasWordStart(index.searchable, token))) {
       return SearchMatchTier.allWords;
     }
-    return SearchMatchTier.partial;
+    if (q.expandedTerms.any((term) => term.length > 1 && _hasWordStart(index.searchable, term))) {
+      return SearchMatchTier.partial;
+    }
+    return null;
   }
 
   /// Kata di kueri yang tidak muncul di data mana pun diganti kata data terdekat
@@ -657,27 +679,22 @@ class SearchUtils {
   static bool _occursIn(String word, Iterable<String> vocabulary) =>
       vocabulary.any((candidate) => candidate.contains(word));
 
-  static Map<String, int>? _vocabularyCache;
-  static int _vocabularyCacheKey = -1;
+  static final _vocabularyCache = _DatasetCache<Map<String, int>>();
 
-  /// Frekuensi kata (≥4 huruf) di semua pasal. Cache ikut jumlah pasal, seperti
-  /// kamus saran di [_suggestionDictionary].
+  /// Frekuensi kata (≥4 huruf) di semua pasal.
   static Map<String, int> _vocabularyOf(Iterable<PasalModel> pasalList) {
     final list = pasalList.toList();
-    if (_vocabularyCache != null && _vocabularyCacheKey == list.length) {
-      return _vocabularyCache!;
-    }
-    final counts = <String, int>{};
-    for (final pasal in list) {
-      for (final word in _indexOf(pasal).searchable.split(' ')) {
-        if (word.length >= 4 && !RegExp(r'\d').hasMatch(word)) {
-          counts[word] = (counts[word] ?? 0) + 1;
+    return _vocabularyCache.get(list, () {
+      final counts = <String, int>{};
+      for (final pasal in list) {
+        for (final word in _indexOf(pasal).searchable.split(' ')) {
+          if (word.length >= 4 && !RegExp(r'\d').hasMatch(word)) {
+            counts[word] = (counts[word] ?? 0) + 1;
+          }
         }
       }
-    }
-    _vocabularyCache = counts;
-    _vocabularyCacheKey = list.length;
-    return counts;
+      return counts;
+    });
   }
 
   /// Urutan nomor alami: 5 < 5a < 10 < 1152 < 1152a < 1152bis.

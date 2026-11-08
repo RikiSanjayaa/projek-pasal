@@ -508,6 +508,24 @@ void main() {
         expect(result.pasal.first.id, '20');
         expect(result.tierOf(alias), SearchMatchTier.alias);
         expect(result.aliases, ['hidup bersama sebagai suami istri']);
+        // "kumpul" hanya potongan dari "Perkumpulan", bukan kata yang cocok.
+        expect(result.pasal.map((p) => p.id), ['20']);
+      });
+
+      test('pasal matching only inside other words is not returned', () {
+        final inside = make('30', 'Pidana perbaikan.');
+        final result = SearchUtils.search([inside], 'baik xyz');
+        expect(result.pasal, isEmpty);
+      });
+    });
+
+    group('correctQuery after data reload', () {
+      test('vocabulary is rebuilt when pasal content changes but the count stays the same', () {
+        final before = [PasalModel(id: '1', undangUndangId: 'uu-1', nomor: '1', isi: 'Pencurian barang milik orang lain.')];
+        expect(SearchUtils.correctQuery('pencarian', before), 'pencurian');
+
+        final after = [PasalModel(id: '1', undangUndangId: 'uu-1', nomor: '1', isi: 'Pencarian dan pencurian barang.')];
+        expect(SearchUtils.correctQuery('pencarian', after), isNull);
       });
     });
   });
