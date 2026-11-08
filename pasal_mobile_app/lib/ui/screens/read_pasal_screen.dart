@@ -19,6 +19,7 @@ import '../utils/open_link.dart';
 import '../widgets/riwayat_pasal.dart';
 import '../../core/services/data_service.dart';
 import '../../models/pasal_versi_model.dart';
+import '../widgets/pasal_actions_sheet.dart';
 
 class ReadPasalScreen extends StatefulWidget {
   final PasalModel pasal;
@@ -38,9 +39,7 @@ class ReadPasalScreen extends StatefulWidget {
 
 class _ReadPasalScreenState extends State<ReadPasalScreen> {
   final GlobalKey _searchKey = GlobalKey();
-  final GlobalKey _archiveKey = GlobalKey();
-  final GlobalKey _copyKey = GlobalKey();
-  final GlobalKey _pdfKey = GlobalKey();
+  final GlobalKey _actionsKey = GlobalKey();
   String? _kodeUU;
   String? _officialUrl;
   late PasalModel _currentPasal;
@@ -56,18 +55,19 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final prefs = await SharedPreferences.getInstance();
-      bool hasShown = prefs.getBool('has_shown_read_pasal_showcase') ?? false;
+      // v1 memperkenalkan tombol simpan/salin/PDF yang terpisah; v2 = satu tombol aksi.
+      final shownV1 = prefs.getBool('has_shown_read_pasal_showcase') ?? false;
+      final shownV2 = prefs.getBool('has_shown_read_pasal_showcase_v2') ?? false;
 
-      if (!hasShown && mounted) {
+      if (!shownV2 && mounted) {
         Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted) {
             ShowcaseView.get().startShowCase([
-              _searchKey,
-              _archiveKey,
-              _copyKey,
-              _pdfKey,
+              if (!shownV1) _searchKey,
+              _actionsKey,
             ]);
             prefs.setBool('has_shown_read_pasal_showcase', true);
+            prefs.setBool('has_shown_read_pasal_showcase_v2', true);
           }
         });
       }
@@ -390,219 +390,52 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                         ),
                                       ),
                                     ],
+                                    ValueListenableBuilder<List<String>>(
+                                      valueListenable: archiveService.archivedIds,
+                                      builder: (context, ids, _) => ids.contains(_currentPasal.id)
+                                          ? Padding(
+                                              padding: const EdgeInsets.only(left: 6),
+                                              child: Tooltip(
+                                                message: 'Tersimpan',
+                                                child: Icon(
+                                                  Icons.bookmark_rounded,
+                                                  size: 20,
+                                                  color: AppColors.primary,
+                                                ),
+                                              ),
+                                            )
+                                          : const SizedBox.shrink(),
+                                    ),
                                   ],
                                 ),
                               ),
 
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Archive Button
-                                  AppShowcase(
-                                    showcaseKey: _archiveKey,
-                                    title: 'Simpan Pasal',
-                                    description:
-                                        'Tandai pasal ini sebagai favorit untuk akses cepat.\n\nPasal tersimpan dapat dilihat di halaman Tersimpan pada menu navigasi.\n\nTekan lagi untuk menghapus dari daftar simpan.',
-                                    child: ValueListenableBuilder<List<String>>(
-                                      valueListenable:
-                                          archiveService.archivedIds,
-                                      builder: (context, ids, _) {
-                                        final isArchived = ids.contains(
-                                          _currentPasal.id,
-                                        );
-                                        return InkWell(
-                                          onTap: () {
-                                            archiveService.toggleArchive(
-                                              _currentPasal.id,
-                                            );
-
-                                            AppNotification.show(
-                                              context,
-                                              isArchived
-                                                  ? "Dihapus dari Tersimpan"
-                                                  : "Berhasil Disimpan",
-                                              color: isArchived
-                                                  ? Colors.grey[700]
-                                                  : AppColors.primary,
-                                              icon: isArchived
-                                                  ? Icons.delete_outline_rounded
-                                                  : Icons.bookmark_rounded,
-                                            );
-                                          },
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          child: Container(
-                                            padding: const EdgeInsets.all(8.0),
-                                            decoration: BoxDecoration(
-                                              color: isDark
-                                                  ? Colors.grey.withValues(
-                                                      alpha: 0.1,
-                                                    )
-                                                  : Colors.grey.withValues(
-                                                      alpha: 0.05,
-                                                    ),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: Icon(
-                                              isArchived
-                                                  ? Icons.bookmark_rounded
-                                                  : Icons
-                                                        .bookmark_border_rounded,
-                                              size: 18,
-                                              color: isArchived
-                                                  ? AppColors.primary
-                                                  : (isDark
-                                                        ? Colors.grey[400]
-                                                        : Colors.grey[600]),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  if (_naskahResmiUrl != null) ...[
-                                    Tooltip(
-                                      message: 'Buka naskah resmi',
-                                      child: InkWell(
-                                        onTap: () => openExternalLink(
-                                          context,
-                                          _naskahResmiUrl!,
-                                        ),
+                              AppShowcase(
+                                showcaseKey: _actionsKey,
+                                title: 'Aksi Pasal',
+                                description:
+                                    'Simpan pasal, salin isinya, cetak PDF, buka naskah resmi, dan lihat riwayat perubahan ada di sini.',
+                                child: Tooltip(
+                                  message: 'Aksi pasal',
+                                  child: InkWell(
+                                    onTap: _showActions,
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8.0),
+                                      decoration: BoxDecoration(
+                                        color: isDark
+                                            ? Colors.grey.withValues(alpha: 0.1)
+                                            : Colors.grey.withValues(alpha: 0.05),
                                         borderRadius: BorderRadius.circular(8),
-                                        child: Container(
-                                          padding: const EdgeInsets.all(8.0),
-                                          decoration: BoxDecoration(
-                                            color: isDark
-                                                ? Colors.grey.withValues(alpha: 0.1)
-                                                : Colors.grey.withValues(alpha: 0.05),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Icon(
-                                            Icons.open_in_new_rounded,
-                                            size: 20,
-                                            color: isDark
-                                                ? Colors.grey[400]
-                                                : Colors.grey[600],
-                                          ),
-                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                  ],
-
-                                  // Copy Button
-                                  AppShowcase(
-                                    showcaseKey: _copyKey,
-                                    title: 'Salin Pasal',
-                                    description:
-                                        'Salin seluruh isi pasal ke clipboard.\n\nTeks yang disalin mencakup:\n• Sumber Undang-Undang\n• Nomor dan judul pasal\n• Isi lengkap pasal\n• Penjelasan (jika ada)\n\nGunakan untuk berbagi atau referensi.',
-                                    child: InkWell(
-                                      onTap: () async {
-                                        final sb = StringBuffer();
-                                        sb.writeln(_kodeUU ?? "UU");
-                                        sb.writeln(
-                                          "Pasal ${_currentPasal.nomor}",
-                                        );
-                                        if (_currentPasal.judul != null &&
-                                            _currentPasal.judul!
-                                                .trim()
-                                                .isNotEmpty) {
-                                          sb.writeln(
-                                            _currentPasal.judul!.toUpperCase(),
-                                          );
-                                        }
-                                        sb.writeln();
-                                        sb.writeln(_currentPasal.isi);
-                                        if (_currentPasal.penjelasan != null &&
-                                            _currentPasal
-                                                .penjelasan!
-                                                .isNotEmpty) {
-                                          sb.writeln();
-                                          sb.writeln("PENJELASAN");
-                                          sb.writeln(_currentPasal.penjelasan);
-                                        }
-                                        if (!_currentPasal.isVerified) {
-                                          sb.writeln();
-                                          sb.writeln(
-                                            'Catatan: belum diverifikasi admin.',
-                                          );
-                                        }
-
-                                        await Clipboard.setData(
-                                          ClipboardData(text: sb.toString()),
-                                        );
-                                        if (context.mounted) {
-                                          AppNotification.show(
-                                            context,
-                                            "Pasal berhasil disalin",
-                                            color: Colors.green,
-                                            icon: Icons.copy_rounded,
-                                          );
-                                        }
-                                      },
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(8.0),
-                                        decoration: BoxDecoration(
-                                          color: isDark
-                                              ? Colors.grey.withValues(
-                                                  alpha: 0.1,
-                                                )
-                                              : Colors.grey.withValues(
-                                                  alpha: 0.05,
-                                                ),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: Icon(
-                                          Icons.copy_rounded,
-                                          size: 20,
-                                          color: isDark
-                                              ? Colors.grey[400]
-                                              : Colors.grey[600],
-                                        ),
+                                      child: Icon(
+                                        Icons.more_horiz_rounded,
+                                        size: 22,
+                                        color: isDark ? Colors.grey[300] : Colors.grey[700],
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-
-                                  // PDF Print Button
-                                  AppShowcase(
-                                    showcaseKey: _pdfKey,
-                                    title: 'Cetak PDF',
-                                    description:
-                                        'Cetak atau unduh pasal ini sebagai PDF.\n\nHasil PDF mencakup isi pasal lengkap beserta penjelasannya (jika ada).',
-                                    child: InkWell(
-                                      onTap: () {
-                                        PdfExportService.exportSinglePasal(
-                                          pasal: _currentPasal,
-                                          searchQuery: _localSearchQuery,
-                                        );
-                                      },
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(8.0),
-                                        decoration: BoxDecoration(
-                                          color: isDark
-                                              ? Colors.grey.withValues(alpha: 0.1)
-                                              : Colors.grey.withValues(alpha: 0.05),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Icon(
-                                          Icons.picture_as_pdf_outlined,
-                                          size: 20,
-                                          color: isDark
-                                              ? Colors.grey[400]
-                                              : Colors.grey[600],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             ],
                           ),
@@ -780,6 +613,97 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
         ],
       ),
     );
+  }
+
+  void _showActions() {
+    final isArchived = archiveService.archivedIds.value.contains(_currentPasal.id);
+    final naskahResmi = _naskahResmiUrl;
+    showPasalActionsSheet(
+      context,
+      title: '${_kodeUU ?? 'UU'} Pasal ${_currentPasal.nomor}',
+      actions: [
+        PasalAction(
+          icon: isArchived ? Icons.bookmark_remove_outlined : Icons.bookmark_add_outlined,
+          label: isArchived ? 'Hapus dari Tersimpan' : 'Simpan pasal',
+          description: isArchived ? null : 'Buka lagi lewat menu Tersimpan',
+          color: isArchived ? null : AppColors.primary,
+          onTap: _toggleArchive,
+        ),
+        PasalAction(
+          icon: Icons.copy_rounded,
+          label: 'Salin pasal',
+          description: 'Sumber, nomor, judul, isi, dan penjelasan',
+          onTap: _copyPasal,
+        ),
+        PasalAction(
+          icon: Icons.picture_as_pdf_outlined,
+          label: 'Cetak atau unduh PDF',
+          onTap: () => PdfExportService.exportSinglePasal(
+            pasal: _currentPasal,
+            searchQuery: _localSearchQuery,
+          ),
+        ),
+        if (naskahResmi != null)
+          PasalAction(
+            icon: Icons.open_in_new_rounded,
+            label: 'Buka naskah resmi',
+            description: 'JDIH BPK, di browser',
+            onTap: () => openExternalLink(context, naskahResmi),
+          ),
+        if (_versi.isNotEmpty)
+          PasalAction(
+            icon: Icons.history_rounded,
+            label: 'Riwayat perubahan',
+            onTap: () => showRiwayatPasalSheet(
+              context,
+              pasal: _currentPasal,
+              kodeUU: _kodeUU ?? 'UU',
+              versi: _versi,
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _toggleArchive() {
+    final isArchived = archiveService.archivedIds.value.contains(_currentPasal.id);
+    archiveService.toggleArchive(_currentPasal.id);
+    AppNotification.show(
+      context,
+      isArchived ? "Dihapus dari Tersimpan" : "Berhasil Disimpan",
+      color: isArchived ? Colors.grey[700] : AppColors.primary,
+      icon: isArchived ? Icons.delete_outline_rounded : Icons.bookmark_rounded,
+    );
+  }
+
+  Future<void> _copyPasal() async {
+    final sb = StringBuffer();
+    sb.writeln(_kodeUU ?? "UU");
+    sb.writeln("Pasal ${_currentPasal.nomor}");
+    if (_currentPasal.judul != null && _currentPasal.judul!.trim().isNotEmpty) {
+      sb.writeln(_currentPasal.judul!.toUpperCase());
+    }
+    sb.writeln();
+    sb.writeln(_currentPasal.isi);
+    if (_currentPasal.penjelasan != null && _currentPasal.penjelasan!.isNotEmpty) {
+      sb.writeln();
+      sb.writeln("PENJELASAN");
+      sb.writeln(_currentPasal.penjelasan);
+    }
+    if (!_currentPasal.isVerified) {
+      sb.writeln();
+      sb.writeln('Catatan: belum diverifikasi admin.');
+    }
+
+    await Clipboard.setData(ClipboardData(text: sb.toString()));
+    if (mounted) {
+      AppNotification.show(
+        context,
+        "Pasal berhasil disalin",
+        color: Colors.green,
+        icon: Icons.copy_rounded,
+      );
+    }
   }
 
   String? get _naskahResmiUrl {
