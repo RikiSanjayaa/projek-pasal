@@ -1,10 +1,125 @@
 import '../../models/pasal_model.dart';
 
+/// Teks pasal yang sudah dinormalisasi. Dihitung sekali per objek [PasalModel]
+/// (lihat [SearchUtils._indexOf]); tanpa ini setiap ketikan menormalisasi ulang
+/// seluruh teks ribuan pasal.
+class _PasalIndex {
+  final String nomor;
+  final String title;
+  final String content;
+  final String explanation;
+  final List<String> keywords;
+  final String searchable;
+
+  _PasalIndex({
+    required this.nomor,
+    required this.title,
+    required this.content,
+    required this.explanation,
+    required this.keywords,
+  }) : searchable = [nomor, title, content, explanation, ...keywords].join(' ');
+}
+
+/// Nilai turunan dari satu dataset pasal. Berlaku selama daftar berisi objek [PasalModel] yang sama
+/// dengan urutan yang sama. Reload atau sync membuat objek baru, jadi cache dibangun ulang walaupun
+/// jumlah pasal tidak berubah. Pembandingan identitas O(n) jauh lebih murah dari membangun ulang.
+class _DatasetCache<T> {
+  List<PasalModel> _source = const [];
+  T? _value;
+
+  T get(List<PasalModel> list, T Function() build) {
+    final value = _value;
+    if (value != null && _sameObjects(list)) return value;
+    _source = List.of(list, growable: false);
+    return _value = build();
+  }
+
+  bool _sameObjects(List<PasalModel> list) {
+    if (list.length != _source.length) return false;
+    for (var i = 0; i < list.length; i++) {
+      if (!identical(list[i], _source[i])) return false;
+    }
+    return true;
+  }
+}
+
 /// Utility class for search-related operations
 ///
 /// Provides shared search functionality for both HomeScreen filtering
 /// and other search contexts in the app.
 class SearchUtils {
+  /// Baris catatan redaksi di penjelasan (pipeline import menambahkannya ke ratusan
+  /// pasal KUHPerdata). Tetap tampil, tapi tidak ikut dicari agar tidak membanjiri hasil.
+  static const String catatanPrefix = 'Catatan CariPasal:';
+
+  /// Sebutan undang-undang di kueri ("pasal 1365 kuhperdata", "pasal 27 uu ite") yang
+  /// tidak sama dengan kodenya, dipetakan ke kode yang sudah dinormalisasi.
+  static const Map<String, String> _uuNameAliases = {
+    'kuhperdata': 'kuhper',
+    'kuh perdata': 'kuhper',
+    'bw': 'kuhper',
+    'kuhpidana': 'kuhp',
+    'ite': 'uu ite',
+  };
+
+  static final Expando<_PasalIndex> _indexCache = Expando('pasalSearchIndex');
+
+  static _PasalIndex _indexOf(PasalModel pasal) => _indexCache[pasal] ??= _PasalIndex(
+    nomor: normalize(pasal.nomor),
+    title: normalize(pasal.judul ?? ''),
+    content: normalize(pasal.isi),
+    explanation: normalize(searchablePenjelasan(pasal.penjelasan)),
+    keywords: pasal.keywords.map(normalize).toList(),
+  );
+
+  /// Penjelasan tanpa baris [catatanPrefix].
+  static String searchablePenjelasan(String? penjelasan) {
+    if (penjelasan == null || !penjelasan.contains(catatanPrefix)) {
+      return penjelasan ?? '';
+    }
+    return penjelasan
+        .split('\n')
+        .where((line) => !line.trimLeft().startsWith(catatanPrefix))
+        .join('\n');
+  }
+
+  /// Nomor pasal kalau seluruh kueri hanya menunjuk satu pasal: "362", "pasal 16A",
+  /// "pasal 1152bis", "pasal 27 ayat 3", "pasal 5 ayat (1) huruf a". Null kalau bukan.
+  static String? specificNomor(String query) {
+    final match = RegExp(
+      r'^(?:pasal\s+)?(\d{1,4}(?:[a-z]{1,3})?(?:\s+(?:bis|ter))?)(?:\s+(?:ayat|huruf|angka)\s+[a-z0-9]{1,4})*$',
+    ).firstMatch(normalize(query));
+    return match?.group(1);
+  }
+
+  /// Pisahkan sebutan undang-undang dari kueri. [kodeByUuId]: id UU → kode (contoh "KUHPER").
+  /// Hasil `kode` dalam bentuk ternormalisasi, atau null bila kueri tidak menyebut UU.
+  static ({String? kode, String rest}) splitUuScope(
+    String query,
+    Map<String, String> kodeByUuId,
+  ) {
+    final normalized = normalize(query);
+    if (kodeByUuId.isEmpty || normalized.isEmpty) {
+      return (kode: null, rest: normalized);
+    }
+    final kodes = kodeByUuId.values.map(normalize).toSet();
+    final names = <String, String>{
+      for (final kode in kodes) kode: kode,
+      for (final entry in _uuNameAliases.entries)
+        if (kodes.contains(entry.value)) entry.key: entry.value,
+    };
+    // Nama terpanjang dulu supaya "kuh perdata" tidak terbaca sebagai bagian lain.
+    final ordered = names.keys.toList()..sort((a, b) => b.length.compareTo(a.length));
+    for (final name in ordered) {
+      final pattern = RegExp('(?:^|\\s)(?:uu\\s+)?${RegExp.escape(name)}(?=\\s|\$)');
+      final match = pattern.firstMatch(normalized);
+      if (match == null) continue;
+      final rest = normalized.replaceRange(match.start, match.end, ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+      return (kode: names[name], rest: rest);
+    }
+    return (kode: null, rest: normalized);
+  }
+
   static const Set<String> _stopWords = {
     'dan',
     'atau',
@@ -59,6 +174,10 @@ class SearchUtils {
   };
 
   static Map<String, List<String>> _synonyms = _builtInSynonyms;
+
+  /// Alias (ternormalisasi) untuk istilah yang sama persis dengan [normalizedTerm].
+  static Set<String> aliasesFor(String normalizedTerm) =>
+      (_synonyms[normalizedTerm] ?? const <String>[]).map(normalize).toSet();
 
   /// Gabungkan alias dari dashboard (via sync) dengan sinonim bawaan. Untuk istilah yang sama,
   /// daftar dari server menggantikan daftar bawaan. Format baris: `{term, aliases}`.
@@ -258,21 +377,14 @@ class SearchUtils {
     return scored.take(limit).map((e) => e.phrase).toList();
   }
 
-  static Map<String, int>? _phraseDfCache;
-  static int _phraseDfCacheLen = -1;
+  static final _suggestionCache = _DatasetCache<Map<String, int>>();
 
-  /// ponytail: dictionary cache is keyed by dataset length only — a sync
-  /// that keeps the same pasal count won't invalidate it; add force/epoch
-  /// param wired to the sync hook if staleness ever shows up.
-  static Map<String, int> _suggestionDictionary(
-    Iterable<PasalModel> pasalList, {
-    bool force = false,
-  }) {
+  static Map<String, int> _suggestionDictionary(Iterable<PasalModel> pasalList) {
     final list = pasalList.toList();
-    if (!force && _phraseDfCache != null && _phraseDfCacheLen == list.length) {
-      return _phraseDfCache!;
-    }
+    return _suggestionCache.get(list, () => _buildSuggestionDictionary(list));
+  }
 
+  static Map<String, int> _buildSuggestionDictionary(List<PasalModel> list) {
     final df = <String, int>{};
     void record(Set<String> seen, String phrase) {
       final p = normalize(phrase);
@@ -297,7 +409,7 @@ class SearchUtils {
 
       // Body text (isi + penjelasan): 1-3 word n-gram windows.
       final bodyTokens = tokenize(
-        [title, pasal.isi, pasal.penjelasan ?? ''].join(' '),
+        [title, pasal.isi, searchablePenjelasan(pasal.penjelasan)].join(' '),
       );
       for (var i = 0; i < bodyTokens.length; i++) {
         record(seen, bodyTokens[i]);
@@ -320,13 +432,9 @@ class SearchUtils {
       return wordCount == 1 ? e.value >= 2 : true;
     }).toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    final result = <String, int>{
+    return <String, int>{
       for (final e in kept.take(30000)) e.key: e.value,
     };
-
-    _phraseDfCache = result;
-    _phraseDfCacheLen = list.length;
-    return result;
   }
 
   /// Light typo tolerance: distance ≤1 for short words, ≤2 for long ones.
@@ -349,32 +457,23 @@ class SearchUtils {
   }
 
   static int scorePasal(PasalModel pasal, String query) =>
-      _scoreWithMatches(pasal, query).score;
+      _score(pasal, _PreparedQuery(normalize(query)));
 
-  static ({int score, int matchedTokens}) _scoreWithMatches(
-    PasalModel pasal,
-    String query,
-  ) {
-    final normalizedQuery = normalize(query);
-    if (normalizedQuery.isEmpty) return (score: 0, matchedTokens: 0);
+  static int _score(PasalModel pasal, _PreparedQuery q) {
+    final normalizedQuery = q.normalized;
+    if (normalizedQuery.isEmpty) return 0;
 
-    final nomorQuery = extractNomorQuery(normalizedQuery);
-    final firstNomor = extractFirstNomor(normalizedQuery);
-    final nomor = normalize(pasal.nomor);
-    final title = normalize(pasal.judul ?? '');
-    final content = normalize(pasal.isi);
-    final explanation = normalize(pasal.penjelasan ?? '');
-    final keywords = pasal.keywords.map(normalize).toList();
-    final searchable = [
-      nomor,
-      title,
-      content,
-      explanation,
-      ...keywords,
-    ].join(' ');
+    final nomorQuery = q.nomorQuery;
+    final firstNomor = q.firstNomor;
+    final index = _indexOf(pasal);
+    final nomor = index.nomor;
+    final title = index.title;
+    final content = index.content;
+    final explanation = index.explanation;
+    final keywords = index.keywords;
+    final searchable = index.searchable;
 
     var score = 0;
-    var matchedTokens = 0;
 
     if (nomorQuery.isNotEmpty) {
       if (nomor == nomorQuery) score += 1000;
@@ -399,87 +498,210 @@ class SearchUtils {
     if (content.contains(normalizedQuery)) score += 120;
     if (explanation.contains(normalizedQuery)) score += 70;
 
-    final expandedTerms = expandQuery(normalizedQuery);
-    final tokens = tokenize(normalizedQuery);
     var tokenMatches = 0;
 
     // Full phrase match in content strongly outranks scattered token hits.
     if (content.contains(normalizedQuery)) score += 150;
 
-    for (final term in expandedTerms) {
+    for (final term in q.expandedTerms) {
       if (term.length <= 1) continue;
       if (title.contains(term)) score += 75;
       if (keywords.any((keyword) => keyword.contains(term))) score += 65;
       if (content.contains(term)) score += 35;
       if (explanation.contains(term)) score += 20;
       if (searchable.contains(term)) tokenMatches++;
-    }
-
-    if (tokens.isNotEmpty) {
-      for (final token in tokens) {
-        if (searchable.contains(token)) matchedTokens++;
+      // Alias untuk seluruh kueri ("hidup bersama sebagai suami istri" untuk "kumpul kebo")
+      // adalah padanan kueri itu, jadi dinilai setara kecocokan frasa, bukan kata lepas.
+      if (q.wholeQueryAliases.contains(term) && (title.contains(term) || content.contains(term))) {
+        score += 250;
       }
     }
 
-    if (tokens.isNotEmpty && tokenMatches == 0) return (score: 0, matchedTokens: 0);
-    if (tokens.length > 1 && tokenMatches >= tokens.length) score += 90;
-    if (tokens.length > 1 && tokenMatches == 1) score -= 20;
+    if (q.tokens.isNotEmpty && tokenMatches == 0) return 0;
+    if (q.tokens.length > 1 && tokenMatches >= q.tokens.length) score += 90;
+    if (q.tokens.length > 1 && tokenMatches == 1) score -= 20;
 
-    return (score: score, matchedTokens: matchedTokens);
+    return score;
   }
 
+  /// Urutkan [pasalList] menurut relevansi terhadap [query]. Lihat [search].
   static List<PasalModel> rankPasal(
     Iterable<PasalModel> pasalList,
-    String query,
-  ) {
-    final normalizedQuery = normalize(query);
-    if (normalizedQuery.isEmpty) return pasalList.toList();
+    String query, {
+    Map<String, String> kodeByUuId = const {},
+  }) => search(pasalList, query, kodeByUuId: kodeByUuId).pasal;
 
-    final list = pasalList.toList();
-    final nomorQuery = extractNomorQuery(normalizedQuery);
-    if (_isSpecificNomorSearch(normalizedQuery, nomorQuery)) {
-      final exactMatches = list
-          .where((pasal) => normalize(pasal.nomor) == nomorQuery)
-          .toList();
+  /// Cari dan urutkan pasal.
+  ///
+  /// Untuk kueri beberapa kata, hasil dikelompokkan menurut [SearchMatchTier]: frasa persis dulu,
+  /// lalu padanan istilah (alias), lalu pasal yang memuat semua kata secara terpisah, lalu yang
+  /// memuat sebagian kata. Di dalam kelompok, urutan memakai skor. Kalau ada cukup pasal di tiga
+  /// kelompok pertama, kelompok "sebagian kata" dibuang: kata yang lebih banyak mempersempit hasil.
+  ///
+  /// [kodeByUuId] (id UU → kode) mengaktifkan sebutan UU di kueri: "pasal 1365 kuhperdata"
+  /// hanya mencari di KUHPerdata. Tanpa peta itu, sebutan UU diperlakukan sebagai kata biasa.
+  static SearchResult search(
+    Iterable<PasalModel> pasalList,
+    String query, {
+    Map<String, String> kodeByUuId = const {},
+  }) {
+    var normalizedQuery = normalize(query);
+    if (normalizedQuery.isEmpty) return SearchResult(pasalList.toList());
 
-      if (exactMatches.isNotEmpty) {
-        exactMatches.sort(
-          (a, b) =>
-              _nomorSortValue(a.nomor).compareTo(_nomorSortValue(b.nomor)),
-        );
-        return exactMatches;
-      }
+    var list = pasalList.toList();
+    final scope = splitUuScope(normalizedQuery, kodeByUuId);
+    if (scope.kode != null) {
+      list = list.where((p) => normalize(kodeByUuId[p.undangUndangId] ?? '') == scope.kode).toList();
+      if (scope.rest.isEmpty) return SearchResult(list..sort((a, b) => _compareNomor(a.nomor, b.nomor)));
+      normalizedQuery = scope.rest;
     }
 
-    final tokens = tokenize(normalizedQuery);
-    final scored = <({PasalModel pasal, int score, int matchedTokens})>[];
+    final nomor = specificNomor(normalizedQuery);
+    if (nomor != null) {
+      final target = nomor.replaceAll(' ', '');
+      final exactMatches = list.where((pasal) => _indexOf(pasal).nomor.replaceAll(' ', '') == target).toList();
+      if (exactMatches.isNotEmpty) return SearchResult(exactMatches);
+    }
+
+    final q = _PreparedQuery(normalizedQuery);
+    final tiered = q.tokens.length > 1 || q.wholeQueryAliases.isNotEmpty;
+    final scored = <({PasalModel pasal, int score, SearchMatchTier? tier})>[];
     for (final pasal in list) {
-      final (:score, :matchedTokens) = _scoreWithMatches(pasal, normalizedQuery);
-      if (score > 0) scored.add((pasal: pasal, score: score, matchedTokens: matchedTokens));
+      final score = _score(pasal, q);
+      if (score <= 0) continue;
+      if (!tiered) {
+        scored.add((pasal: pasal, score: score, tier: null));
+        continue;
+      }
+      // Skor juga naik karena potongan kata ("baik" di "perbaikan"); pasal seperti itu tidak
+      // memuat satu pun kata kueri, jadi tidak ditampilkan.
+      final tier = _tierOf(_indexOf(pasal), q);
+      if (tier != null) scored.add((pasal: pasal, score: score, tier: tier));
     }
 
-    // Multi-word query: if enough pasal match EVERY token, drop the ones
-    // matching only some tokens — more words should narrow, not widen.
-    if (tokens.isNotEmpty &&
-        tokens.length > 1 &&
-        scored.length > 4) {
-      final fullMatches = scored
-          .where((item) => item.matchedTokens == tokens.length)
-          .toList();
-      if (fullMatches.length >= 5) {
-        scored.removeWhere((item) => item.matchedTokens < tokens.length);
-      }
+    if (tiered) {
+      final strong = scored.where((item) => item.tier != SearchMatchTier.partial).length;
+      if (strong >= 5) scored.removeWhere((item) => item.tier == SearchMatchTier.partial);
     }
 
     scored.sort((a, b) {
+      final byTier = (a.tier?.index ?? 0).compareTo(b.tier?.index ?? 0);
+      if (byTier != 0) return byTier;
       final byScore = b.score.compareTo(a.score);
       if (byScore != 0) return byScore;
-      return _nomorSortValue(
-        a.pasal.nomor,
-      ).compareTo(_nomorSortValue(b.pasal.nomor));
+      return _compareNomor(a.pasal.nomor, b.pasal.nomor);
     });
 
-    return scored.map((item) => item.pasal).toList();
+    return SearchResult(
+      scored.map((item) => item.pasal).toList(),
+      tiers: {for (final item in scored) if (item.tier != null) item.pasal.id: item.tier!},
+      phrase: tiered ? normalizedQuery : null,
+      aliases: q.wholeQueryAliases.toList(),
+    );
+  }
+
+  /// Kata atau frasa muncul di awal kata ("nama baik" cocok dengan "nama baiknya", tidak dengan
+  /// "perbaikan").
+  static bool _hasWordStart(String haystack, String needle) =>
+      haystack.startsWith(needle) || haystack.contains(' $needle');
+
+  /// Null bila tidak ada kata kueri (atau padanannya) yang muncul di awal kata.
+  static SearchMatchTier? _tierOf(_PasalIndex index, _PreparedQuery q) {
+    final fields = [index.title, index.content, index.explanation, ...index.keywords];
+    if (fields.any((field) => _hasWordStart(field, q.normalized))) return SearchMatchTier.phrase;
+    if (q.wholeQueryAliases.any((alias) => fields.any((field) => _hasWordStart(field, alias)))) {
+      return SearchMatchTier.alias;
+    }
+    if (q.tokens.length > 1 && q.tokens.every((token) => _hasWordStart(index.searchable, token))) {
+      return SearchMatchTier.allWords;
+    }
+    if (q.expandedTerms.any((term) => term.length > 1 && _hasWordStart(index.searchable, term))) {
+      return SearchMatchTier.partial;
+    }
+    return null;
+  }
+
+  /// Kata di kueri yang tidak muncul di data mana pun diganti kata data terdekat
+  /// (selisih 1-2 huruf), contoh "pencurain" → "pencurian". Null bila tidak ada yang diganti.
+  /// Kata sambung, nomor, dan sebutan UU ([kodeByUuId]) tidak dikoreksi.
+  static String? correctQuery(
+    String query,
+    Iterable<PasalModel> pasalList, {
+    Map<String, String> kodeByUuId = const {},
+  }) {
+    final normalized = normalize(query);
+    final words = normalized.split(' ').where((w) => w.isNotEmpty).toList();
+    if (words.isEmpty) return null;
+    final vocabulary = _vocabularyOf(pasalList);
+    final uuNames = {
+      ...kodeByUuId.values.map(normalize),
+      ..._uuNameAliases.keys,
+      'uu',
+    };
+    var changed = false;
+    final corrected = <String>[];
+    // Kata yang merupakan bagian istilah alias ("kebo" di "kumpul kebo") tidak dikoreksi.
+    final aliasWords = {
+      for (final phrase in _synonyms.keys)
+        if (normalized.contains(phrase)) ...phrase.split(' '),
+    };
+    for (final word in words) {
+      if (aliasWords.contains(word)) {
+        corrected.add(word);
+        continue;
+      }
+      if (word.length < 4 ||
+          RegExp(r'\d').hasMatch(word) ||
+          _stopWords.contains(word) ||
+          uuNames.contains(word) ||
+          _occursIn(word, vocabulary.keys)) {
+        corrected.add(word);
+        continue;
+      }
+      String? best;
+      var bestDistance = 3;
+      var bestCount = 0;
+      vocabulary.forEach((candidate, count) {
+        if (!_fuzzyClose(word, candidate)) return;
+        final distance = _levenshteinDistance(word, candidate, 2);
+        if (distance < bestDistance || (distance == bestDistance && count > bestCount)) {
+          best = candidate;
+          bestDistance = distance;
+          bestCount = count;
+        }
+      });
+      corrected.add(best ?? word);
+      changed |= best != null;
+    }
+    return changed ? corrected.join(' ') : null;
+  }
+
+  static bool _occursIn(String word, Iterable<String> vocabulary) =>
+      vocabulary.any((candidate) => candidate.contains(word));
+
+  static final _vocabularyCache = _DatasetCache<Map<String, int>>();
+
+  /// Frekuensi kata (≥4 huruf) di semua pasal.
+  static Map<String, int> _vocabularyOf(Iterable<PasalModel> pasalList) {
+    final list = pasalList.toList();
+    return _vocabularyCache.get(list, () {
+      final counts = <String, int>{};
+      for (final pasal in list) {
+        for (final word in _indexOf(pasal).searchable.split(' ')) {
+          if (word.length >= 4 && !RegExp(r'\d').hasMatch(word)) {
+            counts[word] = (counts[word] ?? 0) + 1;
+          }
+        }
+      }
+      return counts;
+    });
+  }
+
+  /// Urutan nomor alami: 5 < 5a < 10 < 1152 < 1152a < 1152bis.
+  static int _compareNomor(String a, String b) {
+    final byNumber = _nomorSortValue(a).compareTo(_nomorSortValue(b));
+    if (byNumber != 0) return byNumber;
+    return normalize(a).compareTo(normalize(b));
   }
 
   static const Set<String> _validLegalTerms = {
@@ -591,18 +813,6 @@ class SearchUtils {
     return q.isNotEmpty && RegExp(r'^\d').hasMatch(q);
   }
 
-  static bool _isSpecificNomorSearch(
-    String normalizedQuery,
-    String nomorQuery,
-  ) {
-    if (nomorQuery.isEmpty) return false;
-    final pattern = RegExp(r'^\d{1,4}[a-z]?(?:\s+(?:bis|ter))?$');
-    if (!pattern.hasMatch(nomorQuery)) return false;
-
-    return normalizedQuery == nomorQuery ||
-        normalizedQuery == 'pasal $nomorQuery';
-  }
-
   /// Extracts a context-aware snippet from [pasal.isi] or [pasal.penjelasan]
   /// ensuring that matches in long articles are visible in search results.
   static SearchSnippet extractSnippet({
@@ -640,10 +850,10 @@ class SearchUtils {
       totalChars: totalChars,
     );
 
-    final penjelasanMatch =
-        (pasal.penjelasan != null && pasal.penjelasan!.trim().isNotEmpty)
+    final searchPenjelasan = searchablePenjelasan(pasal.penjelasan);
+    final penjelasanMatch = searchPenjelasan.trim().isNotEmpty
             ? _findSnippetMatch(
-              rawText: pasal.penjelasan!,
+              rawText: searchPenjelasan,
               terms: terms,
               cleanQuery: cleanQuery,
               source: SnippetSource.penjelasan,
@@ -784,6 +994,64 @@ class SearchUtils {
       return '... ${cleanText.substring(start).trim()}';
     }
   }
+}
+
+/// Kueri yang sudah dinormalisasi; bagian yang sama untuk semua pasal dihitung sekali.
+class _PreparedQuery {
+  final String normalized;
+  final String nomorQuery;
+  final String firstNomor;
+  final List<String> expandedTerms;
+  final List<String> tokens;
+
+  /// Alias yang istilahnya sama persis dengan seluruh kueri.
+  final Set<String> wholeQueryAliases;
+
+  _PreparedQuery(this.normalized)
+    : nomorQuery = SearchUtils.extractNomorQuery(normalized),
+      firstNomor = SearchUtils.extractFirstNomor(normalized),
+      expandedTerms = SearchUtils.expandQuery(normalized),
+      tokens = SearchUtils.tokenize(normalized),
+      wholeQueryAliases = SearchUtils.aliasesFor(normalized);
+}
+
+/// Seberapa dekat pasal cocok dengan kueri beberapa kata. Urutan enum = urutan tampil.
+enum SearchMatchTier {
+  /// Seluruh kueri muncul berurutan, misalnya "nama baik" di "... kehormatan atau nama baik ...".
+  phrase,
+
+  /// Padanan istilah dari Smart Search muncul, misalnya "hidup bersama sebagai suami istri"
+  /// untuk "kumpul kebo".
+  alias,
+
+  /// Semua kata muncul, tapi tidak berurutan.
+  allWords,
+
+  /// Hanya sebagian kata yang muncul.
+  partial,
+}
+
+class SearchResult {
+  /// Hasil terurut.
+  final List<PasalModel> pasal;
+
+  /// Kelompok tiap pasal (per id). Kosong untuk kueri satu kata atau pencarian nomor.
+  final Map<String, SearchMatchTier> tiers;
+
+  /// Kueri ternormalisasi yang dipakai untuk kelompok [SearchMatchTier.phrase]; null kalau hasil
+  /// tidak dikelompokkan.
+  final String? phrase;
+
+  /// Padanan istilah untuk seluruh kueri (kelompok [SearchMatchTier.alias]).
+  final List<String> aliases;
+
+  const SearchResult(this.pasal, {this.tiers = const {}, this.phrase, this.aliases = const []});
+
+  bool get isTiered => phrase != null;
+
+  SearchMatchTier? tierOf(PasalModel pasal) => tiers[pasal.id];
+
+  bool get hasPhraseMatch => tiers.values.contains(SearchMatchTier.phrase);
 }
 
 enum SnippetSource { isi, penjelasan, defaultIsi }

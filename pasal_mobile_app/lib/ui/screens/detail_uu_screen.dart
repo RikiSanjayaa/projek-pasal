@@ -6,6 +6,7 @@ import '../../core/services/query_service.dart';
 import '../../core/services/sync_manager.dart';
 import '../../core/utils/search_utils.dart';
 import '../widgets/pasal_card.dart';
+import '../widgets/search_tier_header.dart';
 import '../widgets/settings_drawer.dart';
 import '../utils/uu_color_helper.dart';
 
@@ -20,6 +21,7 @@ class DetailUUScreen extends StatefulWidget {
 class _DetailUUScreenState extends State<DetailUUScreen> {
   List<PasalModel> _allPasal = [];
   List<PasalModel> _filteredPasal = [];
+  SearchResult? _searchResult;
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
 
@@ -56,8 +58,10 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
     setState(() {
       if (query.isEmpty) {
         _filteredPasal = _allPasal;
+        _searchResult = null;
       } else {
-        _filteredPasal = SearchUtils.rankPasal(_allPasal, query);
+        _searchResult = SearchUtils.search(_allPasal, query);
+        _filteredPasal = _searchResult!.pasal;
       }
     });
   }
@@ -338,11 +342,17 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                       itemCount: _filteredPasal.length,
                       itemBuilder: (context, index) {
-                        return PasalCard(
+                        final card = PasalCard(
                           pasal: _filteredPasal[index],
                           contextList: _filteredPasal,
                           searchQuery: _searchController.text,
                           showUULabel: false,
+                        );
+                        final header = SearchTierHeader.before(_searchResult, _filteredPasal, index);
+                        if (header == null) return card;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [header, card],
                         );
                       },
                     ),

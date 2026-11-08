@@ -408,5 +408,125 @@ void main() {
         expect(nomorSnippet.text.startsWith('(1) Setiap orang'), isTrue);
       });
     });
+
+    group('multi-UU search', () {
+      PasalModel make(String uu, String nomor, String isi, {String? penjelasan}) => PasalModel(
+        id: '$uu-$nomor',
+        undangUndangId: uu,
+        nomor: nomor,
+        isi: isi,
+        penjelasan: penjelasan,
+      );
+
+      final kode = {'uu-kuhp': 'KUHP', 'uu-kuhper': 'KUHPER'};
+      final list = [
+        make('uu-kuhp', '1', '(1) Tidak ada satu perbuatan pun yang dapat dikenai sanksi pidana.'),
+        make('uu-kuhp', '362', 'Setiap Orang yang menggunakan gelar tanpa hak.'),
+        make('uu-kuhper', '362', 'Pengadilan dapat menunjuk wali.'),
+        make('uu-kuhper', '1365', 'Tiap perbuatan melanggar hukum yang membawa kerugian kepada orang lain.'),
+        make(
+          'uu-kuhper',
+          '594',
+          'Hak milik atas benda diperoleh karena pengambilan untuk dimiliki.',
+          penjelasan: 'Catatan CariPasal: UU 5/1960 mencabut Buku II sepanjang mengenai tanah dan perkawinan.',
+        ),
+        make('uu-kuhper', '26', 'Undang-undang memandang perkawinan hanya dalam hubungan perdata.'),
+      ];
+
+      test('pasal number with ayat goes straight to that pasal', () {
+        final result = SearchUtils.rankPasal(list, 'pasal 1 ayat (1)');
+        expect(result.map((p) => p.id), ['uu-kuhp-1']);
+      });
+
+      test('naming the UU narrows a number search to that UU', () {
+        final result = SearchUtils.rankPasal(list, 'pasal 362 kuhper', kodeByUuId: kode);
+        expect(result.map((p) => p.id), ['uu-kuhper-362']);
+      });
+
+      test('UU alias (kuhperdata) works and does not match KUHP by prefix', () {
+        final result = SearchUtils.rankPasal(list, 'pasal 1365 kuhperdata', kodeByUuId: kode);
+        expect(result.map((p) => p.id), ['uu-kuhper-1365']);
+        final kuhp = SearchUtils.rankPasal(list, '362 kuhp', kodeByUuId: kode);
+        expect(kuhp.map((p) => p.id), ['uu-kuhp-362']);
+      });
+
+      test('Catatan CariPasal lines in penjelasan are not searched', () {
+        final result = SearchUtils.rankPasal(list, 'perkawinan');
+        expect(result.map((p) => p.id), ['uu-kuhper-26']);
+      });
+
+      test('correctQuery fixes a typo to a word that exists in the data', () {
+        expect(SearchUtils.correctQuery('perbuatn melanggar hukum', list), 'perbuatan melanggar hukum');
+        expect(SearchUtils.correctQuery('perkawinan', list), isNull);
+        expect(SearchUtils.correctQuery('pasal 1365', list), isNull);
+      });
+    });
+
+    group('match tiers', () {
+      PasalModel make(String id, String isi) => PasalModel(id: id, undangUndangId: 'uu-1', nomor: id, isi: isi);
+
+      final phrase = make('1', 'Setiap orang yang melakukan pencemaran nama baik dipidana.');
+      final scattered = make('2', 'Pencemaran terhadap nama seseorang yang baik dan terhormat.');
+      final partial = make('3', 'Perbaikan nama jalan dilakukan oleh pemerintah daerah.');
+
+      test('exact phrase first, then all words scattered, then partial', () {
+        final result = SearchUtils.search([partial, scattered, phrase], 'pencemaran nama baik');
+        expect(result.pasal.map((p) => p.id), ['1', '2', '3']);
+        expect(result.tierOf(phrase), SearchMatchTier.phrase);
+        expect(result.tierOf(scattered), SearchMatchTier.allWords);
+        // "baik" di dalam "perbaikan" bukan awal kata, jadi tidak dihitung sebagai kata yang cocok.
+        expect(result.tierOf(partial), SearchMatchTier.partial);
+        expect(result.hasPhraseMatch, isTrue);
+      });
+
+      test('reports when no pasal has the exact phrase', () {
+        final result = SearchUtils.search([partial, scattered], 'pencemaran nama baik');
+        expect(result.isTiered, isTrue);
+        expect(result.hasPhraseMatch, isFalse);
+        expect(result.pasal.first.id, '2');
+      });
+
+      test('partial matches are dropped once five pasal match every word', () {
+        final strong = [for (var i = 10; i < 15; i++) make('$i', 'Pencemaran nama orang yang baik.')];
+        final result = SearchUtils.search([...strong, partial], 'pencemaran nama baik');
+        expect(result.pasal.map((p) => p.id), isNot(contains('3')));
+      });
+
+      test('single-word queries are not grouped', () {
+        final result = SearchUtils.search([phrase, scattered], 'pencemaran');
+        expect(result.isTiered, isFalse);
+        expect(result.tierOf(phrase), isNull);
+      });
+
+      test('alias of the whole query forms its own group after the exact phrase', () {
+        SearchUtils.applyServerAliases([
+          {'term': 'kumpul kebo', 'aliases': ['hidup bersama sebagai suami istri']},
+        ]);
+        final alias = make('20', 'Setiap Orang yang melakukan hidup bersama sebagai suami istri di luar perkawinan.');
+        final other = make('21', 'Perkumpulan dapat menjadi wali.');
+        final result = SearchUtils.search([other, alias], 'kumpul kebo');
+        expect(result.pasal.first.id, '20');
+        expect(result.tierOf(alias), SearchMatchTier.alias);
+        expect(result.aliases, ['hidup bersama sebagai suami istri']);
+        // "kumpul" hanya potongan dari "Perkumpulan", bukan kata yang cocok.
+        expect(result.pasal.map((p) => p.id), ['20']);
+      });
+
+      test('pasal matching only inside other words is not returned', () {
+        final inside = make('30', 'Pidana perbaikan.');
+        final result = SearchUtils.search([inside], 'baik xyz');
+        expect(result.pasal, isEmpty);
+      });
+    });
+
+    group('correctQuery after data reload', () {
+      test('vocabulary is rebuilt when pasal content changes but the count stays the same', () {
+        final before = [PasalModel(id: '1', undangUndangId: 'uu-1', nomor: '1', isi: 'Pencurian barang milik orang lain.')];
+        expect(SearchUtils.correctQuery('pencarian', before), 'pencurian');
+
+        final after = [PasalModel(id: '1', undangUndangId: 'uu-1', nomor: '1', isi: 'Pencarian dan pencurian barang.')];
+        expect(SearchUtils.correctQuery('pencarian', after), isNull);
+      });
+    });
   });
 }
