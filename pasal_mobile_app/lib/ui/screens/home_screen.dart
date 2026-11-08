@@ -8,6 +8,7 @@ import '../../models/undang_undang_model.dart';
 import '../../core/services/query_service.dart';
 import '../../core/utils/search_utils.dart';
 import '../widgets/pasal_card.dart';
+import '../widgets/search_tier_header.dart';
 import '../widgets/main_layout.dart';
 import '../widgets/keyword_bottom_sheet.dart';
 import '../widgets/pagination_footer.dart';
@@ -45,6 +46,9 @@ class _HomeScreenState extends State<HomeScreen> {
   /// ejaan ([_correctedQuery]) kalau kueri asli tidak menemukan apa pun.
   String _effectiveQuery = '';
   String? _correctedQuery;
+
+  /// Hasil pencarian terakhir, untuk judul kelompok (frasa persis, semua kata, sebagian).
+  SearchResult? _searchResult;
   Timer? _searchDebounce;
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
@@ -174,10 +178,11 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     String? corrected;
+    SearchResult? result;
     if (_searchQuery.isNotEmpty) {
       final kodeByUuId = {for (final uu in _listUU) uu.id: uu.kode};
       final filtered = source;
-      source = SearchUtils.rankPasal(filtered, _searchQuery, kodeByUuId: kodeByUuId);
+      result = SearchUtils.search(filtered, _searchQuery, kodeByUuId: kodeByUuId);
       // Ada kata yang tidak muncul di data sama sekali (biasanya salah ketik): pakai
       // kueri hasil koreksi kalau kueri itu menemukan pasal.
       final candidate = SearchUtils.correctQuery(
@@ -186,12 +191,13 @@ class _HomeScreenState extends State<HomeScreen> {
         kodeByUuId: kodeByUuId,
       );
       if (candidate != null) {
-        final correctedResults = SearchUtils.rankPasal(filtered, candidate, kodeByUuId: kodeByUuId);
-        if (correctedResults.isNotEmpty) {
+        final correctedResult = SearchUtils.search(filtered, candidate, kodeByUuId: kodeByUuId);
+        if (correctedResult.pasal.isNotEmpty) {
           corrected = candidate;
-          source = correctedResults;
+          result = correctedResult;
         }
       }
+      source = result.pasal;
     }
 
     if (_selectedKeywords.isNotEmpty) {
@@ -219,6 +225,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       _correctedQuery = corrected;
+      _searchResult = result;
       _effectiveQuery = corrected ?? _searchQuery;
       _filteredData = source;
       _totalPages = (_filteredData.length / _itemsPerPage).ceil();
@@ -515,6 +522,14 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: isDark ? Colors.grey[400] : Colors.grey[700],
                             ),
                           ),
+                        if (SearchTierHeader.noPhraseNotice(_searchResult) case final notice?)
+                          Text(
+                            notice,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark ? Colors.grey[400] : Colors.grey[700],
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -686,12 +701,18 @@ class _HomeScreenState extends State<HomeScreen> {
                               : const SizedBox(height: 20);
                         }
 
-                        return PasalCard(
+                        final card = PasalCard(
                           pasal: _paginatedData[index],
                           contextList: _filteredData,
                           searchQuery: _effectiveQuery,
                           showUULabel: true,
                           matchedKeywords: const [],
+                        );
+                        final header = SearchTierHeader.before(_searchResult, _paginatedData, index);
+                        if (header == null) return card;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [header, card],
                         );
                       },
                     ),

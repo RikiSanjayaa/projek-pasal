@@ -461,5 +461,54 @@ void main() {
         expect(SearchUtils.correctQuery('pasal 1365', list), isNull);
       });
     });
+
+    group('match tiers', () {
+      PasalModel make(String id, String isi) => PasalModel(id: id, undangUndangId: 'uu-1', nomor: id, isi: isi);
+
+      final phrase = make('1', 'Setiap orang yang melakukan pencemaran nama baik dipidana.');
+      final scattered = make('2', 'Pencemaran terhadap nama seseorang yang baik dan terhormat.');
+      final partial = make('3', 'Perbaikan nama jalan dilakukan oleh pemerintah daerah.');
+
+      test('exact phrase first, then all words scattered, then partial', () {
+        final result = SearchUtils.search([partial, scattered, phrase], 'pencemaran nama baik');
+        expect(result.pasal.map((p) => p.id), ['1', '2', '3']);
+        expect(result.tierOf(phrase), SearchMatchTier.phrase);
+        expect(result.tierOf(scattered), SearchMatchTier.allWords);
+        // "baik" di dalam "perbaikan" bukan awal kata, jadi tidak dihitung sebagai kata yang cocok.
+        expect(result.tierOf(partial), SearchMatchTier.partial);
+        expect(result.hasPhraseMatch, isTrue);
+      });
+
+      test('reports when no pasal has the exact phrase', () {
+        final result = SearchUtils.search([partial, scattered], 'pencemaran nama baik');
+        expect(result.isTiered, isTrue);
+        expect(result.hasPhraseMatch, isFalse);
+        expect(result.pasal.first.id, '2');
+      });
+
+      test('partial matches are dropped once five pasal match every word', () {
+        final strong = [for (var i = 10; i < 15; i++) make('$i', 'Pencemaran nama orang yang baik.')];
+        final result = SearchUtils.search([...strong, partial], 'pencemaran nama baik');
+        expect(result.pasal.map((p) => p.id), isNot(contains('3')));
+      });
+
+      test('single-word queries are not grouped', () {
+        final result = SearchUtils.search([phrase, scattered], 'pencemaran');
+        expect(result.isTiered, isFalse);
+        expect(result.tierOf(phrase), isNull);
+      });
+
+      test('alias of the whole query forms its own group after the exact phrase', () {
+        SearchUtils.applyServerAliases([
+          {'term': 'kumpul kebo', 'aliases': ['hidup bersama sebagai suami istri']},
+        ]);
+        final alias = make('20', 'Setiap Orang yang melakukan hidup bersama sebagai suami istri di luar perkawinan.');
+        final other = make('21', 'Perkumpulan dapat menjadi wali.');
+        final result = SearchUtils.search([other, alias], 'kumpul kebo');
+        expect(result.pasal.first.id, '20');
+        expect(result.tierOf(alias), SearchMatchTier.alias);
+        expect(result.aliases, ['hidup bersama sebagai suami istri']);
+      });
+    });
   });
 }
