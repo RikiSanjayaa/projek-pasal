@@ -52,6 +52,7 @@ dependencies:
   showcaseview: ^5.0.1
   pdf: ^3.11.1
   printing: ^5.13.2
+  web: ^1.1.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
