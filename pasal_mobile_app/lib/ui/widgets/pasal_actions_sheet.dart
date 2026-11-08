@@ -36,8 +36,10 @@ Future<void> showPasalActionsSheet(
     ),
     builder: (sheetContext) {
       final muted = isDark ? Colors.grey[400] : Colors.grey[600];
+      // Lembar bawah dibatasi tingginya oleh showModalBottomSheet; di layar landscape daftar aksi
+      // bisa lebih tinggi dari itu, jadi daftar dibuat bisa digulir sementara pegangan dan judul tetap.
       return Padding(
-        padding: const EdgeInsets.fromLTRB(8, 10, 8, 16),
+        padding: const EdgeInsets.fromLTRB(8, 10, 8, 0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -59,22 +61,30 @@ Future<void> showPasalActionsSheet(
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: muted),
               ),
             ),
-            for (final action in actions)
-              ListTile(
-                leading: Icon(action.icon, color: action.color ?? AppColors.textPrimary(isDark)),
-                title: Text(
-                  action.label,
-                  style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark)),
-                ),
-                subtitle: action.description == null
-                    ? null
-                    : Text(action.description!, style: TextStyle(fontSize: 12, color: muted)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  action.onTap();
-                },
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsets.only(bottom: 16),
+                children: [
+                  for (final action in actions)
+                    ListTile(
+                      leading: Icon(action.icon, color: action.color ?? AppColors.textPrimary(isDark)),
+                      title: Text(
+                        action.label,
+                        style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark)),
+                      ),
+                      subtitle: action.description == null
+                          ? null
+                          : Text(action.description!, style: TextStyle(fontSize: 12, color: muted)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      onTap: () {
+                        Navigator.of(sheetContext).pop();
+                        action.onTap();
+                      },
+                    ),
+                ],
               ),
+            ),
           ],
         ),
       );
