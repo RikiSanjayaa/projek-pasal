@@ -20,12 +20,22 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="CariPasal Mobile">
 
-  <!-- Warna chrome browser/status bar Android. Nilai media query dipakai
-       sebelum Flutter berjalan; setelah itu theme_color_sync.dart memperbarui
-       semua tag ini mengikuti tema aplikasi (terang/gelap). -->
-  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F7FA">
-  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121212">
+  <!-- Status bar Android. Satu meta tanpa `media` disengaja: Firefox Android
+       memakai meta pertama yang ditemukan, dan media query membuat warnanya
+       mengikuti OS, bukan tema app. Nilai awal dipilih dari preferensi OS;
+       setelah Flutter jalan, theme_color_sync.dart memperbaruinya mengikuti
+       tema app (mode Sistem/Terang/Gelap). Manifest sengaja tidak memuat
+       `theme_color` karena Firefox memprioritaskannya di atas meta. -->
   <meta name="theme-color" content="#F5F7FA">
+  <script>
+    (function () {
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta && window.matchMedia &&
+          window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        meta.setAttribute('content', '#121212');
+      }
+    })();
+  </script>
   <meta name="color-scheme" content="light dark">
 
   <!-- iOS meta tags & icons -->
@@ -54,6 +64,6 @@
   </style>
 </head>
 <body>
-  <script src="flutter_bootstrap.js?v=15f8f1c-1794144531" async></script>
+  <script src="flutter_bootstrap.js?v=af5f868-1794148007" async></script>
 </body>
 </html>
