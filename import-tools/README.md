@@ -2,7 +2,8 @@
 
 Pipeline yang mengambil teks undang-undang dari datahukum.com, membandingkannya dengan PDF resmi
 BPK (kalau ada), lalu menghasilkan file Bulk Import (xlsx) atau JSON untuk impor dari dashboard admin.
-UU yang terdaftar ada di `laws/` (satu file per UU): `kuhp-2023`, `kuhap-2025`, `kuhper-1847`.
+UU yang terdaftar ada di `laws/` (satu file per UU): `kuhp-2023`, `kuhap-2025`, `kuhper-1847`,
+`uu-ite-2008`.
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -r import-tools/requirements.txt
@@ -48,9 +49,27 @@ sebagai `dihapus` lalu `disisipkan`. Sheet `riwayat` berisi semua versi itu.
 - `LawConfig.amendments`: daftar perubahan yang ditulis tangan (KUHP: UU 1/2026 beserta PDF resminya
   di `Amendment.pdf`/`pdf_url`, diunduh sekali ke cache).
 - `LawConfig.amendments_from_html=True`: daftar perubahan dibaca dari bagian "Riwayat" HTML
-  datahukum, termasuk daftar pasal yang dicabut. Dipakai KUHPerdata (47 Staatsblad dan UU 23/2006).
-  Metadata yang salah di sumber dikoreksi lewat `amendment_overrides`. Tanggal yang tahunnya tidak
-  cocok dengan nomor peraturan diabaikan dan dicetak sebagai peringatan.
+  datahukum, termasuk daftar pasal yang dicabut. Dipakai KUHPerdata (47 Staatsblad dan UU 23/2006) dan
+  UU ITE (UU 19/2016, UU 1/2024, UU 1/2026). Metadata yang salah di sumber, juga `pdf`/`pdf_url`
+  pembanding, diisi lewat `amendment_overrides`. Tanggal yang tahunnya meleset lebih dari lima tahun
+  dari nomor peraturan diabaikan dan dicetak sebagai peringatan.
+- `Amendment.derive`: rumusan suatu perubahan disusun sendiri dari versi sebelumnya, bukan dari HTML.
+  Dipakai untuk UU 1/2026 di UU ITE: versi datahukum mencabut ayat yang tidak disebut dan memakai
+  kembali rumusan lama, sedangkan UU 1/2026 sendiri hanya memuat daftar ayat yang dicabut dan tabel
+  ancaman pidana baru (lihat `laws/uu_ite_2008.py`).
+
+## Perbaikan teks
+
+- `text_fixes`: typo pada rumusan yang berlaku (isi/penjelasan pasal).
+- `version_fixes`: typo pada satu versi rumusan (per class versi). Dijalankan saat versi itu dibaca,
+  jadi ikut ke riwayat dan ke versi turunan `derive`.
+- `ocr_fixes`: pola regex untuk artefak OCR yang berulang di seluruh UU (contoh huruf "ı", catatan
+  kaki "TAMBAHAN LEMBARAN NEGARA ...").
+
+Semua entri berhenti dengan error kalau teks salahnya tidak ditemukan lagi, supaya daftar tidak basi.
+
+HTML datahukum ada dua format: yang baru menautkan pasal ke judul bab/bagian lewat `data-parent-id`,
+yang lama (UU ITE) menyarangkan `div.pasal` di dalam `div.bab`. Keduanya didukung.
 
 ## Tanpa PDF resmi (KUHPerdata)
 

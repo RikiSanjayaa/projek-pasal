@@ -1,8 +1,8 @@
 # CariPasal
 
 CariPasal adalah aplikasi untuk mencari dan membaca pasal hukum Indonesia. Saat ini isinya KUHP
-nasional (UU 1/2023, sudah termasuk perubahan UU 1/2026), KUHAP baru (UU 20/2025), dan KUHPerdata
-(Burgerlijk Wetboek, terjemahan tidak resmi).
+nasional (UU 1/2023, sudah termasuk perubahan UU 1/2026), KUHAP baru (UU 20/2025), KUHPerdata
+(Burgerlijk Wetboek, terjemahan tidak resmi), dan UU ITE (UU 11/2008 beserta perubahannya).
 Admin mengelola dan memverifikasi teks lewat dashboard web. Pengguna membaca pasal lewat aplikasi
 mobile yang tetap bisa dipakai tanpa internet setelah data diunduh.
 
@@ -68,9 +68,13 @@ projek-pasal/
   verifikasi. Perubahan oleh 47 Staatsblad (1872-1939) dan UU 23/2006 tersimpan sebagai riwayat; 64
   pasal tercatat "Dicabut.". Bab yang tidak berlaku lagi karena UU Perkawinan, UUPA, UU Hak Tanggungan,
   atau dianggap tidak berlaku oleh SEMA 3/1963 diberi baris "Catatan CariPasal:" di penjelasan.
-- Teks diambil dari datahukum.com (bukan sumber resmi). Untuk KUHP dan KUHAP, pipeline membandingkannya
-  dengan PDF resmi JDIH BPK dan mencatat koreksi typo per pasal. KUHPerdata tidak punya naskah resmi
-  berbahasa Indonesia, jadi teksnya dipindai untuk sisa teks penerjemah dan kata asing.
+- **UU ITE**: 63 pasal, dikonsolidasi dengan UU 19/2016, UU 1/2024, dan UU 1/2026. Pasal 30, 36, 46,
+  dan 47 serta beberapa ayat Pasal 27, 28, 31, 45, 45A, dan 51 tercatat "Dicabut."; ancaman denda
+  Pasal 45, 45A, 45B, dan 48-51 memakai kategori sesuai lampiran UU 1/2026. Putusan MK 20/PUU-XIV/2016,
+  105/PUU-XXII/2024, dan 115/PUU-XXII/2024 dicatat di penjelasan pasal terkait.
+- Teks diambil dari datahukum.com (bukan sumber resmi). Untuk KUHP, KUHAP, dan UU ITE, pipeline
+  membandingkannya dengan PDF resmi JDIH BPK dan mencatat koreksi typo per pasal. KUHPerdata tidak punya
+  naskah resmi berbahasa Indonesia, jadi teksnya dipindai untuk sisa teks penerjemah dan kata asing.
 - Keyword otomatis dari judul bab/bagian, dan pasal terkait otomatis dari rujukan di isi pasal
   ("sebagaimana dimaksud dalam Pasal 66 ayat (1)").
 

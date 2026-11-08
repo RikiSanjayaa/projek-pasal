@@ -23,6 +23,7 @@ import urllib.request
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Callable
 
 import pymupdf
 from bs4 import BeautifulSoup, Tag
@@ -73,6 +74,10 @@ class Amendment:
     pdf_url: str = ""
     # Pasal yang dihapus/dicabut peraturan ini. Teks lama di HTML untuk pasal ini diabaikan.
     repealed: tuple[str, ...] = ()
+    # Rumusan dibuat sendiri dari versi sebelumnya, bukan dari HTML (dipakai kalau versi datahukum
+    # untuk peraturan ini keliru): derive(nomor, isi_sebelumnya) -> isi baru, atau None (tidak berubah).
+    # Penjelasan ikut versi sebelumnya.
+    derive: Callable[[str, str], str | None] | None = None
 
 
 CATATAN_PREFIX = "Catatan CariPasal: "
@@ -126,6 +131,12 @@ class LawConfig:
     mk_notes: dict[str, str] = field(default_factory=dict)
     # (kolom, teks salah, teks benar); skrip berhenti kalau teks salahnya tidak ditemukan.
     text_fixes: dict[str, list[tuple[str, str, str]]] = field(default_factory=dict)
+    # Perbaikan pada satu versi rumusan (class versi, kolom, teks salah, teks benar), diterapkan saat
+    # versi itu dibaca dari HTML, jadi ikut ke riwayat dan ke versi turunan (`Amendment.derive`).
+    version_fixes: dict[str, list[tuple[str, str, str, str]]] = field(default_factory=dict)
+    # Pembersihan karakter/artefak OCR khusus UU ini (regex, pengganti), dijalankan pada setiap versi
+    # sebelum `version_fixes`. Contoh: "ı" -> "i", catatan kaki "TAMBAHAN LEMBARAN NEGARA ...".
+    ocr_fixes: tuple[tuple[str, str], ...] = ()
     # Pasal berskor rendah atau bertanda QA yang sudah dicek manual.
     manual_review: dict[str, str] = field(default_factory=dict)
     # Bab yang isinya memetakan pasal UU lain, jadi nomornya tidak dibaca sebagai rujukan internal.
@@ -451,9 +462,23 @@ def build_versions(
 ) -> list[Version]:
     """Semua rumusan pasal dari yang tertua ke yang berlaku, tanpa versi yang tidak mengubah teks."""
     versions: list[Version] = []
-    isi = render_section(content, config.doc_class, clean)
+
+    def render(doc_class: str) -> tuple[str, str]:
+        """Rumusan versi `doc_class` dari HTML, setelah `ocr_fixes` dan `version_fixes` untuk versi itu."""
+        fields = {"isi": render_section(content, doc_class, clean), "penjelasan": render_section(explanation, doc_class, clean)}
+        for pattern, replacement in config.ocr_fixes:
+            fields = {column: re.sub(pattern, replacement, text).strip() for column, text in fields.items()}
+        for fix_class, column, wrong, right in config.version_fixes.get(nomor, []):
+            if fix_class != doc_class:
+                continue
+            if wrong not in fields[column]:
+                raise PipelineError(f"version_fixes Pasal {nomor} ({doc_class}): {wrong!r} tidak ditemukan di {column}")
+            fields[column] = fields[column].replace(wrong, right)
+        return fields["isi"], fields["penjelasan"]
+
+    isi, penjelasan = render(config.doc_class)
     if isi:
-        versions.append(Version(ORIGINAL, None, isi, render_section(explanation, config.doc_class, clean)))
+        versions.append(Version(ORIGINAL, None, isi, penjelasan))
     for amendment in amendments:
         previous = versions[-1] if versions else None
         if nomor_key(nomor) in {nomor_key(n) for n in amendment.repealed}:
@@ -461,8 +486,14 @@ def build_versions(
             if previous is not None and previous.status != REPEALED:
                 versions.append(Version(REPEALED, amendment, config.repealed_text, ""))
             continue
-        isi = render_section(content, amendment.doc_class, clean)
-        penjelasan = render_section(explanation, amendment.doc_class, clean)
+        if amendment.derive is not None:
+            if previous is None or previous.status == REPEALED:
+                continue
+            derived = amendment.derive(nomor, previous.isi)
+            if derived is not None and letters(derived) != letters(previous.isi):
+                versions.append(Version(CHANGED, amendment, derived, previous.penjelasan))
+            continue
+        isi, penjelasan = render(amendment.doc_class)
         if not isi and not penjelasan:
             continue
         if previous is None or previous.status == REPEALED:
@@ -520,18 +551,25 @@ def parse_datahukum(
     known_classes = {config.doc_class} | {a.doc_class for a in amendments}
     clean = TextCleaner(body.get_text(" "))
     structure = soup.select("div.buku, div.bab, div.bag, div.para")
-    headings = {tag["data-node-id"]: parse_heading(tag) for tag in structure}
-    parents = {tag["data-node-id"]: tag.get("data-parent-id", "") for tag in structure}
+    # Format HTML baru menautkan pasal ke judulnya lewat data-parent-id; format lama (contoh UU ITE)
+    # menyarangkan div.pasal di dalam div.bab/div.bag.
+    linked = all(tag.has_attr("data-node-id") for tag in structure)
+    headings = {tag["data-node-id"]: parse_heading(tag) for tag in structure} if linked else {}
+    parents = {tag["data-node-id"]: tag.get("data-parent-id", "") for tag in structure} if linked else {}
+    nested = {id(tag): parse_heading(tag) for tag in structure} if not linked else {}
 
     records: list[PasalRecord] = []
     for pasal in soup.select("div.pasal"):
         nomor = squash(pasal.select_one(".pasal-header h5").get_text(" ")).removeprefix("Pasal ").strip()
 
         chain = []
-        parent = pasal.get("data-parent-id", "")
-        while parent:
-            chain.append(headings[parent])
-            parent = parents.get(parent, "")
+        if linked:
+            parent = pasal.get("data-parent-id", "")
+            while parent:
+                chain.append(headings[parent])
+                parent = parents.get(parent, "")
+        else:
+            chain = [nested[id(tag)] for tag in pasal.parents if id(tag) in nested]
         chain.reverse()
         if not chain and records:
             # Pasal sisipan (contoh 599A) tidak punya induk di HTML; ikut struktur pasal sebelumnya.
@@ -1114,6 +1152,13 @@ ARTEFACT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
 DUTCH_WORDS = re.compile(r"\b(?:het|een|niet|zijn|wordt|worden|ingevolge|bij|tot|ook|naar|deze|welke|zal|kan)\b")
 
 
+def without_notes(penjelasan: str) -> str:
+    """Penjelasan tanpa baris catatan yang ditambahkan pipeline (Putusan MK, Catatan CariPasal)."""
+    return "\n".join(
+        line for line in penjelasan.split("\n") if not line.startswith(("Catatan Putusan MK", CATATAN_PREFIX))
+    ).strip()
+
+
 def artefact_findings(record: PasalRecord) -> list[str]:
     """Temuan QA di semua versi rumusan pasal (versi lama juga tampil di riwayat)."""
     found: list[str] = []
@@ -1146,9 +1191,16 @@ class OfficialPdfs:
 
 
 def official_pdfs(config: LawConfig) -> OfficialPdfs:
-    """Unduh (atau ambil dari cache) PDF resmi pembanding. Daftar perubahan dari HTML tidak punya PDF."""
+    """Unduh (atau ambil dari cache) PDF resmi pembanding: UU utama dan UU perubahan yang punya PDF
+    (dari `amendments`, atau `pdf`/`pdf_url` di `amendment_overrides` untuk daftar dari HTML)."""
     body = fetch(config.bpk_pdf_url, CACHE_DIR / f"bpk_{config.slug}.pdf") if config.bpk_pdf_url else None
-    amendments = {a.doc_class: fetch(a.pdf_url, CACHE_DIR / a.pdf) for a in config.amendments if a.pdf}
+    sources = {a.doc_class: (a.pdf, a.pdf_url) for a in config.amendments if a.pdf}
+    sources |= {
+        doc_class: (fields["pdf"], fields["pdf_url"])
+        for doc_class, fields in config.amendment_overrides.items()
+        if fields.get("pdf")
+    }
+    amendments = {doc_class: fetch(url, CACHE_DIR / name) for doc_class, (name, url) in sources.items()}
     return OfficialPdfs(body, amendments)
 
 
@@ -1190,15 +1242,22 @@ def analyze(config: LawConfig, html_path: Path, pdfs: OfficialPdfs, lenient: boo
                 if record.original_penjelasan
                 else 1.0
             )
-        folded = amended_folded.get(latest.doc_class) if latest else None
-        if folded is not None and (record.status.startswith("isi") or record.status == INSERTED):
-            amended = fragment_coverage(record.isi, folded)
-            notes.append(f"Isi versi {latest.label} cocok {amended:.0%} dengan PDF {latest.label}")
-            isi_cov = amended if isi_cov is None else min(isi_cov, amended)
-        if folded is not None and ("penjelasan" in record.status or (record.status == INSERTED and record.penjelasan)):
-            amended = fragment_coverage(record.penjelasan, folded)
-            notes.append(f"Penjelasan versi {latest.label} cocok {amended:.0%} dengan PDF {latest.label}")
-            pj_cov = amended if pj_cov is None else min(pj_cov, amended)
+        # Setiap versi perubahan yang punya PDF resmi dicek ke PDF itu (catatan MK/CariPasal dibuang).
+        for index, version in enumerate(record.versions):
+            folded = amended_folded.get(version.amendment.doc_class) if version.amendment else None
+            if folded is None or version.status not in (CHANGED, INSERTED):
+                continue
+            before = record.versions[index - 1] if index and version.status == CHANGED else None
+            label = version.amendment.label
+            if before is None or letters(version.isi) != letters(before.isi):
+                amended = fragment_coverage(version.isi, folded)
+                notes.append(f"Isi versi {label} cocok {amended:.0%} dengan PDF {label}")
+                isi_cov = amended if isi_cov is None else min(isi_cov, amended)
+            penjelasan = without_notes(version.penjelasan)
+            if penjelasan and (before is None or letters(penjelasan) != letters(without_notes(before.penjelasan))):
+                amended = fragment_coverage(penjelasan, folded)
+                notes.append(f"Penjelasan versi {label} cocok {amended:.0%} dengan PDF {label}")
+                pj_cov = amended if pj_cov is None else min(pj_cov, amended)
 
         empty_item = bool(re.search(r"^(\(\d+[a-z]?\)|[a-z]\.|\d+\.)$", record.isi + "\n" + record.penjelasan, re.M))
         if empty_item:
