@@ -1,4 +1,5 @@
-FROM php:8.3-cli-alpine
+ARG PHP_BASE_IMAGE=php:8.3.36-cli-alpine3.24
+FROM ${PHP_BASE_IMAGE}
 
 WORKDIR /var/www/html
 
