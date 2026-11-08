@@ -7,7 +7,7 @@ File ini dibuat oleh `import-tools/prepare_import.py kuhap-2025`. Jangan edit ma
 
 - `01_kuhap_2025_ready.xlsx`
   - sheet `import`: 369 pasal (Pasal 1 sampai 369).
-  - sheet `review`: hasil pembandingan tiap pasal dengan PDF resmi.
+  - sheet `review`: hasil pemeriksaan tiap pasal dengan PDF resmi.
 - `judul` diisi judul paragraf/bagian/bab tempat pasal berada (tidak ada judul per pasal).
 - `penjelasan` diisi penjelasan resmi.
 - `keywords` (topik): judul bab dan bagian tempat pasal berada. Tidak perlu diisi manual.
@@ -44,7 +44,7 @@ di ujung baris). Pasal berskor rendah yang sudah dicek manual tercatat di `manua
 2. Menu `Import Data` → mode XLSX → pilih UU `KUHAP` → upload file xlsx.
 3. Import memakai `updateOrCreate` per (UU, nomor): pasal yang sudah ada akan ditimpa,
    pasal lain di UU yang sama tidak dihapus.
-4. Nomor disimpan tanpa awalan "Pasal" (contoh `1`, `599A`). Data lama dengan nomor `Pasal 1`
+4. Nomor disimpan tanpa awalan "Pasal" (contoh `1`, `369`). Data lama dengan nomor `Pasal 1`
    tidak akan tertimpa dan jadi dobel, jadi hapus dulu pasal lama sebelum import.
 5. Pasal baru atau yang teksnya berubah masuk menu `Verifikasi` dengan status "Perlu verifikasi".
    Admin mencocokkan tiap pasal dengan naskah resmi lalu menekan "Verifikasi". Sebelum itu pasal

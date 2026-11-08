@@ -1,8 +1,8 @@
 # import-tools
 
 Pipeline yang mengambil teks undang-undang dari datahukum.com, membandingkannya dengan PDF resmi
-BPK, lalu menghasilkan file Bulk Import (xlsx) atau JSON untuk impor dari dashboard admin.
-UU yang terdaftar ada di `laws/` (satu file per UU).
+BPK (kalau ada), lalu menghasilkan file Bulk Import (xlsx) atau JSON untuk impor dari dashboard admin.
+UU yang terdaftar ada di `laws/` (satu file per UU): `kuhp-2023`, `kuhap-2025`, `kuhper-1847`.
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -r import-tools/requirements.txt
@@ -30,19 +30,39 @@ python prepare_import.py kuhp-2023 --json out.json --previous-count 625
 - `--previous-count N` (opsional) menggagalkan run kalau jumlah pasal turun lebih dari 2% dari `N`.
 - Berhasil: exit 0, `out.json` berisi `slug, kode, source_url, fetched_at, html_sha256,
   unknown_versions, metrics.pasal_count, warnings, pasal[]`. Setiap pasal membawa `judul, isi,
-  penjelasan, keywords[], links[], riwayat[], status_teks, review`. Teksnya persis sama dengan
-  sheet `import` dan `riwayat` di xlsx.
+  penjelasan, catatan, keywords[], links[], riwayat[], status_teks, review`. Teksnya persis sama dengan
+  sheet `import` dan `riwayat` di xlsx. `catatan` null kalau UU tidak punya catatan redaksi.
 - Gagal struktural (div `batangtubuh`/`pasal` hilang, HTML tidak terbaca, unduhan gagal, jumlah
   pasal anjlok): exit 2 dan `out.json` berisi `{"error": "<pesan Indonesia>"}`.
-- `unknown_versions`: class versi (`uu-...`) di HTML yang bukan versi asli maupun versi perubahan di
-  konfigurasi UU. Kalau tidak kosong, ada UU perubahan baru yang belum dikonfigurasi.
+- `unknown_versions`: class versi di HTML yang bukan versi asli maupun versi perubahan yang dikenal.
+  Kalau tidak kosong, ada peraturan perubahan baru yang belum dikonfigurasi.
 - `warnings`: di mode xlsx, entri `text_fixes` yang tidak cocok lagi menghentikan skrip. Di mode JSON
   perbaikan itu dilewati dan dicatat sebagai peringatan `{nomor, message}`.
 
-## PDF UU perubahan
+## Perubahan dan riwayat
 
-`Amendment.pdf` adalah nama file di folder cache dan `Amendment.pdf_url` sumber unduhannya (BPK).
-PDF diunduh sekali kalau belum ada, seperti PDF BPK utama.
+Setiap pasal disusun sebagai daftar versi, dari rumusan asli sampai rumusan yang berlaku. Versi
+yang teksnya sama dengan versi sebelumnya dilewati; pasal yang dicabut lalu ditambahkan lagi tercatat
+sebagai `dihapus` lalu `disisipkan`. Sheet `riwayat` berisi semua versi itu.
+
+- `LawConfig.amendments`: daftar perubahan yang ditulis tangan (KUHP: UU 1/2026 beserta PDF resminya
+  di `Amendment.pdf`/`pdf_url`, diunduh sekali ke cache).
+- `LawConfig.amendments_from_html=True`: daftar perubahan dibaca dari bagian "Riwayat" HTML
+  datahukum, termasuk daftar pasal yang dicabut. Dipakai KUHPerdata (47 Staatsblad dan UU 23/2006).
+  Metadata yang salah di sumber dikoreksi lewat `amendment_overrides`. Tanggal yang tahunnya tidak
+  cocok dengan nomor peraturan diabaikan dan dicetak sebagai peringatan.
+
+## Tanpa PDF resmi (KUHPerdata)
+
+KUHPerdata hanya punya naskah resmi berbahasa Belanda, jadi `bpk_pdf_url` kosong dan kolom
+`cakupan_*_pdf` di sheet `review` kosong. Semua versi rumusan dipindai untuk sisa teks penerjemah
+atau chatbot, kata ganti percakapan, kata Belanda yang tertinggal, dan judul pasal di dalam isi;
+temuannya ditandai `perlu_review`. Perbaikan per pasal ada di `text_fixes`.
+
+`catatan_rules` mengisi kolom `catatan` (catatan CariPasal, bukan bagian naskah) per buku/bab atau
+per pasal, misalnya bab perkawinan yang tidak berlaku lagi sejauh telah diatur UU 1/1974. Aturan
+yang tidak mengenai satu pasal pun menghentikan skrip. `catatan_teks` dicatat di README hasil dan
+diisi admin di menu Undang-Undang (kolom "Catatan status teks").
 
 ## Docker
 

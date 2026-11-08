@@ -7,13 +7,13 @@ File ini dibuat oleh `import-tools/prepare_import.py kuhp-2023`. Jangan edit man
 
 - `01_kuhp_2023_konsolidasi_ready.xlsx`
   - sheet `import`: 625 pasal (Pasal 1 sampai 624 ditambah Pasal 599A).
-  - sheet `review`: hasil pembandingan tiap pasal dengan PDF resmi.
+  - sheet `review`: hasil pemeriksaan tiap pasal dengan PDF resmi.
 - Teks sudah dikonsolidasi dengan UU 1/2026 (Penyesuaian Pidana):
   - isi pasal diubah (48): 3, 8, 37, 49, 66, 69, 76, 77, 82, 83, 84, 90, 91, 95, 99, 100, 101, 103, 120, 121, 132, 136, 196, 243, 251, 263, 264, 281, 295, 296, 297, 299, 300, 332, 375, 398, 407, 455, 457, 473, 521, 597, 605, 606, 609, 610, 613, 622
   - hanya penjelasan diubah (4): 48, 433, 458, 466
   - pasal sisipan (1): 599A
-  - pasal dihapus, isinya "Dihapus." (2): 615, 616
-- Sheet `riwayat` berisi 109 versi untuk pasal di atas: rumusan UU 1/2023 lalu rumusan UU 1/2026, masing-masing dengan link naskah resminya. Import menyimpannya sebagai riwayat pasal (tampil di admin).
+  - pasal dihapus/dicabut, isinya "Dihapus." (2): 615, 616
+- Sheet `riwayat` berisi 109 versi: semua rumusan tiap pasal yang pernah berubah, dari UU 1/2023 sampai rumusan yang berlaku, masing-masing dengan sumber dan link naskah resminya (kalau ada). Import menyimpannya sebagai riwayat pasal.
 - `judul` diisi judul paragraf/bagian/bab tempat pasal berada (tidak ada judul per pasal).
 - `penjelasan` diisi penjelasan resmi.
 - Pasal 220, 237 diberi catatan Putusan MK di kolom penjelasan.
