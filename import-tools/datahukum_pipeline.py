@@ -13,9 +13,12 @@ sama yang disebut dalam isi pasal. Tidak ada kolom yang perlu diisi manual.
 from __future__ import annotations
 
 import difflib
+import hashlib
 import html
+import os
 import re
 import urllib.request
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -26,7 +29,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CACHE_DIR = Path(__file__).resolve().parent / ".cache"
+CACHE_DIR = Path(os.environ.get("IMPORT_CACHE_DIR") or Path(__file__).resolve().parent / ".cache")
 SCRIPT = "import-tools/prepare_import.py"
 
 REVIEW_COVERAGE_THRESHOLD = 0.90
@@ -58,7 +61,8 @@ class Amendment:
     doc_class: str  # class section versi perubahan di HTML, contoh "uu-12026"
     label: str  # contoh "UU 1/2026"
     title: str  # contoh "UU 1/2026 (Penyesuaian Pidana)"
-    pdf: Path  # PDF resmi UU perubahan, pembanding rumusan baru
+    pdf: str  # nama file PDF resmi UU perubahan di folder cache, pembanding rumusan baru
+    pdf_url: str  # sumber unduhan PDF itu (BPK); diunduh ke cache kalau belum ada
     full_title: str  # contoh "Undang-Undang Nomor 1 Tahun 2026 tentang Penyesuaian Pidana"
     official_url: str  # halaman naskah resmi (JDIH BPK)
     diundangkan: str  # YYYY-MM-DD
@@ -118,14 +122,25 @@ class PasalRecord:
     notes: list[str] = field(default_factory=list)
 
 
+class PipelineError(Exception):
+    """Kegagalan struktural; pesannya (bahasa Indonesia) ditampilkan ke admin di mode --json."""
+
+
+def download(url: str, path: Path) -> Path:
+    """Unduh `url` ke `path` lewat file sementara, jadi unduhan yang gagal tidak merusak cache."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (CariPasal import tool)"})
+    partial = path.with_name(path.name + ".part")
+    with urllib.request.urlopen(request, timeout=120) as response:
+        partial.write_bytes(response.read())
+    os.replace(partial, path)
+    return path
+
+
 def fetch(url: str, path: Path) -> Path:
     if path.exists() and path.stat().st_size > 0:
         return path
-    path.parent.mkdir(parents=True, exist_ok=True)
-    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (CariPasal import tool)"})
-    with urllib.request.urlopen(request, timeout=120) as response:
-        path.write_bytes(response.read())
-    return path
+    return download(url, path)
 
 
 def squash(text: str) -> str:
@@ -293,9 +308,37 @@ def parse_heading(tag: Tag) -> Heading:
     return Heading(kind=kind, label=label.strip(), title=title.strip())
 
 
-def parse_datahukum(path: Path, config: LawConfig) -> list[PasalRecord]:
+def version_classes(parent: Tag | None) -> set[str]:
+    """Class versi (`uu-...`) dari section anak langsung `parent`."""
+    if parent is None:
+        return set()
+    return {
+        name
+        for section in parent.find_all("section", recursive=False)
+        for name in section.get("class", [])
+        if name.startswith("uu-")
+    }
+
+
+def parse_datahukum(
+    path: Path,
+    config: LawConfig,
+    warnings: list[dict[str, str]] | None = None,
+    unknown_versions: set[str] | None = None,
+) -> list[PasalRecord]:
+    """Baca HTML datahukum.
+
+    Tanpa `warnings`, typo di `text_fixes` yang tidak cocok adalah error (mode xlsx). Dengan `warnings`
+    (mode --json) perbaikan itu dilewati dan dicatat. `unknown_versions` diisi class versi yang bukan
+    versi asli maupun versi perubahan di konfigurasi.
+    """
     soup = BeautifulSoup(path.read_text(encoding="utf-8"), "html.parser")
-    clean = TextCleaner(soup.select_one("div.batangtubuh").get_text(" "))
+    body = soup.select_one("div.batangtubuh")
+    if body is None:
+        raise PipelineError("Struktur HTML datahukum.com berubah: elemen div.batangtubuh tidak ditemukan.")
+    if not soup.select("div.pasal"):
+        raise PipelineError("Struktur HTML datahukum.com berubah: tidak ada elemen div.pasal.")
+    clean = TextCleaner(body.get_text(" "))
     structure = soup.select("div.buku, div.bab, div.bag, div.para")
     headings = {tag["data-node-id"]: parse_heading(tag) for tag in structure}
     parents = {tag["data-node-id"]: tag.get("data-parent-id", "") for tag in structure}
@@ -317,6 +360,9 @@ def parse_datahukum(path: Path, config: LawConfig) -> list[PasalRecord]:
 
         content = pasal.select_one("div.content")
         explanation = pasal.select_one("div.penjelasan")
+        if unknown_versions is not None:
+            known_classes = {config.doc_class, amended_class}
+            unknown_versions |= (version_classes(content) | version_classes(explanation)) - known_classes
         isi_original = render_section(content, config.doc_class, clean)
         isi_amended = render_section(content, amended_class, clean)
         pj_original = render_section(explanation, config.doc_class, clean)
@@ -348,6 +394,9 @@ def parse_datahukum(path: Path, config: LawConfig) -> list[PasalRecord]:
             }
         for column, wrong, right in config.text_fixes.get(nomor, []):
             if wrong not in fields[column]:
+                if warnings is not None:
+                    warnings.append({"nomor": nomor, "message": f"Perbaikan teks ({column}) dilewati karena {wrong!r} tidak ditemukan; periksa text_fixes."})
+                    continue
                 raise ValueError(f"text_fixes Pasal {nomor}: {wrong!r} tidak ditemukan di {column}")
             fields[column] = fields[column].replace(wrong, right)
         penjelasan = fields["penjelasan"]
@@ -731,7 +780,7 @@ def write_readme(config: LawConfig, records: list[PasalRecord], review: list[dic
             f"{config.label} lalu rumusan {config.amendment.label}, masing-masing dengan link naskah resminya. "
             "Import menyimpannya sebagai riwayat pasal (tampil di admin).\n"
         )
-        sources.append(f"3. Rumusan perubahan {config.amendment.title}: `{config.amendment.pdf.name}`")
+        sources.append(f"3. Rumusan perubahan {config.amendment.title}: `{config.amendment.pdf}`")
     mk = ""
     if config.mk_notes:
         mk = f"- Pasal {', '.join(config.mk_notes)} diberi catatan Putusan MK di kolom penjelasan.\n"
@@ -804,20 +853,34 @@ Catatan tampilan: normalizer import menggabungkan anak kalimat penutup setelah d
     (config.output_dir / "README_IMPORT.md").write_text(readme, encoding="utf-8")
 
 
-def run(config: LawConfig) -> None:
-    html_path = fetch(config.datahukum_url, CACHE_DIR / f"datahukum_{config.slug}.html")
-    pdf_path = fetch(config.bpk_pdf_url, CACHE_DIR / f"bpk_{config.slug}.pdf")
-    if config.amendment and not config.amendment.pdf.exists():
-        raise FileNotFoundError(f"PDF {config.amendment.label} tidak ditemukan: {config.amendment.pdf}")
+def amendment_pdf_path(config: LawConfig) -> Path | None:
+    if config.amendment is None:
+        return None
+    return fetch(config.amendment.pdf_url, CACHE_DIR / config.amendment.pdf)
 
-    records = parse_datahukum(html_path, config)
+
+@dataclass
+class Analysis:
+    records: list[PasalRecord]
+    review: list[dict[str, object]]
+    body: PdfIndex
+    explanation: PdfIndex
+    warnings: list[dict[str, str]]
+    unknown_versions: list[str]
+
+
+def analyze(config: LawConfig, html_path: Path, pdf_path: Path, amendment_pdf: Path | None, lenient: bool) -> Analysis:
+    """Parse HTML, bandingkan dengan PDF resmi. `lenient` = mode --json (typo basi jadi peringatan)."""
+    warnings: list[dict[str, str]] = []
+    unknown: set[str] = set()
+    records = parse_datahukum(html_path, config, warnings if lenient else None, unknown)
     original_order = [r.nomor for r in records if r.status != INSERTED]
 
     pages = [page.get_text() for page in pymupdf.open(pdf_path)]
     body = index_pdf(pages[config.body_pages[0] - 1 : config.body_pages[1]], original_order)
     explanation = index_pdf(pages[config.penjelasan_pages[0] - 1 : config.penjelasan_pages[1]], original_order)
     amendment_folded = (
-        ocr_fold("\n".join(page.get_text() for page in pymupdf.open(config.amendment.pdf))) if config.amendment else ""
+        ocr_fold("\n".join(page.get_text() for page in pymupdf.open(amendment_pdf))) if amendment_pdf else ""
     )
     heading_fixes = fix_heading_placement(records, body)
 
@@ -868,6 +931,14 @@ def run(config: LawConfig) -> None:
                 "catatan": "; ".join(notes),
             }
         )
+    return Analysis(records, review, body, explanation, warnings, sorted(unknown))
+
+
+def run(config: LawConfig) -> None:
+    html_path = fetch(config.datahukum_url, CACHE_DIR / f"datahukum_{config.slug}.html")
+    pdf_path = fetch(config.bpk_pdf_url, CACHE_DIR / f"bpk_{config.slug}.pdf")
+    analysis = analyze(config, html_path, pdf_path, amendment_pdf_path(config), lenient=False)
+    records, review, body, explanation = analysis.records, analysis.review, analysis.body, analysis.explanation
 
     links = write_xlsx(config, records, review)
     write_readme(config, records, review, links)
@@ -876,3 +947,80 @@ def run(config: LawConfig) -> None:
     print(f"[{config.slug}] output: {config.output_dir}")
     print(f"[{config.slug}] pasal: {len(records)} | link: {sum(len(v) for v in links.values())} | perlu review: {flagged}")
     print(f"[{config.slug}] header pasal terbaca di PDF: batang tubuh {len(body.starts)}, penjelasan {len(explanation.starts)}")
+
+
+def run_json(config: LawConfig, refresh: bool, previous_count: int | None = None) -> dict[str, object]:
+    """Hasil pipeline sebagai dict JSON (Contract A). Tidak menulis xlsx/README."""
+    html_path = CACHE_DIR / f"datahukum_{config.slug}.html"
+    try:
+        if refresh or not (html_path.exists() and html_path.stat().st_size > 0):
+            # Unduhan baru dipakai (dan menggantikan cache) hanya kalau lolos parse.
+            candidate = download(config.datahukum_url, html_path.with_name(html_path.name + ".new"))
+        else:
+            candidate = html_path
+        pdf_path = fetch(config.bpk_pdf_url, CACHE_DIR / f"bpk_{config.slug}.pdf")
+        amendment_pdf = amendment_pdf_path(config)
+    except OSError as error:
+        raise PipelineError(f"Gagal mengunduh sumber: {error}") from error
+
+    try:
+        analysis = analyze(config, candidate, pdf_path, amendment_pdf, lenient=True)
+        if previous_count and len(analysis.records) < previous_count * 0.98:
+            raise PipelineError(
+                f"Jumlah pasal turun dari {previous_count} menjadi {len(analysis.records)} (lebih dari 2%); "
+                "kemungkinan struktur sumber berubah."
+            )
+    except PipelineError:
+        if candidate != html_path:
+            candidate.unlink(missing_ok=True)
+        raise
+    except Exception as error:
+        if candidate != html_path:
+            candidate.unlink(missing_ok=True)
+        raise PipelineError(f"Gagal membaca sumber: {type(error).__name__}: {error}") from error
+    if candidate != html_path:
+        os.replace(candidate, html_path)
+
+    records = analysis.records
+    known = {record.nomor for record in records}
+    history: dict[str, list[dict[str, object]]] = {}
+    for row in history_rows(config, records):
+        history.setdefault(str(row["nomor"]), []).append({k: v for k, v in row.items() if k != "nomor"})
+    reviews = {str(row["nomor"]): row for row in analysis.review}
+
+    pasal = []
+    for record in records:
+        review = reviews[record.nomor]
+        pasal.append(
+            {
+                "nomor": record.nomor,
+                "judul": judul_for(record),
+                "isi": record.isi,
+                "penjelasan": record.penjelasan,
+                "keywords": [k for k in keywords_for(record).split(", ") if k],
+                "links": [
+                    {"targetUU": config.kode, "targetNomor": nomor, "keterangan": f"Disebut dalam isi: {phrase}"}
+                    for nomor, phrase in cross_references(record, known, config)
+                ],
+                "riwayat": history.get(record.nomor, []),
+                "status_teks": record.status,
+                "review": {
+                    "cakupan_isi_pdf": review["cakupan_isi_pdf"],
+                    "cakupan_penjelasan_pdf": review["cakupan_penjelasan_pdf"],
+                    "perlu_review": review["perlu_review"] == "ya",
+                    "catatan": review["catatan"],
+                },
+            }
+        )
+    fetched = datetime.fromtimestamp(html_path.stat().st_mtime, tz=timezone.utc)
+    return {
+        "slug": config.slug,
+        "kode": config.kode,
+        "source_url": config.datahukum_url,
+        "fetched_at": fetched.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "html_sha256": hashlib.sha256(html_path.read_bytes()).hexdigest(),
+        "unknown_versions": analysis.unknown_versions,
+        "metrics": {"pasal_count": len(records)},
+        "warnings": analysis.warnings,
+        "pasal": pasal,
+    }

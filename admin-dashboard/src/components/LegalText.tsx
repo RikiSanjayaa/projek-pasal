@@ -1,39 +1,76 @@
-import { Box, Stack, Text, type MantineSize } from '@mantine/core'
+import { useMemo, type ReactNode } from 'react'
+import { Box, Text, type MantineSize } from '@mantine/core'
+import { normalizeLegalChunk, parseLegalStructure, type Range } from '@/lib/legal-text'
 
-// Penjelasan memakai label seperti "Ayat (1)", "Huruf a", "Angka 3" di awal baris.
-const SECTION_LABEL = /^((?:Ayat|Huruf|Angka)\s+(?:\(\d+[a-z]?\)|[a-z]{1,2}\b|\d+[a-z]?\b))\s*(.*)$/i
-// Butir daftar huruf/angka: "a. ...", "1. ...", "1) ...".
-const LIST_ITEM = /^(?:[a-z]{1,2}|\d+[a-z]?)[.)]\s/i
+const INDENT = '1.6em'
+const MARKER_WIDTH = '2.1em'
+
+interface LegalLayoutProps {
+  /** Teks yang sudah dinormalisasi; rentang blok menunjuk ke string ini. */
+  text: string
+  size?: MantineSize
+  /** Cara menampilkan satu rentang teks (polos atau dengan tanda perubahan). */
+  renderRange: (range: Range) => ReactNode
+}
+
+function joinRanges(ranges: Range[], renderRange: (range: Range) => ReactNode) {
+  return ranges.map((range, index) => (
+    <span key={index}>
+      {index > 0 && ' '}
+      {renderRange(range)}
+    </span>
+  ))
+}
+
+/** Tata letak isi/penjelasan seperti di aplikasi mobile: penanda di kolom sendiri, butir menjorok, label sub-judul. */
+export function LegalLayout({ text, size = 'md', renderRange }: LegalLayoutProps) {
+  const blocks = useMemo(() => parseLegalStructure(text), [text])
+
+  return (
+    <Box style={{ lineHeight: 1.7 }}>
+      {blocks.map((block, index) => {
+        const first = index === 0
+        if (block.type === 'label') {
+          return (
+            <Text key={index} size="sm" fw={700} c="var(--mantine-primary-color-filled)" mt={first ? 0 : 'md'} mb={2}>
+              {renderRange(block.label)}
+            </Text>
+          )
+        }
+        if (block.type === 'paragraph') {
+          return (
+            <Text key={index} size={size} lh="inherit" mt={first ? 0 : 8}>
+              {joinRanges(block.text, renderRange)}
+            </Text>
+          )
+        }
+        return (
+          <Box
+            key={index}
+            mt={first ? 0 : block.level === 0 ? 10 : 6}
+            pl={`calc(${INDENT} * ${block.level})`}
+            style={{ display: 'flex', alignItems: 'baseline' }}
+          >
+            <Text size={size} lh="inherit" style={{ flex: `0 0 ${MARKER_WIDTH}`, fontVariantNumeric: 'tabular-nums' }}>
+              {renderRange(block.marker)}
+            </Text>
+            <Text size={size} lh="inherit" style={{ flex: 1, minWidth: 0 }}>
+              {joinRanges(block.text, renderRange)}
+            </Text>
+          </Box>
+        )
+      })}
+    </Box>
+  )
+}
 
 interface LegalTextProps {
   text: string
   size?: MantineSize
 }
 
-/** Isi dan penjelasan pasal dengan format yang sama: ayat rata kiri, butir huruf/angka menjorok, label penjelasan tebal. */
+/** Isi atau penjelasan pasal dengan format yang sama seperti di aplikasi mobile. */
 export function LegalText({ text, size = 'md' }: LegalTextProps) {
-  const lines = text.split('\n').map((line) => line.trim()).filter(Boolean)
-
-  return (
-    <Stack gap={6}>
-      {lines.map((line, index) => {
-        const label = line.match(SECTION_LABEL)
-        if (label) {
-          return (
-            <Box key={index} mt={index === 0 ? 0 : 'xs'}>
-              <Text size="xs" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: 0.4 }}>
-                {label[1]}
-              </Text>
-              {label[2] && <Text size={size}>{label[2]}</Text>}
-            </Box>
-          )
-        }
-        return (
-          <Text key={index} size={size} pl={LIST_ITEM.test(line) ? 'lg' : 0}>
-            {line}
-          </Text>
-        )
-      })}
-    </Stack>
-  )
+  const normalized = useMemo(() => normalizeLegalChunk(text), [text])
+  return <LegalLayout text={normalized} size={size} renderRange={([start, end]) => normalized.slice(start, end)} />
 }

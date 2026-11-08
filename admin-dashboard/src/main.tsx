@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Badge, Card, MantineProvider, Tooltip, createTheme } from '@mantine/core'
+import { Badge, Card, MantineProvider, Notification, Tooltip, createTheme } from '@mantine/core'
 import { DatesProvider } from '@mantine/dates'
 import { ModalsProvider } from '@mantine/modals'
 import { Notifications } from '@mantine/notifications'
@@ -31,6 +31,8 @@ const queryClient = new QueryClient({
 const theme = createTheme({
   primaryColor: 'blue',
   defaultRadius: 'md',
+  // Tanpa bayangan: pemisahan cukup lewat border (dropdown, modal, notifikasi, kartu).
+  shadows: { xs: 'none', sm: 'none', md: 'none', lg: 'none', xl: 'none' },
   fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
   headings: {
     fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
@@ -42,6 +44,7 @@ const theme = createTheme({
     }),
     Card: Card.extend({ defaultProps: { withBorder: true, radius: 'md' } }),
     Tooltip: Tooltip.extend({ defaultProps: { withArrow: true } }),
+    Notification: Notification.extend({ defaultProps: { withBorder: true } }),
   },
 })
 

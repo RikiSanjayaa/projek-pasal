@@ -35,4 +35,19 @@ return [
         ],
     ],
 
+    /*
+    | Import on-demand dari datahukum.com lewat dashboard admin (issue #29).
+    | Mati secara default; staging menyalakannya dengan DATAHUKUM_FETCH_ENABLED=true.
+    */
+    'datahukum' => [
+        'enabled' => (bool) env('DATAHUKUM_FETCH_ENABLED', false),
+        'python' => env('IMPORT_PYTHON', '/opt/import-venv/bin/python'),
+        'tools_dir' => env('IMPORT_TOOLS_DIR', '/opt/import-tools'),
+        'cache_dir' => env('IMPORT_CACHE_DIR', storage_path('app/import-cache')),
+        // Batas waktu satu run (detik). Harus lebih kecil dari --timeout queue worker (900).
+        'timeout' => (int) env('IMPORT_TIMEOUT', 840),
+        // Jarak minimum antar run untuk UU yang sama (menit), supaya datahukum tidak dibebani.
+        'min_interval_minutes' => (int) env('IMPORT_MIN_INTERVAL_MINUTES', 10),
+    ],
+
 ];

@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\AdminUserController;
+use App\Http\Controllers\Api\ImportRunController;
+use App\Http\Controllers\Api\ImportSourceController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
@@ -71,6 +73,14 @@ Route::middleware(['auth:sanctum', 'role:admin,super_admin'])->prefix('admin')->
         Route::patch('/admin-users/{id}/deactivate', [AdminUserController::class, 'deactivate']);
         Route::delete('/admin-users/{id}/devices/{deviceId}', [AdminUserController::class, 'deleteDevice']);
     });
+
+    Route::get('/import-sources', [ImportSourceController::class, 'index']);
+    Route::post('/import-sources/{slug}/runs', [ImportSourceController::class, 'startRun']);
+    Route::get('/import-runs/{id}', [ImportRunController::class, 'show']);
+    Route::get('/import-runs/{id}/items', [ImportRunController::class, 'items']);
+    Route::patch('/import-runs/{id}/items', [ImportRunController::class, 'updateItems']);
+    Route::post('/import-runs/{id}/apply', [ImportRunController::class, 'apply']);
+    Route::post('/import-runs/{id}/discard', [ImportRunController::class, 'discard']);
 
     Route::get('/audit-logs', [AuditLogController::class, 'index']);
     Route::get('/audit-logs/{id}', [AuditLogController::class, 'show']);

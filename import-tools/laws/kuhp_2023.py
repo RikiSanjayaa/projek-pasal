@@ -1,6 +1,6 @@
 """KUHP: UU Nomor 1 Tahun 2023, dikonsolidasi dengan UU Nomor 1 Tahun 2026 (Penyesuaian Pidana)."""
 
-from datahukum_pipeline import ROOT, Amendment, LawConfig
+from datahukum_pipeline import Amendment, LawConfig
 
 # Putusan MK yang tercatat di JDIH BPK untuk UU 1/2023 (dicek 2026-11-07).
 MK_NOTES = {
@@ -17,7 +17,7 @@ MK_NOTES = {
 }
 
 # Typo per pasal: (kolom, teks salah, teks benar). Setiap entri sudah dicek ke PDF resmi
-# (BPK untuk rumusan 2023, uu-nomor-1-tahun-2026.pdf untuk rumusan perubahan). Skrip berhenti
+# (BPK untuk rumusan 2023, PDF UU 1/2026 untuk rumusan perubahan). Skrip berhenti
 # kalau teks salahnya tidak ditemukan, supaya daftar ini tidak diam-diam basi.
 TEXT_FIXES: dict[str, list[tuple[str, str, str]]] = {
     "3": [("isi", "sesuai dengan Tingkat pemeriksaan", "sesuai dengan tingkat pemeriksaan")],
@@ -95,7 +95,8 @@ CONFIG = LawConfig(
         doc_class="uu-12026",
         label="UU 1/2026",
         title="UU 1/2026 (Penyesuaian Pidana)",
-        pdf=ROOT / "uu-nomor-1-tahun-2026.pdf",
+        pdf="uu-nomor-1-tahun-2026.pdf",
+        pdf_url="https://peraturan.bpk.go.id/Download/400929/UU%20Nomor%201%20Tahun%202026.pdf",
         full_title="Undang-Undang Nomor 1 Tahun 2026 tentang Penyesuaian Pidana",
         official_url="https://peraturan.bpk.go.id/Details/337869/uu-no-1-tahun-2026",
         diundangkan="2026-01-12",

@@ -1,4 +1,5 @@
-FROM php:8.3-cli-alpine
+ARG PHP_BASE_IMAGE=php:8.3.36-cli-alpine3.24
+FROM ${PHP_BASE_IMAGE}
 
 WORKDIR /var/www/html
 
@@ -19,6 +20,20 @@ RUN apk add --no-cache \
     pdo_pgsql \
     pgsql \
     zip
+
+# Pipeline impor datahukum (import-tools/) untuk job antrean di dashboard admin.
+# Folder itu ada di luar build context (./backend-laravel), jadi dikirim sebagai build context
+# tambahan bernama `import-tools`: compose memakai `additional_contexts` (docker-compose.yml);
+# tanpa compose: docker build --build-context import-tools=../import-tools backend-laravel
+RUN apk add --no-cache python3 py3-pip
+COPY --from=import-tools requirements.txt /opt/import-tools/requirements.txt
+RUN python3 -m venv /opt/import-venv \
+    && /opt/import-venv/bin/pip install --no-cache-dir --prefer-binary -r /opt/import-tools/requirements.txt
+COPY --from=import-tools prepare_import.py datahukum_pipeline.py /opt/import-tools/
+COPY --from=import-tools laws /opt/import-tools/laws
+ENV IMPORT_TOOLS_DIR=/opt/import-tools \
+    IMPORT_PYTHON=/opt/import-venv/bin/python \
+    IMPORT_CACHE_DIR=/var/www/html/storage/app/import-cache
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
