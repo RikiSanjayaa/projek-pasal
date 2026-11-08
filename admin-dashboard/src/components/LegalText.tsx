@@ -1,39 +1,53 @@
-import { Box, Stack, Text, type MantineSize } from '@mantine/core'
-
-// Penjelasan memakai label seperti "Ayat (1)", "Huruf a", "Angka 3" di awal baris.
-const SECTION_LABEL = /^((?:Ayat|Huruf|Angka)\s+(?:\(\d+[a-z]?\)|[a-z]{1,2}\b|\d+[a-z]?\b))\s*(.*)$/i
-// Butir daftar huruf/angka: "a. ...", "1. ...", "1) ...".
-const LIST_ITEM = /^(?:[a-z]{1,2}|\d+[a-z]?)[.)]\s/i
+import { useMemo } from 'react'
+import { Box, Text, type MantineSize } from '@mantine/core'
+import { parseLegalText } from '@/lib/legal-text'
 
 interface LegalTextProps {
   text: string
   size?: MantineSize
 }
 
-/** Isi dan penjelasan pasal dengan format yang sama: ayat rata kiri, butir huruf/angka menjorok, label penjelasan tebal. */
+const INDENT = '1.6em'
+const MARKER_WIDTH = '2.1em'
+
+/** Isi dan penjelasan pasal dengan tata letak yang sama seperti di aplikasi mobile. */
 export function LegalText({ text, size = 'md' }: LegalTextProps) {
-  const lines = text.split('\n').map((line) => line.trim()).filter(Boolean)
+  const blocks = useMemo(() => parseLegalText(text), [text])
 
   return (
-    <Stack gap={6}>
-      {lines.map((line, index) => {
-        const label = line.match(SECTION_LABEL)
-        if (label) {
+    <Box style={{ lineHeight: 1.7 }}>
+      {blocks.map((block, index) => {
+        const first = index === 0
+        if (block.type === 'label') {
           return (
-            <Box key={index} mt={index === 0 ? 0 : 'xs'}>
-              <Text size="xs" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: 0.4 }}>
-                {label[1]}
-              </Text>
-              {label[2] && <Text size={size}>{label[2]}</Text>}
-            </Box>
+            <Text key={index} size="sm" fw={700} c="var(--mantine-primary-color-filled)" mt={first ? 0 : 'md'} mb={2}>
+              {block.text}
+            </Text>
+          )
+        }
+        if (block.type === 'paragraph') {
+          return (
+            <Text key={index} size={size} lh="inherit" mt={first ? 0 : 8}>
+              {block.text}
+            </Text>
           )
         }
         return (
-          <Text key={index} size={size} pl={LIST_ITEM.test(line) ? 'lg' : 0}>
-            {line}
-          </Text>
+          <Box
+            key={index}
+            mt={first ? 0 : block.level === 0 ? 10 : 6}
+            pl={`calc(${INDENT} * ${block.level})`}
+            style={{ display: 'flex', alignItems: 'baseline' }}
+          >
+            <Text size={size} lh="inherit" style={{ flex: `0 0 ${MARKER_WIDTH}`, fontVariantNumeric: 'tabular-nums' }}>
+              {block.marker}
+            </Text>
+            <Text size={size} lh="inherit" style={{ flex: 1, minWidth: 0 }}>
+              {block.text}
+            </Text>
+          </Box>
         )
       })}
-    </Stack>
+    </Box>
   )
 }
