@@ -12,6 +12,12 @@ use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
+/**
+ * Import xlsx/rows dari dashboard. Sengaja TIDAK mengisi pasal.source_snapshot: snapshot adalah
+ * "isi terakhir yang diterapkan dari sumber datahukum" dan hanya diperbarui oleh ImportApplyService.
+ * Import xlsx tidak lewat perbandingan 3 arah, jadi hasilnya muncul sebagai "diedit admin" pada
+ * pengecekan datahukum berikutnya bila berbeda dari snapshot.
+ */
 class ImportPasalService
 {
     public function importRows(array $rows, ?string $adminId = null): array
@@ -177,7 +183,7 @@ class ImportPasalService
     }
 
     /** Simpan ulang seluruh riwayat satu pasal. Mengembalikan jumlah versi yang disimpan. */
-    private function replaceHistory(Pasal $pasal, array $versions): int
+    public function replaceHistory(Pasal $pasal, array $versions): int
     {
         $rows = [];
         foreach (array_values($versions) as $position => $version) {

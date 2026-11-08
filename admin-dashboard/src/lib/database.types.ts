@@ -414,3 +414,101 @@ export interface UserWithDevices extends User {
 export interface AdminWithDevices extends AdminUser {
   admin_devices: AdminDevice[]
 }
+
+// --- Import dari datahukum.com (Sumber Data) ---
+
+export type ImportRunStatus = 'queued' | 'running' | 'ready' | 'applied' | 'failed' | 'discarded' | 'needs_config'
+
+export type ImportItemCategory = 'baru' | 'berubah' | 'konflik' | 'diedit_admin' | 'hilang' | 'riwayat'
+
+export interface ImportUserRef {
+  id: string
+  nama: string
+}
+
+export interface ImportRunSummary {
+  counts: Record<ImportItemCategory, number>
+  selected: number
+  total_pasal: number
+  large_change: boolean
+  pdf_flagged: number
+  /** Diisi setelah Terapkan. */
+  applied?: { diterapkan: number; dilewati: number; diakui: number; link_ditambah: number; link_dihapus: number }
+}
+
+export interface ImportRun {
+  id: string
+  slug: string
+  undang_undang_id: string | null
+  status: ImportRunStatus
+  requested_by: ImportUserRef | null
+  applied_by: ImportUserRef | null
+  created_at: string
+  started_at: string | null
+  finished_at: string | null
+  applied_at: string | null
+  error: string | null
+  warnings: { nomor: string; message: string }[]
+  unknown_versions: string[]
+  summary: ImportRunSummary | null
+  source_url: string | null
+  html_sha256: string | null
+}
+
+export interface ImportSource {
+  slug: string
+  kode: string
+  nama: string
+  label: string
+  datahukum_url: string
+  undang_undang_id: string | null
+  last_run: ImportRun | null
+  active_run: ImportRun | null
+}
+
+export interface ImportSourcesResponse {
+  enabled: boolean
+  sources: ImportSource[]
+}
+
+export interface ImportSnap {
+  judul: string | null
+  isi: string | null
+  penjelasan: string | null
+  keywords: string[]
+}
+
+export interface ImportRiwayatRow {
+  urutan: number
+  status: string
+  sumber: string
+  judul_sumber: string | null
+  diundangkan: string | null
+  berlaku_sejak: string | null
+  naskah_resmi: string | null
+  isi: string
+  penjelasan: string | null
+}
+
+export interface ImportItemReview {
+  cakupan_isi_pdf?: number | null
+  cakupan_penjelasan_pdf?: number | null
+  perlu_review?: boolean
+  catatan?: string | null
+}
+
+export interface ImportItem {
+  id: string
+  nomor: string
+  pasal_id: string | null
+  category: ImportItemCategory
+  selected: boolean
+  base: ImportSnap | null
+  current: ImportSnap | null
+  incoming: ImportSnap | null
+  incoming_riwayat: ImportRiwayatRow[] | null
+  current_riwayat: ImportRiwayatRow[] | null
+  review: ImportItemReview | null
+  notes: string[]
+  applied_at: string | null
+}

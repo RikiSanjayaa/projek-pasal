@@ -23,12 +23,36 @@ services:
     container_name: caripasal-backend-local
     build:
       context: ./backend-laravel
+      additional_contexts:
+        import-tools: ./import-tools
     env_file:
       - path: ./backend-laravel/.env.docker
         required: false
     restart: unless-stopped
     ports:
       - "127.0.0.1:${BACKEND_PORT}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Menjalankan job antrean (impor datahukum). Hanya worker yang menjalankan pipeline Python dan
+  # menulis ke cache impor, jadi hanya worker yang memasang volume cache; backend cuma membaca DB.
+  queue-worker:
+    container_name: caripasal-queue-worker-local
+    build:
+      context: ./backend-laravel
+      additional_contexts:
+        import-tools: ./import-tools
+    command: ["php", "artisan", "queue:work", "--queue=imports,default", "--tries=1", "--timeout=900", "--sleep=3"]
+    env_file:
+      - path: ./backend-laravel/.env.docker
+        required: false
+    environment:
+      RUN_MIGRATIONS: "false"
+      RUN_SEEDERS: "false"
+    restart: unless-stopped
+    volumes:
+      - caripasal_import_cache:/var/www/html/storage/app/import-cache
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,3 +81,4 @@ services:
 
 volumes:
   caripasal_postgres_data:
+  caripasal_import_cache:

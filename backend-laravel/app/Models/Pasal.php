@@ -32,13 +32,21 @@ class Pasal extends Model
         'verification_status',
         'verified_by',
         'verified_at',
+        'source_snapshot',
         'created_by',
         'updated_by',
     ];
 
+    /**
+     * source_snapshot hanya untuk perbandingan import; tidak ikut respons API maupun sync mobile.
+     * Hanya import datahukum (ApplyImportRun) yang mengisinya, import xlsx tidak menyentuhnya.
+     */
+    protected $hidden = ['source_snapshot'];
+
     protected function casts(): array
     {
         return [
+            'source_snapshot' => 'array',
             'is_active' => 'boolean',
             'verified_at' => 'datetime',
         ];

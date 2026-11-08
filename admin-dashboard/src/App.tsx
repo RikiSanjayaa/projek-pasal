@@ -19,6 +19,8 @@ const PasalDetailPage = lazy(() => import('./pages/pasal/PasalDetailPage').then(
 const VerificationQueuePage = lazy(() => import('./pages/pasal/VerificationQueuePage').then((module) => ({ default: module.VerificationQueuePage })))
 const UndangUndangListPage = lazy(() => import('./pages/undang-undang/UndangUndangListPage').then((module) => ({ default: module.UndangUndangListPage })))
 const BulkImportPage = lazy(() => import('./pages/BulkImportPage').then((module) => ({ default: module.BulkImportPage })))
+const ImportSourcesPage = lazy(() => import('./pages/ImportSourcesPage').then((module) => ({ default: module.ImportSourcesPage })))
+const ImportRunPage = lazy(() => import('./pages/ImportRunPage').then((module) => ({ default: module.ImportRunPage })))
 const AuditLogPage = lazy(() => import('./pages/AuditLogPage').then((module) => ({ default: module.AuditLogPage })))
 const AuditLogDetailPage = lazy(() => import('./pages/AuditLogDetailPage').then((module) => ({ default: module.AuditLogDetailPage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((module) => ({ default: module.NotFoundPage })))
@@ -83,6 +85,8 @@ function App() {
           <Route path="verifikasi" element={<VerificationQueuePage />} />
           <Route path="undang-undang" element={<UndangUndangListPage />} />
           <Route path="bulk-import" element={<BulkImportPage />} />
+          <Route path="sumber-data" element={<ImportSourcesPage />} />
+          <Route path="sumber-data/runs/:id" element={<ImportRunPage />} />
           <Route path="audit-log" element={<WithDataMapping><AuditLogPage /></WithDataMapping>} />
           <Route path="audit-log/:id" element={<WithDataMapping><AuditLogDetailPage /></WithDataMapping>} />
           <Route path="manage-admin" element={<ManageAdminPage />} />
