@@ -46,16 +46,8 @@ class PasalController extends Controller
         if ($search !== '') {
             $this->applySmartSearch($query, $search);
         }
-        $keywords = $request->query('keywords', []);
-        if (is_string($keywords)) {
-            $keywords = array_filter(explode(',', $keywords));
-        }
-        if (is_array($keywords) && count($keywords) > 0) {
-            $query->where(function ($q) use ($keywords) {
-                foreach ($keywords as $keyword) {
-                    $q->orWhereRaw('? = ANY(keywords)', [$keyword]);
-                }
-            });
+        if ($request->filled('bab')) {
+            $query->where('bab', (string) $request->query('bab'));
         }
 
         $sort = (string) $request->query('sort', 'nomor');
@@ -95,17 +87,18 @@ class PasalController extends Controller
         );
     }
 
-    /** Semua keyword/topik yang dipakai pasal aktif, untuk pilihan filter di admin. */
-    public function keywords(): JsonResponse
+    /** Semua bab yang dipakai pasal aktif, untuk pilihan filter di admin. */
+    public function bab(): JsonResponse
     {
-        $keywords = DB::table('pasal')
+        $bab = DB::table('pasal')
             ->whereNull('deleted_at')
             ->where('is_active', true)
-            ->selectRaw('DISTINCT unnest(keywords) AS keyword')
-            ->orderBy('keyword')
-            ->pluck('keyword');
+            ->whereNotNull('bab')
+            ->distinct()
+            ->orderBy('bab')
+            ->pluck('bab');
 
-        return response()->json(['keywords' => $keywords]);
+        return response()->json(['bab' => $bab]);
     }
 
     /** Progres verifikasi per undang-undang aktif: total pasal aktif dan yang sudah terverifikasi. */
@@ -318,8 +311,7 @@ class PasalController extends Controller
             'judul' => ['nullable', 'string', 'max:500'],
             'isi' => [$required, 'string'],
             'penjelasan' => ['nullable', 'string'],
-            'keywords' => ['sometimes', 'array'],
-            'keywords.*' => ['string'],
+            'bab' => ['nullable', 'string', 'max:300'],
             'is_active' => ['sometimes', 'boolean'],
         ], [
             'nomor.unique' => 'Nomor pasal ini sudah ada pada undang-undang yang dipilih.',
@@ -340,7 +332,7 @@ class PasalController extends Controller
                 CASE WHEN lower(nomor) = ? THEN 850 ELSE 0 END +
                 CASE WHEN nomor ILIKE ? THEN 420 ELSE 0 END +
                 CASE WHEN judul ILIKE ? THEN 260 ELSE 0 END +
-                CASE WHEN array_to_string(keywords, ' ') ILIKE ? THEN 220 ELSE 0 END +
+                CASE WHEN bab ILIKE ? THEN 220 ELSE 0 END +
                 CASE WHEN isi ILIKE ? THEN 90 ELSE 0 END +
                 CASE WHEN penjelasan ILIKE ? THEN 45 ELSE 0 END +
                 COALESCE(ts_rank_cd(search_vector, websearch_to_tsquery('simple', ?)), 0) * 120
@@ -366,7 +358,7 @@ class PasalController extends Controller
                     ->orWhere('judul', 'ilike', $term)
                     ->orWhere('isi', 'ilike', $term)
                     ->orWhere('penjelasan', 'ilike', $term)
-                    ->orWhereRaw("array_to_string(keywords, ' ') ILIKE ?", [$term]);
+                    ->orWhere('bab', 'ilike', $term);
             }
         });
     }

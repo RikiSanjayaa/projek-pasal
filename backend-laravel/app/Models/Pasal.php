@@ -27,7 +27,7 @@ class Pasal extends Model
         'judul',
         'isi',
         'penjelasan',
-        'keywords',
+        'bab',
         'is_active',
         'verification_status',
         'verified_by',
@@ -77,27 +77,6 @@ class Pasal extends Model
             : "CAST({$column} AS INTEGER)";
 
         return $query->orderByRaw("{$number} {$direction} NULLS LAST")->orderBy($column, $direction);
-    }
-
-    public function getKeywordsAttribute(mixed $value): array
-    {
-        if (is_array($value)) {
-            return $value;
-        }
-
-        $trimmed = trim((string) $value, '{}');
-        if ($trimmed === '') {
-            return [];
-        }
-
-        return array_map(fn ($item) => trim($item, '"'), str_getcsv($trimmed));
-    }
-
-    public function setKeywordsAttribute(mixed $value): void
-    {
-        $items = is_array($value) ? $value : array_filter(array_map('trim', explode(',', (string) $value)));
-        $escaped = array_map(fn ($item) => '"'.str_replace('"', '\"', (string) $item).'"', $items);
-        $this->attributes['keywords'] = '{'.implode(',', $escaped).'}';
     }
 
     public function undangUndang(): BelongsTo

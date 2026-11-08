@@ -142,6 +142,10 @@ export function PasalDetailPage() {
         <Grid.Col span={{ base: 12, md: 8 }}>
           <Card padding="lg" radius="md" withBorder>
             <Stack gap="md">
+              {pasal.bab && (
+                <Text size="sm" c="dimmed">{pasal.bab}</Text>
+              )}
+
               {pasal.judul && (
                 <div>
                   <Text size="sm" c="dimmed" mb={4}>Judul</Text>
@@ -162,19 +166,6 @@ export function PasalDetailPage() {
                   <Box p="md" bg="var(--mantine-color-blue-light)" style={{ borderRadius: 'var(--mantine-radius-md)' }}>
                     <LegalText text={pasal.penjelasan} size="sm" />
                   </Box>
-                </div>
-              )}
-
-              {pasal.keywords && pasal.keywords.length > 0 && (
-                <div>
-                  <Text size="sm" c="dimmed" mb={4}>Keywords</Text>
-                  <Group gap={4}>
-                    {pasal.keywords.map((kw, idx) => (
-                      <Badge key={idx} variant="outline" size="sm">
-                        {kw}
-                      </Badge>
-                    ))}
-                  </Group>
                 </div>
               )}
             </Stack>

@@ -110,10 +110,10 @@ export function XlsxImportGuide() {
                   <Table.Td>Penjelasan dari UU...</Table.Td>
                 </Table.Tr>
                 <Table.Tr>
-                  <Table.Td><Code>keywords</Code></Table.Td>
+                  <Table.Td><Code>bab</Code></Table.Td>
                   <Table.Td><Badge color="gray" size="xs">Opsional</Badge></Table.Td>
-                  <Table.Td>Kata kunci, pisahkan dengan koma</Table.Td>
-                  <Table.Td>pembunuhan, berencana, pidana</Table.Td>
+                  <Table.Td>Bab tempat pasal berada. Kolom tidak ada: bab lama tetap. Sel kosong: bab dihapus.</Table.Td>
+                  <Table.Td>Bab XXIII · Tindak Pidana Pencurian</Table.Td>
                 </Table.Tr>
               </Table.Tbody>
             </Table>
@@ -168,9 +168,6 @@ export function XlsxImportGuide() {
             </List.Item>
             <List.Item icon={<ThemeIcon color="green" size={16} radius="xl"><IconCircleCheck size={12} /></ThemeIcon>}>
               Pastikan tidak ada baris kosong di antara data
-            </List.Item>
-            <List.Item icon={<ThemeIcon color="green" size={16} radius="xl"><IconCircleCheck size={12} /></ThemeIcon>}>
-              Untuk keywords, gunakan koma sebagai pemisah: <Code>keyword1, keyword2, keyword3</Code>
             </List.Item>
             <List.Item icon={<ThemeIcon color="green" size={16} radius="xl"><IconCircleCheck size={12} /></ThemeIcon>}>
               Link bersifat opsional - kosongkan jika pasal tidak perlu dihubungkan ke pasal lain

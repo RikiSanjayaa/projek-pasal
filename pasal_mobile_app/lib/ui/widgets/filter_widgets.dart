@@ -27,12 +27,16 @@ class ActiveFilterChip extends StatelessWidget {
         children: [
           Icon(icon, size: 12, color: Colors.white),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Colors.white,
-              fontWeight: FontWeight.w500,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 11,
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
           const SizedBox(width: 4),
@@ -48,22 +52,22 @@ class ActiveFilterChip extends StatelessWidget {
 
 /// Section showing all currently active filters
 class ActiveFiltersSection extends StatelessWidget {
-  final List<String> selectedKeywords;
+  final String? selectedBabLabel;
   final String? selectedUUName;
   final VoidCallback onClearAll;
   final VoidCallback onRemoveUU;
-  final void Function(String keyword) onRemoveKeyword;
+  final VoidCallback onRemoveBab;
 
   const ActiveFiltersSection({
     super.key,
-    required this.selectedKeywords,
+    this.selectedBabLabel,
     this.selectedUUName,
     required this.onClearAll,
     required this.onRemoveUU,
-    required this.onRemoveKeyword,
+    required this.onRemoveBab,
   });
 
-  bool get _hasFilters => selectedKeywords.isNotEmpty || selectedUUName != null;
+  bool get _hasFilters => selectedBabLabel != null || selectedUUName != null;
 
   @override
   Widget build(BuildContext context) {
@@ -129,13 +133,12 @@ class ActiveFiltersSection extends StatelessWidget {
                   icon: Icons.menu_book,
                   onRemove: onRemoveUU,
                 ),
-              ...selectedKeywords.map(
-                (k) => ActiveFilterChip(
-                  label: k,
-                  icon: Icons.tag,
-                  onRemove: () => onRemoveKeyword(k),
+              if (selectedBabLabel != null)
+                ActiveFilterChip(
+                  label: selectedBabLabel!,
+                  icon: Icons.account_tree_outlined,
+                  onRemove: onRemoveBab,
                 ),
-              ),
             ],
           ),
         ],

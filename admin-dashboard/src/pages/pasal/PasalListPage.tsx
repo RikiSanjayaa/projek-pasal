@@ -13,7 +13,6 @@ import {
   Badge,
   Modal,
   Tooltip,
-  MultiSelect,
 } from '@mantine/core'
 import { useDebouncedValue, useDisclosure } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
@@ -97,8 +96,13 @@ const getPasalColumns = (searchQuery: string, extraTerms: string[], sort: string
     key: 'judul',
     title: 'Judul',
     width: 200,
-    render: (value) => (
-      <SearchHighlight size="sm" lineClamp={2} text={(value as string) || '-'} query={searchQuery} extraTerms={extraTerms} />
+    render: (value, record) => (
+      <Stack gap={2}>
+        <SearchHighlight size="sm" lineClamp={2} text={(value as string) || '-'} query={searchQuery} extraTerms={extraTerms} />
+        {record.bab && (
+          <Text size="xs" c="dimmed" lineClamp={2}>{record.bab}</Text>
+        )}
+      </Stack>
     ),
   },
   {
@@ -107,33 +111,6 @@ const getPasalColumns = (searchQuery: string, extraTerms: string[], sort: string
     render: (value) => (
       <SearchHighlight size="sm" c="dimmed" lineClamp={2} text={String(value || '')} query={searchQuery} extraTerms={extraTerms} autoSnippet />
     ),
-  },
-  {
-    key: 'keywords',
-    title: 'Keywords',
-    width: 220,
-    render: (value) => {
-      const keywords: string[] = value || []
-      const rest = keywords.slice(2)
-      return (
-        <Group gap={4}>
-          {keywords.slice(0, 2).map((kw) => (
-            <Tooltip key={kw} label={kw} openDelay={400}>
-              <Badge size="sm" variant="outline" maw={200} style={{ minWidth: 0 }}>
-                {kw}
-              </Badge>
-            </Tooltip>
-          ))}
-          {rest.length > 0 && (
-            <Tooltip label={rest.join(', ')} multiline maw={320}>
-              <Badge size="sm" variant="outline" color="gray">
-                +{rest.length}
-              </Badge>
-            </Tooltip>
-          )}
-        </Group>
-      )
-    },
   },
   {
     key: 'verification_status',
@@ -228,7 +205,6 @@ export function PasalListPage() {
     setSearchParams(params)
   }
 
-  const [selectedKeywords, setSelectedKeywords] = useState<string[]>([])
   const [deleteModal, { open: openDelete, close: closeDelete }] = useDisclosure(false)
   const [bulkDeleteModal, { open: openBulkDelete, close: closeBulkDelete }] = useDisclosure(false)
   const [selectedPasal, setSelectedPasal] = useState<PasalWithUndangUndang | null>(null)
@@ -265,24 +241,12 @@ export function PasalListPage() {
     },
   })
 
-  // Fetch keywords for filter
-  const { data: keywordsList } = useQuery({
-    queryKey: ['keywords', 'list'],
-    queryFn: async () => (await api.get<{ keywords: string[] }>('/admin/pasal-keywords')).keywords,
-  })
-
-  // Track previous values to only reset page on actual changes
+  // Track previous value to only reset page on actual changes
   const prevDebouncedSearch = useRef(debouncedSearch)
-  const prevSelectedKeywordsStr = useRef(JSON.stringify(selectedKeywords))
 
   useEffect(() => {
-    const currentKeywordsStr = JSON.stringify(selectedKeywords)
-    const keywordsChanged = currentKeywordsStr !== prevSelectedKeywordsStr.current
-    const searchChanged = debouncedSearch !== prevDebouncedSearch.current
-
-    if (searchChanged || keywordsChanged) {
+    if (debouncedSearch !== prevDebouncedSearch.current) {
       prevDebouncedSearch.current = debouncedSearch
-      prevSelectedKeywordsStr.current = currentKeywordsStr
 
       if (page > 1) {
         const params = new URLSearchParams(searchParams)
@@ -290,11 +254,11 @@ export function PasalListPage() {
         setSearchParams(params, { replace: true })
       }
     }
-  }, [debouncedSearch, selectedKeywords, page, searchParams, setSearchParams])
+  }, [debouncedSearch, page, searchParams, setSearchParams])
 
   // Fetch pasal with pagination
   const { data: pasalData, isLoading } = useQuery({
-    queryKey: ['pasal', 'list', page, pageSize, debouncedSearch, filterUU, filterVerification, selectedKeywords, sort],
+    queryKey: ['pasal', 'list', page, pageSize, debouncedSearch, filterUU, filterVerification, sort],
     queryFn: async () => {
       // Handle "pasal" prefix - extract just the number/identifier
       let searchTerm = debouncedSearch.toLowerCase().trim()
@@ -309,7 +273,6 @@ export function PasalListPage() {
           search: searchTerm,
           undang_undang_id: filterUU,
           verification_status: filterVerification,
-          keywords: selectedKeywords,
           sort,
         })}`
       )
@@ -453,15 +416,6 @@ export function PasalListPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
           <Group wrap="wrap" align="flex-start">
-            <MultiSelect
-              placeholder="Filter Keywords"
-              data={keywordsList || []}
-              value={selectedKeywords}
-              onChange={setSelectedKeywords}
-              clearable
-              searchable
-              w={{ base: '100%', sm: 250 }}
-            />
             <Select
               placeholder="Filter Undang-Undang"
               data={

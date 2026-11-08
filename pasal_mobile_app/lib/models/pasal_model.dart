@@ -5,7 +5,7 @@ class PasalModel {
   final String isi;
   final String? penjelasan;
   final String? judul;
-  final List<String> keywords;
+  final String? bab;
   final List<String> relatedIds;
   final bool isActive;
   final DateTime? createdAt;
@@ -25,7 +25,7 @@ class PasalModel {
     required this.isi,
     this.penjelasan,
     this.judul,
-    this.keywords = const [],
+    this.bab,
     this.relatedIds = const [],
     this.isActive = true,
     this.createdAt,
@@ -42,9 +42,7 @@ class PasalModel {
       isi: json['isi'] ?? '',
       penjelasan: json['penjelasan'],
       judul: json['judul'],
-      keywords: json['keywords'] != null
-          ? List<String>.from(json['keywords'])
-          : [],
+      bab: json['bab'],
       relatedIds: json['related_ids'] != null
           ? List<String>.from(json['related_ids'])
           : [],

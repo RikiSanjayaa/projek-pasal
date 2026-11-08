@@ -46,7 +46,7 @@ Kolom penting:
 - `judul`
 - `isi`
 - `penjelasan`
-- `keywords` tipe `TEXT[]`
+- `bab` teks bab tempat pasal berada, contoh "Buku Kedua · Bab XXIII · Tindak Pidana Pencurian"
 - `search_vector` tipe `TSVECTOR`
 - `is_active`
 - `created_by`, `updated_by` FK ke `admin_users`
@@ -182,7 +182,7 @@ mobile_users 1 --- N user_devices
 
 - index `kode` dan `is_active` pada `undang_undang`
 - index `undang_undang_id`, `nomor`, `is_active`, `deleted_at` pada `pasal`
-- GIN index `search_vector` dan `keywords` pada `pasal`
+- GIN index `search_vector` pada `pasal` (berisi nomor, judul, bab, isi, penjelasan)
 - index perangkat pada `user_devices` dan `admin_devices`
 - index audit pada `audit_logs`
 

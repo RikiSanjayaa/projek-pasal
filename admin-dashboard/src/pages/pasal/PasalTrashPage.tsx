@@ -35,7 +35,7 @@ interface DeletedPasal {
   nomor: string
   judul: string | null
   isi: string
-  keywords: string[]
+  bab: string | null
   deleted_at: string
   // null bila undang-undangnya juga sudah dihapus
   undang_undang: {
@@ -125,24 +125,6 @@ export function PasalTrashPage() {
         <Text size="sm" c="dimmed" lineClamp={2} style={{ maxWidth: 300 }}>
           {value}
         </Text>
-      ),
-    },
-    {
-      key: 'keywords',
-      title: 'Keywords',
-      render: (value) => (
-        <Group gap={4}>
-          {value?.slice(0, 2).map((kw: string, idx: number) => (
-            <Badge key={idx} size="xs" variant="outline">
-              {kw}
-            </Badge>
-          ))}
-          {(value?.length || 0) > 2 && (
-            <Badge size="xs" variant="outline" color="gray">
-              +{(value?.length || 0) - 2}
-            </Badge>
-          )}
-        </Group>
       ),
     },
     {

@@ -486,7 +486,7 @@ class DataService {
       isi: Value(pasal.isi),
       penjelasan: Value(pasal.penjelasan),
       judul: Value(pasal.judul),
-      keywords: Value(jsonEncode(pasal.keywords)),
+      bab: Value(pasal.bab),
       relatedIds: Value(jsonEncode(relatedIds ?? pasal.relatedIds)),
       isActive: Value(pasal.isActive),
       createdAt: Value(pasal.createdAt),

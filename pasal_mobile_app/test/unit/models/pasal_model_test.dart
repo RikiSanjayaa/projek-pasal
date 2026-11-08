@@ -18,7 +18,7 @@ void main() {
         expect(pasal.isi, 'Isi pasal pertama');
         expect(pasal.penjelasan, isNull);
         expect(pasal.judul, isNull);
-        expect(pasal.keywords, isEmpty);
+        expect(pasal.bab, isNull);
         expect(pasal.relatedIds, isEmpty);
         expect(pasal.isActive, isTrue);
         expect(pasal.createdAt, isNull);
@@ -36,7 +36,7 @@ void main() {
           isi: 'Barang siapa dengan sengaja...',
           penjelasan: 'Penjelasan tentang pasal 340',
           judul: 'Pembunuhan Berencana',
-          keywords: ['pembunuhan', 'berencana'],
+          bab: 'Bab XIX · Kejahatan Terhadap Nyawa',
           relatedIds: ['pasal-2', 'pasal-3'],
           isActive: false,
           createdAt: createdAt,
@@ -45,7 +45,7 @@ void main() {
 
         expect(pasal.penjelasan, 'Penjelasan tentang pasal 340');
         expect(pasal.judul, 'Pembunuhan Berencana');
-        expect(pasal.keywords, ['pembunuhan', 'berencana']);
+        expect(pasal.bab, 'Bab XIX · Kejahatan Terhadap Nyawa');
         expect(pasal.relatedIds, ['pasal-2', 'pasal-3']);
         expect(pasal.isActive, isFalse);
         expect(pasal.createdAt, createdAt);
@@ -62,7 +62,7 @@ void main() {
           'isi': 'Barang siapa dengan sengaja dan dengan rencana terlebih dahulu merampas nyawa orang lain',
           'penjelasan': 'Pasal ini mengatur tentang pembunuhan berencana',
           'judul': 'Pembunuhan Berencana',
-          'keywords': ['pembunuhan', 'berencana', 'hukuman mati'],
+          'bab': 'Buku Kedua · Bab XIX · Kejahatan Terhadap Nyawa',
           'related_ids': ['pasal-338', 'pasal-339'],
           'is_active': true,
           'created_at': '2025-01-15T10:00:00Z',
@@ -77,8 +77,7 @@ void main() {
         expect(pasal.isi, contains('Barang siapa'));
         expect(pasal.penjelasan, contains('pembunuhan berencana'));
         expect(pasal.judul, 'Pembunuhan Berencana');
-        expect(pasal.keywords, hasLength(3));
-        expect(pasal.keywords, contains('pembunuhan'));
+        expect(pasal.bab, 'Buku Kedua · Bab XIX · Kejahatan Terhadap Nyawa');
         expect(pasal.relatedIds, hasLength(2));
         expect(pasal.isActive, isTrue);
         expect(pasal.createdAt, isNotNull);
@@ -93,7 +92,7 @@ void main() {
           'isi': 'Isi pasal',
           'penjelasan': null,
           'judul': null,
-          'keywords': null,
+          'bab': null,
           'related_ids': null,
           'is_active': null,
           'created_at': null,
@@ -104,7 +103,7 @@ void main() {
 
         expect(pasal.penjelasan, isNull);
         expect(pasal.judul, isNull);
-        expect(pasal.keywords, isEmpty);
+        expect(pasal.bab, isNull);
         expect(pasal.relatedIds, isEmpty);
         expect(pasal.isActive, isTrue);
         expect(pasal.createdAt, isNull);
@@ -120,7 +119,7 @@ void main() {
         expect(pasal.undangUndangId, '');
         expect(pasal.nomor, '');
         expect(pasal.isi, '');
-        expect(pasal.keywords, isEmpty);
+        expect(pasal.bab, isNull);
         expect(pasal.relatedIds, isEmpty);
         expect(pasal.isActive, isTrue);
       });

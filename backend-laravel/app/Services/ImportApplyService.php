@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
  * Menerapkan item terpilih dari run yang berstatus ready, dalam satu transaksi.
  *
  * - baru: buat pasal (atau pulihkan dari Sampah), perlu_verifikasi.
- * - berubah/konflik: ganti judul/isi/penjelasan/keywords; perlu_verifikasi jika teksnya berubah.
+ * - berubah/konflik: ganti judul/isi/penjelasan/bab; perlu_verifikasi jika teksnya berubah (bab saja tidak).
  * - riwayat: ganti seluruh riwayat versi pasal.
  * - hilang: hanya diakui, tidak ada yang dihapus.
  * Untuk item yang diterapkan: link otomatis ("Disebut dalam isi") disinkronkan dan source_snapshot diperbarui.
@@ -138,10 +138,7 @@ class ImportApplyService
         }
 
         $incoming = $item->incoming;
-        $live = $this->diff->snap($pasal->only(['judul', 'isi', 'penjelasan', 'keywords']));
-        $textChanged = $live['judul'] !== $incoming['judul']
-            || $live['isi'] !== $incoming['isi']
-            || $live['penjelasan'] !== $incoming['penjelasan'];
+        $textChanged = $this->diff->textChanged($pasal->only(['judul', 'isi', 'penjelasan', 'bab']), $incoming);
 
         $pasal->update($this->textAttributes($incoming) + ($textChanged ? Pasal::unverified() : []) + [
             'updated_by' => $adminId,
@@ -176,7 +173,7 @@ class ImportApplyService
         }
 
         if ($item->category !== ImportDiffService::RIWAYAT) {
-            $live = $pasal->only(['judul', 'isi', 'penjelasan', 'keywords']);
+            $live = $pasal->only(['judul', 'isi', 'penjelasan', 'bab']);
             if (! $this->diff->same($live, $item->current) && ! $this->diff->same($live, $item->incoming)) {
                 $this->finish($item, 'Dilewati: pasal diedit sejak run dibuat. Periksa ulang lewat run baru.', false);
 
@@ -202,7 +199,7 @@ class ImportApplyService
             'judul' => $incoming['judul'],
             'isi' => $incoming['isi'],
             'penjelasan' => $incoming['penjelasan'],
-            'keywords' => $incoming['keywords'],
+            'bab' => $incoming['bab'],
         ];
     }
 

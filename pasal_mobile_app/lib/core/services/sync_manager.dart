@@ -20,8 +20,8 @@ class SyncManager {
   static const String _syncDataVersionKey = 'sync_data_version';
 
   /// Naikkan setiap kali sync membawa tabel/kolom baru yang harus diisi untuk SEMUA data
-  /// (sync inkremental hanya mengirim yang berubah). 6 = riwayat pasal (pasal_versi).
-  static const int syncDataVersion = 6;
+  /// (sync inkremental hanya mengirim yang berubah). 6 = riwayat pasal (pasal_versi), 7 = kolom bab menggantikan keywords.
+  static const int syncDataVersion = 7;
 
   /// Notifier for sync state changes
   final ValueNotifier<SyncState> state = ValueNotifier(SyncState.idle);

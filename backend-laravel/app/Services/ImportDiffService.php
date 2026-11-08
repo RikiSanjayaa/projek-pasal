@@ -10,7 +10,7 @@ use InvalidArgumentException;
  * dan sumber baru (incoming). Fungsi murni: array masuk, array keluar, tanpa database.
  *
  * Bentuk masukan `current` (satu elemen per pasal di DB, termasuk yang di Sampah):
- *   ['id', 'nomor', 'judul', 'isi', 'penjelasan', 'keywords' => [], 'snapshot' => array|null,
+ *   ['id', 'nomor', 'judul', 'isi', 'penjelasan', 'bab', 'snapshot' => array|null,
  *    'riwayat' => [baris pasal_versi], 'trashed' => bool]
  * Bentuk masukan `incoming`: elemen `pasal` dari keluaran pipeline (lihat prepare_import.py --json).
  */
@@ -70,7 +70,7 @@ class ImportDiffService
             $seen[$nomor] = true;
             $order++;
 
-            $incomingSnap = $this->snap($payload + ['keywords' => $row['keywords'] ?? []]);
+            $incomingSnap = $this->snap($payload + ['bab' => $row['bab'] ?? null]);
             $incomingRiwayat = self::normalizeRiwayat((array) ($row['riwayat'] ?? []));
             $review = isset($row['review']) && is_array($row['review']) ? $row['review'] : null;
             $links = array_values((array) ($row['links'] ?? []));
@@ -96,7 +96,7 @@ class ImportDiffService
                 continue;
             }
             $order++;
-            $snapshot = isset($row['snapshot']) && is_array($row['snapshot']) ? $this->snap($row['snapshot']) : null;
+            $snapshot = isset($row['snapshot']) && is_array($row['snapshot']) ? $this->baseSnap($row['snapshot'], $this->snap($row)) : null;
             $items[] = [
                 'nomor' => $nomor,
                 'pasal_id' => $row['id'] ?? null,
@@ -150,7 +150,7 @@ class ImportDiffService
      * Bentuk baku isi pasal untuk perbandingan dan penyimpanan.
      *
      * @param  array<string, mixed>  $row
-     * @return array{judul: ?string, isi: string, penjelasan: ?string, keywords: list<string>}
+     * @return array{judul: ?string, isi: string, penjelasan: ?string, bab: ?string}
      */
     public function snap(array $row): array
     {
@@ -161,23 +161,33 @@ class ImportDiffService
             'judul' => $judul === '' ? null : $judul,
             'isi' => (string) ($row['isi'] ?? ''),
             'penjelasan' => trim($penjelasan) === '' ? null : $penjelasan,
-            'keywords' => $this->keywordList($row['keywords'] ?? []),
+            'bab' => self::nullableString($row['bab'] ?? null),
         ];
     }
 
-    /** Dua isi pasal sama jika judul, isi, penjelasan, dan himpunan keyword sama (urutan keyword diabaikan). */
+    /** Dua isi pasal sama jika judul, isi, penjelasan, dan bab sama. */
     public function same(?array $a, ?array $b): bool
     {
         if ($a === null || $b === null) {
             return $a === $b;
         }
 
+        return $this->snap($a) === $this->snap($b);
+    }
+
+    /**
+     * Apakah teks hukumnya (judul, isi, penjelasan) berbeda? Bab bukan teks hukum, jadi perubahan bab
+     * saja tidak boleh mengembalikan pasal ke antrean verifikasi.
+     *
+     * @param  array<string, mixed>  $a
+     * @param  array<string, mixed>  $b
+     */
+    public function textChanged(array $a, array $b): bool
+    {
         $a = $this->snap($a);
         $b = $this->snap($b);
-        sort($a['keywords']);
-        sort($b['keywords']);
 
-        return $a === $b;
+        return $a['judul'] !== $b['judul'] || $a['isi'] !== $b['isi'] || $a['penjelasan'] !== $b['penjelasan'];
     }
 
     /**
@@ -215,7 +225,7 @@ class ImportDiffService
 
     /**
      * @param  array<string, mixed>|null  $currentRow
-     * @param  array{judul: ?string, isi: string, penjelasan: ?string, keywords: list<string>}  $incoming
+     * @param  array{judul: ?string, isi: string, penjelasan: ?string, bab: ?string}  $incoming
      * @param  list<array<string, mixed>>  $incomingRiwayat
      * @return array<string, mixed>|null null jika identik di semua sisi
      */
@@ -235,7 +245,7 @@ class ImportDiffService
 
         $current = $this->snap($currentRow);
         $currentRiwayat = self::normalizeRiwayat((array) ($currentRow['riwayat'] ?? []));
-        $base = isset($currentRow['snapshot']) && is_array($currentRow['snapshot']) ? $this->snap($currentRow['snapshot']) : null;
+        $base = isset($currentRow['snapshot']) && is_array($currentRow['snapshot']) ? $this->baseSnap($currentRow['snapshot'], $current) : null;
         $notes = [];
 
         // Sumber yang tidak membawa riwayat tidak boleh menghapus riwayat buatan admin.
@@ -278,12 +288,20 @@ class ImportDiffService
         ];
     }
 
-    /** @return list<string> */
-    private function keywordList(mixed $value): array
+    /**
+     * Snapshot lama (sebelum kolom bab) tidak punya kunci `bab`. Anggap bab-nya sama dengan data
+     * sekarang supaya run pertama setelah migrasi tidak menandai semua pasal berubah.
+     *
+     * @param  array<string, mixed>  $snapshot
+     * @param  array<string, mixed>  $current  hasil snap() data sekarang
+     */
+    private function baseSnap(array $snapshot, array $current): array
     {
-        $items = is_array($value) ? $value : explode(',', (string) $value);
+        if (! array_key_exists('bab', $snapshot)) {
+            $snapshot['bab'] = $current['bab'];
+        }
 
-        return array_values(array_filter(array_map(fn ($item) => trim((string) $item), $items), fn ($item) => $item !== ''));
+        return $this->snap($snapshot);
     }
 
     private static function nullableString(mixed $value): ?string

@@ -47,10 +47,14 @@ class ImportPasalService
                     'judul' => $row['judul'] ?? null,
                     'isi' => (string) ($row['isi'] ?? ''),
                     'penjelasan' => $row['penjelasan'] ?? null,
-                    'keywords' => $this->normalizeKeywords($row['keywords'] ?? []),
                     'is_active' => true,
                     'updated_by' => $adminId,
                 ]);
+
+                // Kunci "bab" tidak ada = pertahankan nilai sekarang; ada tapi kosong = hapus.
+                if (array_key_exists('bab', $row)) {
+                    $payload['bab'] = $this->nullableString($row['bab']);
+                }
 
                 if ($payload['nomor'] === '' || $payload['isi'] === '') {
                     throw new \RuntimeException('Nomor dan isi pasal wajib diisi.');
@@ -241,14 +245,5 @@ class ImportPasalService
         $value = trim((string) ($value ?? ''));
 
         return $value === '' ? null : $value;
-    }
-
-    private function normalizeKeywords(mixed $value): array
-    {
-        if (is_array($value)) {
-            return array_values(array_filter(array_map('trim', $value)));
-        }
-
-        return array_values(array_filter(array_map('trim', explode(',', (string) $value))));
     }
 }

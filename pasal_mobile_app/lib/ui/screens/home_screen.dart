@@ -7,10 +7,11 @@ import '../../models/pasal_model.dart';
 import '../../models/undang_undang_model.dart';
 import '../../core/services/query_service.dart';
 import '../../core/utils/search_utils.dart';
+import '../../core/utils/bab_utils.dart';
 import '../widgets/pasal_card.dart';
 import '../widgets/search_tier_header.dart';
 import '../widgets/main_layout.dart';
-import '../widgets/keyword_bottom_sheet.dart';
+import '../widgets/bab_bottom_sheet.dart';
 import '../widgets/pagination_footer.dart';
 import '../widgets/filter_widgets.dart';
 import 'package:showcaseview/showcaseview.dart';
@@ -32,13 +33,14 @@ class _HomeScreenState extends State<HomeScreen> {
   List<PasalModel> _filteredData = [];
   List<PasalModel> _paginatedData = [];
   List<UndangUndangModel> _listUU = [];
+  List<BabGroup> _allBabGroups = [];
 
-  List<String> _allAvailableKeywords = [];
-  List<String> _topKeywords = [];
-  Map<String, int> _keywordCounts = {};
+  /// Bab yang tersedia untuk filter, sesuai filter UU aktif.
+  List<BabGroup> _babGroups = [];
 
   String _selectedFilterUUId = 'ALL';
-  List<String> _selectedKeywords = [];
+  BabGroup? _selectedBab;
+  String? _selectedBabJudul;
 
   String _searchQuery = '';
 
@@ -55,40 +57,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool _filtersExpanded = false;
 
-  static const int _visibleKeywordChipsCount = 3;
-
   int _currentPage = 1;
   final int _itemsPerPage = 10;
   int _totalPages = 1;
 
-  final LayerLink _searchLayerLink = LayerLink();
-  OverlayEntry? _overlayEntry;
   final ScrollController _listScrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _initData();
-    _searchFocusNode.addListener(_onSearchFocusChange);
   }
 
   @override
   void dispose() {
     _searchDebounce?.cancel();
     _searchController.dispose();
-    _searchFocusNode.removeListener(_onSearchFocusChange);
     _searchFocusNode.dispose();
     _listScrollController.dispose();
-    _removeOverlay();
     super.dispose();
-  }
-
-  void _onSearchFocusChange() {
-    if (_searchFocusNode.hasFocus) {
-      _showOverlay();
-    } else {
-      _removeOverlay();
-    }
   }
 
   void _initData() async {
@@ -122,50 +109,64 @@ class _HomeScreenState extends State<HomeScreen> {
       return timeB.compareTo(timeA);
     });
 
-    final Map<String, int> keywordCount = {};
-    for (var p in allPasal) {
-      for (var k in p.keywords) {
-        final trimmed = k.trim();
-        if (trimmed.isNotEmpty) {
-          keywordCount[trimmed] = (keywordCount[trimmed] ?? 0) + 1;
-        }
-      }
-    }
-
-    final allAvailableKeywords = keywordCount.keys.toList()
-      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-
-    final sortedByUsage = keywordCount.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final babGroups = BabUtils.groupsOf(
+      allPasal,
+      uuOrder: listUU.map((u) => u.id).toList(),
+    );
 
     if (!mounted) return;
     setState(() {
       _listUU = listUU;
       _allPasalCache = allPasal;
-      _allAvailableKeywords = allAvailableKeywords;
-      _topKeywords = sortedByUsage.take(15).map((e) => e.key).toList();
-      _keywordCounts = keywordCount;
+      _allBabGroups = babGroups;
+      _refreshBabGroups();
     });
 
     _applyFilterAndSearch();
   }
 
-  void _toggleKeyword(String keyword) {
+  /// Bab yang ditawarkan: semua UU, atau hanya UU yang dipilih.
+  void _refreshBabGroups() {
+    _babGroups = _selectedFilterUUId == 'ALL'
+        ? _allBabGroups
+        : _allBabGroups
+              .where((g) => g.undangUndangId == _selectedFilterUUId)
+              .toList();
+    // Objek grup dibuat ulang saat data dimuat ulang; cocokkan lewat UU dan bab.
+    final selected = _selectedBab;
+    if (selected != null) {
+      _selectedBab = _babGroups
+          .where(
+            (g) =>
+                g.undangUndangId == selected.undangUndangId &&
+                g.bab == selected.bab,
+          )
+          .firstOrNull;
+      if (_selectedBab == null) _selectedBabJudul = null;
+    }
+  }
+
+  void _selectUU(String id) {
     setState(() {
-      if (_selectedKeywords.contains(keyword)) {
-        _selectedKeywords.remove(keyword);
-      } else {
-        _selectedKeywords.add(keyword);
-      }
+      _selectedFilterUUId = id;
+      _refreshBabGroups();
       _applyFilterAndSearch();
     });
   }
 
-  void _removeKeyword(String val) {
+  void _removeBab() {
     setState(() {
-      _selectedKeywords.remove(val);
+      _selectedBab = null;
+      _selectedBabJudul = null;
       _applyFilterAndSearch();
     });
+  }
+
+  String? get _selectedBabLabel {
+    final bab = _selectedBab;
+    if (bab == null) return null;
+    final judul = _selectedBabJudul;
+    return judul == null ? bab.bab : '${bab.bab}${BabUtils.separator}$judul';
   }
 
   void _applyFilterAndSearch() {
@@ -175,6 +176,23 @@ class _HomeScreenState extends State<HomeScreen> {
       source = source
           .where((p) => p.undangUndangId == _selectedFilterUUId)
           .toList();
+    }
+
+    final bab = _selectedBab;
+    if (bab != null) {
+      source = source
+          .where(
+            (p) => BabUtils.matches(
+              p,
+              bab.undangUndangId,
+              bab.bab,
+              _selectedBabJudul,
+            ),
+          )
+          .toList();
+      if (_searchQuery.isEmpty) {
+        source.sort((a, b) => QueryService.compareNomor(a.nomor, b.nomor));
+      }
     }
 
     String? corrected;
@@ -198,29 +216,6 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
       source = result.pasal;
-    }
-
-    if (_selectedKeywords.isNotEmpty) {
-      final Map<PasalModel, int> scoredResults = {};
-
-      for (var p in source) {
-        int matchCount = 0;
-        for (var selectedK in _selectedKeywords) {
-          bool hasMatch = p.keywords.any(
-            (pasalK) => pasalK.toLowerCase() == selectedK.toLowerCase(),
-          );
-          if (hasMatch) matchCount++;
-        }
-        if (matchCount > 0) {
-          scoredResults[p] = matchCount;
-        }
-      }
-      source = scoredResults.keys.toList();
-      source.sort((a, b) {
-        int scoreA = scoredResults[a]!;
-        int scoreB = scoredResults[b]!;
-        return scoreB.compareTo(scoreA);
-      });
     }
 
     setState(() {
@@ -318,73 +313,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  List<String> _getKeywordSuggestions() {
-    if (_searchQuery.isEmpty) {
-      return _topKeywords
-          .where((k) => !_selectedKeywords.contains(k))
-          .take(5)
-          .toList();
-    }
-
-    final q = SearchUtils.normalize(_searchQuery);
-    return _allAvailableKeywords
-        .where(
-          (k) =>
-              SearchUtils.normalize(k).contains(q) &&
-              !_selectedKeywords.contains(k),
-        )
-        .take(5)
-        .toList();
-  }
-
-  void _showOverlay() {
-    _removeOverlay();
-
-    _overlayEntry = OverlayEntry(
-      builder: (context) => _buildSearchSuggestionsOverlay(),
-    );
-
-    Overlay.of(context).insert(_overlayEntry!);
-  }
-
-  void _removeOverlay() {
-    _overlayEntry?.remove();
-    _overlayEntry = null;
-  }
-
-  void _updateOverlay() {
-    _overlayEntry?.markNeedsBuild();
-  }
-
-  Widget _buildSearchSuggestionsOverlay() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final keywordSuggestions = _getKeywordSuggestions();
-
-    // Only show overlay when user is typing (Match Screenshot behavior)
-    // No zero-state keyword suggestions: overlay only shows while typing
-    if (_searchQuery.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    if (keywordSuggestions.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Positioned(
-      width: MediaQuery.of(context).size.width - 40,
-      child: CompositedTransformFollower(
-        link: _searchLayerLink,
-        showWhenUnlinked: false,
-        offset: const Offset(0, 50),
-        child: Material(
-          elevation: 8,
-          borderRadius: BorderRadius.circular(12),
-          color: AppColors.card(isDark),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -410,9 +338,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 shapeBorder: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: CompositedTransformTarget(
-                  link: _searchLayerLink,
-                  child: TextField(
+                child: TextField(
                     controller: _searchController,
                     focusNode: _searchFocusNode,
                     keyboardAppearance: isDark
@@ -420,7 +346,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         : Brightness.light,
                     onChanged: (val) {
                       _searchQuery = val;
-                      _updateOverlay();
                       // Peringkat dihitung ulang setelah jeda mengetik, bukan tiap huruf.
                       _searchDebounce?.cancel();
                       _searchDebounce = Timer(
@@ -442,8 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 _searchController.clear();
                                 _searchQuery = '';
                                 _applyFilterAndSearch();
-                                _updateOverlay();
-                              },
+                                        },
                             )
                           : null,
                       filled: true,
@@ -455,12 +379,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
-                ),
               ),
             ),
 
             ActiveFiltersSection(
-              selectedKeywords: _selectedKeywords,
+              selectedBabLabel: _selectedBabLabel,
               selectedUUName: _selectedFilterUUId != 'ALL'
                   ? _listUU
                         .where((u) => u.id == _selectedFilterUUId)
@@ -470,8 +393,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
               onClearAll: () {
                 setState(() {
-                  _selectedKeywords.clear();
+                  _selectedBab = null;
+                  _selectedBabJudul = null;
                   _selectedFilterUUId = 'ALL';
+                  _refreshBabGroups();
                   _applyFilterAndSearch();
                 });
               },
@@ -479,17 +404,18 @@ class _HomeScreenState extends State<HomeScreen> {
               onRemoveUU: () {
                 setState(() {
                   _selectedFilterUUId = 'ALL';
+                  _refreshBabGroups();
                   _applyFilterAndSearch();
                 });
               },
 
-              onRemoveKeyword: (keyword) => _removeKeyword(keyword),
+              onRemoveBab: _removeBab,
             ),
             AppShowcase(
               showcaseKey: _filterKey,
               title: 'Filter Pencarian',
               description:
-                  'Persempit hasil pencarian dengan memilih:\n\n• Keywords - topik spesifik yang Anda cari\n• Undang-Undang - sumber hukum tertentu\n\nKombinasi filter menghasilkan pencarian lebih akurat.',
+                  'Persempit hasil pencarian dengan memilih:\n\n• Bab - bagian tertentu dari undang-undang\n• Undang-Undang - sumber hukum tertentu\n\nKombinasi filter menghasilkan pencarian lebih akurat.',
               shapeBorder: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -506,7 +432,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          (_searchQuery.isNotEmpty || _selectedKeywords.isNotEmpty)
+                          (_searchQuery.isNotEmpty || _selectedBab != null)
                               ? "${_filteredData.length} pasal terkait ditemukan"
                               : "Pasal Terbaru",
                           style: const TextStyle(
@@ -586,87 +512,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 10),
 
             Expanded(
-              child: _selectedKeywords.isNotEmpty
-                  ? Builder(
-                      builder: (context) {
-                        List<PasalModel> mostRelevant = [];
-                        if (_selectedKeywords.length > 1) {
-                          mostRelevant = _filteredData.where((p) {
-                            int matchCount = 0;
-                            for (var k in _selectedKeywords) {
-                              if (p.keywords.any(
-                                (pk) => pk.toLowerCase() == k.toLowerCase(),
-                              )) {
-                                matchCount++;
-                              }
-                            }
-                            return matchCount > 1;
-                          }).toList();
-                        }
-
-                        Map<String, List<PasalModel>> keywordGroups = {};
-                        for (var keyword in _selectedKeywords) {
-                          final matches = _filteredData.where((p) {
-                            bool hasKeyword = p.keywords.any(
-                              (pk) => pk.toLowerCase() == keyword.toLowerCase(),
-                            );
-                            bool alreadyInTop = mostRelevant.contains(p);
-                            return hasKeyword && !alreadyInTop;
-                          }).toList();
-
-                          if (matches.isNotEmpty) {
-                            keywordGroups[keyword] = matches;
-                          }
-                        }
-
-                        if (_filteredData.isEmpty) {
-                          return _buildEmptySearchState(isDark);
-                        }
-
-                        return ListView(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                          children: [
-                            if (mostRelevant.isNotEmpty) ...[
-                              _buildSimpleHeader("Paling Relevan", isDark),
-
-                              ...mostRelevant.map(
-                                (p) => PasalCard(
-                                  pasal: p,
-                                  contextList: _filteredData,
-                                  searchQuery: _effectiveQuery,
-                                  showUULabel: true,
-                                  matchedKeywords: const [],
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                            ],
-                            ...keywordGroups.entries.map((entry) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildSimpleHeader(
-                                    "Terkait ${entry.key}",
-                                    isDark,
-                                  ),
-
-                                  ...entry.value.map(
-                                    (p) => PasalCard(
-                                      pasal: p,
-                                      contextList: _filteredData,
-                                      searchQuery: _effectiveQuery,
-                                      showUULabel: true,
-                                      matchedKeywords: const [],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                ],
-                              );
-                            }),
-                          ],
-                        );
-                      },
-                    )
-                  : _paginatedData.isEmpty
+              child: _paginatedData.isEmpty
                   ? _buildEmptySearchState(isDark)
                   : ListView.builder(
                       controller: _listScrollController,
@@ -706,7 +552,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           contextList: _filteredData,
                           searchQuery: _effectiveQuery,
                           showUULabel: true,
-                          matchedKeywords: const [],
                         );
                         final header = SearchTierHeader.before(_searchResult, _paginatedData, index);
                         if (header == null) return card;
@@ -753,7 +598,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildFilterSections(bool isDark) {
     final hasAnyFilters =
-        _allAvailableKeywords.isNotEmpty || _listUU.isNotEmpty;
+        _allBabGroups.isNotEmpty || _listUU.isNotEmpty;
 
     if (!hasAnyFilters) return const SizedBox.shrink();
 
@@ -809,7 +654,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                  if (_selectedKeywords.isNotEmpty ||
+                  if (_selectedBab != null ||
                       _selectedFilterUUId != 'ALL')
                     Container(
                       margin: const EdgeInsets.only(right: 8),
@@ -822,7 +667,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        '${_selectedKeywords.length + (_selectedFilterUUId != 'ALL' ? 1 : 0)}',
+                        '${(_selectedBab != null ? 1 : 0) + (_selectedFilterUUId != 'ALL' ? 1 : 0)}',
                         style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -868,8 +713,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 12),
-                      // Keywords section
-                      _buildKeywordChipsRow(isDark),
+                      // Bab section
+                      _buildBabRow(isDark),
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 10),
                       ),
@@ -936,12 +781,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: InkWell(
-        onTap: () {
-          setState(() {
-            _selectedFilterUUId = id;
-            _applyFilterAndSearch();
-          });
-        },
+        onTap: () => _selectUU(id),
         borderRadius: BorderRadius.circular(20),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -971,22 +811,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildKeywordChipsRow(bool isDark) {
-    final displayKeywords = _topKeywords
-        .where((k) => !_selectedKeywords.contains(k))
-        .take(_visibleKeywordChipsCount)
-        .toList();
-
-    final remainingCount =
-        _allAvailableKeywords.length -
-        _selectedKeywords.length -
-        displayKeywords.length;
-
-    if (displayKeywords.isEmpty && remainingCount <= 0) {
-      return const SizedBox.shrink();
-    }
+  Widget _buildBabRow(bool isDark) {
+    if (_babGroups.isEmpty) return const SizedBox.shrink();
 
     final blueColor = AppColors.primary;
+    final label = _selectedBabLabel ?? 'Pilih bab (${_babGroups.length})';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -995,10 +824,10 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.only(bottom: 12),
           child: Row(
             children: [
-              Icon(Icons.local_offer_outlined, size: 14, color: blueColor),
+              Icon(Icons.account_tree_outlined, size: 14, color: blueColor),
               const SizedBox(width: 8),
               Text(
-                'Keywords',
+                'Bab',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -1009,124 +838,61 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: InkWell(
-                  onTap: () => _showKeywordBottomSheet(autoFocus: true),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.card(isDark),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isDark ? Colors.grey[700]! : Colors.grey[200]!,
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.search_rounded,
-                      size: 18,
-                      color: blueColor,
-                    ),
-                  ),
-                ),
+        InkWell(
+          onTap: _showBabBottomSheet,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.card(isDark),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _selectedBab != null
+                    ? blueColor
+                    : (isDark ? Colors.grey[700]! : Colors.grey[200]!),
               ),
-
-              ...displayKeywords.map(
-                (keyword) => Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: InkWell(
-                    onTap: () => _toggleKeyword(keyword),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.card(isDark),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isDark ? Colors.grey[700]! : Colors.grey[200]!,
-                        ),
-                      ),
-                      child: Text(
-                        keyword,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: isDark ? Colors.grey[300] : Colors.grey[600],
-                        ),
-                      ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? Colors.grey[300] : Colors.grey[600],
                     ),
                   ),
                 ),
-              ),
-
-              if (remainingCount > 0)
-                InkWell(
-                  onTap: () => _showKeywordBottomSheet(),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: blueColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: blueColor.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Text(
-                      '+$remainingCount',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: blueColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
                 ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
     );
   }
 
-  void _showKeywordBottomSheet({bool autoFocus = false}) {
-    KeywordBottomSheet.show(
+  void _showBabBottomSheet() {
+    BabBottomSheet.show(
       context: context,
-      allKeywords: _allAvailableKeywords,
-      selectedKeywords: _selectedKeywords,
-      topKeywords: _topKeywords,
-      keywordCounts: _keywordCounts,
-      autoFocus: autoFocus,
-      onKeywordToggle: (keyword) {
-        _toggleKeyword(keyword);
-        Navigator.of(context).pop();
-        _showKeywordBottomSheet(autoFocus: autoFocus);
+      groups: _babGroups,
+      kodeByUuId: {for (final uu in _listUU) uu.id: uu.kode},
+      groupByUU: _selectedFilterUUId == 'ALL',
+      onSelected: (group, judul) {
+        setState(() {
+          _selectedBab = group;
+          _selectedBabJudul = judul;
+          _applyFilterAndSearch();
+        });
       },
-    );
-  }
-
-  Widget _buildSimpleHeader(String title, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 1, top: 1),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: AppColors.textPrimary(isDark),
-        ),
-      ),
     );
   }
 }

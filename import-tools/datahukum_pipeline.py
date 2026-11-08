@@ -8,7 +8,7 @@ Alur per undang-undang (lihat konfigurasi di `laws/`):
    Semua teks juga dipindai untuk sisa teks penerjemah/chatbot dan kata asing.
 4. Tulis xlsx siap upload (sheet `import`), hasil cek (sheet `review`), dan README_IMPORT.md.
 
-`keywords` diisi topik (judul bab dan bagian), `linkN_*` diisi rujukan ke pasal lain di UU yang
+`bab` diisi bab tempat pasal berada (dengan buku kalau ada), `linkN_*` diisi rujukan ke pasal lain di UU yang
 sama yang disebut dalam isi pasal. Tidak ada kolom yang perlu diisi manual.
 """
 
@@ -778,16 +778,31 @@ def judul_for(record: PasalRecord) -> str:
     return ""
 
 
-def keywords_for(record: PasalRecord) -> str:
-    """Topik pasal = judul bab dan bagian tempat pasal berada (huruf kecil)."""
-    topics = []
-    for heading in record.headings:
-        if heading.kind in {"bab", "bagian"} and heading.title:
-            # Koma adalah pemisah keyword di format import, jadi dibuang dari judul.
-            topic = heading.title.lower().replace(",", "")
-            if topic not in topics:
-                topics.append(topic)
-    return ", ".join(topics)
+ROMAN_NUMERAL = re.compile(r"^[IVXLCDM]+[A-Z]?$", re.I)
+
+
+def label_case(label: str) -> str:
+    """'BAB XXI' -> 'Bab XXI', 'BUKU KEDUA' -> 'Buku Kedua' (angka Romawi tetap huruf besar)."""
+    words = label.split()
+    return " ".join(
+        w.upper() if i and ROMAN_NUMERAL.match(w) else w[:1].upper() + w[1:].lower()
+        for i, w in enumerate(words)
+    )
+
+
+def bab_for(record: PasalRecord) -> str:
+    """Bab tempat pasal berada: '[Buku ... · ]Bab ... · Judul Bab'. Kosong kalau pasal tanpa judul bab.
+
+    Buku selalu disertakan kalau ada, karena nomor bab diulang dari awal di tiap buku.
+    """
+    bab = next((h for h in record.headings if h.kind == "bab" and h.label), None)
+    if bab is None:
+        return ""
+    parts = [label_case(h.label) for h in record.headings if h.kind == "buku" and h.label]
+    parts.append(label_case(bab.label))
+    if bab.title:
+        parts.append(title_case(bab.title))
+    return " · ".join(parts)
 
 
 # Nomor sisipan: "599A" (UU baru) atau "1601a"/"1152bis" (KUHPerdata).
@@ -913,12 +928,12 @@ def write_xlsx(
     known = {record.nomor for record in records}
     links = {record.nomor: cross_references(record, known, config) for record in records}
     link_slots = max((len(found) for found in links.values()), default=0)
-    headers = ["nomor", "judul", "isi", "penjelasan", "keywords"]
+    headers = ["nomor", "judul", "isi", "penjelasan", "bab"]
     for slot in range(1, link_slots + 1):
         headers += [f"link{slot}_targetUU", f"link{slot}_targetNomor", f"link{slot}_keterangan"]
     ws.append(headers)
     for record in records:
-        row = [record.nomor, judul_for(record), record.isi, record.penjelasan, keywords_for(record)]
+        row = [record.nomor, judul_for(record), record.isi, record.penjelasan, bab_for(record) or None]
         for nomor, phrase in links[record.nomor]:
             row += [config.kode, nomor, f"Disebut dalam isi: {phrase}"]
         ws.append(row)
@@ -1098,7 +1113,7 @@ File ini dibuat oleh `{SCRIPT} {config.slug}`. Jangan edit manual; perbaiki konf
   - sheet `import`: {len(records)} pasal ({span}).
   - sheet `review`: hasil pemeriksaan tiap pasal{" dengan PDF resmi" if with_pdf else ""}.
 {consolidation}- `judul` diisi judul paragraf/bagian/bab tempat pasal berada (tidak ada judul per pasal).
-{penjelasan}{mk}{catatan}- `keywords` (topik): judul bab dan bagian tempat pasal berada. Tidak perlu diisi manual.
+{penjelasan}{mk}{catatan}- `bab`: bab tempat pasal berada, dengan buku di depannya kalau ada (mis. "Buku Kedua · Bab XXI · Tentang Hipotek"). Tidak perlu diisi manual.
 - `linkN_*` (pasal terkait, {link_count} link): rujukan ke pasal lain di {config.kode} yang disebut di isi
   pasal, misalnya "sebagaimana dimaksud dalam Pasal 54". Rujukan yang diikuti nama undang-undang lain
   dilewati{no_link}.
@@ -1353,7 +1368,7 @@ def run_json(config: LawConfig, refresh: bool, previous_count: int | None = None
                 "judul": judul_for(record),
                 "isi": record.isi,
                 "penjelasan": record.penjelasan,
-                "keywords": [k for k in keywords_for(record).split(", ") if k],
+                "bab": bab_for(record) or None,
                 "links": [
                     {"targetUU": config.kode, "targetNomor": nomor, "keterangan": f"Disebut dalam isi: {phrase}"}
                     for nomor, phrase in cross_references(record, known, config)

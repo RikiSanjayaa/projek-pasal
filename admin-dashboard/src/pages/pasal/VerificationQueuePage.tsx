@@ -102,7 +102,7 @@ export function VerificationQueuePage() {
 
       <Card padding="md">
         <Stack gap="md">
-          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="sm">
+          <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="sm">
             {summary?.map((row) => {
               const percent = row.total ? Math.round((row.verified / row.total) * 100) : 0
               const active = filterUU === row.undang_undang_id

@@ -27,8 +27,7 @@ class PasalTable extends Table {
   TextColumn get isi => text()();
   TextColumn get penjelasan => text().nullable()();
   TextColumn get judul => text().nullable()();
-  TextColumn get keywords =>
-      text().withDefault(const Constant('[]'))(); // JSON array as string
+  TextColumn get bab => text().nullable()();
   TextColumn get relatedIds => text().withDefault(
     const Constant('[]'),
   )(); // JSON array as string (deprecated, use PasalLinksTable)
@@ -98,7 +97,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -156,6 +155,16 @@ class AppDatabase extends _$AppDatabase {
         // Riwayat perubahan pasal; data lama dibiarkan, versi diisi saat sync.
         await m.createTable(pasalVersiTable);
         await m.createIndex(idxPasalVersiPasalId);
+      }
+      if (from < 7) {
+        // Kolom bab menggantikan keywords; data diisi ulang lewat sync.
+        await m.alterTable(
+          // ignore: experimental_member_use
+          TableMigration(
+            pasalTable,
+            newColumns: [pasalTable.bab],
+          ),
+        );
       }
     },
   );

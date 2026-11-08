@@ -10,7 +10,6 @@ import {
   TextInput,
   Textarea,
   Select,
-  TagsInput,
   Grid,
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
@@ -69,7 +68,7 @@ export function PasalCreatePage() {
       judul: '',
       isi: '',
       penjelasan: '',
-      keywords: [],
+      bab: '',
     },
     validate: {
       undang_undang_id: (value: string) => (!value ? 'Pilih undang-undang' : null),
@@ -261,11 +260,11 @@ export function PasalCreatePage() {
                   {...form.getInputProps('penjelasan')}
                 />
 
-                <TagsInput
-                  label="Keywords"
-                  placeholder="Ketik keyword dan tekan Enter"
-                  description="Keywords untuk memudahkan pencarian"
-                  {...form.getInputProps('keywords')}
+                <TextInput
+                  label="Bab"
+                  placeholder="Contoh: Bab XXIII · Tindak Pidana Pencurian (opsional)"
+                  description="Diisi otomatis saat import. Kosongkan bila pasal tidak berada di bawah bab."
+                  {...form.getInputProps('bab')}
                 />
 
                 <PasalQualityAlert issues={qualityIssues} />
