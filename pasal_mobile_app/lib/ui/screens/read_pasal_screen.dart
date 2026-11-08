@@ -20,6 +20,7 @@ import '../widgets/riwayat_pasal.dart';
 import '../../core/services/data_service.dart';
 import '../../models/pasal_versi_model.dart';
 import '../widgets/pasal_actions_sheet.dart';
+import 'bab_result_screen.dart';
 
 class ReadPasalScreen extends StatefulWidget {
   final PasalModel pasal;
@@ -488,6 +489,11 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                 PasalRiwayatChip(versi: _versi),
                             ],
                           ),
+                          if (_currentPasal.bab != null &&
+                              _currentPasal.bab!.trim().isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            _buildBabLine(isDark, uuColor),
+                          ],
                           const SizedBox(height: 24),
 
                           if (_currentPasal.judul != null &&
@@ -585,11 +591,6 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                       ),
                     ],
 
-                    if (_currentPasal.keywords.isNotEmpty) ...[
-                      const SizedBox(height: 24),
-                      KeywordsSection(keywords: _currentPasal.keywords),
-                    ],
-
                     const SizedBox(height: 24),
                     RelatedPasalLinks(
                       pasalId: _currentPasal.id,
@@ -673,6 +674,40 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
       isArchived ? "Dihapus dari Tersimpan" : "Berhasil Disimpan",
       color: isArchived ? Colors.grey[700] : AppColors.primary,
       icon: isArchived ? Icons.delete_outline_rounded : Icons.bookmark_rounded,
+    );
+  }
+
+  /// Baris bab (breadcrumb): ketuk untuk melihat semua pasal di bab ini.
+  Widget _buildBabLine(bool isDark, Color uuColor) {
+    final bab = _currentPasal.bab!;
+    return InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BabResultScreen(
+            undangUndangId: _currentPasal.undangUndangId,
+            bab: bab,
+          ),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                bab,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                ),
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, size: 18, color: uuColor),
+          ],
+        ),
+      ),
     );
   }
 

@@ -17,7 +17,7 @@ File ini dibuat oleh `import-tools/prepare_import.py kuhp-2023`. Jangan edit man
 - `judul` diisi judul paragraf/bagian/bab tempat pasal berada (tidak ada judul per pasal).
 - `penjelasan` diisi penjelasan resmi.
 - Pasal 220, 237 diberi catatan Putusan MK di kolom penjelasan.
-- `keywords` (topik): judul bab dan bagian tempat pasal berada. Tidak perlu diisi manual.
+- `bab`: bab tempat pasal berada, dengan buku di depannya kalau ada (mis. "Buku Kedua · Bab XXI · Tentang Hipotek"). Tidak perlu diisi manual.
 - `linkN_*` (pasal terkait, 348 link): rujukan ke pasal lain di KUHP yang disebut di isi
   pasal, misalnya "sebagaimana dimaksud dalam Pasal 54". Rujukan yang diikuti nama undang-undang lain
   dilewati, begitu juga Bab Ketentuan Penutup dan Ketentuan Peralihan (isinya memetakan pasal UU lain).

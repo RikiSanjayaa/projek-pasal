@@ -142,7 +142,7 @@ void main() {
           judul: 'Penadahan',
           isi:
               'Barangsiapa membeli atau menyimpan barang yang diperoleh dari kejahatan.',
-          keywords: const ['penadahan', 'hasil kejahatan'],
+          bab: 'Bab XXXI · Penadahan',
         ),
         PasalModel(
           id: '2',
@@ -151,7 +151,7 @@ void main() {
           judul: 'Pencurian',
           isi:
               'Barangsiapa mengambil barang sesuatu yang seluruhnya atau sebagian kepunyaan orang lain.',
-          keywords: const ['pencurian'],
+          bab: 'Bab XXII · Pencurian',
         ),
         PasalModel(
           id: '3',
@@ -160,9 +160,35 @@ void main() {
           judul: 'Pembunuhan berencana',
           isi:
               'Barangsiapa dengan sengaja dan dengan rencana terlebih dahulu merampas nyawa orang lain.',
-          keywords: const ['pembunuhan'],
+          bab: 'Bab XIX · Pembunuhan',
         ),
       ];
+
+      test('pasal whose bab title matches ranks above one that only mentions it in isi', () {
+        final list = [
+          PasalModel(
+            id: 'isi',
+            undangUndangId: 'uu-1',
+            nomor: '1',
+            isi: 'Ketentuan ini menyebut hipotek satu kali saja.',
+          ),
+          PasalModel(
+            id: 'bab',
+            undangUndangId: 'uu-1',
+            nomor: '2',
+            isi: 'Ketentuan lain tanpa kata itu.',
+            bab: 'Buku Kedua · Bab XXI · Tentang Hipotek',
+          ),
+        ];
+
+        final result = SearchUtils.rankPasal(list, 'hipotek');
+
+        expect(result.map((p) => p.id), ['bab', 'isi']);
+        expect(
+          SearchUtils.scorePasal(list[1], 'hipotek'),
+          greaterThan(SearchUtils.scorePasal(list[0], 'hipotek')),
+        );
+      });
 
       test('prioritizes exact pasal number', () {
         final result = SearchUtils.rankPasal(pasalList, 'pasal 480');
@@ -178,21 +204,18 @@ void main() {
               undangUndangId: 'uu-1',
               nomor: '12',
               isi: 'Isi pasal dua belas.',
-              keywords: const [],
             ),
             PasalModel(
               id: '120',
               undangUndangId: 'uu-1',
               nomor: '120',
               isi: 'Isi pasal seratus dua puluh.',
-              keywords: const [],
             ),
             PasalModel(
               id: '128',
               undangUndangId: 'uu-1',
               nomor: '128',
               isi: 'Isi pasal seratus dua puluh delapan.',
-              keywords: const [],
             ),
           ], 'pasal 12');
 
@@ -209,14 +232,12 @@ void main() {
               undangUndangId: 'uu-1',
               nomor: '120',
               isi: 'Isi pasal seratus dua puluh.',
-              keywords: const [],
             ),
             PasalModel(
               id: '128',
               undangUndangId: 'uu-1',
               nomor: '128',
               isi: 'Isi pasal seratus dua puluh delapan.',
-              keywords: const [],
             ),
           ], 'pasal 12');
 
@@ -246,7 +267,6 @@ void main() {
           undangUndangId: 'uu-1',
           nomor: id,
           isi: isi,
-          keywords: const [],
         );
         final list = [
           for (var i = 1; i <= 6; i++)
@@ -278,7 +298,7 @@ void main() {
             nomor: '362',
             judul: 'Pencurian barang',
             isi: 'Mencuri.',
-            keywords: const ['pencurian', 'barang bergerak'],
+            bab: 'Bab XXII · Pencurian',
           ),
           PasalModel(
             id: '2',
@@ -286,28 +306,28 @@ void main() {
             nomor: '167',
             judul: 'Pencurian dengan kekerasan',
             isi: 'Melanggar ketentuan.',
-            keywords: const ['keras'],
+            bab: 'Bab XXIII · Keras',
           ),
           PasalModel(
             id: '3',
             undangUndangId: 'uu-1',
             nomor: '480',
             isi: 'Penadahan.',
-            keywords: const ['penadahan'],
+            bab: 'Bab XXXI · Penadahan',
           ),
         ];
 
-        // Exact token match wins over substring; titles and keywords both suggested.
+        // Exact token match wins over substring; titles and bab both suggested.
         final result = SearchUtils.suggestionsFromData('pencurian', list);
         expect(result.first, 'pencurian');
         expect(result, contains('pencurian barang'));
         expect(result, contains('pencurian dengan kekerasan'));
 
-        // Typo falls back to fuzzy keyword match.
+        // Typo falls back to fuzzy bab match.
         final typo = SearchUtils.suggestionsFromData('pencurianx', list);
         expect(typo, contains('pencurian'));
 
-        // No relevant keyword → empty (no dud suggestions).
+        // No relevant bab → empty (no dud suggestions).
         expect(SearchUtils.suggestionsFromData('meteorologi', list), isEmpty);
       });
 
@@ -347,7 +367,7 @@ void main() {
             '(4) Ketentuan lebih lanjut diatur dalam Peraturan Pemerintah.',
         penjelasan:
             'Yang dimaksud dengan kekerasan berat dalam pasal ini adalah perbuatan yang mengakibatkan luka berat atau kematian secara langsung.',
-        keywords: const ['kekerasan', 'pidana mati'],
+        bab: 'Bab XXV · Kekerasan Berat',
       );
 
       test('returns beginning of text when match is at the start', () {

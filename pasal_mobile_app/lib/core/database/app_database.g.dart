@@ -685,17 +685,14 @@ class $PasalTableTable extends PasalTable
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _keywordsMeta = const VerificationMeta(
-    'keywords',
-  );
+  static const VerificationMeta _babMeta = const VerificationMeta('bab');
   @override
-  late final GeneratedColumn<String> keywords = GeneratedColumn<String>(
-    'keywords',
+  late final GeneratedColumn<String> bab = GeneratedColumn<String>(
+    'bab',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultValue: const Constant('[]'),
   );
   static const VerificationMeta _relatedIdsMeta = const VerificationMeta(
     'relatedIds',
@@ -777,7 +774,7 @@ class $PasalTableTable extends PasalTable
     isi,
     penjelasan,
     judul,
-    keywords,
+    bab,
     relatedIds,
     isActive,
     createdAt,
@@ -841,10 +838,10 @@ class $PasalTableTable extends PasalTable
         judul.isAcceptableOrUnknown(data['judul']!, _judulMeta),
       );
     }
-    if (data.containsKey('keywords')) {
+    if (data.containsKey('bab')) {
       context.handle(
-        _keywordsMeta,
-        keywords.isAcceptableOrUnknown(data['keywords']!, _keywordsMeta),
+        _babMeta,
+        bab.isAcceptableOrUnknown(data['bab']!, _babMeta),
       );
     }
     if (data.containsKey('related_ids')) {
@@ -923,10 +920,10 @@ class $PasalTableTable extends PasalTable
         DriftSqlType.string,
         data['${effectivePrefix}judul'],
       ),
-      keywords: attachedDatabase.typeMapping.read(
+      bab: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}keywords'],
-      )!,
+        data['${effectivePrefix}bab'],
+      ),
       relatedIds: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}related_ids'],
@@ -967,7 +964,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
   final String isi;
   final String? penjelasan;
   final String? judul;
-  final String keywords;
+  final String? bab;
   final String relatedIds;
   final bool isActive;
   final DateTime? createdAt;
@@ -981,7 +978,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
     required this.isi,
     this.penjelasan,
     this.judul,
-    required this.keywords,
+    this.bab,
     required this.relatedIds,
     required this.isActive,
     this.createdAt,
@@ -1002,7 +999,9 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
     if (!nullToAbsent || judul != null) {
       map['judul'] = Variable<String>(judul);
     }
-    map['keywords'] = Variable<String>(keywords);
+    if (!nullToAbsent || bab != null) {
+      map['bab'] = Variable<String>(bab);
+    }
     map['related_ids'] = Variable<String>(relatedIds);
     map['is_active'] = Variable<bool>(isActive);
     if (!nullToAbsent || createdAt != null) {
@@ -1030,7 +1029,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
       judul: judul == null && nullToAbsent
           ? const Value.absent()
           : Value(judul),
-      keywords: Value(keywords),
+      bab: bab == null && nullToAbsent ? const Value.absent() : Value(bab),
       relatedIds: Value(relatedIds),
       isActive: Value(isActive),
       createdAt: createdAt == null && nullToAbsent
@@ -1058,7 +1057,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
       isi: serializer.fromJson<String>(json['isi']),
       penjelasan: serializer.fromJson<String?>(json['penjelasan']),
       judul: serializer.fromJson<String?>(json['judul']),
-      keywords: serializer.fromJson<String>(json['keywords']),
+      bab: serializer.fromJson<String?>(json['bab']),
       relatedIds: serializer.fromJson<String>(json['relatedIds']),
       isActive: serializer.fromJson<bool>(json['isActive']),
       createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
@@ -1079,7 +1078,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
       'isi': serializer.toJson<String>(isi),
       'penjelasan': serializer.toJson<String?>(penjelasan),
       'judul': serializer.toJson<String?>(judul),
-      'keywords': serializer.toJson<String>(keywords),
+      'bab': serializer.toJson<String?>(bab),
       'relatedIds': serializer.toJson<String>(relatedIds),
       'isActive': serializer.toJson<bool>(isActive),
       'createdAt': serializer.toJson<DateTime?>(createdAt),
@@ -1096,7 +1095,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
     String? isi,
     Value<String?> penjelasan = const Value.absent(),
     Value<String?> judul = const Value.absent(),
-    String? keywords,
+    Value<String?> bab = const Value.absent(),
     String? relatedIds,
     bool? isActive,
     Value<DateTime?> createdAt = const Value.absent(),
@@ -1110,7 +1109,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
     isi: isi ?? this.isi,
     penjelasan: penjelasan.present ? penjelasan.value : this.penjelasan,
     judul: judul.present ? judul.value : this.judul,
-    keywords: keywords ?? this.keywords,
+    bab: bab.present ? bab.value : this.bab,
     relatedIds: relatedIds ?? this.relatedIds,
     isActive: isActive ?? this.isActive,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
@@ -1130,7 +1129,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
           ? data.penjelasan.value
           : this.penjelasan,
       judul: data.judul.present ? data.judul.value : this.judul,
-      keywords: data.keywords.present ? data.keywords.value : this.keywords,
+      bab: data.bab.present ? data.bab.value : this.bab,
       relatedIds: data.relatedIds.present
           ? data.relatedIds.value
           : this.relatedIds,
@@ -1155,7 +1154,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
           ..write('isi: $isi, ')
           ..write('penjelasan: $penjelasan, ')
           ..write('judul: $judul, ')
-          ..write('keywords: $keywords, ')
+          ..write('bab: $bab, ')
           ..write('relatedIds: $relatedIds, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
@@ -1174,7 +1173,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
     isi,
     penjelasan,
     judul,
-    keywords,
+    bab,
     relatedIds,
     isActive,
     createdAt,
@@ -1192,7 +1191,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
           other.isi == this.isi &&
           other.penjelasan == this.penjelasan &&
           other.judul == this.judul &&
-          other.keywords == this.keywords &&
+          other.bab == this.bab &&
           other.relatedIds == this.relatedIds &&
           other.isActive == this.isActive &&
           other.createdAt == this.createdAt &&
@@ -1208,7 +1207,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
   final Value<String> isi;
   final Value<String?> penjelasan;
   final Value<String?> judul;
-  final Value<String> keywords;
+  final Value<String?> bab;
   final Value<String> relatedIds;
   final Value<bool> isActive;
   final Value<DateTime?> createdAt;
@@ -1223,7 +1222,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     this.isi = const Value.absent(),
     this.penjelasan = const Value.absent(),
     this.judul = const Value.absent(),
-    this.keywords = const Value.absent(),
+    this.bab = const Value.absent(),
     this.relatedIds = const Value.absent(),
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1239,7 +1238,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     required String isi,
     this.penjelasan = const Value.absent(),
     this.judul = const Value.absent(),
-    this.keywords = const Value.absent(),
+    this.bab = const Value.absent(),
     this.relatedIds = const Value.absent(),
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1258,7 +1257,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     Expression<String>? isi,
     Expression<String>? penjelasan,
     Expression<String>? judul,
-    Expression<String>? keywords,
+    Expression<String>? bab,
     Expression<String>? relatedIds,
     Expression<bool>? isActive,
     Expression<DateTime>? createdAt,
@@ -1274,7 +1273,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
       if (isi != null) 'isi': isi,
       if (penjelasan != null) 'penjelasan': penjelasan,
       if (judul != null) 'judul': judul,
-      if (keywords != null) 'keywords': keywords,
+      if (bab != null) 'bab': bab,
       if (relatedIds != null) 'related_ids': relatedIds,
       if (isActive != null) 'is_active': isActive,
       if (createdAt != null) 'created_at': createdAt,
@@ -1292,7 +1291,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     Value<String>? isi,
     Value<String?>? penjelasan,
     Value<String?>? judul,
-    Value<String>? keywords,
+    Value<String?>? bab,
     Value<String>? relatedIds,
     Value<bool>? isActive,
     Value<DateTime?>? createdAt,
@@ -1308,7 +1307,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
       isi: isi ?? this.isi,
       penjelasan: penjelasan ?? this.penjelasan,
       judul: judul ?? this.judul,
-      keywords: keywords ?? this.keywords,
+      bab: bab ?? this.bab,
       relatedIds: relatedIds ?? this.relatedIds,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
@@ -1340,8 +1339,8 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     if (judul.present) {
       map['judul'] = Variable<String>(judul.value);
     }
-    if (keywords.present) {
-      map['keywords'] = Variable<String>(keywords.value);
+    if (bab.present) {
+      map['bab'] = Variable<String>(bab.value);
     }
     if (relatedIds.present) {
       map['related_ids'] = Variable<String>(relatedIds.value);
@@ -1376,7 +1375,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
           ..write('isi: $isi, ')
           ..write('penjelasan: $penjelasan, ')
           ..write('judul: $judul, ')
-          ..write('keywords: $keywords, ')
+          ..write('bab: $bab, ')
           ..write('relatedIds: $relatedIds, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
@@ -2949,7 +2948,7 @@ typedef $$PasalTableTableCreateCompanionBuilder =
       required String isi,
       Value<String?> penjelasan,
       Value<String?> judul,
-      Value<String> keywords,
+      Value<String?> bab,
       Value<String> relatedIds,
       Value<bool> isActive,
       Value<DateTime?> createdAt,
@@ -2966,7 +2965,7 @@ typedef $$PasalTableTableUpdateCompanionBuilder =
       Value<String> isi,
       Value<String?> penjelasan,
       Value<String?> judul,
-      Value<String> keywords,
+      Value<String?> bab,
       Value<String> relatedIds,
       Value<bool> isActive,
       Value<DateTime?> createdAt,
@@ -3015,8 +3014,8 @@ class $$PasalTableTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get keywords => $composableBuilder(
-    column: $table.keywords,
+  ColumnFilters<String> get bab => $composableBuilder(
+    column: $table.bab,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3090,8 +3089,8 @@ class $$PasalTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get keywords => $composableBuilder(
-    column: $table.keywords,
+  ColumnOrderings<String> get bab => $composableBuilder(
+    column: $table.bab,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -3157,8 +3156,8 @@ class $$PasalTableTableAnnotationComposer
   GeneratedColumn<String> get judul =>
       $composableBuilder(column: $table.judul, builder: (column) => column);
 
-  GeneratedColumn<String> get keywords =>
-      $composableBuilder(column: $table.keywords, builder: (column) => column);
+  GeneratedColumn<String> get bab =>
+      $composableBuilder(column: $table.bab, builder: (column) => column);
 
   GeneratedColumn<String> get relatedIds => $composableBuilder(
     column: $table.relatedIds,
@@ -3222,7 +3221,7 @@ class $$PasalTableTableTableManager
                 Value<String> isi = const Value.absent(),
                 Value<String?> penjelasan = const Value.absent(),
                 Value<String?> judul = const Value.absent(),
-                Value<String> keywords = const Value.absent(),
+                Value<String?> bab = const Value.absent(),
                 Value<String> relatedIds = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
@@ -3237,7 +3236,7 @@ class $$PasalTableTableTableManager
                 isi: isi,
                 penjelasan: penjelasan,
                 judul: judul,
-                keywords: keywords,
+                bab: bab,
                 relatedIds: relatedIds,
                 isActive: isActive,
                 createdAt: createdAt,
@@ -3254,7 +3253,7 @@ class $$PasalTableTableTableManager
                 required String isi,
                 Value<String?> penjelasan = const Value.absent(),
                 Value<String?> judul = const Value.absent(),
-                Value<String> keywords = const Value.absent(),
+                Value<String?> bab = const Value.absent(),
                 Value<String> relatedIds = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
@@ -3269,7 +3268,7 @@ class $$PasalTableTableTableManager
                 isi: isi,
                 penjelasan: penjelasan,
                 judul: judul,
-                keywords: keywords,
+                bab: bab,
                 relatedIds: relatedIds,
                 isActive: isActive,
                 createdAt: createdAt,

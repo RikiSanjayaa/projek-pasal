@@ -13,12 +13,12 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 | **`splash_screen.dart`**         | Layar pembuka. Mengecek database dan menginisialisasi SyncManager. Jika kosong -> Onboarding. Jika ada -> MainNavigation + cek update.    |
 | **`onboarding_screen.dart`**     | Layar download awal database dari server (Supabase) ke HP (Drift/SQLite). Hanya muncul saat instalasi pertama.                            |
 | **`main_navigation.dart`**       | Mengatur Bottom Navigation Bar (Tab Home vs Tab Pustaka).                                                                                 |
-| **`home_screen.dart`**           | **Dashboard Utama**. Fitur: Search Global, Filter Dropdown Keyword, Filter Kategori UU, List Pasal Terbaru                                |
+| **`home_screen.dart`**           | **Dashboard Utama**. Fitur: Search Global (hasil dikelompokkan per kecocokan), Filter Bab lalu Judul, Filter Kategori UU, List Pasal Terbaru |
 | **`library_screen.dart`**        | **Tab Pustaka**. Menampilkan daftar "Buku/Kitab UU" (KUHP, ITE, dll) dalam bentuk Grid.                                                   |
 | **`detail_uu_screen.dart`**      | Halaman isi buku. Muncul saat buku di Pustaka diklik. Menampilkan daftar pasal + deskripsi UU jika tersedia.                              |
 | **`read_pasal_screen.dart`**     | **Mode Baca Detail**. Muncul saat kartu pasal diklik. Fitur: Next/Prev Pasal, Highlight Teks, Pasal Terkait, Riwayat Perubahan, dan Share.|
 | **`search_screen.dart`**         | _(Legacy/Opsional)_ Halaman pencarian khusus jika menggunakan `showSearch` bawaan Flutter. Saat ini pencarian sudah terintegrasi di Home. |
-| **`keyword_result_screen.dart`** | Halaman hasil klik tag/chip. Menampilkan semua pasal yang memiliki tagar yang sama.                                                       |
+| **`bab_result_screen.dart`**     | Daftar semua pasal dalam satu bab. Dibuka dari baris bab di layar baca pasal.                                                            |
 
 ### Widgets (`lib/ui/widgets/`)
 
@@ -68,7 +68,7 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 
 1. **Offline First:** Bisa mencari pasal tanpa internet setelah sync pertama.
 2. **Smart Search:** Pencarian instan berdasarkan nomor, isi, atau judul pasal.
-3. **Strict Keyword Filter:** Filter menggunakan Tag (AND Logic). "Judi" + "Online" hanya menampilkan pasal yang mengandung keduanya.
+3. **Filter Bab:** Pilih bab (dikelompokkan per UU, urut sesuai naskah), lalu boleh dipersempit ke satu judul bagian di dalam bab itu.
 4. **Dark Mode:** Otomatis menyimpan preferensi pengguna.
 5. **Auto-Check Update:** Setiap app dibuka, app menanyakan server apakah ada data baru. Banner hanya muncul kalau memang ada perubahan. Pengaturan menampilkan "Data diperbarui" (tanggal terakhir admin mengubah data di server) dan "Sync terakhir" (kapan HP ini terakhir sync). Tidak ada jadwal pembaruan data mingguan. Alias pencarian dari dashboard ikut diperbarui pada pengecekan ini.
 6. **Pasal Terkait:** Menampilkan link ke pasal-pasal yang berhubungan (jika ada di database).

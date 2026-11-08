@@ -97,20 +97,8 @@ function LinkedPasalDetail({ pasalId, excludePasalId }: { pasalId: string; exclu
           </div>
         )}
 
-        {/* Keywords */}
-        {pasal.keywords && pasal.keywords.length > 0 && (
-          <Group gap={4}>
-            {pasal.keywords.slice(0, 5).map((kw, idx) => (
-              <Badge key={idx} variant="outline" size="xs">
-                {kw}
-              </Badge>
-            ))}
-            {pasal.keywords.length > 5 && (
-              <Badge size="xs" variant="outline" color="gray">
-                +{pasal.keywords.length - 5}
-              </Badge>
-            )}
-          </Group>
+        {pasal.bab && (
+          <Text size="xs" c="dimmed">{pasal.bab}</Text>
         )}
 
         {/* Related pasal links (excluding parent) */}

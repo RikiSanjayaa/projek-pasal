@@ -143,13 +143,17 @@ class QueryService {
     }
   }
 
-  static Future<List<PasalModel>> getPasalByKeyword(String keyword) async {
+  /// Pasal dalam satu bab di satu UU, urut nomor alami.
+  static Future<List<PasalModel>> getPasalByBab(String uuId, String bab) async {
     try {
-      final data = await _database.getActivePasal();
-      final pasal = data.map((row) => _rowToPasalModel(row)).toList();
-      return SearchUtils.rankPasal(pasal, keyword);
+      final data = await _database.getActivePasalByUndangUndang(uuId);
+      return data
+          .where((row) => row.bab == bab)
+          .map((row) => _rowToPasalModel(row))
+          .toList()
+        ..sort((a, b) => compareNomor(a.nomor, b.nomor));
     } catch (e) {
-      print("Error getting pasal by keyword: $e");
+      print("Error getting pasal by bab: $e");
       return [];
     }
   }
@@ -210,7 +214,7 @@ class QueryService {
       isi: row.isi,
       penjelasan: row.penjelasan,
       judul: row.judul,
-      keywords: _parseJsonArray(row.keywords),
+      bab: row.bab,
       relatedIds: _parseJsonArray(row.relatedIds),
       isActive: row.isActive,
       createdAt: row.createdAt,

@@ -12,6 +12,7 @@ export interface PasalQualityInput {
   judul?: string | null
   isi?: string | null
   penjelasan?: string | null
+  bab?: string | null
 }
 
 const TYPO_PATTERNS: Array<{ pattern: RegExp; label: string; replacement: string }> = [
@@ -106,6 +107,7 @@ export function normalizePasalInput<T extends PasalQualityInput>(row: T): T {
     judul: applyCommonOcrCorrections(row.judul).replace(/\s+/g, ' ').trim() || undefined,
     isi: normalizeLegalTextForStorage(row.isi),
     penjelasan: normalizeLegalTextForStorage(row.penjelasan) || undefined,
+    ...('bab' in row ? { bab: String(row.bab || '').replace(/\s+/g, ' ').trim() || null } : {}),
   }
 }
 

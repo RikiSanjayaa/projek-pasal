@@ -31,7 +31,7 @@ python prepare_import.py kuhp-2023 --json out.json --previous-count 625
 - `--previous-count N` (opsional) menggagalkan run kalau jumlah pasal turun lebih dari 2% dari `N`.
 - Berhasil: exit 0, `out.json` berisi `slug, kode, source_url, fetched_at, html_sha256,
   unknown_versions, metrics.pasal_count, warnings, pasal[]`. Setiap pasal membawa `judul, isi,
-  penjelasan, keywords[], links[], riwayat[], status_teks, review`. Teksnya persis sama dengan
+  penjelasan, bab, links[], riwayat[], status_teks, review`. Teksnya persis sama dengan
   sheet `import` dan `riwayat` di xlsx.
 - Gagal struktural (div `batangtubuh`/`pasal` hilang, HTML tidak terbaca, unduhan gagal, jumlah
   pasal anjlok): exit 2 dan `out.json` berisi `{"error": "<pesan Indonesia>"}`.

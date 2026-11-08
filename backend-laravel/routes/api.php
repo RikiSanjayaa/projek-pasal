@@ -38,7 +38,7 @@ Route::middleware(['auth:sanctum', 'role:admin,super_admin'])->prefix('admin')->
     Route::post('/pasal/bulk-restore', [PasalController::class, 'bulkRestore']);
     Route::post('/pasal/bulk-force-delete', [PasalController::class, 'bulkForceDelete']);
     Route::post('/pasal/bulk-verify', [PasalController::class, 'bulkVerify']);
-    Route::get('/pasal-keywords', [PasalController::class, 'keywords']);
+    Route::get('/pasal-bab', [PasalController::class, 'bab']);
     Route::get('/pasal-verification-summary', [PasalController::class, 'verificationSummary']);
     Route::delete('/pasal/{id}/force', [PasalController::class, 'forceDelete']);
     Route::apiResource('/pasal', PasalController::class);

@@ -184,7 +184,7 @@ return [
         'judul' => 'Judul',
         'isi' => 'Isi',
         'penjelasan' => 'Penjelasan',
-        'keywords' => 'Keywords',
+        'bab' => 'Bab',
         'is_active' => 'Status aktif',
         'ids' => 'Daftar pasal',
         'rows' => 'Baris import',

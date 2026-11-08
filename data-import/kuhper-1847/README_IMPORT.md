@@ -18,7 +18,7 @@ File ini dibuat oleh `import-tools/prepare_import.py kuhper-1847`. Jangan edit m
 - 910 pasal diberi catatan berawalan "Catatan CariPasal:" di kolom penjelasan: status
   berlaku menurut undang-undang yang lebih baru (bukan bagian naskah). Aturannya ada di
   `catatan_rules` konfigurasi.
-- `keywords` (topik): judul bab dan bagian tempat pasal berada. Tidak perlu diisi manual.
+- `bab`: bab tempat pasal berada, dengan buku di depannya kalau ada (mis. "Buku Kedua · Bab XXI · Tentang Hipotek"). Tidak perlu diisi manual.
 - `linkN_*` (pasal terkait, 418 link): rujukan ke pasal lain di KUHPER yang disebut di isi
   pasal, misalnya "sebagaimana dimaksud dalam Pasal 54". Rujukan yang diikuti nama undang-undang lain
   dilewati.

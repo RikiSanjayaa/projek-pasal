@@ -172,7 +172,7 @@ void main() {
   });
 
   group('migrasi skema', () {
-    test('v5 -> v6 membuat pasal_versi tanpa menghapus data lama', () async {
+    test('v5 -> v7 membuat pasal_versi, menukar keywords dengan bab, data lama tetap', () async {
       if (!sqliteOk) return markTestSkipped('libsqlite3 tidak tersedia');
       final old = AppDatabase.forTesting(
         NativeDatabase.memory(
@@ -198,7 +198,7 @@ void main() {
                 is_active INTEGER NOT NULL DEFAULT 1, created_at INTEGER,
                 UNIQUE(source_pasal_id, target_pasal_id))''');
             raw.execute(
-              "INSERT INTO pasal_table (id, undang_undang_id, nomor, isi) VALUES ('p1','u1','3','isi lama')",
+              "INSERT INTO pasal_table (id, undang_undang_id, nomor, isi, keywords) VALUES ('p1','u1','3','isi lama','[\"lama\"]')",
             );
             raw.execute('PRAGMA user_version = 5');
           },
@@ -208,6 +208,13 @@ void main() {
 
       final pasal = await old.getPasalById('p1');
       expect(pasal?.isi, 'isi lama');
+      expect(pasal?.bab, isNull);
+      final columns = await old
+          .customSelect("SELECT name FROM pragma_table_info('pasal_table')")
+          .get();
+      final names = columns.map((r) => r.read<String>('name')).toList();
+      expect(names, contains('bab'));
+      expect(names, isNot(contains('keywords')));
 
       await old.insertAllPasalVersi([
         PasalVersiTableCompanion.insert(

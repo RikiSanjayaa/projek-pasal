@@ -14,7 +14,6 @@ import {
   SimpleGrid,
   Stack,
   Tabs,
-  TagsInput,
   Text,
   Textarea,
   TextInput,
@@ -75,7 +74,7 @@ interface ImportPasal {
   judul?: string
   isi: string
   penjelasan?: string
-  keywords?: string[]
+  bab?: string | null
   links?: PasalLink[]
   /** Ada = file membawa riwayat lengkap; backend mengganti riwayat lama pasal ini. */
   riwayat?: ImportRiwayat[]
@@ -128,10 +127,7 @@ function cleanOcrText(text: string) {
 }
 
 function normalizeImportPasal(row: ImportPasal): ImportPasal {
-  return normalizePasalInput({
-    ...row,
-    keywords: row.keywords?.map((keyword) => keyword.trim()).filter(Boolean) || [],
-  })
+  return normalizePasalInput(row)
 }
 
 function createDraftId() {
@@ -209,7 +205,6 @@ function parseOcrTextToDrafts(text: string, source = 'Teks manual'): OcrDraft[] 
       judul: '',
       isi: normalizeLegalTextForStorage(cleaned),
       penjelasan: '',
-      keywords: [],
     }]
   }
 
@@ -234,7 +229,6 @@ function parseOcrTextToDrafts(text: string, source = 'Teks manual'): OcrDraft[] 
       judul,
       isi: normalizeLegalTextForStorage(isi),
       penjelasan: normalizeLegalTextForStorage(penjelasan),
-      keywords: [],
     }
   })
 }
@@ -427,20 +421,17 @@ export function BulkImportPage() {
       })
     }
 
+    const hasBabColumn = 'bab' in rows[0]
+
     return rows.map((row, index) => {
       const rowNum = index + 2
       const nomor = String(row.nomor || '').trim()
       const judul = String(row.judul || '').trim() || undefined
       const isi = String(row.isi || '').trim()
       const penjelasan = String(row.penjelasan || '').trim() || undefined
-      const keywordsRaw = String(row.keywords || '').trim()
 
       if (!nomor) throw new Error(`Baris ${rowNum}: kolom "nomor" wajib diisi`)
       if (!isi) throw new Error(`Baris ${rowNum}: kolom "isi" wajib diisi`)
-
-      const keywords = keywordsRaw
-        ? keywordsRaw.split(',').map((keyword) => keyword.trim()).filter(Boolean)
-        : []
 
       const links: PasalLink[] = []
       for (let i = 1; i <= MAX_LINKS_PER_PASAL; i++) {
@@ -462,7 +453,8 @@ export function BulkImportPage() {
         judul,
         isi,
         penjelasan,
-        keywords,
+        // Kunci bab hanya dikirim bila sheet punya kolom "bab"; kosong berarti hapus nilai lama.
+        ...(hasBabColumn ? { bab: String(row.bab || '').trim() || null } : {}),
         links: links.length > 0 ? links : undefined,
         riwayat: historySheet ? history.get(nomor) ?? [] : undefined,
       })
@@ -665,7 +657,7 @@ export function BulkImportPage() {
         judul: 'Contoh Judul Pasal',
         isi: 'Isi lengkap pasal. Tuliskan seluruh isi pasal di kolom ini.',
         penjelasan: 'Penjelasan, tafsir, atau pendapat ahli (opsional)',
-        keywords: 'keyword1, keyword2, keyword3',
+        bab: 'Bab XXIII · Tindak Pidana Pencurian',
         link1_targetUU: 'KUHAP',
         link1_targetNomor: '21',
         link1_keterangan: 'Lihat prosedur penyidikan',
@@ -874,11 +866,6 @@ export function BulkImportPage() {
                                 minRows={4}
                                 autosize
                               />
-                              <TagsInput
-                                label="Keywords"
-                                value={draft.keywords || []}
-                                onChange={(keywords) => updateDraft(draft.id, { keywords })}
-                              />
                               <Badge color={issues.length === 0 ? 'green' : hasErrors ? 'red' : 'yellow'}>
                                 {summarizeQualityIssues(issues)}
                               </Badge>
@@ -923,13 +910,6 @@ export function BulkImportPage() {
                                   label="Judul"
                                   value={draft.judul || ''}
                                   onChange={(event) => updateDraft(draft.id, { judul: event.currentTarget.value })}
-                                />
-                              </Box>
-                              <Box className="ocr-field-keywords">
-                                <TagsInput
-                                  label="Keywords"
-                                  value={draft.keywords || []}
-                                  onChange={(keywords) => updateDraft(draft.id, { keywords })}
                                 />
                               </Box>
                               <Box className="ocr-field-body">

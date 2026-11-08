@@ -10,7 +10,7 @@ File ini dibuat oleh `import-tools/prepare_import.py kuhap-2025`. Jangan edit ma
   - sheet `review`: hasil pemeriksaan tiap pasal dengan PDF resmi.
 - `judul` diisi judul paragraf/bagian/bab tempat pasal berada (tidak ada judul per pasal).
 - `penjelasan` diisi penjelasan resmi.
-- `keywords` (topik): judul bab dan bagian tempat pasal berada. Tidak perlu diisi manual.
+- `bab`: bab tempat pasal berada, dengan buku di depannya kalau ada (mis. "Buku Kedua · Bab XXI · Tentang Hipotek"). Tidak perlu diisi manual.
 - `linkN_*` (pasal terkait, 179 link): rujukan ke pasal lain di KUHAP yang disebut di isi
   pasal, misalnya "sebagaimana dimaksud dalam Pasal 54". Rujukan yang diikuti nama undang-undang lain
   dilewati, begitu juga Bab Ketentuan Penutup dan Ketentuan Peralihan (isinya memetakan pasal UU lain).

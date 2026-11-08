@@ -65,7 +65,7 @@ export interface Database {
           judul: string | null
           isi: string
           penjelasan: string | null
-          keywords: string[]
+          bab: string | null
           is_active: boolean
           verification_status: VerificationStatus
           verified_by: string | null
@@ -83,7 +83,7 @@ export interface Database {
           judul?: string | null
           isi: string
           penjelasan?: string | null
-          keywords?: string[]
+          bab?: string | null
           is_active?: boolean
           deleted_at?: string | null
           created_at?: string
@@ -98,7 +98,7 @@ export interface Database {
           judul?: string | null
           isi?: string
           penjelasan?: string | null
-          keywords?: string[]
+          bab?: string | null
           is_active?: boolean
           deleted_at?: string | null
           created_at?: string
@@ -320,7 +320,7 @@ export interface Database {
           judul: string | null
           isi: string
           penjelasan: string | null
-          keywords: string[]
+          bab: string | null
           rank: number
           total_count: number
         }[]
@@ -476,7 +476,7 @@ export interface ImportSnap {
   judul: string | null
   isi: string | null
   penjelasan: string | null
-  keywords: string[]
+  bab: string | null
 }
 
 export interface ImportRiwayatRow {

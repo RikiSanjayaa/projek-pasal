@@ -10,7 +10,6 @@ import {
   TextInput,
   Textarea,
   Select,
-  TagsInput,
   LoadingOverlay,
   Grid,
 } from '@mantine/core'
@@ -59,7 +58,7 @@ export function PasalEditPage() {
       judul: '',
       isi: '',
       penjelasan: '',
-      keywords: [],
+      bab: '',
     },
     validate: {
       undang_undang_id: (value) => (!value ? 'Pilih undang-undang' : null),
@@ -82,7 +81,7 @@ export function PasalEditPage() {
         judul: pasal.judul || '',
         isi: pasal.isi,
         penjelasan: pasal.penjelasan || '',
-        keywords: pasal.keywords || [],
+        bab: pasal.bab || '',
       })
     }
   }, [pasal])
@@ -241,11 +240,11 @@ export function PasalEditPage() {
                   {...form.getInputProps('penjelasan')}
                 />
 
-                <TagsInput
-                  label="Keywords"
-                  placeholder="Ketik keyword dan tekan Enter"
-                  description="Keywords untuk memudahkan pencarian"
-                  {...form.getInputProps('keywords')}
+                <TextInput
+                  label="Bab"
+                  placeholder="Contoh: Bab XXIII · Tindak Pidana Pencurian (opsional)"
+                  description="Diisi otomatis saat import. Kosongkan bila pasal tidak berada di bawah bab."
+                  {...form.getInputProps('bab')}
                 />
 
                 <PasalQualityAlert issues={qualityIssues} />

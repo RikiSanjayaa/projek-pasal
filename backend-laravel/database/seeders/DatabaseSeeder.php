@@ -84,11 +84,7 @@ class DatabaseSeeder extends Seeder
                         "Tiada seorang pun dapat dipidana atau dikenai tindakan, kecuali perbuatan yang dilakukan telah ditetapkan sebagai tindak pidana dalam peraturan perundang-undangan yang berlaku pada saat perbuatan itu dilakukan.",
                     "penjelasan" =>
                         "Pasal ini menegaskan asas legalitas sebagai dasar utama pemidanaan dalam KUHP nasional.",
-                    "keywords" => [
-                        "asas legalitas",
-                        "pemidanaan",
-                        "ketentuan umum",
-                    ],
+                    "bab" => "Bab I · Ruang Lingkup Berlakunya Ketentuan Peraturan Perundang-undangan Pidana",
                 ],
                 [
                     "nomor" => "Pasal 2",
@@ -97,7 +93,7 @@ class DatabaseSeeder extends Seeder
                         "Hukum yang hidup dalam masyarakat dapat menjadi dasar pemidanaan sepanjang sesuai dengan nilai Pancasila, Undang-Undang Dasar Negara Republik Indonesia Tahun 1945, hak asasi manusia, dan asas hukum umum yang diakui masyarakat bangsa-bangsa.",
                     "penjelasan" =>
                         "Pasal ini membuka ruang pengakuan terhadap hukum yang hidup dengan pembatasan konstitusional dan HAM.",
-                    "keywords" => ["hukum adat", "living law", "asas hukum"],
+                    "bab" => "Bab I · Ruang Lingkup Berlakunya Ketentuan Peraturan Perundang-undangan Pidana",
                 ],
                 [
                     "nomor" => "Pasal 23",
@@ -106,11 +102,7 @@ class DatabaseSeeder extends Seeder
                         "Setiap orang yang melakukan tindak pidana dipertanggungjawabkan atas perbuatannya apabila pada waktu melakukan tindak pidana tersebut memiliki kesalahan.",
                     "penjelasan" =>
                         "Rumusan ini menempatkan kesalahan sebagai syarat pokok pertanggungjawaban pidana.",
-                    "keywords" => [
-                        "kesalahan",
-                        "pertanggungjawaban pidana",
-                        "unsur pidana",
-                    ],
+                    "bab" => "Bab II · Tindak Pidana dan Pertanggungjawaban Pidana",
                 ],
                 [
                     "nomor" => "Pasal 37",
@@ -119,11 +111,7 @@ class DatabaseSeeder extends Seeder
                         "Pemidanaan bertujuan mencegah tindak pidana, memasyarakatkan terpidana dengan pembinaan, menyelesaikan konflik akibat tindak pidana, memulihkan keseimbangan, serta menumbuhkan rasa penyesalan pada terpidana.",
                     "penjelasan" =>
                         "Pasal ini menegaskan orientasi pemidanaan yang tidak semata-mata bersifat pembalasan.",
-                    "keywords" => [
-                        "tujuan pemidanaan",
-                        "restoratif",
-                        "pembinaan",
-                    ],
+                    "bab" => "Bab III · Pemidanaan, Pidana, dan Tindakan",
                 ],
                 [
                     "nomor" => "Pasal 38",
@@ -132,11 +120,7 @@ class DatabaseSeeder extends Seeder
                         "Pemidanaan tidak dimaksudkan untuk menderitakan dan tidak diperkenankan merendahkan martabat manusia.",
                     "penjelasan" =>
                         "Prinsip ini menjadi batas etis dalam penjatuhan dan pelaksanaan pidana.",
-                    "keywords" => [
-                        "martabat manusia",
-                        "pidana",
-                        "hak asasi manusia",
-                    ],
+                    "bab" => "Bab III · Pemidanaan, Pidana, dan Tindakan",
                 ],
                 [
                     "nomor" => "Pasal 218",
@@ -145,7 +129,7 @@ class DatabaseSeeder extends Seeder
                         "Setiap orang yang di muka umum menyerang kehormatan atau harkat dan martabat diri Presiden atau Wakil Presiden dipidana dengan pidana penjara paling lama 3 tahun 6 bulan atau pidana denda paling banyak kategori IV.",
                     "penjelasan" =>
                         "Contoh pasal delik aduan yang sering menjadi perhatian publik dalam pembahasan KUHP baru.",
-                    "keywords" => ["presiden", "penghinaan", "delik aduan"],
+                    "bab" => "Bab VIII · Tindak Pidana terhadap Martabat Presiden",
                 ],
                 [
                     "nomor" => "Pasal 240",
@@ -154,11 +138,7 @@ class DatabaseSeeder extends Seeder
                         "Setiap orang yang menyiarkan atau menyebarluaskan berita atau pemberitahuan bohong yang menimbulkan keonaran dalam masyarakat dipidana dengan pidana penjara paling lama 6 tahun atau pidana denda paling banyak kategori V.",
                     "penjelasan" =>
                         "Pasal ini relevan untuk simulasi pencarian isu hoaks dan gangguan ketertiban umum.",
-                    "keywords" => [
-                        "berita bohong",
-                        "keonaran",
-                        "ketertiban umum",
-                    ],
+                    "bab" => "Bab VIII · Tindak Pidana terhadap Ketertiban Umum",
                 ],
                 [
                     "nomor" => "Pasal 408",
@@ -167,11 +147,7 @@ class DatabaseSeeder extends Seeder
                         "Setiap orang yang mengambil barang yang seluruhnya atau sebagian milik orang lain dengan maksud untuk memiliki secara melawan hukum dipidana karena pencurian dengan pidana penjara paling lama 5 tahun atau pidana denda paling banyak kategori V.",
                     "penjelasan" =>
                         "Rumusan dasar tindak pidana pencurian untuk kebutuhan contoh pasal yang umum dicari.",
-                    "keywords" => [
-                        "pencurian",
-                        "mengambil barang",
-                        "melawan hukum",
-                    ],
+                    "bab" => "Bab XXVII · Tindak Pidana Pencurian",
                 ],
                 [
                     "nomor" => "Pasal 459",
@@ -180,11 +156,7 @@ class DatabaseSeeder extends Seeder
                         "Setiap orang yang dengan maksud menguntungkan diri sendiri atau orang lain secara melawan hukum, memakai nama palsu, martabat palsu, tipu muslihat, atau rangkaian kebohongan untuk menggerakkan orang supaya menyerahkan barang, memberi utang, atau menghapuskan piutang dipidana karena penipuan.",
                     "penjelasan" =>
                         "Pasal ini mewakili tindak pidana penipuan yang sering dicari dalam praktik sehari-hari.",
-                    "keywords" => [
-                        "penipuan",
-                        "tipu muslihat",
-                        "rangkaian kebohongan",
-                    ],
+                    "bab" => "Bab XXVIII · Tindak Pidana Penipuan",
                 ],
                 [
                     "nomor" => "Pasal 473",
@@ -193,11 +165,7 @@ class DatabaseSeeder extends Seeder
                         "Setiap orang yang secara melawan hukum memiliki barang yang seluruhnya atau sebagian milik orang lain yang berada dalam penguasaannya bukan karena tindak pidana dipidana karena penggelapan.",
                     "penjelasan" =>
                         "Pasal penggelapan berguna sebagai pembanding terhadap pencurian dan penipuan.",
-                    "keywords" => [
-                        "penggelapan",
-                        "penguasaan barang",
-                        "melawan hukum",
-                    ],
+                    "bab" => "Bab XXIX · Tindak Pidana Penggelapan",
                 ],
             ]
             as $pasal

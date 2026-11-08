@@ -8,7 +8,7 @@ Smart Search dibuat agar pencarian pasal tetap cepat, bisa dipakai offline di mo
 - Backend admin memakai PostgreSQL full-text search dan ranking.
 - Query dinormalisasi: huruf kecil, tanda baca dibersihkan, spasi dirapikan.
 - Nomor pasal selalu diprioritaskan.
-- Keyword, judul, isi pasal, dan penjelasan ikut dihitung dalam ranking.
+- Bab, judul, isi pasal, dan penjelasan ikut dihitung dalam ranking.
 - Sinonim hukum umum ditambahkan sebagai content-aware search ringan.
 - Super admin bisa mengelola sinonim/alias dari dashboard tanpa deploy ulang; alias ikut terkirim ke mobile lewat sync.
 - Jika hasil kosong, UI memberi saran kata hukum yang bisa dicoba.
@@ -42,7 +42,7 @@ Mobile memakai scoring lokal:
 1. nomor pasal exact match;
 2. nomor pasal prefix/contains;
 3. judul;
-4. keyword;
+4. bab;
 5. isi;
 6. penjelasan;
 7. synonym match;
@@ -65,10 +65,12 @@ Backend memakai:
 search_vector @@ websearch_to_tsquery('simple', query)
 ts_rank_cd(search_vector, query)
 ILIKE fallback
-keyword ranking
+bab ranking
 ```
 
-Migration baru memasukkan `keywords` ke `search_vector`, lalu memicu reindex semua pasal dengan update ringan.
+Migration `2026_08_18_000001` memasukkan `keywords` ke `search_vector`; migration
+`2026_11_11_000001_replace_pasal_keywords_with_bab` mengganti kolom itu dengan `bab` dan menghitung ulang
+`search_vector` semua pasal.
 
 ## Menu Smart Search
 

@@ -201,51 +201,20 @@ void main() {
         expect(result, isEmpty);
       });
 
-      test('correctly parses keywords JSON array', () async {
+      test('maps bab column', () async {
         final testData = [
           TestDataFactory.createPasal(
             id: 'pasal-1',
-            keywords: '["pidana", "hukum", "sanksi"]',
+            bab: 'Bab XXIII · Tindak Pidana Pencurian',
           ),
+          TestDataFactory.createPasal(id: 'pasal-2', nomor: '2'),
         ];
         when(mockDatabase.getActivePasal()).thenAnswer((_) async => testData);
 
         final result = await QueryService.getAllPasal();
 
-        expect(result.first.keywords, ['pidana', 'hukum', 'sanksi']);
-      });
-
-      test('returns empty list for invalid keywords JSON', () async {
-        final testData = [
-          TestDataFactory.createPasal(id: 'pasal-1', keywords: 'invalid json'),
-        ];
-        when(mockDatabase.getActivePasal()).thenAnswer((_) async => testData);
-
-        final result = await QueryService.getAllPasal();
-
-        expect(result.first.keywords, isEmpty);
-      });
-
-      test('returns empty list for empty keywords string', () async {
-        final testData = [
-          TestDataFactory.createPasal(id: 'pasal-1', keywords: ''),
-        ];
-        when(mockDatabase.getActivePasal()).thenAnswer((_) async => testData);
-
-        final result = await QueryService.getAllPasal();
-
-        expect(result.first.keywords, isEmpty);
-      });
-
-      test('returns empty list for empty array keywords', () async {
-        final testData = [
-          TestDataFactory.createPasal(id: 'pasal-1', keywords: '[]'),
-        ];
-        when(mockDatabase.getActivePasal()).thenAnswer((_) async => testData);
-
-        final result = await QueryService.getAllPasal();
-
-        expect(result.first.keywords, isEmpty);
+        expect(result[0].bab, 'Bab XXIII · Tindak Pidana Pencurian');
+        expect(result[1].bab, isNull);
       });
     });
 
@@ -377,23 +346,44 @@ void main() {
       });
     });
 
-    group('getPasalByKeyword', () {
-      test('returns matching pasal for keyword', () async {
+    group('getPasalByBab', () {
+      test('returns only pasal of that bab, in natural nomor order', () async {
+        const bab = 'Buku Kedua · Bab XXI · Tentang Hipotek';
         final testData = [
-          TestDataFactory.createPasal(id: 'pasal-1', keywords: '["pidana"]'),
+          for (final nomor in ['100', '10', '2', '79A', '79'])
+            TestDataFactory.createPasal(
+              id: 'pasal-$nomor',
+              nomor: nomor,
+              undangUndangId: 'uu-1',
+              bab: bab,
+            ),
+          TestDataFactory.createPasal(
+            id: 'pasal-lain',
+            nomor: '1',
+            undangUndangId: 'uu-1',
+            bab: 'Buku Kedua · Bab XXII · Lainnya',
+          ),
+          TestDataFactory.createPasal(
+            id: 'pasal-tanpa-bab',
+            nomor: '3',
+            undangUndangId: 'uu-1',
+          ),
         ];
-        when(mockDatabase.getActivePasal()).thenAnswer((_) async => testData);
+        when(
+          mockDatabase.getActivePasalByUndangUndang('uu-1'),
+        ).thenAnswer((_) async => testData);
 
-        final result = await QueryService.getPasalByKeyword('pidana');
+        final result = await QueryService.getPasalByBab('uu-1', bab);
 
-        expect(result.length, 1);
-        verify(mockDatabase.getActivePasal()).called(1);
+        expect(result.map((p) => p.nomor), ['2', '10', '79', '79A', '100']);
       });
 
       test('returns empty list when database throws exception', () async {
-        when(mockDatabase.getActivePasal()).thenThrow(Exception('DB Error'));
+        when(
+          mockDatabase.getActivePasalByUndangUndang('uu-1'),
+        ).thenThrow(Exception('DB Error'));
 
-        final result = await QueryService.getPasalByKeyword('keyword');
+        final result = await QueryService.getPasalByBab('uu-1', 'Bab I · X');
 
         expect(result, isEmpty);
       });
@@ -458,7 +448,6 @@ void main() {
             undangUndangId: 'uu-1',
             nomor: '1',
             isi: 'Isi 1',
-            keywords: '[]',
             relatedIds: '[]',
             isActive: true,
             createdAt: now.subtract(const Duration(days: 1)),
@@ -470,7 +459,6 @@ void main() {
             undangUndangId: 'uu-1',
             nomor: '2',
             isi: 'Isi 2',
-            keywords: '[]',
             relatedIds: '[]',
             isActive: true,
             createdAt: now,
@@ -494,7 +482,6 @@ void main() {
             undangUndangId: 'uu-1',
             nomor: '1',
             isi: 'Isi 1',
-            keywords: '[]',
             relatedIds: '[]',
             isActive: true,
             createdAt: null,
@@ -506,7 +493,6 @@ void main() {
             undangUndangId: 'uu-1',
             nomor: '2',
             isi: 'Isi 2',
-            keywords: '[]',
             relatedIds: '[]',
             isActive: true,
             createdAt: DateTime(2024, 1, 1),
@@ -654,7 +640,7 @@ void main() {
           isi: 'Test content',
           penjelasan: 'Test explanation',
           judul: 'Test title',
-          keywords: '["test", "sample"]',
+          bab: 'Bab I · Ketentuan Umum',
           relatedIds: '["rel-1", "rel-2"]',
           isActive: true,
           createdAt: DateTime(2024, 1, 1),
@@ -673,7 +659,7 @@ void main() {
       expect(pasal.isi, 'Test content');
       expect(pasal.penjelasan, 'Test explanation');
       expect(pasal.judul, 'Test title');
-      expect(pasal.keywords, ['test', 'sample']);
+      expect(pasal.bab, 'Bab I · Ketentuan Umum');
       expect(pasal.relatedIds, ['rel-1', 'rel-2']);
       expect(pasal.isActive, true);
       expect(pasal.createdAt, DateTime(2024, 1, 1));

@@ -75,8 +75,9 @@ projek-pasal/
 - Teks diambil dari datahukum.com (bukan sumber resmi). Untuk KUHP, KUHAP, dan UU ITE, pipeline
   membandingkannya dengan PDF resmi JDIH BPK dan mencatat koreksi typo per pasal. KUHPerdata tidak punya
   naskah resmi berbahasa Indonesia, jadi teksnya dipindai untuk sisa teks penerjemah dan kata asing.
-- Keyword otomatis dari judul bab/bagian, dan pasal terkait otomatis dari rujukan di isi pasal
-  ("sebagaimana dimaksud dalam Pasal 66 ayat (1)").
+- Setiap pasal menyimpan judul bagian/paragraf (`judul`) dan bab tempatnya (`bab`, contoh
+  "Buku Kedua · Bab XXIII · Tindak Pidana Pencurian"), keduanya diisi otomatis dari struktur naskah.
+  Pasal terkait otomatis diambil dari rujukan di isi pasal ("sebagaimana dimaksud dalam Pasal 66 ayat (1)").
 
 ### Admin dashboard
 
@@ -103,8 +104,9 @@ projek-pasal/
 
 - Data diunduh sekali, lalu bisa dibaca tanpa internet. Setiap kali dibuka, aplikasi memeriksa
   pembaruan dan hanya mengunduh yang berubah.
-- Pencarian nomor, judul, dan isi pasal, filter per undang-undang dan keyword, serta alias Smart
-  Search dari dashboard.
+- Pencarian nomor, judul, dan isi pasal, filter per undang-undang dan per bab (lalu judul di dalam bab),
+  serta alias Smart Search dari dashboard. Hasil kueri beberapa kata dikelompokkan: frasa persis, istilah
+  terkait, semua kata tidak berurutan, lalu sebagian kata.
 - Isi dan penjelasan pasal ditata per ayat dan butir. Pasal yang belum diverifikasi diberi ikon
   peringatan kecil di sebelah judul.
 - Pasal yang diubah UU lain diberi label (misalnya "Diubah UU 1/2026") dan punya panel riwayat
@@ -237,7 +239,7 @@ python -m venv .venv && .venv/bin/pip install -r import-tools/requirements.txt
 
 Hasilnya ada di `data-import/<slug>/`:
 
-- `*.xlsx` berisi sheet `import` (pasal, keyword, pasal terkait), `review` (cakupan teks terhadap PDF
+- `*.xlsx` berisi sheet `import` (pasal, bab, pasal terkait), `review` (cakupan teks terhadap PDF
   BPK atau temuan pemindaian), `riwayat` (semua versi rumusan per peraturan sumber), dan `catatan`.
 - `README_IMPORT.md` berisi ringkasan konsolidasi, catatan Putusan MK, dan pasal yang perlu dicek
   manual.

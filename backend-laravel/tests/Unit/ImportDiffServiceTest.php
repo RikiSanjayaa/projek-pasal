@@ -15,9 +15,9 @@ class ImportDiffServiceTest extends TestCase
         $this->service = new ImportDiffService;
     }
 
-    private function text(string $isi = 'Setiap orang dipidana.', array $keywords = ['pidana'], ?string $judul = null, ?string $penjelasan = null): array
+    private function text(string $isi = 'Setiap orang dipidana.', ?string $bab = 'Bab I · Ketentuan Umum', ?string $judul = null, ?string $penjelasan = null): array
     {
-        return ['judul' => $judul, 'isi' => $isi, 'penjelasan' => $penjelasan, 'keywords' => $keywords];
+        return ['judul' => $judul, 'isi' => $isi, 'penjelasan' => $penjelasan, 'bab' => $bab];
     }
 
     /** Baris pasal di DB; snapshot default = isi sekarang. */
@@ -141,14 +141,44 @@ class ImportDiffServiceTest extends TestCase
         $this->assertSame([], $this->service->diff([$db], [$this->src('1', $t, ['riwayat' => []])]));
     }
 
-    public function test_keyword_order_does_not_matter_but_membership_does(): void
+    public function test_bab_only_change_is_berubah_and_does_not_count_as_text_change(): void
     {
-        $base = $this->text(keywords: ['a', 'b']);
-        $db = $this->db('1', $base);
+        $db = $this->db('1', $this->text(bab: 'Bab I · Lama'));
 
-        $this->assertSame([], $this->service->diff([$db], [$this->src('1', $this->text(keywords: ['b', 'a']))]));
+        $item = $this->only($this->service->diff([$db], [$this->src('1', $this->text(bab: 'Bab I · Baru'))]));
 
-        $item = $this->only($this->service->diff([$db], [$this->src('1', $this->text(keywords: ['a', 'c']))]));
+        $this->assertSame('berubah', $item['category']);
+        $this->assertSame('Bab I · Lama', $item['base']['bab']);
+        $this->assertSame('Bab I · Baru', $item['incoming']['bab']);
+        // Dipakai ImportApplyService: bab saja tidak mengembalikan pasal ke antrean verifikasi.
+        $this->assertFalse($this->service->textChanged($item['current'], $item['incoming']));
+        $this->assertTrue($this->service->textChanged($item['current'], $this->text('Isi lain.', bab: 'Bab I · Baru')));
+        $this->assertTrue($this->service->textChanged($item['current'], $this->text(judul: 'Judul lain', bab: 'Bab I · Lama')));
+    }
+
+    public function test_null_and_blank_bab_are_equal(): void
+    {
+        $db = $this->db('1', $this->text(bab: null));
+
+        $this->assertSame([], $this->service->diff([$db], [$this->src('1', $this->text(bab: '  '))]));
+    }
+
+    public function test_snapshot_without_bab_key_does_not_flag_when_live_equals_incoming(): void
+    {
+        $live = $this->text(bab: 'Bab I · Ketentuan Umum');
+        $oldSnapshot = ['judul' => null, 'isi' => 'Setiap orang dipidana.', 'penjelasan' => null, 'keywords' => ['ketentuan umum']];
+
+        $this->assertSame([], $this->service->diff([$this->db('1', $live, $oldSnapshot)], [$this->src('1', $live)]));
+    }
+
+    public function test_snapshot_without_bab_key_with_new_incoming_bab_is_berubah_not_diedit_admin(): void
+    {
+        $oldSnapshot = ['judul' => null, 'isi' => 'Setiap orang dipidana.', 'penjelasan' => null, 'keywords' => ['x']];
+        $item = $this->only($this->service->diff(
+            [$this->db('1', $this->text(bab: null), $oldSnapshot)],
+            [$this->src('1', $this->text(bab: 'Bab I · Ketentuan Umum'))],
+        ));
+
         $this->assertSame('berubah', $item['category']);
     }
 

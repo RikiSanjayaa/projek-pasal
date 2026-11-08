@@ -3,14 +3,14 @@ import { DiffText } from '@/components/DiffText'
 import { LegalText } from '@/components/LegalText'
 import type { ImportItem, ImportRiwayatRow, ImportSnap } from '@/lib/database.types'
 
-const FIELDS: { key: 'judul' | 'isi' | 'penjelasan'; label: string }[] = [
+const FIELDS: { key: 'judul' | 'isi' | 'penjelasan' | 'bab'; label: string }[] = [
+  { key: 'bab', label: 'Bab' },
   { key: 'judul', label: 'Judul' },
   { key: 'isi', label: 'Isi' },
   { key: 'penjelasan', label: 'Penjelasan' },
 ]
 
-const kw = (s: ImportSnap | null) => (s?.keywords ?? []).join(', ')
-const txt = (s: ImportSnap | null, key: 'judul' | 'isi' | 'penjelasan') => s?.[key] ?? ''
+const txt = (s: ImportSnap | null, key: 'judul' | 'isi' | 'penjelasan' | 'bab') => s?.[key] ?? ''
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -26,8 +26,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 /** Diff semua field dari `before` ke `after`; field yang sama dilewati. */
 function SnapDiff({ before, after }: { before: ImportSnap | null; after: ImportSnap | null }) {
   const rows = FIELDS.filter((f) => txt(before, f.key) !== txt(after, f.key))
-  const kwChanged = kw(before) !== kw(after)
-  if (rows.length === 0 && !kwChanged) return <Text size="sm" c="dimmed">Tidak ada perbedaan.</Text>
+  if (rows.length === 0) return <Text size="sm" c="dimmed">Tidak ada perbedaan.</Text>
   return (
     <Stack gap="sm">
       {rows.map((f) => (
@@ -35,11 +34,6 @@ function SnapDiff({ before, after }: { before: ImportSnap | null; after: ImportS
           <DiffText before={txt(before, f.key)} after={txt(after, f.key)} />
         </Section>
       ))}
-      {kwChanged && (
-        <Section label="Kata kunci">
-          <DiffText before={kw(before)} after={kw(after)} />
-        </Section>
-      )}
     </Stack>
   )
 }
@@ -51,7 +45,7 @@ function SnapText({ snap }: { snap: ImportSnap | null }) {
       {snap.judul && <Section label="Judul"><Text size="sm">{snap.judul}</Text></Section>}
       {snap.isi && <Section label="Isi"><LegalText text={snap.isi} size="sm" /></Section>}
       {snap.penjelasan && <Section label="Penjelasan"><LegalText text={snap.penjelasan} size="sm" /></Section>}
-      {snap.keywords.length > 0 && <Section label="Kata kunci"><Text size="sm">{kw(snap)}</Text></Section>}
+      {snap.bab && <Section label="Bab"><Text size="sm">{snap.bab}</Text></Section>}
     </Stack>
   )
 }

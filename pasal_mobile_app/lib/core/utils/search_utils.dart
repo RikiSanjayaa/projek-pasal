@@ -8,7 +8,10 @@ class _PasalIndex {
   final String title;
   final String content;
   final String explanation;
-  final List<String> keywords;
+
+  /// Judul bab saja ("Buku Kedua · Bab XXI · Tentang Hipotek" -> "tentang hipotek"). Label buku
+  /// dan bab tidak ikut dicari supaya kueri seperti "bab" atau angka Romawi tidak cocok ke semua pasal.
+  final String bab;
   final String searchable;
 
   _PasalIndex({
@@ -16,8 +19,8 @@ class _PasalIndex {
     required this.title,
     required this.content,
     required this.explanation,
-    required this.keywords,
-  }) : searchable = [nomor, title, content, explanation, ...keywords].join(' ');
+    required this.bab,
+  }) : searchable = [nomor, title, content, explanation, bab].join(' ');
 }
 
 /// Utility class for search-related operations
@@ -46,7 +49,7 @@ class SearchUtils {
     title: normalize(pasal.judul ?? ''),
     content: normalize(pasal.isi),
     explanation: normalize(searchablePenjelasan(pasal.penjelasan)),
-    keywords: pasal.keywords.map(normalize).toList(),
+    bab: normalize((pasal.bab ?? '').split('·').last),
   );
 
   /// Penjelasan tanpa baris [catatanPrefix].
@@ -307,9 +310,9 @@ class SearchUtils {
   }
 
   /// Suggests search terms mined from the actual pasal dataset — titles,
-  /// keywords, body text (isi) and penjelasan are compiled into a phrase
+  /// bab, body text (isi) and penjelasan are compiled into a phrase
   /// dictionary: 1-3 word n-grams counted per pasal, with high-signal title
-  /// and keyword chunks kept unconditionally. Candidates resembling [query]
+  /// and bab chunks kept unconditionally. Candidates resembling [query]
   /// (exact / substring / light fuzzy typo match) are ranked by match
   /// quality, phrase commonness, then frequency. Every suggestion comes
   /// from real pasal text, so tapping it is guaranteed to return results.
@@ -379,7 +382,7 @@ class SearchUtils {
     for (final pasal in list) {
       final seen = <String>{}; // per-pasal dedupe → document frequency
 
-      // High-signal fields: title chunks and keywords, any length.
+      // High-signal fields: title chunks and bab, any length.
       final title = pasal.judul ?? '';
       if (title.trim().isNotEmpty) {
         for (final chunk in title.split(RegExp(r'[,;()\[\]\-–—]'))) {
@@ -387,8 +390,10 @@ class SearchUtils {
           if (words.isNotEmpty && words.length <= 6) record(seen, chunk);
         }
       }
-      for (final keyword in pasal.keywords) {
-        record(seen, keyword);
+      final bab = pasal.bab;
+      if (bab != null && bab.trim().isNotEmpty) {
+        // Judul bab saja ("Bab XXI · Tentang Hipotek" -> "Tentang Hipotek").
+        record(seen, bab.split('·').last);
       }
 
       // Body text (isi + penjelasan): 1-3 word n-gram windows.
@@ -439,7 +444,7 @@ class SearchUtils {
         pasal.judul ?? '',
         pasal.isi,
         pasal.penjelasan ?? '',
-        pasal.keywords.join(' '),
+        pasal.bab ?? '',
       ].join(' '),
     );
   }
@@ -458,7 +463,7 @@ class SearchUtils {
     final title = index.title;
     final content = index.content;
     final explanation = index.explanation;
-    final keywords = index.keywords;
+    final bab = index.bab;
     final searchable = index.searchable;
 
     var score = 0;
@@ -479,10 +484,11 @@ class SearchUtils {
     }
 
     if (title.contains(normalizedQuery)) score += 320;
-    if (keywords.any((keyword) => keyword == normalizedQuery)) score += 280;
-    if (keywords.any((keyword) => keyword.contains(normalizedQuery))) {
-      score += 180;
+    // Kueri adalah kata/frasa utuh di judul bab: setara kata kunci yang persis sama.
+    if (bab.isNotEmpty && ' $bab '.contains(' $normalizedQuery ')) {
+      score += 280;
     }
+    if (bab.contains(normalizedQuery)) score += 180;
     if (content.contains(normalizedQuery)) score += 120;
     if (explanation.contains(normalizedQuery)) score += 70;
 
@@ -494,7 +500,7 @@ class SearchUtils {
     for (final term in q.expandedTerms) {
       if (term.length <= 1) continue;
       if (title.contains(term)) score += 75;
-      if (keywords.any((keyword) => keyword.contains(term))) score += 65;
+      if (bab.contains(term)) score += 65;
       if (content.contains(term)) score += 35;
       if (explanation.contains(term)) score += 20;
       if (searchable.contains(term)) tokenMatches++;
@@ -588,7 +594,7 @@ class SearchUtils {
       haystack.startsWith(needle) || haystack.contains(' $needle');
 
   static SearchMatchTier _tierOf(_PasalIndex index, _PreparedQuery q) {
-    final fields = [index.title, index.content, index.explanation, ...index.keywords];
+    final fields = [index.title, index.content, index.explanation, index.bab];
     if (fields.any((field) => _hasWordStart(field, q.normalized))) return SearchMatchTier.phrase;
     if (q.wholeQueryAliases.any((alias) => fields.any((field) => _hasWordStart(field, alias)))) {
       return SearchMatchTier.alias;
