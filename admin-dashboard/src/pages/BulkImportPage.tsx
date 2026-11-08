@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   ActionIcon,
   Alert,
+  Anchor,
   Badge,
   Box,
   Button,
@@ -47,12 +49,25 @@ import {
 } from '@/lib/pasal-quality'
 import { invalidatePasalData } from '@/lib/query-invalidation'
 
-const MAX_LINKS_PER_PASAL = 5
+const MAX_LINKS_PER_PASAL = 20
 
 interface PasalLink {
   targetUU: string
   targetNomor: string
   keterangan?: string
+}
+
+/** Baris sheet "riwayat" dari pipeline: versi rumusan pasal per UU sumber. */
+interface ImportRiwayat {
+  urutan: number
+  status: string
+  sumber: string
+  judul_sumber?: string
+  diundangkan?: string
+  berlaku_sejak?: string
+  naskah_resmi?: string
+  isi: string
+  penjelasan?: string
 }
 
 interface ImportPasal {
@@ -62,6 +77,8 @@ interface ImportPasal {
   penjelasan?: string
   keywords?: string[]
   links?: PasalLink[]
+  /** Ada = file membawa riwayat lengkap; backend mengganti riwayat lama pasal ini. */
+  riwayat?: ImportRiwayat[]
 }
 
 interface OcrDraft extends ImportPasal {
@@ -74,6 +91,9 @@ interface ImportResult {
     success: number
     failed: number
     errors: { nomor: string; error: string }[]
+    needsVerification: number
+    /** Jumlah pasal yang riwayatnya disimpan dan total versinya. */
+    history: { pasal: number; versi: number }
   }
   links: {
     success: number
@@ -382,6 +402,31 @@ export function BulkImportPage() {
       throw new Error('File XLSX kosong atau tidak memiliki data')
     }
 
+    // Sheet opsional "riwayat": kalau ada, setiap pasal di file dikirim dengan riwayatnya (bisa kosong).
+    const historySheet = workbook.Sheets['riwayat']
+    const history = new Map<string, ImportRiwayat[]>()
+    if (historySheet) {
+      const text = (value: unknown) => String(value ?? '').trim()
+      XLSX.utils.sheet_to_json<Record<string, unknown>>(historySheet, { defval: '' }).forEach((row, index) => {
+        const nomor = text(row.nomor)
+        const versi: ImportRiwayat = {
+          urutan: Number(row.urutan) || 0,
+          status: text(row.status),
+          sumber: text(row.sumber),
+          judul_sumber: text(row.judul_sumber) || undefined,
+          diundangkan: text(row.diundangkan) || undefined,
+          berlaku_sejak: text(row.berlaku_sejak) || undefined,
+          naskah_resmi: text(row.naskah_resmi) || undefined,
+          isi: text(row.isi),
+          penjelasan: text(row.penjelasan) || undefined,
+        }
+        if (!nomor || !versi.status || !versi.sumber || !versi.isi) {
+          throw new Error(`Sheet riwayat baris ${index + 2}: nomor, status, sumber, dan isi wajib diisi`)
+        }
+        history.set(nomor, [...(history.get(nomor) ?? []), versi])
+      })
+    }
+
     return rows.map((row, index) => {
       const rowNum = index + 2
       const nomor = String(row.nomor || '').trim()
@@ -412,7 +457,15 @@ export function BulkImportPage() {
         }
       }
 
-      return normalizeImportPasal({ nomor, judul, isi, penjelasan, keywords, links: links.length > 0 ? links : undefined })
+      return normalizeImportPasal({
+        nomor,
+        judul,
+        isi,
+        penjelasan,
+        keywords,
+        links: links.length > 0 ? links : undefined,
+        riwayat: historySheet ? history.get(nomor) ?? [] : undefined,
+      })
     })
   }, [])
 
@@ -549,7 +602,9 @@ export function BulkImportPage() {
         created: number
         updated: number
         errors: { row: number; message: string }[]
+        needs_verification: number
         links?: { created: number; errors: { source: string; target: string; message: string }[] }
+        riwayat?: { pasal: number; versi: number }
       }>('/admin/pasal/bulk-import', {
         rows: sourceRows.map((item) => ({ ...item, undang_undang_id: selectedUU })),
       })
@@ -562,6 +617,8 @@ export function BulkImportPage() {
           success: response.created + response.updated,
           failed: response.errors.length,
           errors: response.errors.map((error) => ({ nomor: `Baris ${error.row}`, error: error.message })),
+          needsVerification: response.needs_verification,
+          history: response.riwayat ?? { pasal: 0, versi: 0 },
         },
         links: {
           success: response.links?.created || 0,
@@ -969,6 +1026,20 @@ export function BulkImportPage() {
                 {` | Link berhasil: ${importResult.links.success}`}
                 {importResult.links.failed > 0 && ` | Link gagal: ${importResult.links.failed}`}
               </Text>
+              {importResult.pasal.needsVerification > 0 && (
+                <Text size="sm" mt={4}>
+                  {importResult.pasal.needsVerification} pasal baru/berubah masuk antrean{' '}
+                  <Anchor component={Link} to="/verifikasi" size="sm">
+                    Verifikasi
+                  </Anchor>
+                  . Pasal tetap tampil di mobile dengan label "Belum diverifikasi admin".
+                </Text>
+              )}
+              {importResult.pasal.history.pasal > 0 && (
+                <Text size="sm" mt={4}>
+                  Riwayat perubahan tersimpan untuk {importResult.pasal.history.pasal} pasal ({importResult.pasal.history.versi} versi).
+                </Text>
+              )}
             </Alert>
           )}
 

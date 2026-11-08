@@ -338,6 +338,24 @@ void main() {
         expect(result.every((p) => p.undangUndangId == 'uu-1'), true);
       });
 
+      test('orders pasal numerically, not alphabetically', () async {
+        final testData = [
+          for (final nomor in ['100', '10', '2', '79A', '79', '1'])
+            TestDataFactory.createPasal(
+              id: 'pasal-$nomor',
+              nomor: nomor,
+              undangUndangId: 'uu-1',
+            ),
+        ];
+        when(
+          mockDatabase.getActivePasalByUndangUndang('uu-1'),
+        ).thenAnswer((_) async => testData);
+
+        final result = await QueryService.getPasalByUU('uu-1');
+
+        expect(result.map((p) => p.nomor), ['1', '2', '10', '79', '79A', '100']);
+      });
+
       test('returns empty list when UU has no pasal', () async {
         when(
           mockDatabase.getActivePasalByUndangUndang('uu-empty'),
@@ -445,6 +463,7 @@ void main() {
             isActive: true,
             createdAt: now.subtract(const Duration(days: 1)),
             updatedAt: null,
+            verificationStatus: 'perlu_verifikasi',
           ),
           PasalTableData(
             id: 'pasal-2',
@@ -456,6 +475,7 @@ void main() {
             isActive: true,
             createdAt: now,
             updatedAt: null,
+            verificationStatus: 'perlu_verifikasi',
           ),
         ];
         when(mockDatabase.getActivePasal()).thenAnswer((_) async => testData);
@@ -479,6 +499,7 @@ void main() {
             isActive: true,
             createdAt: null,
             updatedAt: null,
+            verificationStatus: 'perlu_verifikasi',
           ),
           PasalTableData(
             id: 'pasal-2',
@@ -490,6 +511,7 @@ void main() {
             isActive: true,
             createdAt: DateTime(2024, 1, 1),
             updatedAt: null,
+            verificationStatus: 'perlu_verifikasi',
           ),
         ];
         when(mockDatabase.getActivePasal()).thenAnswer((_) async => testData);

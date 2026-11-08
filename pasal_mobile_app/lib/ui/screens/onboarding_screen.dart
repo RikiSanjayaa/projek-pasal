@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../core/config/app_colors.dart';
 import '../../core/services/sync_manager.dart';
 import '../../core/services/sync_progress.dart';
@@ -13,15 +13,19 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  final PageController _pageController = PageController();
+  PageController _pageController = PageController();
   int _currentPage = 0;
   bool _isDownloading = false;
+
+  /// Pesan kesalahan dari unduhan pertama yang gagal; non-null menampilkan
+  /// layar error dengan tombol coba lagi.
+  String? _downloadError;
 
   final List<Map<String, dynamic>> _pages = [
     {
       "title": "Selamat Datang",
       "desc":
-          "Aplikasi Kitab Undang-Undang Hukum (KUHP, ITE, dll) dalam genggaman Anda.",
+          "Baca dan cari pasal undang-undang Indonesia kapan saja, langsung dari genggaman Anda.",
       "icon": Icons.menu_book_rounded,
       "color": AppColors.primary,
     },
@@ -41,8 +45,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     },
   ];
 
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   Future<void> _startDownload() async {
-    setState(() => _isDownloading = true);
+    setState(() {
+      _isDownloading = true;
+      _downloadError = null;
+    });
 
     final result = await syncManager.performSync();
 
@@ -54,7 +67,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       _showCompletionDialog(dbSize);
     } else if (syncManager.progress.value?.phase == SyncPhase.cancelled) {
-      setState(() => _isDownloading = false);
+      _backToPages();
       AppNotification.show(
         context,
         "Unduhan dibatalkan",
@@ -62,14 +75,105 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         icon: Icons.cancel,
       );
     } else {
-      setState(() => _isDownloading = false);
-      AppNotification.show(
-        context,
-        result.message,
-        color: AppColors.error,
-        icon: Icons.error_outline,
-      );
+      setState(() {
+        _isDownloading = false;
+        _downloadError = _downloadErrorMessage(result);
+      });
     }
+  }
+
+  String _downloadErrorMessage(SyncResult result) {
+    final message = result.message.trim();
+    if (message.isNotEmpty && message != 'Sync gagal') return message;
+    final progress = syncManager.progress.value;
+    if (progress?.phase == SyncPhase.error &&
+        progress!.currentOperation.trim().isNotEmpty) {
+      return progress.currentOperation;
+    }
+    return 'Data hukum belum berhasil diunduh.';
+  }
+
+  /// Kembali ke slide terakhir (bukan slide pertama) setelah unduhan
+  /// dibatalkan atau gagal.
+  void _backToPages() {
+    _pageController.dispose();
+    _pageController = PageController(initialPage: _currentPage);
+    setState(() {
+      _isDownloading = false;
+      _downloadError = null;
+    });
+  }
+
+  Widget _buildErrorView(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            height: 120,
+            width: 120,
+            decoration: BoxDecoration(
+              color: AppColors.error.withValues(alpha: isDark ? 0.1 : 0.05),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.error.withValues(alpha: isDark ? 0.5 : 0.3),
+                width: 2,
+              ),
+            ),
+            child: const Icon(
+              Icons.cloud_off_rounded,
+              size: 50,
+              color: AppColors.error,
+            ),
+          ),
+          const SizedBox(height: 32),
+          Text(
+            'Unduhan Gagal',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary(isDark),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _downloadError ?? '',
+            style: TextStyle(
+              fontSize: 15,
+              height: 1.5,
+              color: AppColors.textSecondary(isDark),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Periksa koneksi internet Anda, lalu coba lagi.',
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary(isDark),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: FilledButton.icon(
+              onPressed: _startDownload,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text(
+                'Coba Lagi',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextButton(onPressed: _backToPages, child: const Text('Kembali')),
+        ],
+      ),
+    );
   }
 
   void _showCompletionDialog(String dbSize) {
@@ -242,9 +346,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Expanded(
               child: _isDownloading
                   ? _buildDownloadingView(isDark)
+                  : _downloadError != null
+                  ? _buildErrorView(isDark)
                   : _buildOnboardingPages(isDark),
             ),
-            if (!_isDownloading) _buildBottomSection(isDark),
+            if (!_isDownloading && _downloadError == null)
+              _buildBottomSection(isDark),
           ],
         ),
       ),
@@ -613,14 +720,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _startDownload();
                 }
               },
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

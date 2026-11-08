@@ -45,6 +45,8 @@ class TestDataFactory {
     bool isActive = true,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String verificationStatus = 'perlu_verifikasi',
+    DateTime? verifiedAt,
   }) {
     return PasalTableData(
       id: id,
@@ -58,6 +60,8 @@ class TestDataFactory {
       isActive: isActive,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      verificationStatus: verificationStatus,
+      verifiedAt: verifiedAt,
     );
   }
 

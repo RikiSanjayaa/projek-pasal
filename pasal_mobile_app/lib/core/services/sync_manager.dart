@@ -1,5 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/date_format_id.dart';
+import '../utils/search_utils.dart';
 import 'auth_service.dart';
 import 'data_service.dart';
 import 'sync_progress.dart';
@@ -11,10 +15,13 @@ class SyncManager {
   SyncManager._internal();
 
   static const String _lastSyncKey = 'last_sync_timestamp';
-  static const String _syncIntervalKey = 'sync_interval_days';
+  static const String _dataUpdatedKey = 'data_updated_at';
+  static const String _searchAliasesKey = 'search_aliases';
+  static const String _syncDataVersionKey = 'sync_data_version';
 
-  /// Default sync interval in days
-  static const int defaultSyncIntervalDays = 7;
+  /// Naikkan setiap kali sync membawa tabel/kolom baru yang harus diisi untuk SEMUA data
+  /// (sync inkremental hanya mengirim yang berubah). 6 = riwayat pasal (pasal_versi).
+  static const int syncDataVersion = 6;
 
   /// Notifier for sync state changes
   final ValueNotifier<SyncState> state = ValueNotifier(SyncState.idle);
@@ -29,6 +36,10 @@ class SyncManager {
   DateTime? _lastSyncTime;
   DateTime? get lastSyncTime => _lastSyncTime;
 
+  /// Waktu terakhir admin mengubah data di server (bukan waktu sync perangkat)
+  DateTime? _dataUpdatedAt;
+  DateTime? get dataUpdatedAt => _dataUpdatedAt;
+
   /// Initialize sync manager - call on app startup
   Future<void> initialize() async {
     await _loadLastSyncTime();
@@ -39,12 +50,49 @@ class SyncManager {
     try {
       final prefs = await SharedPreferences.getInstance();
       final timestamp = prefs.getInt(_lastSyncKey);
-      if (timestamp != null) {
+      // Data lokal dari versi aplikasi lama belum punya tabel baru: paksa sync penuh sekali.
+      final dataVersion = prefs.getInt(_syncDataVersionKey);
+      if (timestamp != null && dataVersion == syncDataVersion) {
         _lastSyncTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
+      }
+      final dataUpdated = prefs.getString(_dataUpdatedKey);
+      _dataUpdatedAt = dataUpdated == null ? null : DateTime.tryParse(dataUpdated);
+      final aliases = prefs.getString(_searchAliasesKey);
+      if (aliases != null) {
+        SearchUtils.applyServerAliases(jsonDecode(aliases) as List<dynamic>);
       }
     } catch (e) {
       print("Error loading last sync time: $e");
     }
+  }
+
+  /// Simpan metadata dari respons sync/check, sync/updates, atau sync/full:
+  /// `data_updated_at` (ISO 8601) dan `search_aliases` (alias pencarian dari dashboard).
+  Future<void> recordServerMeta(Map<String, dynamic>? body) async {
+    if (body == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final updated = body['data_updated_at'];
+      final parsed = updated is String ? DateTime.tryParse(updated) : null;
+      if (parsed != null) {
+        _dataUpdatedAt = parsed;
+        await prefs.setString(_dataUpdatedKey, parsed.toIso8601String());
+      }
+      final aliases = body['search_aliases'];
+      if (aliases is List) {
+        SearchUtils.applyServerAliases(aliases);
+        await prefs.setString(_searchAliasesKey, jsonEncode(aliases));
+      }
+    } catch (e) {
+      print("Error saving server sync metadata: $e");
+    }
+  }
+
+  /// Tanggal data terakhir diubah admin, contoh "7 Nov 2026"
+  String get dataUpdatedText {
+    final updated = _dataUpdatedAt;
+    if (updated == null) return "Belum diketahui";
+    return DateFormatId.short(updated);
   }
 
   /// Save current time as last sync timestamp
@@ -53,39 +101,10 @@ class SyncManager {
       final prefs = await SharedPreferences.getInstance();
       _lastSyncTime = DateTime.now();
       await prefs.setInt(_lastSyncKey, _lastSyncTime!.millisecondsSinceEpoch);
+      await prefs.setInt(_syncDataVersionKey, syncDataVersion);
     } catch (e) {
       print("Error saving last sync time: $e");
     }
-  }
-
-  /// Get configured sync interval in days
-  Future<int> getSyncIntervalDays() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getInt(_syncIntervalKey) ?? defaultSyncIntervalDays;
-    } catch (e) {
-      return defaultSyncIntervalDays;
-    }
-  }
-
-  /// Set sync interval in days
-  Future<void> setSyncIntervalDays(int days) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(_syncIntervalKey, days);
-    } catch (e) {
-      print("Error saving sync interval: $e");
-    }
-  }
-
-  /// Check if sync is needed based on time interval
-  Future<bool> isSyncDue() async {
-    if (_lastSyncTime == null) return true;
-
-    final intervalDays = await getSyncIntervalDays();
-    final daysSinceLastSync = DateTime.now().difference(_lastSyncTime!).inDays;
-
-    return daysSinceLastSync >= intervalDays;
   }
 
   /// Get days since last sync
@@ -117,41 +136,6 @@ class SyncManager {
     } else {
       final months = (days / 30).floor();
       return "$months bulan yang lalu";
-    }
-  }
-
-  /// Check for updates on app launch
-  /// Also verifies account is still active
-  Future<bool> checkOnLaunch() async {
-    state.value = SyncState.checking;
-
-    try {
-      // Verify account is still active
-      final activeStatus = await authService.verifyActiveStatus();
-      if (activeStatus != ActiveStatusResult.active &&
-          activeStatus != ActiveStatusResult.error) {
-        // Account deactivated or expired - auth service handles logout
-        state.value = SyncState.idle;
-        return false;
-      }
-
-      final syncDue = await isSyncDue();
-
-      if (!syncDue) {
-        state.value = SyncState.idle;
-        updateAvailable.value = false;
-        return false;
-      }
-
-      final hasUpdates = await DataService.checkForUpdates();
-      updateAvailable.value = hasUpdates;
-      state.value = SyncState.idle;
-
-      return hasUpdates;
-    } catch (e) {
-      print("Error checking for updates on launch: $e");
-      state.value = SyncState.error;
-      return false;
     }
   }
 
@@ -236,9 +220,9 @@ class SyncManager {
     updateAvailable.value = false;
   }
 
-  /// Force check for updates (ignores time interval)
-  /// Also verifies account is still active
-  Future<bool> forceCheckUpdates() async {
+  /// Cek ke server apakah ada data baru. Dipanggil setiap app dibuka dan dari tombol
+  /// "Periksa Update". Juga memastikan akun masih aktif.
+  Future<bool> checkForUpdates() async {
     state.value = SyncState.checking;
 
     try {

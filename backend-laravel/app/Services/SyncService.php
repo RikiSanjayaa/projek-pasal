@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Pasal;
 use App\Models\PasalLink;
+use App\Models\PasalVersi;
+use App\Models\SearchAlias;
 use App\Models\UndangUndang;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -16,36 +18,103 @@ class SyncService
             return true;
         }
 
-        $time = CarbonImmutable::parse($since);
+        $time = $this->since($since);
 
         return UndangUndang::withTrashed()->where('updated_at', '>', $time)->orWhere('deleted_at', '>', $time)->exists()
             || Pasal::withTrashed()->where('updated_at', '>', $time)->orWhere('deleted_at', '>', $time)->exists()
             || PasalLink::withTrashed()->where('updated_at', '>', $time)->orWhere('deleted_at', '>', $time)->exists();
     }
 
+    /**
+     * Waktu terakhir admin mengubah data apa pun yang ikut tersinkron (UU, pasal, atau relasi).
+     * Berbeda dengan waktu sync perangkat: ini yang dipakai app untuk menunjukkan umur data.
+     */
+    public function dataUpdatedAt(): ?string
+    {
+        $latest = collect([UndangUndang::class, Pasal::class, PasalLink::class])
+            ->flatMap(fn (string $model) => [
+                $model::withTrashed()->max('updated_at'),
+                $model::withTrashed()->max('deleted_at'),
+            ])
+            ->filter()
+            ->map(fn ($value) => CarbonImmutable::parse($value))
+            ->max();
+
+        return $latest?->toISOString();
+    }
+
+    /**
+     * Alias pencarian aktif dari dashboard. Selalu dikirim utuh (daftarnya kecil) supaya alias
+     * yang dihapus juga ikut hilang di perangkat tanpa perlu melacak penghapusan.
+     *
+     * @return array<int, array{term: string, aliases: array<int, string>}>
+     */
+    public function searchAliases(): array
+    {
+        return SearchAlias::query()
+            ->where('is_active', true)
+            ->orderBy('term')
+            ->get(['term', 'aliases'])
+            ->map(fn (SearchAlias $alias) => ['term' => $alias->term, 'aliases' => array_values($alias->aliases ?? [])])
+            ->all();
+    }
+
     public function updates(?string $since): array
     {
-        $time = $since ? CarbonImmutable::parse($since) : null;
+        $time = $since ? $this->since($since) : null;
+        $updatedPasal = $this->updated(Pasal::class, $time)->values();
 
         return [
             'server_time' => now()->toISOString(),
+            'data_updated_at' => $this->dataUpdatedAt(),
             'updated_uu' => $this->updated(UndangUndang::class, $time)->values(),
-            'updated_pasal' => $this->updated(Pasal::class, $time)->values(),
+            'updated_pasal' => $updatedPasal,
             'updated_links' => $this->updated(PasalLink::class, $time)->values(),
             'deleted_uu_ids' => $this->deletedIds(UndangUndang::class, $time),
             'deleted_pasal_ids' => $this->deletedIds(Pasal::class, $time),
             'deleted_link_ids' => $this->deletedIds(PasalLink::class, $time),
+            // Riwayat lengkap untuk setiap pasal di updated_pasal. Perubahan riwayat selalu menyentuh
+            // updated_at pasalnya, jadi klien cukup mengganti riwayat pasal-pasal itu dengan daftar ini.
+            'pasal_versi' => $this->history($updatedPasal->pluck('id')->all()),
+            'search_aliases' => $this->searchAliases(),
         ];
     }
 
     public function full(): array
     {
+        $pasal = Pasal::query()->where('is_active', true)->get();
+
         return [
             'server_time' => now()->toISOString(),
+            'data_updated_at' => $this->dataUpdatedAt(),
             'undang_undang' => UndangUndang::query()->where('is_active', true)->orderByDesc('tahun')->get(),
-            'pasal' => Pasal::query()->where('is_active', true)->get(),
+            'pasal' => $pasal,
             'pasal_links' => PasalLink::query()->where('is_active', true)->get(),
+            'pasal_versi' => $this->history($pasal->pluck('id')->all()),
+            'search_aliases' => $this->searchAliases(),
         ];
+    }
+
+    /** @param list<string> $pasalIds */
+    private function history(array $pasalIds): Collection
+    {
+        if ($pasalIds === []) {
+            return collect();
+        }
+
+        return collect($pasalIds)
+            ->chunk(1000)
+            ->flatMap(fn (Collection $ids) => PasalVersi::query()->whereIn('pasal_id', $ids->all())->orderBy('pasal_id')->orderBy('urutan')->get())
+            ->values();
+    }
+
+    /**
+     * Klien mengirim waktu ISO 8601 (biasanya UTC). Laravel mengikat Carbon ke query sebagai jam
+     * dinding tanpa offset, jadi samakan dulu dengan zona session DB (APP_TIMEZONE).
+     */
+    private function since(string $value): CarbonImmutable
+    {
+        return CarbonImmutable::parse($value)->setTimezone(config('app.timezone'));
     }
 
     private function updated(string $model, ?CarbonImmutable $time): Collection

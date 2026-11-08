@@ -13,6 +13,8 @@ class UndangUndangTable extends Table {
   IntColumn get tahun => integer().withDefault(const Constant(0))();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   DateTimeColumn get updatedAt => dateTime().nullable()();
+  TextColumn get officialUrl => text().nullable()();
+  TextColumn get sourceUrl => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -33,6 +35,9 @@ class PasalTable extends Table {
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   DateTimeColumn get createdAt => dateTime().nullable()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
+  TextColumn get verificationStatus =>
+      text().withDefault(const Constant('perlu_verifikasi'))();
+  DateTimeColumn get verifiedAt => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -61,12 +66,39 @@ class PasalLinksTable extends Table {
   ];
 }
 
-@DriftDatabase(tables: [UndangUndangTable, PasalTable, PasalLinksTable])
+// Riwayat versi isi pasal. Server mengirim seluruh riwayat per pasal, jadi
+// klien mengganti semua versi sebuah pasal sekaligus.
+@TableIndex(name: 'idx_pasal_versi_pasal_id', columns: {#pasalId})
+class PasalVersiTable extends Table {
+  TextColumn get id => text()();
+  TextColumn get pasalId => text()();
+  IntColumn get urutan => integer()();
+  TextColumn get status => text()();
+  TextColumn get sumber => text().nullable()();
+  TextColumn get judulSumber => text().nullable()();
+  TextColumn get diundangkan => text().nullable()();
+  TextColumn get berlakuSejak => text().nullable()();
+  TextColumn get naskahResmi => text().nullable()();
+  TextColumn get isi => text()();
+  TextColumn get penjelasan => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().nullable()();
+  DateTimeColumn get updatedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DriftDatabase(
+  tables: [UndangUndangTable, PasalTable, PasalLinksTable, PasalVersiTable],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
+  /// Untuk tes: pakai executor sendiri (mis. `NativeDatabase.memory()`).
+  AppDatabase.forTesting(super.executor);
+
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -104,6 +136,26 @@ class AppDatabase extends _$AppDatabase {
                 UNIQUE(source_pasal_id, target_pasal_id)
               )
             ''');
+      }
+      if (from < 5) {
+        // Verification workflow: pasal status + official/source links on UU
+        await customStatement(
+          "ALTER TABLE pasal_table ADD COLUMN verification_status TEXT NOT NULL DEFAULT 'perlu_verifikasi'",
+        );
+        await customStatement(
+          'ALTER TABLE pasal_table ADD COLUMN verified_at INTEGER',
+        );
+        await customStatement(
+          'ALTER TABLE undang_undang_table ADD COLUMN official_url TEXT',
+        );
+        await customStatement(
+          'ALTER TABLE undang_undang_table ADD COLUMN source_url TEXT',
+        );
+      }
+      if (from < 6) {
+        // Riwayat perubahan pasal; data lama dibiarkan, versi diisi saat sync.
+        await m.createTable(pasalVersiTable);
+        await m.createIndex(idxPasalVersiPasalId);
       }
     },
   );
@@ -297,6 +349,52 @@ class AppDatabase extends _$AppDatabase {
     return delete(pasalLinksTable).go();
   }
 
+  // ============================================================
+  // Pasal versi (riwayat perubahan) queries
+  // ============================================================
+
+  // Semua versi satu pasal, dari yang tertua ke terbaru
+  Future<List<PasalVersiTableData>> getVersiByPasalId(String pasalId) {
+    return (select(pasalVersiTable)
+          ..where((tbl) => tbl.pasalId.equals(pasalId))
+          ..orderBy([(tbl) => OrderingTerm.asc(tbl.urutan)]))
+        .get();
+  }
+
+  Future<void> insertAllPasalVersi(List<PasalVersiTableCompanion> data) {
+    return batch((batch) {
+      batch.insertAll(pasalVersiTable, data, mode: InsertMode.replace);
+    });
+  }
+
+  Future<void> clearAllPasalVersi() {
+    return delete(pasalVersiTable).go();
+  }
+
+  Future<int> deletePasalVersiByPasalId(String pasalId) {
+    return (delete(
+      pasalVersiTable,
+    )..where((tbl) => tbl.pasalId.equals(pasalId))).go();
+  }
+
+  // Ganti seluruh riwayat pasal-pasal ini dengan [data] (hapus lalu isi ulang)
+  Future<void> replacePasalVersi(
+    Iterable<String> pasalIds,
+    List<PasalVersiTableCompanion> data,
+  ) {
+    return transaction(() async {
+      final ids = pasalIds.toSet().toList();
+      // Dipecah agar tidak melewati batas variabel SQLite
+      for (var i = 0; i < ids.length; i += 500) {
+        final chunk = ids.sublist(i, i + 500 > ids.length ? ids.length : i + 500);
+        await (delete(
+          pasalVersiTable,
+        )..where((tbl) => tbl.pasalId.isIn(chunk))).go();
+      }
+      await insertAllPasalVersi(data);
+    });
+  }
+
   // Upsert pasal link
   Future<void> upsertPasalLink(PasalLinksTableCompanion data) {
     return into(pasalLinksTable).insert(
@@ -362,6 +460,7 @@ class AppDatabase extends _$AppDatabase {
       for (final pasal in pasalList) {
         await deletePasalLinksBySourcePasalId(pasal.id);
         await deletePasalLinksByTargetPasalId(pasal.id);
+        await deletePasalVersiByPasalId(pasal.id);
       }
       // Delete all pasal for this UU
       await deletePasalByUndangUndangId(uu.id);
@@ -377,6 +476,7 @@ class AppDatabase extends _$AppDatabase {
     for (final pasal in pasalList) {
       await deletePasalLinksBySourcePasalId(pasal.id);
       await deletePasalLinksByTargetPasalId(pasal.id);
+      await deletePasalVersiByPasalId(pasal.id);
     }
     // Delete all pasal for this UU
     await deletePasalByUndangUndangId(uuId);
@@ -393,6 +493,7 @@ class AppDatabase extends _$AppDatabase {
     for (final pasal in inactivePasal) {
       await deletePasalLinksBySourcePasalId(pasal.id);
       await deletePasalLinksByTargetPasalId(pasal.id);
+      await deletePasalVersiByPasalId(pasal.id);
       await deletePasalById(pasal.id);
     }
   }
@@ -403,8 +504,10 @@ QueryExecutor _openConnection() {
     name: 'pasal_database',
     native: const DriftNativeOptions(shareAcrossIsolates: false),
     web: DriftWebOptions(
-      sqlite3Wasm: Uri.parse('sqlite3.wasm'),
-      driftWorker: Uri.parse('drift_worker.dart.js'),
+      // URL absolut: worker drift tidak punya base URL, jadi path relatif gagal dibuat
+      // ("Failed to construct 'URL'") di browser tanpa SharedWorker, misalnya Safari iOS.
+      sqlite3Wasm: Uri.base.resolve('sqlite3.wasm'),
+      driftWorker: Uri.base.resolve('drift_worker.dart.js'),
     ),
   );
 }

@@ -10,6 +10,13 @@ class PasalModel {
   final bool isActive;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final String verificationStatus;
+  final DateTime? verifiedAt;
+
+  static const String statusTerverifikasi = 'terverifikasi';
+  static const String statusPerluVerifikasi = 'perlu_verifikasi';
+
+  bool get isVerified => verificationStatus == statusTerverifikasi;
 
   PasalModel({
     required this.id,
@@ -23,6 +30,8 @@ class PasalModel {
     this.isActive = true,
     this.createdAt,
     this.updatedAt,
+    this.verificationStatus = statusPerluVerifikasi,
+    this.verifiedAt,
   });
 
   factory PasalModel.fromJson(Map<String, dynamic> json) {
@@ -46,6 +55,10 @@ class PasalModel {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
           : null,
+      verificationStatus: json['verification_status'] == statusTerverifikasi
+          ? statusTerverifikasi
+          : statusPerluVerifikasi,
+      verifiedAt: DateTime.tryParse(json['verified_at']?.toString() ?? ''),
     );
   }
 }

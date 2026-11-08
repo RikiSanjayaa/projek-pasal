@@ -14,10 +14,12 @@ import {
   IconScale,
   IconBook,
   IconHistory,
+  IconChecklist,
 } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { api } from '@/lib/api'
+import { pendingVerificationCount, verificationSummaryQuery } from '@/lib/verification'
 
 const CombinedAnalyticsChart = lazy(() =>
   import('@/components/charts/CombinedAnalyticsChart').then((module) => ({ default: module.CombinedAnalyticsChart }))
@@ -103,6 +105,9 @@ export function DashboardPage() {
   const totalChangesToday = dashboardData?.totalChangesToday
   const auditLogsAnalytics = dashboardData?.auditLogsAnalytics || []
 
+  const { data: verificationSummary } = useQuery(verificationSummaryQuery)
+  const pendingVerification = verificationSummary ? pendingVerificationCount(verificationSummary) : undefined
+
   // Get recent contributor name
 
   return (
@@ -150,11 +155,23 @@ export function DashboardPage() {
           >
             {loadingDashboard ? '...' : `${totalChangesToday || 0} Perubahan Hari Ini`}
           </Button>
+
+          <Button
+            variant="light"
+            color={pendingVerification ? 'yellow' : 'green'}
+            size="md"
+            radius="xl"
+            fullWidth={isMobile}
+            leftSection={<IconChecklist size={20} />}
+            onClick={() => navigate('/verifikasi')}
+          >
+            {pendingVerification === undefined ? '...' : `${pendingVerification} Perlu Verifikasi`}
+          </Button>
         </Group>
       </Group>
 
       {/* Main Analytics Section */}
-      <Grid gutter="lg">
+      <Grid gap="lg">
         <Grid.Col span={{ base: 12, lg: 8 }}>
           <Suspense fallback={<AnalyticsSkeleton />}>
             <CombinedAnalyticsChart logs={auditLogsAnalytics} loading={loadingDashboard} />

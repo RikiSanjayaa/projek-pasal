@@ -11,7 +11,6 @@ import {
   TextInput,
   Select,
   Badge,
-  ActionIcon,
   Modal,
   Tooltip,
   MultiSelect,
@@ -19,6 +18,7 @@ import {
 import { useDebouncedValue, useDisclosure } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import {
+  IconArrowsSort,
   IconPlus,
   IconSearch,
   IconEdit,
@@ -27,7 +27,9 @@ import {
 } from '@tabler/icons-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DataTable, type Column } from '@/components/DataTable'
+import { IconAction } from '@/components/IconAction'
 import { SearchHighlight } from '@/components/SearchHighlight'
+import { VERIFICATION_OPTIONS, VerificationBadge } from '@/components/VerificationBadge'
 import { api, toQueryString, type PaginatedResponse } from '@/lib/api'
 import type { PasalWithUndangUndang } from '@/lib/database.types'
 import { formatPasalLabel } from '@/lib/pasal-format'
@@ -68,69 +70,100 @@ const getPasalStatus = (pasal: PasalWithUndangUndang): { label: string; color: s
   }
 }
 
-const getPasalColumns = (searchQuery: string, extraTerms: string[]): Column<PasalWithUndangUndang>[] => [
-  {
-    key: 'undang_undang',
-    title: 'Undang-Undang',
-    width: 120,
-    render: (_, record) => (
-      <Badge color="blue" variant="light">
-        {record.undang_undang?.kode}
-      </Badge>
-    ),
-  },
+const SORT_DATE_LABEL: Record<string, { key: 'updated_at' | 'created_at' | 'verified_at'; label: string }> = {
+  updated_at: { key: 'updated_at', label: 'Diubah' },
+  created_at: { key: 'created_at', label: 'Ditambahkan' },
+  verified_at: { key: 'verified_at', label: 'Diverifikasi' },
+}
+
+const formatShortDate = (value: string) =>
+  new Date(value).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+
+const getPasalColumns = (searchQuery: string, extraTerms: string[], sort: string): Column<PasalWithUndangUndang>[] => [
   {
     key: 'nomor',
-    title: 'Nomor',
-    width: 100,
-    render: (value) => (
-      <SearchHighlight fw={500} text={formatPasalLabel(value as string)} query={searchQuery} extraTerms={extraTerms} />
+    title: 'Pasal',
+    width: 130,
+    render: (value, record) => (
+      <Stack gap={4} align="flex-start">
+        <Badge color="blue" variant="light" size="sm">
+          {record.undang_undang?.kode}
+        </Badge>
+        <SearchHighlight fw={600} text={formatPasalLabel(value as string)} query={searchQuery} extraTerms={extraTerms} />
+      </Stack>
     ),
   },
   {
     key: 'judul',
     title: 'Judul',
+    width: 200,
     render: (value) => (
-      <SearchHighlight size="sm" lineClamp={1} text={(value as string) || '-'} query={searchQuery} extraTerms={extraTerms} />
+      <SearchHighlight size="sm" lineClamp={2} text={(value as string) || '-'} query={searchQuery} extraTerms={extraTerms} />
     ),
   },
   {
     key: 'isi',
     title: 'Isi',
     render: (value) => (
-      <SearchHighlight size="sm" c="dimmed" lineClamp={2} style={{ maxWidth: 300 }} text={String(value || '')} query={searchQuery} extraTerms={extraTerms} autoSnippet />
+      <SearchHighlight size="sm" c="dimmed" lineClamp={2} text={String(value || '')} query={searchQuery} extraTerms={extraTerms} autoSnippet />
     ),
   },
   {
     key: 'keywords',
     title: 'Keywords',
-    render: (value) => (
-      <Group gap={4}>
-        {value?.slice(0, 2).map((kw: string, idx: number) => (
-          <Badge key={idx} size="xs" variant="outline">
-            {kw}
-          </Badge>
-        ))}
-        {(value?.length || 0) > 2 && (
-          <Badge size="xs" variant="outline" color="gray">
-            +{(value?.length || 0) - 2}
-          </Badge>
-        )}
-      </Group>
-    ),
+    width: 220,
+    render: (value) => {
+      const keywords: string[] = value || []
+      const rest = keywords.slice(2)
+      return (
+        <Group gap={4}>
+          {keywords.slice(0, 2).map((kw) => (
+            <Tooltip key={kw} label={kw} openDelay={400}>
+              <Badge size="sm" variant="outline" maw={200} style={{ minWidth: 0 }}>
+                {kw}
+              </Badge>
+            </Tooltip>
+          ))}
+          {rest.length > 0 && (
+            <Tooltip label={rest.join(', ')} multiline maw={320}>
+              <Badge size="sm" variant="outline" color="gray">
+                +{rest.length}
+              </Badge>
+            </Tooltip>
+          )}
+        </Group>
+      )
+    },
   },
   {
-    key: 'status',
+    key: 'verification_status',
     title: 'Status',
-    width: 120,
+    width: 150,
     render: (_, record) => {
       const status = getPasalStatus(record)
+      const sortDate = SORT_DATE_LABEL[sort]
+      const sortValue = sortDate ? record[sortDate.key] : null
       return (
-        <Tooltip label={status.description}>
-          <Badge color={status.color} variant="light">
-            {status.label}
-          </Badge>
-        </Tooltip>
+        <Stack gap={4} align="flex-start">
+          <VerificationBadge
+            status={record.verification_status}
+            verifiedAt={record.verified_at}
+            verifierName={record.verifier?.nama}
+            size="sm"
+          />
+          {status.label !== 'Aktif' && (
+            <Tooltip label={status.description}>
+              <Badge color={status.color} variant="light" size="sm">
+                {status.label}
+              </Badge>
+            </Tooltip>
+          )}
+          {sortDate && sortValue && (
+            <Text size="xs" c="dimmed">
+              {sortDate.label} {formatShortDate(sortValue)}
+            </Text>
+          )}
+        </Stack>
       )
     },
   },
@@ -171,6 +204,30 @@ export function PasalListPage() {
     setSearchParams(params)
   }
 
+  const filterVerification = searchParams.get('verifikasi')
+  const setFilterVerification = (value: string | null) => {
+    const params = new URLSearchParams(searchParams)
+    if (value) {
+      params.set('verifikasi', value)
+    } else {
+      params.delete('verifikasi')
+    }
+    params.delete('page')
+    setSearchParams(params)
+  }
+
+  const sort = searchParams.get('urut') || 'nomor'
+  const setSort = (value: string | null) => {
+    const params = new URLSearchParams(searchParams)
+    if (value && value !== 'nomor') {
+      params.set('urut', value)
+    } else {
+      params.delete('urut')
+    }
+    params.delete('page')
+    setSearchParams(params)
+  }
+
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([])
   const [deleteModal, { open: openDelete, close: closeDelete }] = useDisclosure(false)
   const [bulkDeleteModal, { open: openBulkDelete, close: closeBulkDelete }] = useDisclosure(false)
@@ -193,16 +250,16 @@ export function PasalListPage() {
   }, [smartSuggestionData?.suggestions, debouncedSearch])
 
   const pasalColumns = useMemo(
-    () => getPasalColumns(debouncedSearch, smartSuggestions),
-    [debouncedSearch, smartSuggestions]
+    () => getPasalColumns(debouncedSearch, smartSuggestions, sort),
+    [debouncedSearch, smartSuggestions, sort]
   )
 
-  // Fetch undang-undang for filter (include inactive UU)
+  // UU untuk filter: termasuk yang nonaktif, tapi bukan yang sudah dihapus (Ujicoba, KUHAP 1981).
   const { data: undangUndangList } = useQuery({
-    queryKey: ['undang_undang', 'list', 'all'],
+    queryKey: ['undang_undang', 'list', 'filter'],
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<{ id: string; kode: string; nama: string; is_active: boolean }>>(
-        '/admin/undang-undang?with_trashed=1&per_page=200'
+        '/admin/undang-undang?per_page=200'
       )
       return response.data
     },
@@ -211,11 +268,7 @@ export function PasalListPage() {
   // Fetch keywords for filter
   const { data: keywordsList } = useQuery({
     queryKey: ['keywords', 'list'],
-    queryFn: async () => {
-      const response = await api.get<PaginatedResponse<{ keywords: string[] | null }>>('/admin/pasal?is_active=1&per_page=500')
-      const allKeywords = response.data.flatMap(p => p.keywords || []).filter(Boolean)
-      return [...new Set(allKeywords)].sort()
-    },
+    queryFn: async () => (await api.get<{ keywords: string[] }>('/admin/pasal-keywords')).keywords,
   })
 
   // Track previous values to only reset page on actual changes
@@ -241,7 +294,7 @@ export function PasalListPage() {
 
   // Fetch pasal with pagination
   const { data: pasalData, isLoading } = useQuery({
-    queryKey: ['pasal', 'list', page, pageSize, debouncedSearch, filterUU, selectedKeywords],
+    queryKey: ['pasal', 'list', page, pageSize, debouncedSearch, filterUU, filterVerification, selectedKeywords, sort],
     queryFn: async () => {
       // Handle "pasal" prefix - extract just the number/identifier
       let searchTerm = debouncedSearch.toLowerCase().trim()
@@ -255,13 +308,15 @@ export function PasalListPage() {
           per_page: pageSize,
           search: searchTerm,
           undang_undang_id: filterUU,
+          verification_status: filterVerification,
           keywords: selectedKeywords,
+          sort,
         })}`
       )
 
       // Sort results by numeric relevance when searching by number
       let sortedData = response.data
-      if (searchTerm && /^\d/.test(searchTerm)) {
+      if (sort === 'nomor' && searchTerm && /^\d/.test(searchTerm)) {
         sortedData = [...sortedData].sort((a, b) => {
           const aNomor = a.nomor.toLowerCase()
           const bNomor = b.nomor.toLowerCase()
@@ -389,18 +444,15 @@ export function PasalListPage() {
         </Group>
       </Group>
 
-      {/* Filters */}
-      <Card padding="md" radius="md" withBorder>
+      <Card padding="md">
         <Stack gap="md">
+          <TextInput
+            placeholder="Cari nomor, judul, atau isi pasal..."
+            leftSection={<IconSearch size={16} />}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
           <Group wrap="wrap" align="flex-start">
-            <TextInput
-              placeholder="Cari nomor, judul, atau isi pasal..."
-              leftSection={<IconSearch size={16} />}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              w={{ base: '100%', sm: 'auto' }}
-              style={{ flex: 1 }}
-            />
             <MultiSelect
               placeholder="Filter Keywords"
               data={keywordsList || []}
@@ -425,64 +477,67 @@ export function PasalListPage() {
               clearable
               w={{ base: '100%', sm: 250 }}
             />
+            <Select
+              placeholder="Status verifikasi"
+              data={VERIFICATION_OPTIONS}
+              value={filterVerification}
+              onChange={setFilterVerification}
+              clearable
+              w={{ base: '100%', sm: 200 }}
+            />
+            <Select
+              aria-label="Urutkan"
+              leftSection={<IconArrowsSort size={16} />}
+              data={[
+                { value: 'nomor', label: debouncedSearch.trim() ? 'Paling relevan' : 'Urutan pasal' },
+                { value: 'updated_at', label: 'Terakhir diubah' },
+                { value: 'created_at', label: 'Terakhir ditambahkan' },
+                { value: 'verified_at', label: 'Terakhir diverifikasi' },
+              ]}
+              value={sort}
+              onChange={setSort}
+              allowDeselect={false}
+              w={{ base: '100%', sm: 210 }}
+            />
           </Group>
-        </Stack>
-      </Card>
 
-      {/* Table */}
-      <Card padding="md" radius="md" withBorder>
-        {!isLoading && debouncedSearch.trim() && (pasalData?.count || 0) === 0 && smartSuggestions.length > 0 && (
-          <Alert color="yellow" variant="light" mb="md" title="Tidak ada hasil persis">
-            <Stack gap="xs">
-              <Text size="sm">Coba cari dengan istilah yang lebih umum:</Text>
-              <Group gap="xs">
-                {smartSuggestions.map((suggestion) => (
-                  <Button key={suggestion} size="xs" variant="light" onClick={() => setSearch(suggestion)}>
-                    {suggestion}
-                  </Button>
-                ))}
-              </Group>
-            </Stack>
-          </Alert>
-        )}
-        <DataTable
-          columns={pasalColumns}
-          data={pasalData?.data || []}
-          loading={isLoading}
-          current={page}
-          pageSize={pageSize}
-          total={pasalData?.count || 0}
-          pageSizeOptions={PAGE_SIZE_OPTIONS}
-          onPageChange={setPage}
-          onPageSizeChange={handlePageSizeChange}
-          selectable
-          selectedIds={selectedIds}
-          onSelect={setSelectedIds}
-          onRowClick={(pasal) => navigate(`/pasal/${pasal.id}`)}
-          rowActions={(pasal) => (
-            <Group gap={4}>
-              <Tooltip label="Edit">
-                <ActionIcon
-                  variant="subtle"
-                  color="blue"
-                  onClick={() => navigate(`/pasal/${pasal.id}/edit`)}
-                >
-                  <IconEdit size={16} />
-                </ActionIcon>
-              </Tooltip>
-              <Tooltip label="Hapus">
-                <ActionIcon
-                  variant="subtle"
-                  color="red"
-                  onClick={() => handleDelete(pasal)}
-                >
-                  <IconTrash size={16} />
-                </ActionIcon>
-              </Tooltip>
-            </Group>
+          {!isLoading && debouncedSearch.trim() && (pasalData?.count || 0) === 0 && smartSuggestions.length > 0 && (
+            <Alert color="yellow" variant="light" title="Tidak ada hasil persis">
+              <Stack gap="xs">
+                <Text size="sm">Coba cari dengan istilah yang lebih umum:</Text>
+                <Group gap="xs">
+                  {smartSuggestions.map((suggestion) => (
+                    <Button key={suggestion} size="xs" variant="light" onClick={() => setSearch(suggestion)}>
+                      {suggestion}
+                    </Button>
+                  ))}
+                </Group>
+              </Stack>
+            </Alert>
           )}
-          emptyText="Tidak ada data pasal"
-        />
+          <DataTable
+            columns={pasalColumns}
+            data={pasalData?.data || []}
+            loading={isLoading}
+            current={page}
+            pageSize={pageSize}
+            total={pasalData?.count || 0}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            onPageChange={setPage}
+            onPageSizeChange={handlePageSizeChange}
+            selectable
+            selectedIds={selectedIds}
+            onSelect={setSelectedIds}
+            onRowClick={(pasal) => navigate(`/pasal/${pasal.id}`)}
+            rowActions={(pasal) => (
+              <Group gap={2} wrap="nowrap">
+                <IconAction label="Edit pasal" icon={<IconEdit size={18} />} color="blue" onClick={() => navigate(`/pasal/${pasal.id}/edit`)} />
+                <IconAction label="Hapus pasal" icon={<IconTrash size={18} />} color="red" onClick={() => handleDelete(pasal)} />
+              </Group>
+            )}
+            emptyText="Tidak ada data pasal"
+          />
+        </Stack>
       </Card>
 
       {/* Delete Confirmation Modal */}

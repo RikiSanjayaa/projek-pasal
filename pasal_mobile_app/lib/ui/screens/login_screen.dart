@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../core/config/app_colors.dart';
 import '../../core/services/auth_service.dart';
 import '../widgets/app_notification.dart';
@@ -578,12 +578,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: FilledButton(
                       onPressed: _isLoading ? null : _handleLogin,
                       style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
                         disabledBackgroundColor: AppColors.primary.withValues(
                           alpha: 0.5,
                         ),

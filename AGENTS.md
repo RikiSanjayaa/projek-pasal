@@ -70,7 +70,7 @@ if (isServerDown) setServerDown(true)
 
 **File Naming**: PascalCase components (`DashboardPage.tsx`), camelCase utilities
 
-**UI Library**: Mantine v7 components, use prop shorthands (`c`, `w`, `p`, `gap`)
+**UI Library**: Mantine v9 (React 19) components, use prop shorthands (`c`, `w`, `p`, `gap`). Table row actions use `IconAction` (icon + tooltip); one `Card` per page section (filters and table share it); pasal text renders through `LegalText`
 
 ### Flutter/Dart (Mobile App)
 

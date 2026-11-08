@@ -19,9 +19,10 @@ import {
 } from '@mantine/core'
 import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import { showNotification } from '@mantine/notifications'
-import { IconCopy, IconDevices, IconRefresh } from '@tabler/icons-react'
+import { IconCopy, IconDevices, IconLogout, IconRefresh, IconUserCheck, IconUserOff, IconUserPlus } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
+import { IconAction } from '@/components/IconAction'
 import { SearchablePaginatedList } from '@/components/SearchablePaginatedList'
 import { api, type PaginatedResponse } from '@/lib/api'
 import { invalidateAdminData } from '@/lib/query-invalidation'
@@ -64,6 +65,7 @@ export function ManageAdminPage() {
   const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null)
   const [selectedAdmin, setSelectedAdmin] = useState<AdminUser | null>(null)
   const [devicesOpen, devicesModal] = useDisclosure(false)
+  const [addOpen, addModal] = useDisclosure(false)
 
   const { data: admins = [], isLoading } = useQuery({
     queryKey: ['admin_users'],
@@ -85,6 +87,7 @@ export function ManageAdminPage() {
     },
     onSuccess: async (admin) => {
       await invalidateAdminData(queryClient)
+      addModal.close()
       setCredentials({ email: admin.email, password: admin.temporary_password || password })
       setEmail('')
       setNama('')
@@ -115,7 +118,7 @@ export function ManageAdminPage() {
   if (adminUser?.role !== 'super_admin') {
     return (
       <Card>
-        <Title order={3}>Access denied</Title>
+        <Title order={3}>Akses ditolak</Title>
         <Text>Halaman ini hanya untuk super admin.</Text>
       </Card>
     )
@@ -127,7 +130,7 @@ export function ManageAdminPage() {
       <Table.Tr key={admin.id}>
         <Table.Td><Text fw={600}>{admin.nama}</Text></Table.Td>
         <Table.Td>{admin.email}</Table.Td>
-        <Table.Td><Badge color={admin.role === 'super_admin' ? 'teal' : 'blue'}>{admin.role}</Badge></Table.Td>
+        <Table.Td><Badge color={admin.role === 'super_admin' ? 'teal' : 'blue'} variant="light">{admin.role === 'super_admin' ? 'Super admin' : 'Admin'}</Badge></Table.Td>
         <Table.Td><Badge color={admin.is_active ? 'green' : 'gray'} variant="light">{admin.is_active ? 'Aktif' : 'Nonaktif'}</Badge></Table.Td>
         <Table.Td>
           <Tooltip label="Lihat perangkat">
@@ -145,91 +148,81 @@ export function ManageAdminPage() {
             </Badge>
           </Tooltip>
         </Table.Td>
-        <Table.Td>
+        <Table.Td w={1}>
           {allowToggle && (
-            <Button
-              size="xs"
-              variant="light"
+            <IconAction
+              label={admin.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+              icon={admin.is_active ? <IconUserOff size={18} /> : <IconUserCheck size={18} />}
               color={admin.is_active ? 'orange' : 'green'}
               onClick={() => toggleMutation.mutate({ id: admin.id, active: !admin.is_active })}
-              loading={toggleMutation.isPending}
-            >
-              {admin.is_active ? 'Nonaktifkan' : 'Aktifkan'}
-            </Button>
+              loading={toggleMutation.isPending && toggleMutation.variables?.id === admin.id}
+            />
           )}
         </Table.Td>
       </Table.Tr>
     )
   })
 
+  const renderTable = (items: AdminUser[], allowToggle: boolean) => (
+    <Table striped highlightOnHover miw={760} verticalSpacing="xs">
+      <Table.Thead>
+        <Table.Tr>
+          <Table.Th>Nama</Table.Th>
+          <Table.Th>Email</Table.Th>
+          <Table.Th>Role</Table.Th>
+          <Table.Th>Status</Table.Th>
+          <Table.Th>Perangkat</Table.Th>
+          <Table.Th>Aksi</Table.Th>
+        </Table.Tr>
+      </Table.Thead>
+      <Table.Tbody>{renderRows(items, allowToggle)}</Table.Tbody>
+    </Table>
+  )
+
   return (
     <Stack gap="lg">
       <Group justify="space-between" wrap="wrap">
         <div>
-          <Title order={2}>Manage Admin</Title>
-          <Text c="dimmed">Kelola akun admin dashboard</Text>
+          <Title order={2}>Akun Admin</Title>
+          <Text c="dimmed">Akun untuk masuk ke dashboard admin</Text>
         </div>
-        <Button leftSection={<IconRefresh size={16} />} variant="light" onClick={() => queryClient.invalidateQueries({ queryKey: ['admin_users'] })} fullWidth={isMobile}>
-          Refresh
+        <Button leftSection={<IconUserPlus size={16} />} onClick={addModal.open} fullWidth={isMobile}>
+          Tambah Admin
         </Button>
       </Group>
-
-      <Alert title="Tambah admin baru" color="blue" variant="light">
-        <Group align="flex-end" grow={isMobile}>
-          <TextInput label="Email" value={email} onChange={(event) => setEmail(event.currentTarget.value)} style={{ flex: 1, minWidth: isMobile ? '100%' : 0 }} />
-          <TextInput label="Nama" value={nama} onChange={(event) => setNama(event.currentTarget.value)} style={{ flex: 1, minWidth: isMobile ? '100%' : 0 }} />
-          <PasswordInput label="Password awal" placeholder="Kosongkan untuk auto-generate" value={password} onChange={(event) => setPassword(event.currentTarget.value)} style={{ flex: 1, minWidth: isMobile ? '100%' : 0 }} />
-          <Button onClick={() => createMutation.mutate()} loading={createMutation.isPending} disabled={!email || !nama} fullWidth={isMobile} style={{ minWidth: isMobile ? '100%' : undefined }}>
-            Tambah Admin
-          </Button>
-        </Group>
-      </Alert>
 
       <SearchablePaginatedList
         data={admins}
         isLoading={isLoading}
-        searchTitle="Cari admin"
         getSearchableText={(admin) => `${admin.nama} ${admin.email} ${admin.role}`}
         isActive={(admin) => admin.role === 'super_admin'}
+        toolbarActions={
+          <IconAction label="Muat ulang" icon={<IconRefresh size={18} />} onClick={() => queryClient.invalidateQueries({ queryKey: ['admin_users'] })} />
+        }
         activeSection={{
-          title: 'Super Admin',
+          title: 'Super admin',
           emptyText: 'Tidak ada super admin.',
-          render: (items) => (
-            <Table striped highlightOnHover miw={820}>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Nama</Table.Th>
-                  <Table.Th>Email</Table.Th>
-                  <Table.Th>Role</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                  <Table.Th>Perangkat</Table.Th>
-                  <Table.Th>Aksi</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>{renderRows(items, false)}</Table.Tbody>
-            </Table>
-          ),
+          render: (items) => renderTable(items, false),
         }}
         inactiveSection={{
           title: 'Admin',
           emptyText: 'Tidak ada admin.',
-          render: (items) => (
-            <Table striped highlightOnHover miw={820}>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Nama</Table.Th>
-                  <Table.Th>Email</Table.Th>
-                  <Table.Th>Role</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                  <Table.Th>Perangkat</Table.Th>
-                  <Table.Th>Aksi</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>{renderRows(items, true)}</Table.Tbody>
-            </Table>
-          ),
+          render: (items) => renderTable(items, true),
         }}
       />
+
+      <Modal opened={addOpen} onClose={addModal.close} title="Tambah admin baru" fullScreen={isMobile}>
+        <Stack>
+          <TextInput label="Email" required value={email} onChange={(event) => setEmail(event.currentTarget.value)} />
+          <TextInput label="Nama" required value={nama} onChange={(event) => setNama(event.currentTarget.value)} />
+          <PasswordInput label="Password awal" description="Kosongkan untuk dibuatkan otomatis" value={password} onChange={(event) => setPassword(event.currentTarget.value)} />
+          <Group justify="flex-end">
+            <Button onClick={() => createMutation.mutate()} loading={createMutation.isPending} disabled={!email || !nama}>
+              Tambah Admin
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       <Modal opened={!!credentials} onClose={() => setCredentials(null)} title="Kredensial Sementara" closeOnClickOutside={false} fullScreen={isMobile}>
         {credentials && (
@@ -253,9 +246,13 @@ export function ManageAdminPage() {
                 <Table.Td><Badge color={device.is_active ? 'green' : 'gray'}>{device.is_active ? 'Aktif' : 'Nonaktif'}</Badge></Table.Td>
                 <Table.Td>
                   {device.is_active && (
-                    <Button size="xs" color="red" variant="light" onClick={() => selectedAdmin && deviceMutation.mutate({ adminId: selectedAdmin.id, deviceId: device.id })}>
-                      Force Logout
-                    </Button>
+                    <IconAction
+                      label="Paksa keluar dari perangkat ini"
+                      icon={<IconLogout size={18} />}
+                      color="red"
+                      loading={deviceMutation.isPending && deviceMutation.variables?.deviceId === device.id}
+                      onClick={() => selectedAdmin && deviceMutation.mutate({ adminId: selectedAdmin.id, deviceId: device.id })}
+                    />
                   )}
                 </Table.Td>
               </Table.Tr>

@@ -28,7 +28,8 @@ class SearchUtils {
     'pasal',
   };
 
-  static const Map<String, List<String>> _synonyms = {
+  /// Sinonim bawaan, dipakai saat offline atau sebelum alias dari server pernah diterima.
+  static const Map<String, List<String>> _builtInSynonyms = {
     'maling': ['pencurian', 'mencuri', 'mengambil barang'],
     'curi': ['pencurian', 'mencuri', 'mengambil barang'],
     'nyuri': ['pencurian', 'mencuri', 'mengambil barang'],
@@ -56,6 +57,25 @@ class SearchUtils {
     'pemerkosaan': ['perkosaan', 'persetubuhan'],
     'perkosa': ['perkosaan', 'pemerkosaan', 'persetubuhan'],
   };
+
+  static Map<String, List<String>> _synonyms = _builtInSynonyms;
+
+  /// Gabungkan alias dari dashboard (via sync) dengan sinonim bawaan. Untuk istilah yang sama,
+  /// daftar dari server menggantikan daftar bawaan. Format baris: `{term, aliases}`.
+  static void applyServerAliases(Iterable<dynamic> rows) {
+    final merged = Map<String, List<String>>.of(_builtInSynonyms);
+    for (final row in rows) {
+      if (row is! Map) continue;
+      final term = normalize('${row['term'] ?? ''}');
+      final aliases = (row['aliases'] is List ? row['aliases'] as List : const [])
+          .map((alias) => '$alias'.trim())
+          .where((alias) => alias.isNotEmpty)
+          .toList();
+      if (term.isEmpty || aliases.isEmpty) continue;
+      merged[term] = aliases;
+    }
+    _synonyms = merged;
+  }
 
   /// Strips "pasal" prefix from search query
   ///

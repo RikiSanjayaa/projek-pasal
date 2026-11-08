@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'dart:async';
 import '../../core/config/app_colors.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +15,10 @@ import 'package:showcaseview/showcaseview.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/pdf_export_service.dart';
 import '../widgets/app_showcase.dart';
+import '../utils/open_link.dart';
+import '../widgets/riwayat_pasal.dart';
+import '../../core/services/data_service.dart';
+import '../../models/pasal_versi_model.dart';
 
 class ReadPasalScreen extends StatefulWidget {
   final PasalModel pasal;
@@ -38,7 +42,9 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
   final GlobalKey _copyKey = GlobalKey();
   final GlobalKey _pdfKey = GlobalKey();
   String? _kodeUU;
+  String? _officialUrl;
   late PasalModel _currentPasal;
+  List<PasalVersiModel> _versi = [];
   final ScrollController _scrollController = ScrollController();
 
   bool _isSearching = false;
@@ -71,6 +77,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
     _searchController = TextEditingController(text: widget.searchQuery);
     _isSearching = widget.searchQuery.isNotEmpty;
     _loadUUInfo();
+    _loadVersi();
   }
 
   @override
@@ -81,11 +88,26 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
   }
 
   Future<void> _loadUUInfo() async {
-    final kode = await QueryService.getKodeUU(_currentPasal.undangUndangId);
-    if (mounted) {
+    final uuId = _currentPasal.undangUndangId;
+    final kode = await QueryService.getKodeUU(uuId);
+    final uu = await QueryService.getUUById(uuId);
+    if (mounted && _currentPasal.undangUndangId == uuId) {
       setState(() {
         _kodeUU = kode;
+        _officialUrl = uu?.officialUrl;
       });
+    }
+  }
+
+  Future<void> _loadVersi() async {
+    final pasalId = _currentPasal.id;
+    try {
+      final versi = await DataService.getPasalVersi(pasalId);
+      if (mounted && _currentPasal.id == pasalId) {
+        setState(() => _versi = versi);
+      }
+    } catch (e) {
+      debugPrint('Gagal memuat riwayat pasal: $e');
     }
   }
 
@@ -351,43 +373,23 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: uuColor.withValues(
-                                          alpha: isDark ? 0.1 : 0.05,
+                                    if (!_currentPasal.isVerified) ...[
+                                      const SizedBox(width: 6),
+                                      Tooltip(
+                                        triggerMode: TooltipTriggerMode.tap,
+                                        showDuration: const Duration(seconds: 5),
+                                        preferBelow: true,
+                                        message:
+                                            'Belum diverifikasi admin. Teks diambil dari kompilasi tidak resmi; cocokkan dengan naskah resmi sebelum dijadikan rujukan.',
+                                        child: Icon(
+                                          Icons.warning_amber_rounded,
+                                          size: 20,
+                                          color: isDark
+                                              ? Colors.orange[300]
+                                              : Colors.orange[800],
                                         ),
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color: uuColor.withValues(alpha: 0.2),
-                                          width: 1,
-                                        ),
                                       ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            _getUUIcon(_kodeUU),
-                                            size: 12,
-                                            color: uuColor,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            (_kodeUU ?? 'UU').toUpperCase(),
-                                            style: TextStyle(
-                                              color: uuColor,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              letterSpacing: 0.5,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -461,6 +463,35 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 8),
+                                  if (_naskahResmiUrl != null) ...[
+                                    Tooltip(
+                                      message: 'Buka naskah resmi',
+                                      child: InkWell(
+                                        onTap: () => openExternalLink(
+                                          context,
+                                          _naskahResmiUrl!,
+                                        ),
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(8.0),
+                                          decoration: BoxDecoration(
+                                            color: isDark
+                                                ? Colors.grey.withValues(alpha: 0.1)
+                                                : Colors.grey.withValues(alpha: 0.05),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Icon(
+                                            Icons.open_in_new_rounded,
+                                            size: 20,
+                                            color: isDark
+                                                ? Colors.grey[400]
+                                                : Colors.grey[600],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ],
 
                                   // Copy Button
                                   AppShowcase(
@@ -492,6 +523,12 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                           sb.writeln();
                                           sb.writeln("PENJELASAN");
                                           sb.writeln(_currentPasal.penjelasan);
+                                        }
+                                        if (!_currentPasal.isVerified) {
+                                          sb.writeln();
+                                          sb.writeln(
+                                            'Catatan: belum diverifikasi admin.',
+                                          );
                                         }
 
                                         await Clipboard.setData(
@@ -570,6 +607,54 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                             ],
                           ),
 
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: uuColor.withValues(
+                                    alpha: isDark ? 0.1 : 0.05,
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: uuColor.withValues(alpha: 0.2),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      _getUUIcon(_kodeUU),
+                                      size: 12,
+                                      color: uuColor,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      (_kodeUU ?? 'UU').toUpperCase(),
+                                      style: TextStyle(
+                                        color: uuColor,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (_versi.isNotEmpty &&
+                                  _versi.last.status !=
+                                      PasalVersiModel.statusAsli)
+                                PasalRiwayatChip(versi: _versi),
+                            ],
+                          ),
                           const SizedBox(height: 24),
 
                           if (_currentPasal.judul != null &&
@@ -645,6 +730,19 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                       ),
                     ),
 
+                    if (_versi.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      RiwayatPasalEntry(
+                        versi: _versi,
+                        onTap: () => showRiwayatPasalSheet(
+                          context,
+                          pasal: _currentPasal,
+                          kodeUU: _kodeUU ?? 'UU',
+                          versi: _versi,
+                        ),
+                      ),
+                    ],
+
                     if (_currentPasal.penjelasan != null &&
                         _currentPasal.penjelasan!.length > 3) ...[
                       const SizedBox(height: 24),
@@ -684,12 +782,24 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
     );
   }
 
+  String? get _naskahResmiUrl {
+    if (_versi.isNotEmpty) {
+      final v = _versi.last.naskahResmi?.trim() ?? '';
+      if (v.isNotEmpty) return v;
+    }
+    final u = _officialUrl?.trim() ?? '';
+    return u.isEmpty ? null : u;
+  }
+
   void _navigate(BuildContext context, PasalModel target) {
     setState(() {
       _currentPasal = target;
       _kodeUU = null;
+      _officialUrl = null;
+      _versi = [];
     });
     _loadUUInfo();
+    _loadVersi();
     _scrollController.jumpTo(0);
   }
 }

@@ -16,7 +16,7 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 | **`home_screen.dart`**           | **Dashboard Utama**. Fitur: Search Global, Filter Dropdown Keyword, Filter Kategori UU, List Pasal Terbaru                                |
 | **`library_screen.dart`**        | **Tab Pustaka**. Menampilkan daftar "Buku/Kitab UU" (KUHP, ITE, dll) dalam bentuk Grid.                                                   |
 | **`detail_uu_screen.dart`**      | Halaman isi buku. Muncul saat buku di Pustaka diklik. Menampilkan daftar pasal + deskripsi UU jika tersedia.                              |
-| **`read_pasal_screen.dart`**     | **Mode Baca Detail**. Muncul saat kartu pasal diklik. Fitur: Next/Prev Pasal, Highlight Teks, Pasal Terkait, dan Share.                   |
+| **`read_pasal_screen.dart`**     | **Mode Baca Detail**. Muncul saat kartu pasal diklik. Fitur: Next/Prev Pasal, Highlight Teks, Pasal Terkait, Riwayat Perubahan, dan Share.|
 | **`search_screen.dart`**         | _(Legacy/Opsional)_ Halaman pencarian khusus jika menggunakan `showSearch` bawaan Flutter. Saat ini pencarian sudah terintegrasi di Home. |
 | **`keyword_result_screen.dart`** | Halaman hasil klik tag/chip. Menampilkan semua pasal yang memiliki tagar yang sama.                                                       |
 
@@ -24,6 +24,7 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 
 | File                     | Fungsi                                                                                                      |
 | :----------------------- | :---------------------------------------------------------------------------------------------------------- |
+| **`law_content_formatter.dart`** | Pemformat teks hukum (daftar `(1)`, `a.`, `1.`, indentasi, highlight pencarian). Dipakai untuk **Isi** dan **Penjelasan**; label penjelasan (`Ayat (n)`, `Huruf x`, `Angka n`) menjadi sub-judul. Ekspor PDF memakai logika pemisahan yang sama. |
 | **`main_layout.dart`**   | Wrapper utama semua halaman. Menghandle Background Color & Dark Mode Listener agar konsisten.               |
 | **`pasal_card.dart`**    | Komponen UI Kartu Pasal. Digunakan berulang-ulang di Home, DetailUU, dan Search Result.                     |
 | **`update_banner.dart`** | Banner notifikasi update. Muncul otomatis jika ada data baru di server dan sync sudah lama tidak dilakukan. |
@@ -39,15 +40,17 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 
 | File                      | Fungsi                                                                                    |
 | :------------------------ | :---------------------------------------------------------------------------------------- |
-| **`app_database.dart`**   | Definisi Tabel Database Lokal (SQLite/Drift). Termasuk tabel `undang_undang` dan `pasal`. |
+| **`app_database.dart`**   | Definisi Tabel Database Lokal (SQLite/Drift). Termasuk tabel `undang_undang`, `pasal`, `pasal_links`, dan `pasal_versi` (riwayat). |
 | **`app_database.g.dart`** | File auto-generated oleh Drift. Jangan edit manual.                                       |
 
 ### Utils & Config
 
 | File                               | Fungsi                                                                                              |
 | :--------------------------------- | :-------------------------------------------------------------------------------------------------- |
+| **`core/utils/word_diff.dart`**    | Word diff murni Dart (token kata/spasi/tanda baca, pangkas awalan-akhiran, LCS di bagian tengah). Dipakai layar Riwayat perubahan. |
 | **`utils/highlight_text.dart`**    | Widget khusus untuk mewarnai teks (kuning) sesuai kata kunci pencarian.                             |
 | **`utils/image_helper.dart`**      | Mengatur logika gambar cover buku dan warna tema per buku (Merah untuk KUHP, Hijau untuk ITE, dll). |
+| **`config/app_theme.dart`**        | Satu-satunya definisi tema Material 3 (terang + gelap), dibangun dari warna merek di `app_colors.dart`. |
 | **`config/theme_controller.dart`** | Mengatur State Dark Mode/Light Mode dan menyimpannya ke memori HP (Shared Preferences).             |
 | **`config/env.dart`**              | Konfigurasi environment (Supabase URL dan Anon Key).                                                |
 
@@ -56,6 +59,7 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 | File                           | Fungsi                                                                         |
 | :----------------------------- | :----------------------------------------------------------------------------- |
 | **`pasal_model.dart`**         | Model data untuk Pasal. Termasuk `relatedIds` untuk pasal terkait.             |
+| **`pasal_versi_model.dart`**   | Satu versi isi pasal (status, sumber, tanggal, naskah resmi, isi, penjelasan). |
 | **`undang_undang_model.dart`** | Model data untuk Undang-Undang. Termasuk `deskripsi` untuk informasi tambahan. |
 
 ---
@@ -66,10 +70,12 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 2. **Smart Search:** Pencarian instan berdasarkan nomor, isi, atau judul pasal.
 3. **Strict Keyword Filter:** Filter menggunakan Tag (AND Logic). "Judi" + "Online" hanya menampilkan pasal yang mengandung keduanya.
 4. **Dark Mode:** Otomatis menyimpan preferensi pengguna.
-5. **Auto-Sync:** Otomatis mengecek update saat app dibuka. Jika sync terakhir > 7 hari dan ada data baru, akan muncul banner notifikasi.
+5. **Auto-Check Update:** Setiap app dibuka, app menanyakan server apakah ada data baru. Banner hanya muncul kalau memang ada perubahan. Pengaturan menampilkan "Data diperbarui" (tanggal terakhir admin mengubah data di server) dan "Sync terakhir" (kapan HP ini terakhir sync). Tidak ada jadwal pembaruan data mingguan. Alias pencarian dari dashboard ikut diperbarui pada pengecekan ini.
 6. **Pasal Terkait:** Menampilkan link ke pasal-pasal yang berhubungan (jika ada di database).
 7. **Deskripsi UU:** Menampilkan informasi tentang undang-undang di halaman detail.
-8. **Error Handling:** Pesan error yang jelas dalam Bahasa Indonesia untuk masalah jaringan, server, atau database.
+8. **Riwayat Perubahan Pasal:** Pasal yang pernah diubah, disisipkan, atau dihapus punya chip status di header (contoh "Diubah UU 1/2026") dan kartu "Riwayat perubahan". Kartu membuka daftar versi dari yang tertua ke terbaru (status, sumber, tanggal, tombol "Buka naskah resmi" yang membuka browser lewat `url_launcher`; bila gagal, tautan disalin). Memilih versi menampilkan isi dan penjelasannya; sakelar "Tandai perubahan" (aktif bawaan jika ada versi sebelumnya) menandai selisih kata terhadap versi sebelumnya: dihapus merah dicoret, ditambahkan hijau bergaris bawah. Pasal tanpa riwayat tidak menampilkan chip maupun kartu. Diff kata jatuh kembali ke satu blok hapus + satu blok sisip bila bagian yang berbeda lebih dari 4000 token atau tabel LCS melebihi 4 juta sel.
+9. **Status Verifikasi:** Daftar pasal tidak menampilkan label verifikasi. Di layar baca, pasal yang belum diverifikasi admin memiliki ikon peringatan kecil di samping judul; ketuk untuk melihat penjelasannya. Ikon "buka di browser" di header membuka naskah resmi (naskah versi terakhir, atau tautan resmi UU bila tidak ada).
+10. **Error Handling:** Pesan error yang jelas dalam Bahasa Indonesia untuk masalah jaringan, server, atau database.
 
 ---
 
@@ -83,20 +89,56 @@ App Launch
     |
     +-- Pertama kali? --> [Onboarding] --> Sync & simpan timestamp
     |
-    +-- Sudah ada data? --> Cek apakah sync sudah > 7 hari
+    +-- Sudah ada data? --> [Home Screen], sambil cek /mobile/sync/check di latar belakang
                                 |
-                                +-- Belum waktunya --> [Home Screen]
+                                +-- Ada update? --> Tampilkan UpdateBanner
                                 |
-                                +-- Sudah waktunya --> Cek server
-                                                          |
-                                                          +-- Ada update? --> Tampilkan UpdateBanner
-                                                          |
-                                                          +-- Tidak ada --> [Home Screen]
+                                +-- Tidak ada --> diam (tanggal "Data diperbarui" tetap diperbarui)
 ```
+
+`/mobile/sync/check`, `/mobile/sync/updates`, dan `/mobile/sync/full` mengembalikan
+`data_updated_at`: waktu perubahan terakhir pada undang-undang, pasal, atau relasi pasal.
+
+Riwayat pasal (`pasal_versi`) ikut di `/mobile/sync/full` dan `/mobile/sync/updates`. Sync penuh
+mengosongkan lalu mengisi ulang tabel `pasal_versi`. Sync inkremental mengganti seluruh versi lokal
+untuk tiap id di `updated_pasal` dan `deleted_pasal_ids` dengan baris dari `pasal_versi` (server
+mengirim riwayat lengkap pasal yang berubah). Jika kunci `pasal_versi` tidak ada (server lama),
+versi lokal dibiarkan. Skema database lokal versi 6 menambah tabel `pasal_versi` lewat migrasi.
 
 ---
 
 ## Catatan Pengembang
+
+### Toolchain Flutter
+
+- Flutter **3.47.9** (stable), Dart 3.13. Versi ini dipatok di `Dockerfile` (`ARG FLUTTER_VERSION`,
+  tarball resmi). Image `ghcr.io/cirruslabs/flutter:stable` tertinggal, jadi tidak dipakai.
+- UI memakai paket mandiri **`material_ui`** (pengganti `package:flutter/material.dart`).
+  Impor dengan `import 'package:material_ui/material_ui.dart';`. Aplikasi ini tidak memakai
+  widget Cupertino, sehingga `cupertino_ui` hanya masuk sebagai dependensi transitif.
+- `showcaseview` dan `printing` masih mengimpor `package:flutter/material.dart`, jadi `main.dart`
+  membungkus aplikasi dengan `MaterialUiCompatibilityBridge` di `MaterialApp.builder`. Hapus
+  pembungkus itu setelah kedua paket bermigrasi ke `material_ui`.
+- Lokalisasi memakai `GlobalMaterialLocalizations.delegates` dengan locale `id`.
+
+Menjalankan analisis/tes tanpa memasang Flutter di host (jalankan pada salinan proyek karena
+Docker membuat berkas milik root):
+
+```bash
+docker build --target flutter-sdk -t caripasal-flutter:3.47.9 pasal_mobile_app
+docker run --rm -v "$PWD/pasal_mobile_app:/app" -w /app caripasal-flutter:3.47.9 \
+  sh -c 'flutter pub get && flutter analyze && flutter test'
+```
+
+Build web (Docker, stage `build` lalu Nginx): `docker build -t caripasal-mobile-web pasal_mobile_app`.
+
+### Tema
+
+Semua gaya global ada di `lib/core/config/app_theme.dart` (`AppTheme.light` / `AppTheme.dark`):
+skema warna dari `ColorScheme.fromSeed` dengan primary/secondary/permukaan dipaksa ke
+`AppColors`, skala teks untuk bacaan panjang (badan 16/14 dengan tinggi baris 1.6-1.7), dan bentuk
+seragam (kartu 16, tombol 14, input 12, sheet/dialog 20, chip 20). Tambahkan warna baru di
+`app_colors.dart`, jangan hardcode di widget.
 
 ### Regenerate Database Code
 
@@ -113,14 +155,11 @@ Jika menambah UU baru di database, update juga:
 - Warna dan cover di `lib/ui/utils/image_helper.dart`
 - Asset gambar di `assets/images/`
 
-### Konfigurasi Sync Interval
+### Cek Update
 
-Default sync interval adalah 7 hari. Untuk mengubah:
-
-```dart
-// Di sync_manager.dart
-static const int defaultSyncIntervalDays = 7; // Ubah sesuai kebutuhan
-```
+Tidak ada interval sync. `SyncManager.checkForUpdates()` dipanggil dari splash screen setiap app
+dibuka dan dari tombol "Periksa Update". Request ini kecil (hanya `has_updates` dan
+`data_updated_at`); data baru diunduh setelah pengguna menekan "Update".
 
 ### API Classes
 
@@ -128,15 +167,15 @@ Untuk menggunakan sync dengan error handling:
 
 ```dart
 // Smart sync - hanya sync jika perlu
-final result = await syncManager.smartSync();
+final result = await DataService.smartSync();
 if (result.success) {
   print(result.message); // "Data sudah up-to-date" atau "Sync berhasil"
 } else {
   print(result.error?.userMessage); // Pesan error dalam Bahasa Indonesia
 }
 
-// Force check update
-final hasUpdate = await syncManager.forceCheckUpdates();
+// Cek update manual
+final hasUpdate = await syncManager.checkForUpdates();
 ```
 
 ### Struktur SyncResult

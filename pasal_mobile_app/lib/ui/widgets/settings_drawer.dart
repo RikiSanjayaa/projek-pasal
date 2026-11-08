@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../core/config/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
@@ -278,7 +278,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                       showcaseKey: _updateKey,
                       title: 'Sinkronisasi Data',
                       description:
-                          'Pastikan data Anda selalu terbaru:\n\n• Tekan tombol ini untuk memeriksa pembaruan\n• Data pasal akan diunduh dari server\n• Proses berlangsung di latar belakang\n\nLakukan sinkronisasi secara berkala untuk mendapat data terbaru.',
+                          'Status data pasal:\n\n• App memeriksa pembaruan setiap kali dibuka\n• "Data diperbarui" adalah tanggal terakhir admin mengubah data di server\n• Tekan tombol ini untuk memeriksa pembaruan sekarang\n\nPembaruan data tidak terjadwal; banner muncul hanya kalau memang ada data baru.',
                       shapeBorder: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -326,7 +326,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                                 } else {
                                                   final hasUpdate =
                                                       await syncManager
-                                                          .forceCheckUpdates();
+                                                          .checkForUpdates();
                                                   if (mounted) {
                                                     if (!hasUpdate) {
                                                       setState(() {
@@ -454,27 +454,45 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                                         const SizedBox(
                                                           height: 2,
                                                         ),
-                                                        Text(
-                                                          isSyncing
-                                                              ? (progress
-                                                                        ?.currentOperation ??
-                                                                    'Memproses...')
-                                                              : (syncManager.lastSyncTime !=
-                                                                        null
-                                                                    ? 'Terakhir: ${syncManager.lastSyncText}'
-                                                                    : 'Belum pernah sync'),
-                                                          style: TextStyle(
-                                                            fontSize: 12,
-                                                            color: isDark
-                                                                ? Colors
-                                                                      .grey[500]
-                                                                : Colors
-                                                                      .grey[600],
-                                                          ),
-                                                          maxLines: 1,
-                                                          overflow: TextOverflow
-                                                              .ellipsis,
-                                                        ),
+                                                        if (isSyncing)
+                                                          Text(
+                                                            progress?.currentOperation ??
+                                                                'Memproses...',
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              color: isDark
+                                                                  ? Colors
+                                                                        .grey[500]
+                                                                  : Colors
+                                                                        .grey[600],
+                                                            ),
+                                                            maxLines: 1,
+                                                            overflow: TextOverflow
+                                                                .ellipsis,
+                                                          )
+                                                        else
+                                                          for (final line in [
+                                                            'Data diperbarui: ${syncManager.dataUpdatedText}',
+                                                            syncManager.lastSyncTime !=
+                                                                    null
+                                                                ? 'Sync terakhir: ${syncManager.lastSyncText}'
+                                                                : 'Belum pernah sync',
+                                                          ])
+                                                            Text(
+                                                              line,
+                                                              style: TextStyle(
+                                                                fontSize: 12,
+                                                                color: isDark
+                                                                    ? Colors
+                                                                          .grey[500]
+                                                                    : Colors
+                                                                          .grey[600],
+                                                              ),
+                                                              maxLines: 1,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            ),
                                                       ],
                                                     ),
                                                   ),

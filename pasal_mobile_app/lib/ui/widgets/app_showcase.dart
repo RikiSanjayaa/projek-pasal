@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:showcaseview/showcaseview.dart';
 import '../../core/config/app_colors.dart';
 
@@ -65,7 +65,7 @@ class AppShowcase extends StatelessWidget {
       tooltipActions: [
         TooltipActionButton(
           type: TooltipDefaultActionType.next,
-          name: 'Next',
+          name: 'Lanjut',
           textStyle: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w600,

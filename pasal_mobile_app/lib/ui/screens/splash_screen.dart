@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../core/config/app_colors.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/query_service.dart';
@@ -104,8 +104,8 @@ class _SplashScreenState extends State<SplashScreen>
       );
     } else {
       // Has data - go to main app
-      // Check for updates in background (non-blocking)
-      syncManager.checkOnLaunch();
+      // Cek pembaruan di latar belakang setiap app dibuka (non-blocking)
+      syncManager.checkForUpdates();
 
       Navigator.pushReplacement(
         context,

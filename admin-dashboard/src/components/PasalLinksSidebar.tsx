@@ -425,7 +425,7 @@ export function PasalLinksSidebar({
                 )}
 
                 {/* Expanded detail of linked pasal */}
-                <Collapse in={isExpanded}>
+                <Collapse expanded={isExpanded}>
                   <LinkedPasalDetail
                     pasalId={targetPasal?.id}
                     excludePasalId={pasalId}

@@ -6,12 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Pasal;
 use App\Models\PasalLink;
 use App\Models\SearchAlias;
+use App\Models\UndangUndang;
 use App\Services\AuditService;
 use App\Services\ImportPasalService;
 use App\Support\PasalTextNormalizer;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -19,7 +21,12 @@ class PasalController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Pasal::query()->with('undangUndang');
+        $query = Pasal::query()->with([
+            'undangUndang',
+            'verifier:id,nama,email',
+            // Tanpa isi: cukup untuk label status dan link naskah resmi di daftar/antrean verifikasi.
+            'versiTerakhir:pasal_versi.id,pasal_versi.pasal_id,pasal_versi.urutan,pasal_versi.status,pasal_versi.sumber,pasal_versi.judul_sumber,pasal_versi.naskah_resmi',
+        ]);
         if ($request->boolean('with_trashed') || $request->boolean('trash')) {
             $query->withTrashed();
         }
@@ -31,6 +38,9 @@ class PasalController extends Controller
         }
         if ($request->has('is_active')) {
             $query->where('is_active', filter_var($request->query('is_active'), FILTER_VALIDATE_BOOLEAN));
+        }
+        if ($request->filled('verification_status')) {
+            $query->where('verification_status', $request->query('verification_status'));
         }
         $search = trim((string) $request->query('search', ''));
         if ($search !== '') {
@@ -48,13 +58,19 @@ class PasalController extends Controller
             });
         }
 
-        $sort = $request->boolean('trash') ? 'deleted_at' : ($search !== '' ? 'relevance' : 'nomor');
-        $direction = $request->boolean('trash') ? 'desc' : 'asc';
-
-        if ($sort === 'relevance') {
-            $query->orderByDesc('search_score')->orderBy('nomor');
+        $sort = (string) $request->query('sort', 'nomor');
+        if ($request->boolean('trash')) {
+            $query->orderByDesc('deleted_at');
+        } elseif (in_array($sort, ['updated_at', 'created_at', 'verified_at'], true)) {
+            // Terbaru dulu; pasal yang belum pernah diverifikasi (verified_at null) di akhir.
+            $query->orderByRaw($query->qualifyColumn($sort).' DESC NULLS LAST')->orderByNomor();
+        } elseif ($search !== '') {
+            $query->orderByDesc('search_score')->orderByNomor();
         } else {
-            $query->orderBy($sort, $direction);
+            // Kelompokkan per undang-undang, lalu urut nomor seperti di naskah.
+            $query->orderBy(
+                UndangUndang::withTrashed()->select('kode')->whereColumn('undang_undang.id', 'pasal.undang_undang_id')
+            )->orderByNomor();
         }
 
         return response()->json($query->paginate((int) $request->query('per_page', 20)));
@@ -65,7 +81,8 @@ class PasalController extends Controller
         $payload = $this->validated($request);
         $payload['created_by'] = $request->user()?->id;
         $payload['updated_by'] = $request->user()?->id;
-        $pasal = Pasal::create($payload);
+        // Pasal yang diketik langsung oleh admin adalah tanggung jawab admin itu: langsung terverifikasi.
+        $pasal = Pasal::create($payload + Pasal::verifiedBy($request->user()?->id));
         $audit->log($request, 'CREATE', 'pasal', $pasal->id, null, $pasal);
 
         return response()->json($pasal->load('undangUndang'), 201);
@@ -73,7 +90,80 @@ class PasalController extends Controller
 
     public function show(string $id): JsonResponse
     {
-        return response()->json(Pasal::withTrashed()->with('undangUndang')->findOrFail($id));
+        return response()->json(
+            Pasal::withTrashed()->with(['undangUndang', 'verifier:id,nama,email', 'versiTerakhir'])->findOrFail($id)
+        );
+    }
+
+    /** Semua keyword/topik yang dipakai pasal aktif, untuk pilihan filter di admin. */
+    public function keywords(): JsonResponse
+    {
+        $keywords = DB::table('pasal')
+            ->whereNull('deleted_at')
+            ->where('is_active', true)
+            ->selectRaw('DISTINCT unnest(keywords) AS keyword')
+            ->orderBy('keyword')
+            ->pluck('keyword');
+
+        return response()->json(['keywords' => $keywords]);
+    }
+
+    /** Progres verifikasi per undang-undang aktif: total pasal aktif dan yang sudah terverifikasi. */
+    public function verificationSummary(): JsonResponse
+    {
+        $rows = DB::table('undang_undang as u')
+            ->join('pasal as p', fn ($join) => $join->on('p.undang_undang_id', '=', 'u.id')->whereNull('p.deleted_at')->where('p.is_active', true))
+            ->whereNull('u.deleted_at')
+            ->where('u.is_active', true)
+            ->groupBy('u.id', 'u.kode', 'u.nama')
+            ->orderBy('u.kode')
+            ->selectRaw('u.id, u.kode, u.nama, count(p.id) AS total')
+            ->selectRaw('count(p.id) FILTER (WHERE p.verification_status = ?) AS verified', [Pasal::VERIFIED])
+            ->get()
+            ->map(fn ($row) => [
+                'undang_undang_id' => $row->id,
+                'kode' => $row->kode,
+                'nama' => $row->nama,
+                'total' => (int) $row->total,
+                'verified' => (int) $row->verified,
+            ]);
+
+        return response()->json(['data' => $rows]);
+    }
+
+    public function verify(Request $request, string $id, AuditService $audit): JsonResponse
+    {
+        $pasal = Pasal::findOrFail($id);
+        $this->setVerification($request, $audit, $pasal, Pasal::verifiedBy($request->user()?->id));
+
+        return response()->json($pasal->load(['undangUndang', 'verifier:id,nama,email']));
+    }
+
+    public function unverify(Request $request, string $id, AuditService $audit): JsonResponse
+    {
+        $pasal = Pasal::findOrFail($id);
+        $this->setVerification($request, $audit, $pasal, Pasal::unverified());
+
+        return response()->json($pasal->load('undangUndang'));
+    }
+
+    public function bulkVerify(Request $request, AuditService $audit): JsonResponse
+    {
+        $payload = $request->validate(['ids' => ['required', 'array', 'max:500'], 'ids.*' => ['uuid']]);
+        $verified = 0;
+        foreach (Pasal::whereIn('id', $payload['ids'])->where('verification_status', Pasal::UNVERIFIED)->get() as $pasal) {
+            $this->setVerification($request, $audit, $pasal, Pasal::verifiedBy($request->user()?->id));
+            $verified++;
+        }
+
+        return response()->json(['verified' => $verified]);
+    }
+
+    private function setVerification(Request $request, AuditService $audit, Pasal $pasal, array $state): void
+    {
+        $old = $pasal->replicate();
+        $pasal->update($state + ['updated_by' => $request->user()?->id]);
+        $audit->log($request, 'UPDATE', 'pasal', $pasal->id, $old, $pasal, ['verification_status' => $state['verification_status']]);
     }
 
     public function update(Request $request, string $id, AuditService $audit): JsonResponse
@@ -189,11 +279,12 @@ class PasalController extends Controller
     {
         $request->validate([
             'file' => ['nullable', 'file', 'mimes:xlsx,xls,csv'],
+            'undang_undang_id' => ['nullable', 'uuid', 'exists:undang_undang,id'],
             'rows' => ['nullable', 'array'],
         ]);
 
         $result = $request->hasFile('file')
-            ? $importer->importFile($request->file('file'), $request->user()?->id)
+            ? $importer->importFile($request->file('file'), $request->user()?->id, $request->input('undang_undang_id'))
             : $importer->importRows($request->input('rows', []), $request->user()?->id);
 
         $audit->log($request, 'IMPORT', 'pasal', null, null, null, $result);

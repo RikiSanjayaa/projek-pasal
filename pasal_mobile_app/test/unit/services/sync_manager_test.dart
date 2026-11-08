@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pasal_mobile_app/core/services/sync_manager.dart';
 import 'package:pasal_mobile_app/core/services/sync_progress.dart';
+import 'package:pasal_mobile_app/core/utils/search_utils.dart';
 import '../../mocks/shared_preferences_mock.dart';
 
 void main() {
@@ -51,54 +52,49 @@ void main() {
       });
     });
 
-    group('getSyncIntervalDays', () {
-      test('returns default interval when not set', () async {
-        setupMockSharedPreferences({});
+    group('recordServerMeta', () {
+      test('formats server timestamp as Indonesian date', () async {
+        await manager.recordServerMeta({'data_updated_at': '2026-11-07T13:20:00.000Z'});
 
-        final interval = await manager.getSyncIntervalDays();
-
-        expect(interval, SyncManager.defaultSyncIntervalDays);
-        expect(interval, 7); // Default is 7 days
+        expect(manager.dataUpdatedAt, DateTime.utc(2026, 11, 7, 13, 20));
+        expect(manager.dataUpdatedText, '7 Nov 2026');
       });
 
-      test('returns stored interval when set', () async {
+      test('keeps previous date when server sends nothing usable', () async {
+        await manager.recordServerMeta({'data_updated_at': '2026-08-31T05:00:00.000Z'});
+        await manager.recordServerMeta({'data_updated_at': null});
+        await manager.recordServerMeta({'data_updated_at': 'bukan tanggal'});
+
+        expect(manager.dataUpdatedText, '31 Agu 2026');
+      });
+
+      test('restores date and aliases from storage on initialize', () async {
         setupMockSharedPreferences({
-          'sync_interval_days': 14,
+          'data_updated_at': '2026-01-02T08:00:00.000Z',
+          'search_aliases':
+              '[{"term":"begal","aliases":["pencurian dengan kekerasan"]}]',
         });
 
-        final interval = await manager.getSyncIntervalDays();
-
-        expect(interval, 14);
-      });
-    });
-
-    group('setSyncIntervalDays', () {
-      test('saves interval to SharedPreferences', () async {
-        setupMockSharedPreferences({});
-
-        await expectLater(manager.setSyncIntervalDays(30), completes);
-      });
-
-      test('can set different interval values', () async {
-        setupMockSharedPreferences({});
-
-        await manager.setSyncIntervalDays(1);
-        await manager.setSyncIntervalDays(7);
-        await manager.setSyncIntervalDays(30);
-
-        // Should complete without error for all values
-      });
-    });
-
-    group('isSyncDue', () {
-      test('returns true when lastSyncTime is null', () async {
-        setupMockSharedPreferences({});
-        // Ensure no last sync time is set
         await manager.initialize();
 
-        final isDue = await manager.isSyncDue();
+        expect(manager.dataUpdatedText, '2 Jan 2026');
+        expect(
+          SearchUtils.expandQuery('begal'),
+          contains('pencurian dengan kekerasan'),
+        );
+      });
 
-        expect(isDue, true);
+      test('server aliases extend search without dropping built-in synonyms', () async {
+        await manager.recordServerMeta({
+          'search_aliases': [
+            {'term': 'Jambret', 'aliases': ['pencurian', 'merampas']},
+            {'term': 'maling', 'aliases': ['pencurian']},
+          ],
+        });
+
+        expect(SearchUtils.expandQuery('jambret'), containsAll(['pencurian', 'merampas']));
+        expect(SearchUtils.expandQuery('maling'), isNot(contains('mengambil barang')));
+        expect(SearchUtils.expandQuery('narkoba'), contains('narkotika'));
       });
     });
 

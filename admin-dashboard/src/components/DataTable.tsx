@@ -226,7 +226,7 @@ export function DataTable<T extends Record<string, any>>({
                     {column.title}
                   </Table.Th>
                 ))}
-                {rowActions && <Table.Th w={80}>Aksi</Table.Th>}
+                {rowActions && <Table.Th w={1}>Aksi</Table.Th>}
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>

@@ -24,7 +24,7 @@ class UndangUndangController extends Controller
         }
 
         if ($request->boolean('with_pasal')) {
-            $query->with(['pasal' => fn ($query) => $query->select('id', 'undang_undang_id', 'nomor')->orderBy('nomor')]);
+            $query->with(['pasal' => fn ($query) => $query->select('id', 'undang_undang_id', 'nomor')->orderByNomor()]);
         }
 
         return response()->json($query->orderBy('kode')->paginate((int) $request->query('per_page', 100)));
@@ -84,6 +84,8 @@ class UndangUndangController extends Controller
             'nama_lengkap' => ['nullable', 'string'],
             'deskripsi' => ['nullable', 'string'],
             'tahun' => ['nullable', 'integer'],
+            'official_url' => ['nullable', 'url', 'max:2000'],
+            'source_url' => ['nullable', 'url', 'max:2000'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
     }

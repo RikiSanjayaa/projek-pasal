@@ -60,7 +60,9 @@ export function normalizeLegalTextForStorage(value?: string | null) {
     .replace(/\s+([,.;:])/g, '$1')
     .replace(/([\(\[])\s+/g, '$1')
     .replace(/\s+([)\]])/g, '$1')
-    .replace(/[ \t]+((?:\([0-9ivxlcdm]+[a-z]?\)|[0-9]+[a-z]?\.|\([a-z]\)|[a-z]\.)\s+)/gi, '\n$1')
+    // Pisahkan butir "(1) ", "a. ", "1. " yang menempel di tengah baris (hasil OCR), tapi jangan
+    // memotong rujukan seperti "ayat (1)", "huruf a.", "kategori I.", "5 (lima)", atau tahun "1984.".
+    .replace(/(?<!\b(?:ayat|huruf|angka|pasal|nomor|butir|kategori|golongan|bab|buku|bagian|paragraf|lampiran))(?<![ \t])[ \t]+((?:\((?:[0-9]+[a-z]?|[ivx]+)\)|[0-9]{1,3}[a-z]?\.|\([a-z]\)|[a-z]\.)\s+)/gi, '\n$1')
 
   const lines = cleaned
     .split('\n')
@@ -75,14 +77,19 @@ export function normalizeLegalTextForStorage(value?: string | null) {
     })
 
   const blocks: string[] = []
-  const startsNewBlock = (line: string) => (
+  const startsNewBlock = (line: string, previous: string) => (
     /^(Pasal|Nom[oe]r)\s+[0-9]/i.test(line) ||
     /^(Penjelasan|Pendapat\s+Ahli|Catatan\s+Ahli)\s*:?/i.test(line) ||
-    /^(\([0-9ivxlcdm]+[a-z]?\)|[0-9]+[a-z]?\.|\([a-z]\)|[a-z]\.)\s+/i.test(line)
+    /^(\((?:[0-9]+[a-z]?|[ivx]+)\)|[0-9]{1,3}[a-z]?\.|\([a-z]\)|[a-z]\.)\s+/i.test(line) ||
+    // Label penjelasan resmi ("Ayat (1)", "Huruf a", "Angka 1"). Peka huruf besar supaya
+    // potongan baris OCR seperti "ayat (1) berlaku" tetap disambung.
+    /^(Ayat\s+\([0-9]+[a-z]?\)|Huruf\s+[a-z]{1,2}|Angka\s+[0-9]+[a-z]?)(\s|$)/.test(line) ||
+    // Paragraf baru: baris sebelumnya selesai satu kalimat dan baris ini diawali huruf besar.
+    (/[.:;]$/.test(previous) && /^[A-Z]/.test(line))
   )
 
   for (const line of lines) {
-    if (blocks.length === 0 || startsNewBlock(line)) {
+    if (blocks.length === 0 || startsNewBlock(line, blocks[blocks.length - 1])) {
       blocks.push(line)
     } else {
       blocks[blocks.length - 1] = `${blocks[blocks.length - 1]} ${line}`.replace(/[ \t]+/g, ' ')

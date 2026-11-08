@@ -15,6 +15,7 @@ import { DatePickerInput } from '@mantine/dates'
 import { useDebouncedValue } from '@mantine/hooks'
 import { IconSearch, IconRefresh } from '@tabler/icons-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import dayjs from 'dayjs'
 import { DataTable, type Column } from '@/components/DataTable'
 import { AuditLogHint } from '@/components/AuditLogHint'
 import { api, toQueryString, type PaginatedResponse } from '@/lib/api'
@@ -22,6 +23,25 @@ import { useDataMapping } from '@/contexts/DataMappingContext'
 import type { AuditLog } from '@/lib/database.types'
 
 const PAGE_SIZE = 20
+
+const ACTION_OPTIONS = [
+  { value: 'CREATE', label: 'Tambah', color: 'green' },
+  { value: 'UPDATE', label: 'Ubah', color: 'blue' },
+  { value: 'DELETE', label: 'Hapus', color: 'red' },
+  { value: 'RESTORE', label: 'Pulihkan', color: 'teal' },
+  { value: 'IMPORT', label: 'Import', color: 'violet' },
+  { value: 'LOGIN', label: 'Login', color: 'gray' },
+  { value: 'LOGOUT', label: 'Logout', color: 'gray' },
+]
+
+const TABLE_OPTIONS = [
+  { value: 'pasal', label: 'Pasal' },
+  { value: 'undang_undang', label: 'Undang-Undang' },
+  { value: 'pasal_links', label: 'Pasal terkait' },
+  { value: 'pasal_versi', label: 'Riwayat pasal' },
+  { value: 'mobile_users', label: 'Pengguna mobile' },
+  { value: 'admin_users', label: 'Admin' },
+]
 
 export function AuditLogPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -46,7 +66,8 @@ export function AuditLogPage() {
   const [debouncedSearch] = useDebouncedValue(search, 300)
   const [filterAction, setFilterAction] = useState<string | null>(null)
   const [filterTable, setFilterTable] = useState<string | null>(null)
-  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null])
+  // Mantine Dates 8+ memakai string tanggal lokal 'YYYY-MM-DD'
+  const [dateRange, setDateRange] = useState<[string | null, string | null]>([null, null])
 
   // Refs for tracking previous filter values
   const prevDebouncedSearch = useRef(debouncedSearch)
@@ -60,8 +81,8 @@ export function AuditLogPage() {
     const endDateParam = searchParams.get('endDate')
 
     if (startDateParam || endDateParam) {
-      const start = startDateParam ? new Date(startDateParam) : null
-      const end = endDateParam ? new Date(endDateParam) : null
+      const start = startDateParam ? dayjs(startDateParam).format('YYYY-MM-DD') : null
+      const end = endDateParam ? dayjs(endDateParam).format('YYYY-MM-DD') : null
       setDateRange([start, end])
     }
   }, [searchParams])
@@ -99,8 +120,8 @@ export function AuditLogPage() {
   const { data: logsData, isLoading } = useQuery({
     queryKey: ['audit_logs', page, pageSize, debouncedSearch, filterAction, filterTable, dateRange],
     queryFn: async () => {
-      const endDate = dateRange[1] ? new Date(dateRange[1]) : null
-      if (endDate) endDate.setHours(23, 59, 59, 999)
+      const startDate = dateRange[0] ? dayjs(dateRange[0]).startOf('day') : null
+      const endDate = dateRange[1] ? dayjs(dateRange[1]).endOf('day') : null
 
       const response = await api.get<PaginatedResponse<AuditLog>>(
         `/admin/audit-logs${toQueryString({
@@ -109,7 +130,7 @@ export function AuditLogPage() {
           search: debouncedSearch,
           action: filterAction,
           table_name: filterTable,
-          start_date: dateRange[0]?.toISOString(),
+          start_date: startDate?.toISOString(),
           end_date: endDate?.toISOString(),
         })}`
       )
@@ -144,32 +165,25 @@ export function AuditLogPage() {
     {
       key: 'action',
       title: 'Aksi',
-      width: 100,
+      width: 110,
       render: (value) => {
-        const getActionColor = (action: string) => {
-          switch (action) {
-            case 'CREATE':
-              return 'green'
-            case 'UPDATE':
-              return 'blue'
-            case 'DELETE':
-              return 'red'
-            default:
-              return 'gray'
-          }
-        }
+        const action = ACTION_OPTIONS.find((option) => option.value === value)
         return (
-          <Badge color={getActionColor(value as string)} variant="light">
-            {value}
+          <Badge color={action?.color ?? 'gray'} variant="light">
+            {action?.label ?? value}
           </Badge>
         )
       },
     },
     {
       key: 'table_name',
-      title: 'Tabel',
-      width: 120,
-      render: (value) => <Badge variant="outline">{value}</Badge>,
+      title: 'Data',
+      width: 150,
+      render: (value) => (
+        <Badge variant="outline" color="gray">
+          {TABLE_OPTIONS.find((option) => option.value === value)?.label ?? value}
+        </Badge>
+      ),
     },
     {
       key: 'change_hint',
@@ -203,69 +217,56 @@ export function AuditLogPage() {
         </Group>
       </div>
 
-      {/* Filters */}
-      <Card padding="md" radius="md" withBorder>
-        <Group grow wrap="wrap">
-          <TextInput
-            placeholder="Cari email admin..."
-            leftSection={<IconSearch size={16} />}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <Select
-            placeholder="Filter Aksi"
-            data={[
-              { value: 'CREATE', label: 'CREATE' },
-              { value: 'UPDATE', label: 'UPDATE' },
-              { value: 'DELETE', label: 'DELETE' },
-              { value: 'RESTORE', label: 'RESTORE' },
-              { value: 'IMPORT', label: 'IMPORT' },
-            ]}
-            value={filterAction}
-            onChange={setFilterAction}
-            clearable
-          />
-          <Select
-            placeholder="Filter Tabel"
-            data={[
-              { value: 'pasal', label: 'Pasal' },
-              { value: 'undang_undang', label: 'Undang-Undang' },
-              { value: 'pasal_links', label: 'Pasal Links' },
-              { value: 'mobile_users', label: 'Mobile Users' },
-              { value: 'admin_users', label: 'Admin Users' },
-            ]}
-            value={filterTable}
-            onChange={setFilterTable}
-            clearable
-          />
-          <DatePickerInput
-            weekendDays={[0]}
-            type="range"
-            placeholder="Filter Tanggal"
-            value={dateRange}
-            onChange={setDateRange}
-            clearable
-          />
-        </Group>
-      </Card>
+      <Card padding="md">
+        <Stack gap="md">
+          <Group grow wrap="wrap">
+            <TextInput
+              placeholder="Cari email admin..."
+              leftSection={<IconSearch size={16} />}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <Select
+              placeholder="Semua aksi"
+              data={ACTION_OPTIONS.map(({ value, label }) => ({ value, label }))}
+              value={filterAction}
+              onChange={setFilterAction}
+              clearable
+            />
+            <Select
+              placeholder="Semua data"
+              data={TABLE_OPTIONS}
+              value={filterTable}
+              onChange={setFilterTable}
+              clearable
+            />
+            <DatePickerInput
+              weekendDays={[0]}
+              type="range"
+              valueFormat="D MMM YYYY"
+              placeholder="Rentang tanggal"
+              value={dateRange}
+              onChange={setDateRange}
+              clearable
+            />
+          </Group>
 
-      {/* Table */}
-      <Card padding="md" radius="md" withBorder>
-        <DataTable
-          columns={auditLogColumns}
-          data={logsData?.data || []}
-          loading={isLoading}
-          current={page}
-          pageSize={pageSize}
-          total={logsData?.count || 0}
-          onPageChange={setPage}
-          onPageSizeChange={(newPageSize) => {
-            setPageSize(newPageSize)
-            setPage(1) // Reset to first page when changing page size
-          }}
-          onRowClick={(log) => navigate(`/audit-log/${log.id}`)}
-          emptyText="Tidak ada data audit log"
-        />
+          <DataTable
+            columns={auditLogColumns}
+            data={logsData?.data || []}
+            loading={isLoading}
+            current={page}
+            pageSize={pageSize}
+            total={logsData?.count || 0}
+            onPageChange={setPage}
+            onPageSizeChange={(newPageSize) => {
+              setPageSize(newPageSize)
+              setPage(1) // Reset to first page when changing page size
+            }}
+            onRowClick={(log) => navigate(`/audit-log/${log.id}`)}
+            emptyText="Tidak ada data audit log"
+          />
+        </Stack>
       </Card>
     </Stack>
   )

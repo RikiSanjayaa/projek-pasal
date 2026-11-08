@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class AppColors {
   // Primary Brand Colors
@@ -45,6 +45,12 @@ class AppColors {
   static const Color highlightLight = Color(0xFFFFF59D); // Colors.yellow[200]
   static const Color highlightDark = Color(0xFFFBC02D); // Colors.yellow[700]
 
+  // Word diff (riwayat perubahan pasal)
+  static const Color diffInsertedLight = Color(0xFF1B5E20); // green[900]
+  static const Color diffInsertedDark = Color(0xFFA5D6A7); // green[200]
+  static const Color diffRemovedLight = Color(0xFFB71C1C); // red[900]
+  static const Color diffRemovedDark = Color(0xFFEF9A9A); // red[200]
+
   // Helper methods to get colors based on brightness
   static Color scaffold(bool isDark) => isDark ? scaffoldDark : scaffoldLight;
   static Color card(bool isDark) => isDark ? cardDark : cardLight;
@@ -61,4 +67,12 @@ class AppColors {
   static Color icon(bool isDark) => isDark ? iconDark : iconLight;
   static Color highlight(bool isDark) =>
       isDark ? highlightDark : highlightLight;
+  static Color diffInserted(bool isDark) =>
+      isDark ? diffInsertedDark : diffInsertedLight;
+  static Color diffInsertedBg(bool isDark) =>
+      Colors.green.withValues(alpha: isDark ? 0.25 : 0.18);
+  static Color diffRemoved(bool isDark) =>
+      isDark ? diffRemovedDark : diffRemovedLight;
+  static Color diffRemovedBg(bool isDark) =>
+      Colors.red.withValues(alpha: isDark ? 0.18 : 0.10);
 }

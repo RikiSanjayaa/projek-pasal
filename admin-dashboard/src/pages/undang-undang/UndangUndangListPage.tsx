@@ -12,7 +12,6 @@ import {
   NumberInput,
   Table,
   Badge,
-  ActionIcon,
   Modal,
   Switch,
   Skeleton,
@@ -22,8 +21,9 @@ import {
 import { useForm } from '@mantine/form'
 import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
-import { IconPlus, IconEdit, IconAlertCircle } from '@tabler/icons-react'
+import { IconPlus, IconEdit, IconAlertCircle, IconList } from '@tabler/icons-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { IconAction } from '@/components/IconAction'
 import { api } from '@/lib/api'
 import type { UndangUndang, UndangUndangInsert, UndangUndangUpdate } from '@/lib/database.types'
 import { invalidateUndangUndangData } from '@/lib/query-invalidation'
@@ -76,6 +76,8 @@ export function UndangUndangListPage() {
       nama_lengkap: '',
       deskripsi: '',
       tahun: undefined,
+      official_url: '',
+      source_url: '',
     },
     validate: {
       kode: (value) => (!value ? 'Kode wajib diisi' : null),
@@ -91,6 +93,8 @@ export function UndangUndangListPage() {
       nama_lengkap: '',
       deskripsi: '',
       tahun: undefined,
+      official_url: '',
+      source_url: '',
       is_active: true,
     },
   })
@@ -150,6 +154,8 @@ export function UndangUndangListPage() {
       nama_lengkap: uu.nama_lengkap || '',
       deskripsi: uu.deskripsi || '',
       tahun: uu.tahun || undefined,
+      official_url: uu.official_url || '',
+      source_url: uu.source_url || '',
       is_active: uu.is_active,
     })
     openEdit()
@@ -200,16 +206,15 @@ export function UndangUndangListPage() {
                         </Text>
                       )}
                     </div>
-                    <ActionIcon
-                      variant="subtle"
+                    <IconAction
+                      label="Edit undang-undang"
+                      icon={<IconEdit size={18} />}
                       color="blue"
                       onClick={(event) => {
                         event.stopPropagation()
                         handleEdit(uu)
                       }}
-                    >
-                      <IconEdit size={16} />
-                    </ActionIcon>
+                    />
                   </Group>
 
                   <Text size="sm" c="dimmed" lineClamp={3}>
@@ -242,7 +247,7 @@ export function UndangUndangListPage() {
                     <Table.Th>Total Pasal</Table.Th>
                     <Table.Th>Tahun</Table.Th>
                     <Table.Th>Status</Table.Th>
-                    <Table.Th w={100}>Aksi</Table.Th>
+                    <Table.Th w={1}>Aksi</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -278,17 +283,24 @@ export function UndangUndangListPage() {
                         </Badge>
                       </Table.Td>
                       <Table.Td>
-                        <Group gap="xs">
-                          <ActionIcon
-                            variant="subtle"
+                        <Group gap={2} wrap="nowrap">
+                          <IconAction
+                            label="Lihat pasal"
+                            icon={<IconList size={18} />}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              navigate(`/pasal?uu=${uu.id}`)
+                            }}
+                          />
+                          <IconAction
+                            label="Edit undang-undang"
+                            icon={<IconEdit size={18} />}
                             color="blue"
                             onClick={(e) => {
                               e.stopPropagation()
                               handleEdit(uu)
                             }}
-                          >
-                            <IconEdit size={16} />
-                          </ActionIcon>
+                          />
                         </Group>
                       </Table.Td>
                     </Table.Tr>
@@ -337,6 +349,18 @@ export function UndangUndangListPage() {
               label="Tahun"
               placeholder="Contoh: 1946"
               {...createForm.getInputProps('tahun')}
+            />
+            <TextInput
+              label="Link naskah resmi"
+              description="Dipakai admin saat verifikasi dan ditampilkan di mobile, contoh halaman JDIH BPK"
+              placeholder="https://peraturan.bpk.go.id/Details/..."
+              {...createForm.getInputProps('official_url')}
+            />
+            <TextInput
+              label="Sumber teks"
+              description="Asal teks yang diimport (tidak resmi), contoh datahukum.com"
+              placeholder="https://www.datahukum.com/peraturan/..."
+              {...createForm.getInputProps('source_url')}
             />
             <Group justify="flex-end" mt="md" grow={isMobile}>
               <Button variant="default" onClick={closeCreate}>
@@ -391,6 +415,18 @@ export function UndangUndangListPage() {
               label="Tahun"
               placeholder="Contoh: 1946"
               {...editForm.getInputProps('tahun')}
+            />
+            <TextInput
+              label="Link naskah resmi"
+              description="Dipakai admin saat verifikasi dan ditampilkan di mobile, contoh halaman JDIH BPK"
+              placeholder="https://peraturan.bpk.go.id/Details/..."
+              {...editForm.getInputProps('official_url')}
+            />
+            <TextInput
+              label="Sumber teks"
+              description="Asal teks yang diimport (tidak resmi), contoh datahukum.com"
+              placeholder="https://www.datahukum.com/peraturan/..."
+              {...editForm.getInputProps('source_url')}
             />
             <Switch
               label="Aktif"

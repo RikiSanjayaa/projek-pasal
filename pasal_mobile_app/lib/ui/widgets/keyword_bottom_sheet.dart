@@ -1,11 +1,14 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../core/config/app_colors.dart';
 
 /// Bottom sheet for browsing and searching all available keywords
 class KeywordBottomSheet extends StatefulWidget {
   final List<String> allKeywords;
   final List<String> selectedKeywords;
-  final List<String> popularKeywords;
+  final List<String> topKeywords;
+
+  /// Number of pasal that carry each keyword.
+  final Map<String, int> keywordCounts;
   final Function(String) onKeywordToggle;
   final bool autoFocus;
 
@@ -13,7 +16,8 @@ class KeywordBottomSheet extends StatefulWidget {
     super.key,
     required this.allKeywords,
     required this.selectedKeywords,
-    required this.popularKeywords,
+    required this.topKeywords,
+    required this.keywordCounts,
     required this.onKeywordToggle,
     this.autoFocus = false,
   });
@@ -23,7 +27,8 @@ class KeywordBottomSheet extends StatefulWidget {
     required BuildContext context,
     required List<String> allKeywords,
     required List<String> selectedKeywords,
-    required List<String> popularKeywords,
+    required List<String> topKeywords,
+    required Map<String, int> keywordCounts,
     required Function(String) onKeywordToggle,
     bool autoFocus = false,
   }) {
@@ -34,7 +39,8 @@ class KeywordBottomSheet extends StatefulWidget {
       builder: (context) => KeywordBottomSheet(
         allKeywords: allKeywords,
         selectedKeywords: selectedKeywords,
-        popularKeywords: popularKeywords,
+        topKeywords: topKeywords,
+        keywordCounts: keywordCounts,
         onKeywordToggle: onKeywordToggle,
         autoFocus: autoFocus,
       ),
@@ -175,13 +181,13 @@ class _KeywordBottomSheetState extends State<KeywordBottomSheet> {
                   const SizedBox(height: 16),
                 ],
 
-                // Popular keywords section (only show if not searching)
+                // Most-used keywords section (only show if not searching)
                 if (_searchQuery.isEmpty &&
-                    widget.popularKeywords.isNotEmpty) ...[
-                  _buildSectionHeader('POPULER', isDark),
+                    widget.topKeywords.isNotEmpty) ...[
+                  _buildSectionHeader('PALING BANYAK PASAL', isDark),
                   const SizedBox(height: 8),
                   _buildKeywordChips(
-                    widget.popularKeywords
+                    widget.topKeywords
                         .where((k) => !widget.selectedKeywords.contains(k))
                         .toList(),
                     isDark,
@@ -233,6 +239,11 @@ class _KeywordBottomSheetState extends State<KeywordBottomSheet> {
     );
   }
 
+  String _chipLabel(String keyword) {
+    final count = widget.keywordCounts[keyword];
+    return count == null ? keyword : '$keyword · $count';
+  }
+
   Widget _buildKeywordChips(
     List<String> keywords,
     bool isDark, {
@@ -266,13 +277,17 @@ class _KeywordBottomSheetState extends State<KeywordBottomSheet> {
                   const Icon(Icons.check, size: 14, color: Colors.white),
                   const SizedBox(width: 4),
                 ],
-                Text(
-                  keyword,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isSelected
-                        ? Colors.white
-                        : AppColors.textPrimary(isDark),
+                Flexible(
+                  child: Text(
+                    _chipLabel(keyword),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isSelected
+                          ? Colors.white
+                          : AppColors.textPrimary(isDark),
+                    ),
                   ),
                 ),
               ],

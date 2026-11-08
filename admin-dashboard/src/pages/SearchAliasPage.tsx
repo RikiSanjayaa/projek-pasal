@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react'
 import {
-  ActionIcon,
-  Alert,
   Badge,
   Button,
   Card,
   Group,
   Modal,
+  ScrollArea,
   Stack,
   Switch,
   Table,
@@ -14,13 +13,13 @@ import {
   Text,
   TextInput,
   Title,
-  Tooltip,
 } from '@mantine/core'
 import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { IconEdit, IconPlus, IconRefresh, IconSearch, IconTrash } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
+import { IconAction } from '@/components/IconAction'
 import { api, type PaginatedResponse } from '@/lib/api'
 
 interface SearchAlias {
@@ -134,7 +133,7 @@ export function SearchAliasPage() {
 
   if (adminUser?.role !== 'super_admin') {
     return (
-      <Card withBorder>
+      <Card>
         <Title order={3}>Akses ditolak</Title>
         <Text>Halaman ini hanya untuk super admin.</Text>
       </Card>
@@ -146,92 +145,80 @@ export function SearchAliasPage() {
       <Group justify="space-between" wrap="wrap">
         <div>
           <Title order={2}>Smart Search</Title>
-          <Text c="dimmed">Kelola kata pencarian agar user tetap menemukan pasal meski memakai istilah sehari-hari.</Text>
+          <Text c="dimmed">
+            Arahkan istilah sehari-hari ke istilah hukum. Contoh: <strong>maling</strong> → pencurian, mencuri.
+          </Text>
         </div>
-        <Group gap="sm" w={isMobile ? '100%' : 'auto'}>
-          <Button
-            variant="light"
-            leftSection={<IconRefresh size={16} />}
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['search_aliases'] })}
-            fullWidth={isMobile}
-          >
-            Refresh
-          </Button>
-          <Button leftSection={<IconPlus size={16} />} onClick={openCreate} fullWidth={isMobile}>
-            Tambah Alias
-          </Button>
-        </Group>
+        <Button leftSection={<IconPlus size={16} />} onClick={openCreate} fullWidth={isMobile}>
+          Tambah Alias
+        </Button>
       </Group>
 
-      <Alert color="blue" variant="light">
-        Contoh: kata pencarian <strong>maling</strong> diarahkan ke <strong>pencurian</strong>, <strong>mencuri</strong>, dan <strong>mengambil barang</strong>.
-      </Alert>
+      <Card padding="md">
+        <Stack gap="md">
+          <Group gap="sm" wrap="nowrap">
+            <TextInput
+              value={search}
+              onChange={(event) => setSearch(event.currentTarget.value)}
+              leftSection={<IconSearch size={16} />}
+              placeholder="Cari alias, kata target, atau kategori..."
+              style={{ flex: 1 }}
+            />
+            <IconAction label="Muat ulang" icon={<IconRefresh size={18} />} onClick={() => queryClient.invalidateQueries({ queryKey: ['search_aliases'] })} />
+          </Group>
 
-      <Card withBorder padding="md">
-        <TextInput
-          value={search}
-          onChange={(event) => setSearch(event.currentTarget.value)}
-          leftSection={<IconSearch size={16} />}
-          placeholder="Cari alias, kata target, atau kategori..."
-        />
-      </Card>
-
-      <Card withBorder padding="md">
-        <Table striped highlightOnHover miw={850}>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Kata pencarian</Table.Th>
-              <Table.Th>Kata target</Table.Th>
-              <Table.Th>Kategori</Table.Th>
-              <Table.Th>Status</Table.Th>
-              <Table.Th>Aksi</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {filteredAliases.map((alias) => (
-              <Table.Tr key={alias.id}>
-                <Table.Td>
-                  <Text fw={700}>{alias.term}</Text>
-                  {alias.notes && <Text size="xs" c="dimmed" lineClamp={1}>{alias.notes}</Text>}
-                </Table.Td>
-                <Table.Td>
-                  <Group gap={6}>
-                    {alias.aliases.map((item) => (
-                      <Badge key={item} variant="light">{item}</Badge>
-                    ))}
-                  </Group>
-                </Table.Td>
-                <Table.Td>{alias.category || '-'}</Table.Td>
-                <Table.Td>
-                  <Badge color={alias.is_active ? 'green' : 'gray'} variant="light">
-                    {alias.is_active ? 'Aktif' : 'Nonaktif'}
-                  </Badge>
-                </Table.Td>
-                <Table.Td>
-                  <Group gap={4}>
-                    <Tooltip label="Edit">
-                      <ActionIcon variant="subtle" onClick={() => openEdit(alias)}>
-                        <IconEdit size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                    <Tooltip label="Hapus">
-                      <ActionIcon variant="subtle" color="red" onClick={() => setDeleting(alias)}>
-                        <IconTrash size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                  </Group>
-                </Table.Td>
-              </Table.Tr>
-            ))}
-            {!isLoading && filteredAliases.length === 0 && (
-              <Table.Tr>
-                <Table.Td colSpan={5}>
-                  <Text ta="center" c="dimmed" py="lg">Belum ada alias pencarian.</Text>
-                </Table.Td>
-              </Table.Tr>
-            )}
-          </Table.Tbody>
-        </Table>
+          <ScrollArea type="auto" scrollbarSize={6} offsetScrollbars>
+            <Table striped highlightOnHover miw={760} verticalSpacing="xs">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Kata pencarian</Table.Th>
+                  <Table.Th>Kata target</Table.Th>
+                  <Table.Th>Kategori</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                  <Table.Th w={1}>Aksi</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {filteredAliases.map((alias) => (
+                  <Table.Tr key={alias.id}>
+                    <Table.Td>
+                      <Text fw={700}>{alias.term}</Text>
+                      {alias.notes && <Text size="xs" c="dimmed" lineClamp={1}>{alias.notes}</Text>}
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap={6}>
+                        {alias.aliases.map((item) => (
+                          <Badge key={item} variant="light">{item}</Badge>
+                        ))}
+                      </Group>
+                    </Table.Td>
+                    <Table.Td>{alias.category || '-'}</Table.Td>
+                    <Table.Td>
+                      <Badge color={alias.is_active ? 'green' : 'gray'} variant="light">
+                        {alias.is_active ? 'Aktif' : 'Nonaktif'}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap={2} wrap="nowrap">
+                        <IconAction label="Edit alias" icon={<IconEdit size={18} />} color="blue" onClick={() => openEdit(alias)} />
+                        <IconAction label="Hapus alias" icon={<IconTrash size={18} />} color="red" onClick={() => setDeleting(alias)} />
+                      </Group>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+                {!isLoading && filteredAliases.length === 0 && (
+                  <Table.Tr>
+                    <Table.Td colSpan={5}>
+                      <Text ta="center" c="dimmed" py="lg">
+                        {search.trim() ? 'Tidak ada alias yang cocok.' : 'Belum ada alias pencarian.'}
+                      </Text>
+                    </Table.Td>
+                  </Table.Tr>
+                )}
+              </Table.Tbody>
+            </Table>
+          </ScrollArea>
+        </Stack>
       </Card>
 
       <Modal

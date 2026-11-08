@@ -4,10 +4,13 @@ namespace App\Services;
 
 use App\Models\Pasal;
 use App\Models\PasalLink;
+use App\Models\PasalVersi;
 use App\Models\UndangUndang;
 use App\Support\PasalTextNormalizer;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class ImportPasalService
 {
@@ -16,9 +19,12 @@ class ImportPasalService
         $created = 0;
         $updated = 0;
         $errors = [];
+        $needsVerification = 0;
         $pasalByRow = [];
         $linkCreated = 0;
         $linkErrors = [];
+        $historyPasal = 0;
+        $historyVersions = 0;
 
         foreach ($rows as $index => $row) {
             try {
@@ -44,13 +50,33 @@ class ImportPasalService
                     throw new \RuntimeException('Nomor dan isi pasal wajib diisi.');
                 }
 
+                // Teks hasil import belum tentu sesuai naskah resmi: pasal baru atau yang teksnya
+                // berubah masuk antrean verifikasi. Pasal yang teksnya sama mempertahankan statusnya.
+                $existing = Pasal::where('undang_undang_id', $uu->id)->where('nomor', $payload['nomor'])->first();
+                $textChanged = ! $existing
+                    || $existing->isi !== $payload['isi']
+                    || $existing->penjelasan !== $payload['penjelasan']
+                    || $existing->judul !== $payload['judul'];
+
                 $pasal = Pasal::updateOrCreate(
                     ['undang_undang_id' => $uu->id, 'nomor' => $payload['nomor']],
-                    $payload + ['created_by' => $adminId],
+                    $payload + ['created_by' => $adminId] + ($textChanged ? Pasal::unverified() : []),
                 );
 
                 $pasal->wasRecentlyCreated ? $created++ : $updated++;
+                if ($textChanged) {
+                    $needsVerification++;
+                }
                 $pasalByRow[$index] = $pasal;
+
+                // Kunci "riwayat" ada = sumber import membawa riwayat lengkap; ganti semua versi lama.
+                if (array_key_exists('riwayat', $row) && is_array($row['riwayat'])) {
+                    $saved = $this->replaceHistory($pasal, $row['riwayat']);
+                    if ($saved > 0) {
+                        $historyPasal++;
+                        $historyVersions += $saved;
+                    }
+                }
             } catch (\Throwable $e) {
                 $errors[] = ['row' => $index + 1, 'message' => $e->getMessage()];
             }
@@ -98,12 +124,41 @@ class ImportPasalService
             }
         }
 
-        return compact('created', 'updated', 'errors') + ['links' => ['created' => $linkCreated, 'errors' => $linkErrors]];
+        return compact('created', 'updated', 'errors')
+            + [
+                'needs_verification' => $needsVerification,
+                'links' => ['created' => $linkCreated, 'errors' => $linkErrors],
+                'riwayat' => ['pasal' => $historyPasal, 'versi' => $historyVersions],
+            ];
     }
 
-    public function importFile(UploadedFile $file, ?string $adminId = null): array
+    public function importFile(UploadedFile $file, ?string $adminId = null, ?string $undangUndangId = null): array
     {
-        $sheet = IOFactory::load($file->getRealPath())->getActiveSheet();
+        $workbook = IOFactory::load($file->getRealPath());
+        $mapped = $this->sheetRows($workbook->getSheetByName('import') ?? $workbook->getSheet(0));
+        if ($undangUndangId) {
+            // File hasil pipeline tidak punya kolom kode UU; UU dipilih admin saat upload.
+            $mapped = array_map(fn ($item) => $item + ['undang_undang_id' => $undangUndangId], $mapped);
+        }
+
+        $historySheet = $workbook->getSheetByName('riwayat');
+        if ($historySheet) {
+            $history = [];
+            foreach ($this->sheetRows($historySheet) as $version) {
+                $history[(string) ($version['nomor'] ?? '')][] = $version;
+            }
+            foreach ($mapped as &$item) {
+                $item['riwayat'] = $history[(string) ($item['nomor'] ?? '')] ?? [];
+            }
+            unset($item);
+        }
+
+        return $this->importRows($mapped, $adminId);
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function sheetRows(Worksheet $sheet): array
+    {
         $rows = $sheet->toArray(null, true, true, true);
         $header = array_map(fn ($value) => strtolower(trim((string) $value)), array_shift($rows) ?? []);
         $mapped = [];
@@ -118,7 +173,68 @@ class ImportPasalService
             $mapped[] = $item;
         }
 
-        return $this->importRows($mapped, $adminId);
+        return $mapped;
+    }
+
+    /** Simpan ulang seluruh riwayat satu pasal. Mengembalikan jumlah versi yang disimpan. */
+    private function replaceHistory(Pasal $pasal, array $versions): int
+    {
+        $rows = [];
+        foreach (array_values($versions) as $position => $version) {
+            $status = strtolower(trim((string) ($version['status'] ?? '')));
+            if (! in_array($status, PasalVersi::STATUSES, true)) {
+                throw new \RuntimeException("Riwayat Pasal {$pasal->nomor}: status \"{$status}\" tidak dikenal.");
+            }
+            $sumber = trim((string) ($version['sumber'] ?? ''));
+            $text = PasalTextNormalizer::normalizePayload([
+                'isi' => (string) ($version['isi'] ?? ''),
+                'penjelasan' => $version['penjelasan'] ?? null,
+            ]);
+            if ($sumber === '' || $text['isi'] === '') {
+                throw new \RuntimeException("Riwayat Pasal {$pasal->nomor}: sumber dan isi wajib diisi.");
+            }
+
+            $rows[] = [
+                'urutan' => (int) ($version['urutan'] ?? 0) ?: $position + 1,
+                'status' => $status,
+                'sumber' => $sumber,
+                'judul_sumber' => $this->nullableString($version['judul_sumber'] ?? null),
+                'diundangkan' => $this->nullableString($version['diundangkan'] ?? null),
+                'berlaku_sejak' => $this->nullableString($version['berlaku_sejak'] ?? null),
+                'naskah_resmi' => $this->nullableString($version['naskah_resmi'] ?? null),
+                'isi' => $text['isi'],
+                'penjelasan' => $text['penjelasan'] ?: null,
+            ];
+        }
+
+        // Import ulang dengan riwayat yang sama tidak boleh menyentuh pasal (memicu sync ulang di mobile).
+        $fields = array_keys($rows[0] ?? ['urutan' => null]);
+        $existing = $pasal->versi()->get()
+            ->map(fn (PasalVersi $versi) => array_map(
+                fn ($value) => $value instanceof \DateTimeInterface ? $value->format('Y-m-d') : $value,
+                $versi->only($fields),
+            ))
+            ->all();
+        if ($existing == $rows) {
+            return count($rows);
+        }
+
+        DB::transaction(function () use ($pasal, $rows) {
+            $pasal->versi()->delete();
+            foreach ($rows as $row) {
+                $pasal->versi()->create($row);
+            }
+            $pasal->touch();
+        });
+
+        return count($rows);
+    }
+
+    private function nullableString(mixed $value): ?string
+    {
+        $value = trim((string) ($value ?? ''));
+
+        return $value === '' ? null : $value;
     }
 
     private function normalizeKeywords(mixed $value): array

@@ -18,6 +18,7 @@ import {
 import { useForm } from '@mantine/form'
 import { showNotification } from '@mantine/notifications'
 import { IconAlertCircle } from '@tabler/icons-react'
+import { AppLogo } from '@/components/AppLogo'
 import { useAuth } from '@/contexts/AuthContext'
 import { requestPasswordRecovery } from '@/lib/auth'
 
@@ -109,6 +110,9 @@ export function LoginPage() {
   return (
     <Center h="100vh" bg="var(--mantine-color-body)">
       <Container size={420} my={40}>
+        <Center mb="sm">
+          <AppLogo size={72} />
+        </Center>
         <Title ta="center" fw={900}>
           CariPasal Admin
         </Title>

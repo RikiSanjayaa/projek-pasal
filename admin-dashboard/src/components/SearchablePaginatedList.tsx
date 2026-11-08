@@ -1,5 +1,5 @@
-import React, { ReactNode, useMemo, useState } from 'react'
-import { TextInput, Group, Pagination, Select, Text, Stack, Card, Title, ScrollArea } from '@mantine/core'
+import { ReactNode, useEffect, useMemo, useState } from 'react'
+import { TextInput, Group, Pagination, Select, Text, Stack, Card, ScrollArea, SegmentedControl } from '@mantine/core'
 import { IconSearch } from '@tabler/icons-react'
 
 interface PaginationInfo {
@@ -14,18 +14,18 @@ interface PaginationInfo {
 interface SectionConfig<T> {
   title: string
   emptyText: string
-  actionElement?: ReactNode
   render: (items: T[], pagination: PaginationInfo) => ReactNode
 }
 
 interface SearchablePaginatedListProps<T> {
   data: T[]
-  searchTitle?: string
   searchPlaceholder?: string
   getSearchableText: (item: T) => string
   isActive: (item: T) => boolean
   activeSection: SectionConfig<T>
   inactiveSection: SectionConfig<T>
+  /** Tombol tambahan di kanan kolom pencarian (mis. refresh). */
+  toolbarActions?: ReactNode
   defaultPageSize?: number
   isLoading?: boolean
   loadingText?: string
@@ -38,189 +38,111 @@ const PAGE_SIZE_OPTIONS = [
   { value: '20', label: '20 per halaman' },
 ]
 
+type SectionKey = 'active' | 'inactive'
+
+/** Satu kartu: pencarian, pilihan kelompok (aktif/nonaktif), tabel, dan paginasi. */
 export function SearchablePaginatedList<T>({
   data,
-  searchTitle,
   searchPlaceholder = 'Cari berdasarkan nama atau email...',
   getSearchableText,
   isActive,
   activeSection,
   inactiveSection,
+  toolbarActions,
   defaultPageSize = 10,
   isLoading = false,
   loadingText = 'Memuat data...',
 }: SearchablePaginatedListProps<T>) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [activePageSize, setActivePageSize] = useState(defaultPageSize)
-  const [inactivePageSize, setInactivePageSize] = useState(defaultPageSize)
-  const [activePage, setActivePage] = useState(1)
-  const [inactivePage, setInactivePage] = useState(1)
+  const [sectionKey, setSectionKey] = useState<SectionKey>('active')
+  const [pageSize, setPageSize] = useState(defaultPageSize)
+  const [page, setPage] = useState(1)
 
-  // Filter all data based on search query
   const filteredData = useMemo(() => {
-    if (!searchQuery.trim()) return data
     const query = searchQuery.toLowerCase().trim()
+    if (!query) return data
     return data.filter((item) => getSearchableText(item).toLowerCase().includes(query))
   }, [data, searchQuery, getSearchableText])
 
-  // Split into active and inactive
   const activeItems = useMemo(() => filteredData.filter(isActive), [filteredData, isActive])
   const inactiveItems = useMemo(() => filteredData.filter((item) => !isActive(item)), [filteredData, isActive])
 
-  // Reset pages when search changes
-  React.useEffect(() => {
-    setActivePage(1)
-    setInactivePage(1)
-  }, [searchQuery])
+  useEffect(() => {
+    setPage(1)
+  }, [searchQuery, sectionKey])
 
-  // Paginate active items
-  const activeTotalPages = Math.ceil(activeItems.length / activePageSize)
-  const activeStartIndex = (activePage - 1) * activePageSize
-  const activeEndIndex = Math.min(activeStartIndex + activePageSize, activeItems.length)
-  const paginatedActiveItems = activeItems.slice(activeStartIndex, activeEndIndex)
-
-  // Paginate inactive items
-  const inactiveTotalPages = Math.ceil(inactiveItems.length / inactivePageSize)
-  const inactiveStartIndex = (inactivePage - 1) * inactivePageSize
-  const inactiveEndIndex = Math.min(inactiveStartIndex + inactivePageSize, inactiveItems.length)
-  const paginatedInactiveItems = inactiveItems.slice(inactiveStartIndex, inactiveEndIndex)
-
-  const activePaginationInfo: PaginationInfo = {
-    currentPage: activePage,
-    totalPages: activeTotalPages,
-    pageSize: activePageSize,
-    totalItems: activeItems.length,
-    startIndex: activeStartIndex,
-    endIndex: activeEndIndex,
+  const section = sectionKey === 'active' ? activeSection : inactiveSection
+  const items = sectionKey === 'active' ? activeItems : inactiveItems
+  const totalPages = Math.ceil(items.length / pageSize)
+  const startIndex = (page - 1) * pageSize
+  const endIndex = Math.min(startIndex + pageSize, items.length)
+  const pagination: PaginationInfo = {
+    currentPage: page,
+    totalPages,
+    pageSize,
+    totalItems: items.length,
+    startIndex,
+    endIndex,
   }
-
-  const inactivePaginationInfo: PaginationInfo = {
-    currentPage: inactivePage,
-    totalPages: inactiveTotalPages,
-    pageSize: inactivePageSize,
-    totalItems: inactiveItems.length,
-    startIndex: inactiveStartIndex,
-    endIndex: inactiveEndIndex,
-  }
-
-  const renderPaginationControls = (
-    pagination: PaginationInfo,
-    pageSize: number,
-    onPageChange: (page: number) => void,
-    onPageSizeChange: (size: number) => void
-  ) => (
-    <Group justify="space-between" mt="md">
-      <Text size="sm" c="dimmed">
-        {pagination.totalItems > 0
-          ? `Menampilkan ${pagination.startIndex + 1}-${pagination.endIndex} dari ${pagination.totalItems}`
-          : 'Tidak ada data'}
-      </Text>
-      <Group gap="md">
-        {pagination.totalPages > 1 && (
-          <Pagination
-            value={pagination.currentPage}
-            onChange={onPageChange}
-            total={pagination.totalPages}
-            size="sm"
-          />
-        )}
-        <Select
-          comboboxProps={{ withinPortal: true }}
-          data={PAGE_SIZE_OPTIONS}
-          value={String(pageSize)}
-          onChange={(value) => onPageSizeChange(Number(value))}
-          w={140}
-          size="sm"
-        />
-      </Group>
-    </Group>
-  )
 
   return (
-    <Stack gap="lg">
-      {/* Search Input - Full Width in Card */}
-      <Card padding="md" radius="md" withBorder>
-        <Stack gap="sm">
-          {searchTitle && <Title order={5}>{searchTitle}</Title>}
+    <Card padding="md">
+      <Stack gap="md">
+        <Group gap="sm" wrap="wrap">
           <TextInput
             placeholder={searchPlaceholder}
             leftSection={<IconSearch size={16} />}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.currentTarget.value)}
-            style={{ flex: 1, width: '100%' }}
+            style={{ flex: 1, minWidth: 220 }}
           />
-        </Stack>
-      </Card>
-
-      {/* Active Section */}
-      <div>
-        <Group justify="space-between" mb="sm" align="center">
-          <Title order={5}>
-            {activeSection.title} ({activeItems.length})
-          </Title>
-          {activeSection.actionElement}
+          <SegmentedControl
+            value={sectionKey}
+            onChange={(value) => setSectionKey(value as SectionKey)}
+            data={[
+              { value: 'active', label: `${activeSection.title} (${activeItems.length})` },
+              { value: 'inactive', label: `${inactiveSection.title} (${inactiveItems.length})` },
+            ]}
+          />
+          {toolbarActions}
         </Group>
-        <Card padding="md" radius="md" withBorder>
-          {isLoading ? (
-            <Text c="dimmed" ta="center">
-              {loadingText}
-            </Text>
-          ) : paginatedActiveItems.length === 0 ? (
-            <Text c="dimmed" ta="center">
-              {activeSection.emptyText}
-            </Text>
-          ) : (
-            <ScrollArea style={{ width: '100%' }} type="auto" scrollbarSize={6} offsetScrollbars>
-              {activeSection.render(paginatedActiveItems, activePaginationInfo)}
-            </ScrollArea>
-          )}
-          {!isLoading && activeItems.length > 0 &&
-            renderPaginationControls(
-              activePaginationInfo,
-              activePageSize,
-              setActivePage,
-              (size) => {
-                setActivePageSize(size)
-                setActivePage(1)
-              }
-            )}
-        </Card>
-      </div>
 
-      {/* Inactive Section */}
-      <div>
-        <Group justify="space-between" mb="sm" align="center">
-          <Title order={5}>
-            {inactiveSection.title} ({inactiveItems.length})
-          </Title>
-          {inactiveSection.actionElement}
-        </Group>
-        <Card padding="md" radius="md" withBorder>
-          {isLoading ? (
-            <Text c="dimmed" ta="center">
-              {loadingText}
-            </Text>
-          ) : paginatedInactiveItems.length === 0 ? (
-            <Text c="dimmed" ta="center">
-              {inactiveSection.emptyText}
-            </Text>
-          ) : (
+        {isLoading ? (
+          <Text c="dimmed" ta="center" py="lg">
+            {loadingText}
+          </Text>
+        ) : items.length === 0 ? (
+          <Text c="dimmed" ta="center" py="lg">
+            {searchQuery.trim() ? 'Tidak ada yang cocok dengan pencarian.' : section.emptyText}
+          </Text>
+        ) : (
+          <>
             <ScrollArea style={{ width: '100%' }} type="auto" scrollbarSize={6} offsetScrollbars>
-              {inactiveSection.render(paginatedInactiveItems, inactivePaginationInfo)}
+              {section.render(items.slice(startIndex, endIndex), pagination)}
             </ScrollArea>
-          )}
-          {!isLoading && inactiveItems.length > 0 &&
-            renderPaginationControls(
-              inactivePaginationInfo,
-              inactivePageSize,
-              setInactivePage,
-              (size) => {
-                setInactivePageSize(size)
-                setInactivePage(1)
-              }
-            )}
-        </Card>
-      </div>
-    </Stack>
+            <Group justify="space-between">
+              <Text size="sm" c="dimmed">
+                Menampilkan {startIndex + 1}-{endIndex} dari {items.length}
+              </Text>
+              <Group gap="md">
+                {totalPages > 1 && <Pagination value={page} onChange={setPage} total={totalPages} size="sm" />}
+                <Select
+                  comboboxProps={{ withinPortal: true }}
+                  data={PAGE_SIZE_OPTIONS}
+                  value={String(pageSize)}
+                  onChange={(value) => {
+                    setPageSize(Number(value))
+                    setPage(1)
+                  }}
+                  w={150}
+                  size="sm"
+                  allowDeselect={false}
+                />
+              </Group>
+            </Group>
+          </>
+        )}
+      </Stack>
+    </Card>
   )
 }
