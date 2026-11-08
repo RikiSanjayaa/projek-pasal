@@ -16,7 +16,7 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 | **`home_screen.dart`**           | **Dashboard Utama**. Fitur: Search Global, Filter Dropdown Keyword, Filter Kategori UU, List Pasal Terbaru                                |
 | **`library_screen.dart`**        | **Tab Pustaka**. Menampilkan daftar "Buku/Kitab UU" (KUHP, ITE, dll) dalam bentuk Grid.                                                   |
 | **`detail_uu_screen.dart`**      | Halaman isi buku. Muncul saat buku di Pustaka diklik. Menampilkan daftar pasal + deskripsi UU jika tersedia.                              |
-| **`read_pasal_screen.dart`**     | **Mode Baca Detail**. Muncul saat kartu pasal diklik. Fitur: Next/Prev Pasal, Highlight Teks, Pasal Terkait, dan Share.                   |
+| **`read_pasal_screen.dart`**     | **Mode Baca Detail**. Muncul saat kartu pasal diklik. Fitur: Next/Prev Pasal, Highlight Teks, Pasal Terkait, Riwayat Perubahan, dan Share.|
 | **`search_screen.dart`**         | _(Legacy/Opsional)_ Halaman pencarian khusus jika menggunakan `showSearch` bawaan Flutter. Saat ini pencarian sudah terintegrasi di Home. |
 | **`keyword_result_screen.dart`** | Halaman hasil klik tag/chip. Menampilkan semua pasal yang memiliki tagar yang sama.                                                       |
 
@@ -40,13 +40,14 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 
 | File                      | Fungsi                                                                                    |
 | :------------------------ | :---------------------------------------------------------------------------------------- |
-| **`app_database.dart`**   | Definisi Tabel Database Lokal (SQLite/Drift). Termasuk tabel `undang_undang` dan `pasal`. |
+| **`app_database.dart`**   | Definisi Tabel Database Lokal (SQLite/Drift). Termasuk tabel `undang_undang`, `pasal`, `pasal_links`, dan `pasal_versi` (riwayat). |
 | **`app_database.g.dart`** | File auto-generated oleh Drift. Jangan edit manual.                                       |
 
 ### Utils & Config
 
 | File                               | Fungsi                                                                                              |
 | :--------------------------------- | :-------------------------------------------------------------------------------------------------- |
+| **`core/utils/word_diff.dart`**    | Word diff murni Dart (token kata/spasi/tanda baca, pangkas awalan-akhiran, LCS di bagian tengah). Dipakai layar Riwayat perubahan. |
 | **`utils/highlight_text.dart`**    | Widget khusus untuk mewarnai teks (kuning) sesuai kata kunci pencarian.                             |
 | **`utils/image_helper.dart`**      | Mengatur logika gambar cover buku dan warna tema per buku (Merah untuk KUHP, Hijau untuk ITE, dll). |
 | **`config/app_theme.dart`**        | Satu-satunya definisi tema Material 3 (terang + gelap), dibangun dari warna merek di `app_colors.dart`. |
@@ -58,6 +59,7 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 | File                           | Fungsi                                                                         |
 | :----------------------------- | :----------------------------------------------------------------------------- |
 | **`pasal_model.dart`**         | Model data untuk Pasal. Termasuk `relatedIds` untuk pasal terkait.             |
+| **`pasal_versi_model.dart`**   | Satu versi isi pasal (status, sumber, tanggal, naskah resmi, isi, penjelasan). |
 | **`undang_undang_model.dart`** | Model data untuk Undang-Undang. Termasuk `deskripsi` untuk informasi tambahan. |
 
 ---
@@ -71,7 +73,8 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 5. **Auto-Check Update:** Setiap app dibuka, app menanyakan server apakah ada data baru. Banner hanya muncul kalau memang ada perubahan. Pengaturan menampilkan "Data diperbarui" (tanggal terakhir admin mengubah data di server) dan "Sync terakhir" (kapan HP ini terakhir sync). Tidak ada jadwal pembaruan data mingguan. Alias pencarian dari dashboard ikut diperbarui pada pengecekan ini.
 6. **Pasal Terkait:** Menampilkan link ke pasal-pasal yang berhubungan (jika ada di database).
 7. **Deskripsi UU:** Menampilkan informasi tentang undang-undang di halaman detail.
-8. **Error Handling:** Pesan error yang jelas dalam Bahasa Indonesia untuk masalah jaringan, server, atau database.
+8. **Riwayat Perubahan Pasal:** Pasal yang pernah diubah, disisipkan, atau dihapus punya chip status di header (contoh "Diubah UU 1/2026") dan kartu "Riwayat perubahan". Kartu membuka daftar versi dari yang tertua ke terbaru (status, sumber, tanggal, tautan naskah resmi yang disalin ke clipboard). Memilih versi menampilkan isi dan penjelasannya; sakelar "Tandai perubahan" (aktif bawaan jika ada versi sebelumnya) menandai selisih kata terhadap versi sebelumnya: dihapus merah dicoret, ditambahkan hijau bergaris bawah. Pasal tanpa riwayat tidak menampilkan chip maupun kartu. Diff kata jatuh kembali ke satu blok hapus + satu blok sisip bila bagian yang berbeda lebih dari 4000 token atau tabel LCS melebihi 4 juta sel.
+9. **Error Handling:** Pesan error yang jelas dalam Bahasa Indonesia untuk masalah jaringan, server, atau database.
 
 ---
 
@@ -94,6 +97,12 @@ App Launch
 
 `/mobile/sync/check`, `/mobile/sync/updates`, dan `/mobile/sync/full` mengembalikan
 `data_updated_at`: waktu perubahan terakhir pada undang-undang, pasal, atau relasi pasal.
+
+Riwayat pasal (`pasal_versi`) ikut di `/mobile/sync/full` dan `/mobile/sync/updates`. Sync penuh
+mengosongkan lalu mengisi ulang tabel `pasal_versi`. Sync inkremental mengganti seluruh versi lokal
+untuk tiap id di `updated_pasal` dan `deleted_pasal_ids` dengan baris dari `pasal_versi` (server
+mengirim riwayat lengkap pasal yang berubah). Jika kunci `pasal_versi` tidak ada (server lama),
+versi lokal dibiarkan. Skema database lokal versi 6 menambah tabel `pasal_versi` lewat migrasi.
 
 ---
 

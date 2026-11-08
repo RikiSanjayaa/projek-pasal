@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../../models/pasal_model.dart';
+import '../../models/pasal_versi_model.dart';
 import '../../models/undang_undang_model.dart';
 import '../database/app_database.dart';
 import 'api_service.dart';
@@ -13,6 +15,32 @@ import 'sync_progress.dart';
 
 class DataService {
   static late AppDatabase _database;
+
+  /// Hanya untuk tes: pakai database [db] (mis. in-memory).
+  @visibleForTesting
+  static void useDatabase(AppDatabase db) {
+    _database = db;
+    QueryService.initialize(db);
+  }
+
+  /// Aturan sync inkremental untuk riwayat: ganti seluruh versi lokal setiap
+  /// pasal di [updatedPasal] dan [deletedPasalIds] dengan [versiRows].
+  /// [versiRows] null (kunci `pasal_versi` tidak ada, server lama) = tidak
+  /// mengubah apa pun.
+  @visibleForTesting
+  static Future<void> applyIncrementalVersi({
+    required List<dynamic>? versiRows,
+    required List<dynamic> updatedPasal,
+    required List<String> deletedPasalIds,
+  }) async {
+    if (versiRows == null) return;
+    final changedIds = <String>{
+      for (final item in updatedPasal)
+        if ((item as Map)['id'] != null) item['id'].toString(),
+      ...deletedPasalIds,
+    };
+    await _database.replacePasalVersi(changedIds, _versiCompanions(versiRows));
+  }
 
   static StreamController<SyncProgress>? _progressController;
   static bool _isCancelled = false;
@@ -197,6 +225,7 @@ class DataService {
       final uuRows = List<dynamic>.from(body['undang_undang'] ?? []);
       final pasalRows = List<dynamic>.from(body['pasal'] ?? []);
       final linkRows = List<dynamic>.from(body['pasal_links'] ?? []);
+      final versiRows = List<dynamic>.from(body['pasal_versi'] ?? []);
       final totalBytes = jsonEncode(body).length;
 
       _emitProgress(
@@ -213,12 +242,14 @@ class DataService {
 
       await _database.clearAllPasalLinks();
       await _database.clearAllPasal();
+      await _database.clearAllPasalVersi();
       await _database.clearAllUndangUndang();
 
       final linksMap = _buildLinksMap(linkRows);
       await _database.insertAllPasalLinks(_linkCompanions(linkRows));
       await _database.insertAllUndangUndang(_uuCompanions(uuRows));
       await _database.insertAllPasal(_pasalCompanions(pasalRows, linksMap));
+      await _database.insertAllPasalVersi(_versiCompanions(versiRows));
       await syncManager.recordServerMeta(body);
 
       final finalProgress = SyncProgress(
@@ -285,6 +316,10 @@ class DataService {
         body['deleted_pasal_ids'] ?? [],
       );
       final deletedLinkIds = List<String>.from(body['deleted_link_ids'] ?? []);
+      // Kunci hilang (server lama) = riwayat lokal dibiarkan.
+      final versiRows = body['pasal_versi'] == null
+          ? null
+          : List<dynamic>.from(body['pasal_versi']);
       final totalBytes = jsonEncode(body).length;
 
       for (final id in deletedLinkIds) {
@@ -294,6 +329,7 @@ class DataService {
       for (final id in deletedPasalIds) {
         await _database.deletePasalLinksBySourcePasalId(id);
         await _database.deletePasalLinksByTargetPasalId(id);
+        await _database.deletePasalVersiByPasalId(id);
         await _database.deletePasalById(id);
         deletedRecords++;
       }
@@ -322,6 +358,12 @@ class DataService {
         await _database.upsertPasal(_pasalCompanion(pasal, linksMap[pasal.id]));
         existing == null ? newRecords++ : updatedRecords++;
       }
+
+      await applyIncrementalVersi(
+        versiRows: versiRows,
+        updatedPasal: updatedPasal,
+        deletedPasalIds: deletedPasalIds,
+      );
       await syncManager.recordServerMeta(body);
 
       final finalProgress = SyncProgress(
@@ -351,6 +393,51 @@ class DataService {
         ),
       );
     }
+  }
+
+  /// Semua versi sebuah pasal, dari yang tertua ke terbaru.
+  static Future<List<PasalVersiModel>> getPasalVersi(String pasalId) async {
+    final rows = await _database.getVersiByPasalId(pasalId);
+    return rows
+        .map(
+          (r) => PasalVersiModel(
+            id: r.id,
+            pasalId: r.pasalId,
+            urutan: r.urutan,
+            status: r.status,
+            sumber: r.sumber,
+            judulSumber: r.judulSumber,
+            diundangkan: r.diundangkan,
+            berlakuSejak: r.berlakuSejak,
+            naskahResmi: r.naskahResmi,
+            isi: r.isi,
+            penjelasan: r.penjelasan,
+            createdAt: r.createdAt,
+            updatedAt: r.updatedAt,
+          ),
+        )
+        .toList();
+  }
+
+  static List<PasalVersiTableCompanion> _versiCompanions(List<dynamic> rows) {
+    return rows.map((row) {
+      final v = PasalVersiModel.fromJson(Map<String, dynamic>.from(row));
+      return PasalVersiTableCompanion(
+        id: Value(v.id),
+        pasalId: Value(v.pasalId),
+        urutan: Value(v.urutan),
+        status: Value(v.status),
+        sumber: Value(v.sumber),
+        judulSumber: Value(v.judulSumber),
+        diundangkan: Value(v.diundangkan),
+        berlakuSejak: Value(v.berlakuSejak),
+        naskahResmi: Value(v.naskahResmi),
+        isi: Value(v.isi),
+        penjelasan: Value(v.penjelasan),
+        createdAt: Value(v.createdAt),
+        updatedAt: Value(v.updatedAt),
+      );
+    }).toList();
   }
 
   static List<UndangUndangTableCompanion> _uuCompanions(List<dynamic> rows) {

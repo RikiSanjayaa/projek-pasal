@@ -16,6 +16,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/pdf_export_service.dart';
 import '../widgets/app_showcase.dart';
 import '../widgets/verification_status.dart';
+import '../widgets/riwayat_pasal.dart';
+import '../../core/services/data_service.dart';
+import '../../models/pasal_versi_model.dart';
 
 class ReadPasalScreen extends StatefulWidget {
   final PasalModel pasal;
@@ -41,6 +44,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
   String? _kodeUU;
   String? _officialUrl;
   late PasalModel _currentPasal;
+  List<PasalVersiModel> _versi = [];
   final ScrollController _scrollController = ScrollController();
 
   bool _isSearching = false;
@@ -73,6 +77,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
     _searchController = TextEditingController(text: widget.searchQuery);
     _isSearching = widget.searchQuery.isNotEmpty;
     _loadUUInfo();
+    _loadVersi();
   }
 
   @override
@@ -91,6 +96,18 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
         _kodeUU = kode;
         _officialUrl = uu?.officialUrl;
       });
+    }
+  }
+
+  Future<void> _loadVersi() async {
+    final pasalId = _currentPasal.id;
+    try {
+      final versi = await DataService.getPasalVersi(pasalId);
+      if (mounted && _currentPasal.id == pasalId) {
+        setState(() => _versi = versi);
+      }
+    } catch (e) {
+      debugPrint('Gagal memuat riwayat pasal: $e');
     }
   }
 
@@ -582,6 +599,15 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                           ),
 
                           const SizedBox(height: 12),
+                          if (_versi.isNotEmpty &&
+                              _versi.last.status !=
+                                  PasalVersiModel.statusAsli) ...[
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: PasalRiwayatChip(versi: _versi),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                           VerificationStatusBlock(
                             pasal: _currentPasal,
                             officialUrl: _officialUrl,
@@ -662,6 +688,19 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                       ),
                     ),
 
+                    if (_versi.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      RiwayatPasalEntry(
+                        versi: _versi,
+                        onTap: () => showRiwayatPasalSheet(
+                          context,
+                          pasal: _currentPasal,
+                          kodeUU: _kodeUU ?? 'UU',
+                          versi: _versi,
+                        ),
+                      ),
+                    ],
+
                     if (_currentPasal.penjelasan != null &&
                         _currentPasal.penjelasan!.length > 3) ...[
                       const SizedBox(height: 24),
@@ -721,8 +760,10 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
       _currentPasal = target;
       _kodeUU = null;
       _officialUrl = null;
+      _versi = [];
     });
     _loadUUInfo();
+    _loadVersi();
     _scrollController.jumpTo(0);
   }
 }

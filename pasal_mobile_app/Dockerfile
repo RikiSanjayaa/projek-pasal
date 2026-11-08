@@ -6,8 +6,9 @@ ARG FLUTTER_VERSION=3.47.9
 ENV FLUTTER_HOME=/opt/flutter
 ENV PATH="${FLUTTER_HOME}/bin:${PATH}"
 
+# libsqlite3-dev: tes drift in-memory (NativeDatabase) butuh libsqlite3 di image toolchain.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates curl git xz-utils unzip && \
+    apt-get install -y --no-install-recommends ca-certificates curl git xz-utils unzip libsqlite3-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Official Flutter tarball (pinned; the cirruslabs "stable" image lags behind).
