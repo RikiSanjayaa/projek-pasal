@@ -20,6 +20,14 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="CariPasal Mobile">
 
+  <!-- Warna chrome browser/status bar Android. Nilai media query dipakai
+       sebelum Flutter berjalan; setelah itu theme_color_sync.dart memperbarui
+       semua tag ini mengikuti tema aplikasi (terang/gelap). -->
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F7FA">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121212">
+  <meta name="theme-color" content="#F5F7FA">
+  <meta name="color-scheme" content="light dark">
+
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -31,6 +39,19 @@
 
   <title>CariPasal Mobile</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    /* Cegah kilatan putih sebelum Flutter menggambar. */
+    html, body {
+      margin: 0;
+      height: 100%;
+      background-color: #F5F7FA;
+    }
+    @media (prefers-color-scheme: dark) {
+      html, body {
+        background-color: #121212;
+      }
+    }
+  </style>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

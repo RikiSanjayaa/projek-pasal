@@ -1,7 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+import 'core/config/app_colors.dart';
 import 'core/config/app_theme.dart';
 import 'core/services/data_service.dart';
+import 'core/utils/theme_color_sync.dart';
 import 'ui/screens/splash_screen.dart';
 import 'ui/widgets/auth_wrapper.dart';
 import 'ui/widgets/desktop_viewport_warning.dart';
@@ -44,6 +46,15 @@ class MyApp extends StatelessWidget {
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
           home: const SplashScreen(),
           builder: (context, child) {
+            // Samakan status bar Android/PWA dan latar browser dengan tema
+            // aplikasi (termasuk saat mode Sistem mengikuti preferensi OS).
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            syncBrowserTheme(
+              statusBarColor: cssColorHex(AppColors.appBar(isDark)),
+              backgroundColor: cssColorHex(AppColors.scaffold(isDark)),
+              isDark: isDark,
+            );
+
             // Wrap all routes with AuthWrapper to handle forced logout
             // And DesktopViewportWarning to show mobile optimization notice on web
             // MaterialUiCompatibilityBridge: showcaseview (dan printing) masih
