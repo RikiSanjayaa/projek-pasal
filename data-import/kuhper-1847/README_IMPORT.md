@@ -14,9 +14,10 @@ File ini dibuat oleh `import-tools/prepare_import.py kuhper-1847`. Jangan edit m
   - pasal dihapus/dicabut, isinya "Dicabut." (64): 5a, 5b, 6, 7, 8, 9, 10, 11, 12, 17, 18, 19, 20, 21, 22, 23, 24, 25, 55, 56, 68, 226, 230d, 305, 316, 317, 319l, 324, 325, 346, 347, 349, 350, 376, 450, 455, 466, 496, 497, 498, 569, 614, 615, 910, 1161, 1479, 1547, 1549, 1568, 1601y, 1700, 1701, 1703, 1704, 1783, 1828, 1882, 1896, 1897, 1898, dan 4 lainnya (lihat sheet `review`)
 - Sheet `riwayat` berisi 770 versi: semua rumusan tiap pasal yang pernah berubah, dari Stb. 1847 No. 23 sampai rumusan yang berlaku, masing-masing dengan sumber dan link naskah resminya (kalau ada). Import menyimpannya sebagai riwayat pasal.
 - `judul` diisi judul paragraf/bagian/bab tempat pasal berada (tidak ada judul per pasal).
-- `penjelasan` kosong: undang-undang ini tidak punya penjelasan resmi.
-- `catatan` (catatan CariPasal, bukan bagian naskah) diisi untuk 910 pasal: status berlaku
-  menurut undang-undang yang lebih baru. Aturannya ada di `catatan_rules` konfigurasi.
+- Undang-undang ini tidak punya penjelasan resmi.
+- 910 pasal diberi catatan berawalan "Catatan CariPasal:" di kolom penjelasan: status
+  berlaku menurut undang-undang yang lebih baru (bukan bagian naskah). Aturannya ada di
+  `catatan_rules` konfigurasi.
 - `keywords` (topik): judul bab dan bagian tempat pasal berada. Tidak perlu diisi manual.
 - `linkN_*` (pasal terkait, 418 link): rujukan ke pasal lain di KUHPER yang disebut di isi
   pasal, misalnya "sebagaimana dimaksud dalam Pasal 54". Rujukan yang diikuti nama undang-undang lain
@@ -99,7 +100,6 @@ ada di `text_fixes` (4 perbaikan). Kesalahan terjemahan yang halus tidak bisa di
    - Tahun: `1847`
    - Link naskah resmi: kosongkan (tidak ada naskah resmi berbahasa Indonesia)
    - Sumber teks: `https://www.datahukum.com/peraturan/STB_23_Tahun_1847-bw.html`
-   - Catatan status teks: `Terjemahan tidak resmi dari Burgerlijk Wetboek berbahasa Belanda, bersumber dari datahukum.com. Teks yang berlaku secara hukum adalah naskah Belanda dalam Staatsblad 1847 Nomor 23. Sebagian ketentuan tidak berlaku lagi karena sudah diatur undang-undang lain; lihat Catatan CariPasal di pasal.`
 2. Menu `Import Data` → mode XLSX → pilih UU `KUHPER` → upload file xlsx.
 3. Import memakai `updateOrCreate` per (UU, nomor): pasal yang sudah ada akan ditimpa,
    pasal lain di UU yang sama tidak dihapus.

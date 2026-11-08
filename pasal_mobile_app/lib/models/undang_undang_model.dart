@@ -19,8 +19,6 @@ class UndangUndangModel {
 
   final String? sourceUrl;
 
-  final String? catatanTeks;
-
   UndangUndangModel({
     required this.id,
     required this.kode,
@@ -32,7 +30,6 @@ class UndangUndangModel {
     this.updatedAt,
     this.officialUrl,
     this.sourceUrl,
-    this.catatanTeks,
   });
 
   factory UndangUndangModel.fromJson(Map<String, dynamic> json) {
@@ -50,7 +47,6 @@ class UndangUndangModel {
           : null,
       officialUrl: json['official_url'] as String?,
       sourceUrl: json['source_url'] as String?,
-      catatanTeks: json['catatan_teks'] as String?,
     );
   }
 }

@@ -14,7 +14,7 @@ class UndangUndang extends Model
 
     protected $table = 'undang_undang';
 
-    protected $fillable = ['kode', 'nama', 'nama_lengkap', 'deskripsi', 'tahun', 'is_active', 'official_url', 'source_url', 'catatan_teks'];
+    protected $fillable = ['kode', 'nama', 'nama_lengkap', 'deskripsi', 'tahun', 'is_active', 'official_url', 'source_url'];
 
     protected function casts(): array
     {

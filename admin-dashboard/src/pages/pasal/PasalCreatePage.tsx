@@ -69,7 +69,6 @@ export function PasalCreatePage() {
       judul: '',
       isi: '',
       penjelasan: '',
-      catatan: '',
       keywords: [],
     },
     validate: {
@@ -87,7 +86,7 @@ export function PasalCreatePage() {
   const createMutation = useMutation({
     mutationFn: async (data: PasalInsert) => {
       // 1. Create pasal
-      const result = await api.post<{ id: string }>('/admin/pasal', { ...data, catatan: data.catatan?.trim() || null })
+      const result = await api.post<{ id: string }>('/admin/pasal', data)
       const newPasalId = result.id
 
       // 2. Create pending links if any
@@ -260,17 +259,6 @@ export function PasalCreatePage() {
                   maxRows={20}
                   resize="vertical"
                   {...form.getInputProps('penjelasan')}
-                />
-
-                <Textarea
-                  label="Catatan CariPasal"
-                  placeholder="Catatan redaksi untuk pasal ini (opsional)"
-                  description="Catatan redaksi, bukan bagian naskah. Contoh: status berlaku pasal ini."
-                  autosize
-                  minRows={3}
-                  maxRows={12}
-                  resize="vertical"
-                  {...form.getInputProps('catatan')}
                 />
 
                 <TagsInput

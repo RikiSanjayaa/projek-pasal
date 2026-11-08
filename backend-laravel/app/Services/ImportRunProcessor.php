@@ -127,7 +127,6 @@ class ImportRunProcessor
                 'judul' => $pasal->judul,
                 'isi' => $pasal->isi,
                 'penjelasan' => $pasal->penjelasan,
-                'catatan' => $pasal->catatan,
                 'keywords' => $pasal->keywords,
                 'snapshot' => $pasal->source_snapshot,
                 'trashed' => $pasal->trashed(),

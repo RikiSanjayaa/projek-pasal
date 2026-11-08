@@ -59,7 +59,6 @@ export function PasalEditPage() {
       judul: '',
       isi: '',
       penjelasan: '',
-      catatan: '',
       keywords: [],
     },
     validate: {
@@ -83,7 +82,6 @@ export function PasalEditPage() {
         judul: pasal.judul || '',
         isi: pasal.isi,
         penjelasan: pasal.penjelasan || '',
-        catatan: pasal.catatan || '',
         keywords: pasal.keywords || [],
       })
     }
@@ -91,7 +89,7 @@ export function PasalEditPage() {
 
   const updateMutation = useMutation({
     mutationFn: async (data: PasalUpdate) => {
-      await api.put(`/admin/pasal/${id}`, { ...data, catatan: data.catatan?.trim() || null })
+      await api.put(`/admin/pasal/${id}`, data)
     },
     onSuccess: async () => {
       await invalidatePasalData(queryClient)
@@ -241,17 +239,6 @@ export function PasalEditPage() {
                   maxRows={20}
                   resize="vertical"
                   {...form.getInputProps('penjelasan')}
-                />
-
-                <Textarea
-                  label="Catatan CariPasal"
-                  placeholder="Catatan redaksi untuk pasal ini (opsional)"
-                  description="Catatan redaksi, bukan bagian naskah. Contoh: status berlaku pasal ini."
-                  autosize
-                  minRows={3}
-                  maxRows={12}
-                  resize="vertical"
-                  {...form.getInputProps('catatan')}
                 />
 
                 <TagsInput

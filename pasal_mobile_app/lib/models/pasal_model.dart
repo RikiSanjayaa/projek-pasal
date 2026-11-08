@@ -4,7 +4,6 @@ class PasalModel {
   final String nomor;
   final String isi;
   final String? penjelasan;
-  final String? catatan;
   final String? judul;
   final List<String> keywords;
   final List<String> relatedIds;
@@ -25,7 +24,6 @@ class PasalModel {
     required this.nomor,
     required this.isi,
     this.penjelasan,
-    this.catatan,
     this.judul,
     this.keywords = const [],
     this.relatedIds = const [],
@@ -43,7 +41,6 @@ class PasalModel {
       nomor: json['nomor'] ?? '',
       isi: json['isi'] ?? '',
       penjelasan: json['penjelasan'],
-      catatan: json['catatan'] as String?,
       judul: json['judul'],
       keywords: json['keywords'] != null
           ? List<String>.from(json['keywords'])

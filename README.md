@@ -64,10 +64,10 @@ projek-pasal/
   pasal diubah, Pasal 599A disisipkan, dan Pasal 615 serta 616 tercatat "Dihapus.".
 - **KUHAP 2025**: 369 pasal.
 - **KUHPerdata**: 2124 pasal (1993 pasal asli dan pasal sisipan seperti 1601a). Teksnya terjemahan
-  tidak resmi dari Burgerlijk Wetboek berbahasa Belanda, dan label itu tampil di setiap pasal.
-  Perubahan oleh 47 Staatsblad (1872-1939) dan UU 23/2006 tersimpan sebagai riwayat; 64 pasal tercatat
-  "Dicabut.". Bab yang tidak berlaku lagi karena UU Perkawinan, UUPA, UU Hak Tanggungan, atau dianggap
-  tidak berlaku oleh SEMA 3/1963 diberi Catatan CariPasal.
+  tidak resmi dari Burgerlijk Wetboek berbahasa Belanda, jadi admin mencocokkannya lewat antrean
+  verifikasi. Perubahan oleh 47 Staatsblad (1872-1939) dan UU 23/2006 tersimpan sebagai riwayat; 64
+  pasal tercatat "Dicabut.". Bab yang tidak berlaku lagi karena UU Perkawinan, UUPA, UU Hak Tanggungan,
+  atau dianggap tidak berlaku oleh SEMA 3/1963 diberi baris "Catatan CariPasal:" di penjelasan.
 - Teks diambil dari datahukum.com (bukan sumber resmi). Untuk KUHP dan KUHAP, pipeline membandingkannya
   dengan PDF resmi JDIH BPK dan mencatat koreksi typo per pasal. KUHPerdata tidak punya naskah resmi
   berbahasa Indonesia, jadi teksnya dipindai untuk sisa teks penerjemah dan kata asing.
@@ -233,9 +233,8 @@ python -m venv .venv && .venv/bin/pip install -r import-tools/requirements.txt
 
 Hasilnya ada di `data-import/<slug>/`:
 
-- `*.xlsx` berisi sheet `import` (pasal, keyword, pasal terkait, dan `catatan` untuk KUHPerdata),
-  `review` (cakupan teks terhadap PDF BPK atau temuan pemindaian), `riwayat` (semua versi rumusan per
-  peraturan sumber), dan `catatan`.
+- `*.xlsx` berisi sheet `import` (pasal, keyword, pasal terkait), `review` (cakupan teks terhadap PDF
+  BPK atau temuan pemindaian), `riwayat` (semua versi rumusan per peraturan sumber), dan `catatan`.
 - `README_IMPORT.md` berisi ringkasan konsolidasi, catatan Putusan MK, dan pasal yang perlu dicek
   manual.
 
@@ -295,8 +294,8 @@ Checklist untuk rilis yang membawa verifikasi, riwayat, Sumber Data, dan KUHPerd
 2. Migrasi (`php artisan migrate --force`) sudah dijalankan oleh `deploy/aapanel-deploy.sh`; cek
    outputnya.
 3. Import ulang data KUHP/KUHAP dari `data-import/` lewat Admin > Import Data.
-4. KUHPerdata: buat UU kode `KUHPER` di menu Undang-Undang (isian lengkap, termasuk "Catatan status
-   teks", ada di `data-import/kuhper-1847/README_IMPORT.md`), lalu import xlsx-nya. File ini dikirim
+4. KUHPerdata: buat UU kode `KUHPER` di menu Undang-Undang (isiannya ada di
+   `data-import/kuhper-1847/README_IMPORT.md`), lalu import xlsx-nya. File ini dikirim
    sebagai satu permintaan sekitar 2,5 MB, jadi `client_max_body_size` Nginx untuk `/api/` minimal
    20m (sudah ada di `deploy/aapanel-nginx.conf`) dan `post_max_size` PHP minimal 8M.
 5. Pastikan `APP_LOCALE=id` dan `DATAHUKUM_FETCH_ENABLED=false` di env production.
@@ -304,7 +303,7 @@ Checklist untuk rilis yang membawa verifikasi, riwayat, Sumber Data, dan KUHPerd
    isi `IMPORT_PYTHON`, `IMPORT_TOOLS_DIR`, `IMPORT_CACHE_DIR`, lalu jalankan
    `php artisan queue:work --queue=imports,default --timeout=900` lewat Supervisor.
 7. Build ulang mobile web dan APK dengan Flutter 3.47.9. Perangkat yang sudah punya data akan
-   diminta Update sekali supaya riwayat pasal, catatan, dan label status teks ikut terunduh.
+   diminta Update sekali supaya riwayat pasal ikut terunduh.
 
 ### Deploy mobile web ke `/mobile/`
 

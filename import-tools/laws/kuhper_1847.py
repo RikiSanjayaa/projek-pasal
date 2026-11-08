@@ -1,17 +1,13 @@
-"""KUHPerdata: Burgerlijk Wetboek (Staatsblad 1847 Nomor 23), terjemahan tidak resmi datahukum.com.
+"""KUHPerdata: Burgerlijk Wetboek (Staatsblad 1847 Nomor 23), terjemahan datahukum.com.
 
 Teks yang berlaku secara hukum adalah naskah Belanda; tidak ada naskah resmi berbahasa Indonesia untuk
-pembanding, jadi pemeriksaan otomatis hanya memindai sisa teks penerjemah dan kata asing.
+pembanding, jadi pemeriksaan otomatis hanya memindai sisa teks penerjemah dan kata asing. Status teks
+disampaikan lewat fitur verifikasi admin (pasal tampil "Belum diverifikasi" sampai dicek).
 Daftar perubahan (47 Staatsblad 1872-1939 dan UU 23/2006) diambil dari bagian Riwayat HTML.
+Catatan CariPasal (status berlaku menurut UU yang lebih baru) ditambahkan di akhir penjelasan.
 """
 
 from datahukum_pipeline import CatatanRule, LawConfig
-
-CATATAN_TEKS = (
-    "Terjemahan tidak resmi dari Burgerlijk Wetboek berbahasa Belanda, bersumber dari datahukum.com. "
-    "Teks yang berlaku secara hukum adalah naskah Belanda dalam Staatsblad 1847 Nomor 23. Sebagian "
-    "ketentuan tidak berlaku lagi karena sudah diatur undang-undang lain; lihat Catatan CariPasal di pasal."
-)
 
 # Pasal 66 UU 1/1974: ketentuan KUHPerdata tentang perkawinan "sejauh telah diatur dalam
 # Undang-undang ini, dinyatakan tidak berlaku". UU Perkawinan mengatur perkawinan, hak dan kewajiban
@@ -120,7 +116,6 @@ CONFIG = LawConfig(
         },
     },
     repealed_text="Dicabut.",
-    catatan_teks=CATATAN_TEKS,
     catatan_rules=CATATAN_RULES,
     text_fixes=TEXT_FIXES,
     no_link_bab_titles=frozenset(),

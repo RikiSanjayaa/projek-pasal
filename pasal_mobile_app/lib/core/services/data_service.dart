@@ -462,7 +462,6 @@ class DataService {
       updatedAt: Value(uu.updatedAt),
       officialUrl: Value(uu.officialUrl),
       sourceUrl: Value(uu.sourceUrl),
-      catatanTeks: Value(uu.catatanTeks),
     );
   }
 
@@ -486,7 +485,6 @@ class DataService {
       nomor: Value(pasal.nomor),
       isi: Value(pasal.isi),
       penjelasan: Value(pasal.penjelasan),
-      catatan: Value(pasal.catatan),
       judul: Value(pasal.judul),
       keywords: Value(jsonEncode(pasal.keywords)),
       relatedIds: Value(jsonEncode(relatedIds ?? pasal.relatedIds)),

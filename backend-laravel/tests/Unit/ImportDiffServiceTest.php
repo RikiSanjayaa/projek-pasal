@@ -201,45 +201,6 @@ class ImportDiffServiceTest extends TestCase
         $this->service->diff([], [$this->src('1', $this->text()), $this->src('1', $this->text('Lain.'))]);
     }
 
-    public function test_catatan_only_change_in_source_is_berubah(): void
-    {
-        $t = $this->text();
-        $item = $this->only($this->service->diff(
-            [$this->db('1', $t + ['catatan' => null])],
-            [$this->src('1', $t, ['catatan' => "Bab ini tidak berlaku lagi.\r\n"])],
-        ));
-
-        $this->assertSame('berubah', $item['category']);
-        $this->assertNull($item['base']['catatan']);
-        $this->assertSame('Bab ini tidak berlaku lagi.', $item['incoming']['catatan']);
-    }
-
-    public function test_catatan_edited_by_admin_is_diedit_admin_and_both_sides_changed_is_konflik(): void
-    {
-        $t = $this->text();
-        $item = $this->only($this->service->diff(
-            [$this->db('1', $t + ['catatan' => 'Catatan admin.'], $t)],
-            [$this->src('1', $t)],
-        ));
-        $this->assertSame('diedit_admin', $item['category']);
-
-        $item = $this->only($this->service->diff(
-            [$this->db('1', $t + ['catatan' => 'Catatan admin.'], $t)],
-            [$this->src('1', $t, ['catatan' => 'Catatan sumber.'])],
-        ));
-        $this->assertSame('konflik', $item['category']);
-    }
-
-    public function test_missing_catatan_key_equals_null_and_empty_string(): void
-    {
-        $t = $this->text();
-
-        $this->assertSame([], $this->service->diff([$this->db('1', $t)], [$this->src('1', $t, ['catatan' => null])]));
-        $this->assertSame([], $this->service->diff([$this->db('1', $t + ['catatan' => ''])], [$this->src('1', $t)]));
-        // Snapshot lama tanpa kunci catatan dibaca sebagai null.
-        $this->assertSame([], $this->service->diff([$this->db('1', $t + ['catatan' => null], $t)], [$this->src('1', $t)]));
-    }
-
     public function test_summary_counts_and_large_change_threshold(): void
     {
         $current = [];

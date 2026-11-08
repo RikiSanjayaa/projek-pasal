@@ -52,12 +52,6 @@ class ImportPasalService
                     'updated_by' => $adminId,
                 ]);
 
-                // Kunci "catatan" tidak ada = pertahankan catatan yang sudah tersimpan; ada (termasuk kosong) = timpa.
-                // Catatan editorial, bukan teks hukum, jadi tidak ikut memicu verifikasi ulang di bawah.
-                if (array_key_exists('catatan', $row)) {
-                    $payload['catatan'] = PasalTextNormalizer::normalizeCatatan($row['catatan']);
-                }
-
                 if ($payload['nomor'] === '' || $payload['isi'] === '') {
                     throw new \RuntimeException('Nomor dan isi pasal wajib diisi.');
                 }

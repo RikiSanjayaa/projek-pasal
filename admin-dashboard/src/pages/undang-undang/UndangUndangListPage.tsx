@@ -78,7 +78,6 @@ export function UndangUndangListPage() {
       tahun: undefined,
       official_url: '',
       source_url: '',
-      catatan_teks: '',
     },
     validate: {
       kode: (value) => (!value ? 'Kode wajib diisi' : null),
@@ -96,7 +95,6 @@ export function UndangUndangListPage() {
       tahun: undefined,
       official_url: '',
       source_url: '',
-      catatan_teks: '',
       is_active: true,
     },
   })
@@ -158,7 +156,6 @@ export function UndangUndangListPage() {
       tahun: uu.tahun || undefined,
       official_url: uu.official_url || '',
       source_url: uu.source_url || '',
-      catatan_teks: uu.catatan_teks || '',
       is_active: uu.is_active,
     })
     openEdit()
@@ -323,7 +320,7 @@ export function UndangUndangListPage() {
         size="lg"
         fullScreen={isMobile}
       >
-        <form onSubmit={createForm.onSubmit((values) => createMutation.mutate({ ...values, catatan_teks: values.catatan_teks?.trim() || null }))}>
+        <form onSubmit={createForm.onSubmit((values) => createMutation.mutate(values))}>
           <Stack gap="md">
             <TextInput
               label="Kode"
@@ -365,14 +362,6 @@ export function UndangUndangListPage() {
               placeholder="https://www.datahukum.com/peraturan/..."
               {...createForm.getInputProps('source_url')}
             />
-            <Textarea
-              label="Catatan status teks"
-              description="Tampil di setiap pasal UU ini. Contoh: terjemahan tidak resmi."
-              placeholder="Opsional"
-              minRows={3}
-              autosize
-              {...createForm.getInputProps('catatan_teks')}
-            />
             <Group justify="flex-end" mt="md" grow={isMobile}>
               <Button variant="default" onClick={closeCreate}>
                 Batal
@@ -395,7 +384,7 @@ export function UndangUndangListPage() {
       >
         <form
           onSubmit={editForm.onSubmit((values) =>
-            updateMutation.mutate({ id: selectedUU!.id, data: { ...values, catatan_teks: values.catatan_teks?.trim() || null } })
+            updateMutation.mutate({ id: selectedUU!.id, data: values })
           )}
         >
           <Stack gap="md">
@@ -438,14 +427,6 @@ export function UndangUndangListPage() {
               description="Asal teks yang diimport (tidak resmi), contoh datahukum.com"
               placeholder="https://www.datahukum.com/peraturan/..."
               {...editForm.getInputProps('source_url')}
-            />
-            <Textarea
-              label="Catatan status teks"
-              description="Tampil di setiap pasal UU ini. Contoh: terjemahan tidak resmi."
-              placeholder="Opsional"
-              minRows={3}
-              autosize
-              {...editForm.getInputProps('catatan_teks')}
             />
             <Switch
               label="Aktif"

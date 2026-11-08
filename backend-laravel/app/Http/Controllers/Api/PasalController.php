@@ -295,7 +295,7 @@ class PasalController extends Controller
     private function validated(Request $request, bool $partial = false, ?Pasal $pasal = null): array
     {
         $normalizable = [];
-        foreach (['nomor', 'judul', 'isi', 'penjelasan', 'catatan'] as $field) {
+        foreach (['nomor', 'judul', 'isi', 'penjelasan'] as $field) {
             if ($request->has($field)) {
                 $normalizable[$field] = $request->input($field);
             }
@@ -318,7 +318,6 @@ class PasalController extends Controller
             'judul' => ['nullable', 'string', 'max:500'],
             'isi' => [$required, 'string'],
             'penjelasan' => ['nullable', 'string'],
-            'catatan' => ['nullable', 'string'],
             'keywords' => ['sometimes', 'array'],
             'keywords.*' => ['string'],
             'is_active' => ['sometimes', 'boolean'],

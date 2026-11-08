@@ -27,7 +27,6 @@ export interface Database {
           is_active: boolean
           official_url: string | null
           source_url: string | null
-          catatan_teks: string | null
           created_at: string
           updated_at: string
         }
@@ -41,7 +40,6 @@ export interface Database {
           is_active?: boolean
           official_url?: string | null
           source_url?: string | null
-          catatan_teks?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -55,7 +53,6 @@ export interface Database {
           is_active?: boolean
           official_url?: string | null
           source_url?: string | null
-          catatan_teks?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -68,7 +65,6 @@ export interface Database {
           judul: string | null
           isi: string
           penjelasan: string | null
-          catatan: string | null
           keywords: string[]
           is_active: boolean
           verification_status: VerificationStatus
@@ -87,7 +83,6 @@ export interface Database {
           judul?: string | null
           isi: string
           penjelasan?: string | null
-          catatan?: string | null
           keywords?: string[]
           is_active?: boolean
           deleted_at?: string | null
@@ -103,7 +98,6 @@ export interface Database {
           judul?: string | null
           isi?: string
           penjelasan?: string | null
-          catatan?: string | null
           keywords?: string[]
           is_active?: boolean
           deleted_at?: string | null
@@ -482,8 +476,6 @@ export interface ImportSnap {
   judul: string | null
   isi: string | null
   penjelasan: string | null
-  /** Catatan redaksi CariPasal; snapshot lama tidak memilikinya (dianggap null). */
-  catatan?: string | null
   keywords: string[]
 }
 

@@ -75,11 +75,15 @@ class Amendment:
     repealed: tuple[str, ...] = ()
 
 
+CATATAN_PREFIX = "Catatan CariPasal: "
+
+
 @dataclass(frozen=True)
 class CatatanRule:
-    """Catatan redaksi untuk pasal di buku/bab tertentu atau pasal tertentu (kolom `catatan`).
+    """Catatan redaksi untuk pasal di buku/bab tertentu atau pasal tertentu.
 
-    Kosong berarti tidak membatasi. Label dibandingkan persis dengan judul di HTML ("BUKU KEDUA", "BAB IV").
+    Ditambahkan di akhir penjelasan dengan awalan `CATATAN_PREFIX`. Kosong berarti tidak membatasi.
+    Label dibandingkan persis dengan judul di HTML ("BUKU KEDUA", "BAB IV").
     """
 
     text: str
@@ -87,12 +91,12 @@ class CatatanRule:
     bab: tuple[str, ...] = ()
     nomor: tuple[str, ...] = ()
 
-    def matches(self, record: PasalRecord) -> bool:
-        labels = {h.kind: h.label for h in record.headings}
+    def matches(self, nomor: str, headings: list[Heading]) -> bool:
+        labels = {h.kind: h.label for h in headings}
         return (
             (not self.buku or labels.get("buku") == self.buku)
             and (not self.bab or labels.get("bab") in self.bab)
-            and (not self.nomor or record.nomor in self.nomor)
+            and (not self.nomor or nomor in self.nomor)
         )
 
 
@@ -126,8 +130,6 @@ class LawConfig:
     manual_review: dict[str, str] = field(default_factory=dict)
     # Bab yang isinya memetakan pasal UU lain, jadi nomornya tidak dibaca sebagai rujukan internal.
     no_link_bab_titles: frozenset[str] = frozenset({"KETENTUAN PERALIHAN", "KETENTUAN PENUTUP"})
-    # Catatan status teks untuk seluruh UU (diisi admin di menu Undang-Undang, dicatat di README).
-    catatan_teks: str = ""
     catatan_rules: tuple[CatatanRule, ...] = ()
     readme_notes: tuple[str, ...] = ()
 
@@ -162,7 +164,7 @@ class PasalRecord:
     original_penjelasan: str = ""
     notes: list[str] = field(default_factory=list)
     versions: list[Version] = field(default_factory=list)
-    catatan: str = ""
+    catatan_count: int = 0  # jumlah Catatan CariPasal yang ditambahkan ke penjelasan
 
 
 class PipelineError(Exception):
@@ -559,23 +561,27 @@ def parse_datahukum(
         mk_note = config.mk_notes.get(nomor)
         if mk_note:
             penjelasan = f"{penjelasan}\n{mk_note}".strip()
+        # Catatan redaksi ikut di penjelasan dengan awalan sendiri, seperti catatan Putusan MK.
+        catatan = [] if status == REPEALED else [r.text for r in config.catatan_rules if r.matches(nomor, chain)]
+        for text in catatan:
+            penjelasan = f"{penjelasan}\n{CATATAN_PREFIX}{text}".strip()
         # Riwayat menampilkan rumusan yang berlaku persis seperti isi pasal.
         latest.isi, latest.penjelasan = fields["isi"], penjelasan
 
-        record = PasalRecord(
-            nomor=nomor,
-            headings=chain,
-            isi=fields["isi"],
-            penjelasan=penjelasan,
-            status=status,
-            original_isi=original_isi,
-            original_penjelasan=original_penjelasan,
-            notes=[mk_note.split(":")[0]] if mk_note else [],
-            versions=versions,
+        records.append(
+            PasalRecord(
+                nomor=nomor,
+                headings=chain,
+                isi=fields["isi"],
+                penjelasan=penjelasan,
+                status=status,
+                original_isi=original_isi,
+                original_penjelasan=original_penjelasan,
+                notes=[mk_note.split(":")[0]] if mk_note else [],
+                versions=versions,
+                catatan_count=len(catatan),
+            )
         )
-        if record.status != REPEALED:
-            record.catatan = "\n\n".join(rule.text for rule in config.catatan_rules if rule.matches(record))
-        records.append(record)
     check_catatan_rules(config, records)
     return records, amendments
 
@@ -589,7 +595,7 @@ def check_catatan_rules(config: LawConfig, records: list[PasalRecord]) -> None:
             raise PipelineError(f"catatan_rules: Pasal {', '.join(missing)} tidak ada.")
         for bab in rule.bab or (None,):
             single = CatatanRule(rule.text, rule.buku, (bab,) if bab else (), rule.nomor)
-            if not any(single.matches(r) for r in records):
+            if not any(single.matches(r.nomor, r.headings) for r in records):
                 raise PipelineError(f"catatan_rules: tidak ada pasal di {rule.buku} {bab or ''}".strip() + ".")
 
 
@@ -869,17 +875,12 @@ def write_xlsx(
     known = {record.nomor for record in records}
     links = {record.nomor: cross_references(record, known, config) for record in records}
     link_slots = max((len(found) for found in links.values()), default=0)
-    # Kolom catatan hanya ada kalau UU ini punya catatan redaksi; tanpa kolom, import tidak
-    # menyentuh catatan yang diisi admin.
-    with_catatan = bool(config.catatan_rules)
-    headers = ["nomor", "judul", "isi", "penjelasan", *(["catatan"] if with_catatan else []), "keywords"]
+    headers = ["nomor", "judul", "isi", "penjelasan", "keywords"]
     for slot in range(1, link_slots + 1):
         headers += [f"link{slot}_targetUU", f"link{slot}_targetNomor", f"link{slot}_keterangan"]
     ws.append(headers)
     for record in records:
-        row = [record.nomor, judul_for(record), record.isi, record.penjelasan]
-        row += [record.catatan] if with_catatan else []
-        row += [keywords_for(record)]
+        row = [record.nomor, judul_for(record), record.isi, record.penjelasan, keywords_for(record)]
         for nomor, phrase in links[record.nomor]:
             row += [config.kode, nomor, f"Disebut dalam isi: {phrase}"]
         ws.append(row)
@@ -905,8 +906,6 @@ def write_xlsx(
     meta.append(["Sumber teks", config.datahukum_url])
     if config.bpk_detail_url:
         meta.append(["Pembanding resmi", config.bpk_detail_url])
-    if config.catatan_teks:
-        meta.append(["Status teks", config.catatan_teks])
     meta.append(["Catatan", f"Upload file ini lewat menu Import Data. Pilih UU kode {config.kode} sebelum import."])
     if history_ws is not None:
         meta.append(["Riwayat", "Sheet 'riwayat' ikut dibaca saat import: semua versi rumusan tiap pasal yang pernah berubah."])
@@ -923,9 +922,8 @@ def write_xlsx(
             for cell in row:
                 cell.alignment = Alignment(vertical="top", wrap_text=True)
         sheet.freeze_panes = "A2"
-    widths = [10, 48, 90, 70, *([60] if with_catatan else []), 42]
-    for index, width in enumerate(widths):
-        ws.column_dimensions[chr(ord("A") + index)].width = width
+    for column, width in {"A": 10, "B": 48, "C": 90, "D": 70, "E": 42}.items():
+        ws.column_dimensions[column].width = width
     for column, width in {"A": 10, "B": 22, "C": 48, "D": 16, "E": 20, "F": 12, "G": 90}.items():
         review_ws.column_dimensions[column].width = width
     if history_ws is not None:
@@ -975,6 +973,10 @@ def write_readme(
         span += f" ditambah Pasal {', '.join(inserted)}" if len(inserted) <= 10 else f" ditambah {len(inserted)} pasal sisipan"
     link_count = sum(len(found) for found in links.values())
     with_pdf = bool(config.bpk_pdf_url)
+    # Penjelasan resmi, tanpa catatan MK/CariPasal yang ditambahkan pipeline.
+    has_official_penjelasan = any(v.penjelasan for r in records for v in r.versions[:-1]) or any(
+        r.original_penjelasan for r in records
+    )
 
     consolidation = ""
     sources = [f"1. Teks terstruktur: {config.datahukum_url} (pihak ketiga, bukan sumber resmi)"]
@@ -989,7 +991,7 @@ def write_readme(
         consolidation = (
             f"- Teks sudah dikonsolidasi dengan {title}:\n"
             f"  - isi pasal diubah ({len(isi_changed)}): {listing(isi_changed)}\n"
-            + (f"  - hanya penjelasan diubah ({len(pj_changed)}): {listing(pj_changed)}\n" if any(r.penjelasan for r in records) else "")
+            + (f"  - hanya penjelasan diubah ({len(pj_changed)}): {listing(pj_changed)}\n" if has_official_penjelasan else "")
             + f"  - pasal sisipan ({len(inserted)}): {listing(inserted)}\n"
             f"  - pasal dihapus/dicabut, isinya \"{config.repealed_text}\" ({len(repealed)}): {listing(repealed)}\n"
             f"- Sheet `riwayat` berisi {history_count} versi: semua rumusan tiap pasal yang pernah berubah, dari "
@@ -1004,12 +1006,17 @@ def write_readme(
         mk = f"- Pasal {', '.join(config.mk_notes)} diberi catatan Putusan MK di kolom penjelasan.\n"
     catatan = ""
     if config.catatan_rules:
-        noted = [r.nomor for r in records if r.catatan]
+        noted = sum(1 for r in records if r.catatan_count)
         catatan = (
-            f"- `catatan` (catatan CariPasal, bukan bagian naskah) diisi untuk {len(noted)} pasal: status berlaku\n"
-            "  menurut undang-undang yang lebih baru. Aturannya ada di `catatan_rules` konfigurasi.\n"
+            f"- {noted} pasal diberi catatan berawalan \"{CATATAN_PREFIX.strip()}\" di kolom penjelasan: status\n"
+            "  berlaku menurut undang-undang yang lebih baru (bukan bagian naskah). Aturannya ada di\n"
+            "  `catatan_rules` konfigurasi.\n"
         )
-    penjelasan = "- `penjelasan` diisi penjelasan resmi.\n" if any(r.penjelasan for r in records) else "- `penjelasan` kosong: undang-undang ini tidak punya penjelasan resmi.\n"
+    penjelasan = (
+        "- `penjelasan` diisi penjelasan resmi.\n"
+        if has_official_penjelasan
+        else "- Undang-undang ini tidak punya penjelasan resmi.\n"
+    )
     extra = "".join(f"- {note}\n" for note in config.readme_notes)
     no_link_titles = " dan ".join(title_case(t) for t in sorted(config.no_link_bab_titles))
     no_link = f", begitu juga Bab {no_link_titles} (isinya memetakan pasal UU lain)" if no_link_titles else ""
@@ -1039,7 +1046,6 @@ ada di `text_fixes` ({fixes} perbaikan). Kesalahan terjemahan yang halus tidak b
     official = (
         f"`{config.bpk_detail_url}`" if config.bpk_detail_url else "kosongkan (tidak ada naskah resmi berbahasa Indonesia)"
     )
-    status_teks = f"\n   - Catatan status teks: `{config.catatan_teks}`" if config.catatan_teks else ""
     example = inserted[0] if inserted else numbered[-1]
     table = f"\n### Peraturan perubahan\n\n{amendment_table(records, amendments)}\n" if len(amendments) > 1 else ""
 
@@ -1073,7 +1079,7 @@ File ini dibuat oleh `{SCRIPT} {config.slug}`. Jangan edit manual; perbaiki konf
    - Nama lengkap: `{config.nama_lengkap}`
    - Tahun: `{config.tahun}`
    - Link naskah resmi: {official}
-   - Sumber teks: `{config.datahukum_url}`{status_teks}
+   - Sumber teks: `{config.datahukum_url}`
 2. Menu `Import Data` → mode XLSX → pilih UU `{config.kode}` → upload file xlsx.
 3. Import memakai `updateOrCreate` per (UU, nomor): pasal yang sudah ada akan ditimpa,
    pasal lain di UU yang sama tidak dihapus.
@@ -1288,7 +1294,6 @@ def run_json(config: LawConfig, refresh: bool, previous_count: int | None = None
                 "judul": judul_for(record),
                 "isi": record.isi,
                 "penjelasan": record.penjelasan,
-                "catatan": record.catatan or None,
                 "keywords": [k for k in keywords_for(record).split(", ") if k],
                 "links": [
                     {"targetUU": config.kode, "targetNomor": nomor, "keterangan": f"Disebut dalam isi: {phrase}"}

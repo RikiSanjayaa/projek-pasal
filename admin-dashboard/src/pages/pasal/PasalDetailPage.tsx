@@ -13,7 +13,7 @@ import {
   Box,
 } from '@mantine/core'
 import { useQuery } from '@tanstack/react-query'
-import { IconArrowLeft, IconEdit, IconTrash, IconAlertCircle, IconAlertTriangle } from '@tabler/icons-react'
+import { IconArrowLeft, IconEdit, IconTrash, IconAlertCircle } from '@tabler/icons-react'
 import { api } from '@/lib/api'
 import { LegalText } from '@/components/LegalText'
 import { PasalHistory } from '@/components/PasalHistory'
@@ -149,43 +149,12 @@ export function PasalDetailPage() {
                 </div>
               )}
 
-              {pasal.undang_undang?.catatan_teks && (
-                <Alert
-                  icon={<IconAlertTriangle size={16} />}
-                  color="yellow"
-                  variant="light"
-                  title="Status teks"
-                  style={{ border: '1px solid var(--mantine-color-yellow-4)' }}
-                >
-                  <Text size="sm">{pasal.undang_undang.catatan_teks}</Text>
-                </Alert>
-              )}
-
               <div>
                 <Text size="sm" c="dimmed" mb={4}>Isi Pasal</Text>
                 <Box p="md" bg="var(--mantine-color-default-hover)" style={{ borderRadius: 'var(--mantine-radius-md)' }}>
                   <LegalText text={pasal.isi} />
                 </Box>
               </div>
-
-              {pasal.catatan && (
-                <div>
-                  <Text size="sm" c="dimmed" mb={4}>Catatan CariPasal</Text>
-                  <Box
-                    p="md"
-                    style={{
-                      border: '1px solid var(--mantine-color-yellow-4)',
-                      borderRadius: 'var(--mantine-radius-md)',
-                    }}
-                  >
-                    <Stack gap="xs">
-                      {pasal.catatan.split(/\n+/).filter((p) => p.trim()).map((p, idx) => (
-                        <Text key={idx} size="sm">{p}</Text>
-                      ))}
-                    </Stack>
-                  </Box>
-                </div>
-              )}
 
               {pasal.penjelasan && (
                 <div>

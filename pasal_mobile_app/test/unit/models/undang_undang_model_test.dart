@@ -180,22 +180,5 @@ void main() {
         expect(uu.sourceUrl, isNull);
       });
     });
-
-    group('catatan_teks', () {
-      final base = {'id': 'uu-1', 'kode': 'KUHPER', 'nama': 'KUHPer', 'tahun': 1847};
-
-      test('reads catatan_teks', () {
-        final uu = UndangUndangModel.fromJson({...base, 'catatan_teks': 'Tidak resmi'});
-        expect(uu.catatanTeks, 'Tidak resmi');
-      });
-
-      test('missing or null catatan_teks is null', () {
-        expect(UndangUndangModel.fromJson(base).catatanTeks, isNull);
-        expect(
-          UndangUndangModel.fromJson({...base, 'catatan_teks': null}).catatanTeks,
-          isNull,
-        );
-      });
-    });
   });
 }

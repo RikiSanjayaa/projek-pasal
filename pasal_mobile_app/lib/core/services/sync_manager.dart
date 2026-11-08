@@ -21,8 +21,7 @@ class SyncManager {
 
   /// Naikkan setiap kali sync membawa tabel/kolom baru yang harus diisi untuk SEMUA data
   /// (sync inkremental hanya mengirim yang berubah). 6 = riwayat pasal (pasal_versi).
-  /// 7 = catatan_teks UU dan catatan pasal.
-  static const int syncDataVersion = 7;
+  static const int syncDataVersion = 6;
 
   /// Notifier for sync state changes
   final ValueNotifier<SyncState> state = ValueNotifier(SyncState.idle);

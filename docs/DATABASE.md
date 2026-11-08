@@ -32,8 +32,6 @@ Kolom penting:
 - `deskripsi`
 - `tahun`
 - `is_active`
-- `catatan_teks` peringatan status teks yang tampil di setiap pasal UU ini (contoh: KUHPerdata
-  adalah terjemahan tidak resmi)
 - `created_at`, `updated_at`, `deleted_at`
 
 ### `pasal`
@@ -48,8 +46,6 @@ Kolom penting:
 - `judul`
 - `isi`
 - `penjelasan`
-- `catatan` catatan CariPasal tentang pasal, bukan bagian naskah (contoh: tidak berlaku lagi sejauh
-  telah diatur UU 1/1974)
 - `keywords` tipe `TEXT[]`
 - `search_vector` tipe `TSVECTOR`
 - `is_active`

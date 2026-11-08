@@ -3,15 +3,14 @@ import { DiffText } from '@/components/DiffText'
 import { LegalText } from '@/components/LegalText'
 import type { ImportItem, ImportRiwayatRow, ImportSnap } from '@/lib/database.types'
 
-const FIELDS: { key: 'judul' | 'isi' | 'penjelasan' | 'catatan'; label: string }[] = [
+const FIELDS: { key: 'judul' | 'isi' | 'penjelasan'; label: string }[] = [
   { key: 'judul', label: 'Judul' },
   { key: 'isi', label: 'Isi' },
   { key: 'penjelasan', label: 'Penjelasan' },
-  { key: 'catatan', label: 'Catatan CariPasal' },
 ]
 
 const kw = (s: ImportSnap | null) => (s?.keywords ?? []).join(', ')
-const txt = (s: ImportSnap | null, key: 'judul' | 'isi' | 'penjelasan' | 'catatan') => s?.[key] ?? ''
+const txt = (s: ImportSnap | null, key: 'judul' | 'isi' | 'penjelasan') => s?.[key] ?? ''
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -52,7 +51,6 @@ function SnapText({ snap }: { snap: ImportSnap | null }) {
       {snap.judul && <Section label="Judul"><Text size="sm">{snap.judul}</Text></Section>}
       {snap.isi && <Section label="Isi"><LegalText text={snap.isi} size="sm" /></Section>}
       {snap.penjelasan && <Section label="Penjelasan"><LegalText text={snap.penjelasan} size="sm" /></Section>}
-      {snap.catatan && <Section label="Catatan CariPasal"><Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{snap.catatan}</Text></Section>}
       {snap.keywords.length > 0 && <Section label="Kata kunci"><Text size="sm">{kw(snap)}</Text></Section>}
     </Stack>
   )

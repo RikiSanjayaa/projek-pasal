@@ -51,23 +51,6 @@ class AppColors {
   static const Color diffRemovedLight = Color(0xFFB71C1C); // red[900]
   static const Color diffRemovedDark = Color(0xFFEF9A9A); // red[200]
 
-  // Catatan status teks UU (peringatan, amber) dan catatan editorial pasal (teal)
-  static const Color noticeLight = Color(0xFFE65100); // orange[900]
-  static const Color noticeDark = Color(0xFFFFB74D); // orange[300]
-  static const Color catatanLight = Color(0xFF00695C); // teal[800]
-  static const Color catatanDark = Color(0xFF80CBC4); // teal[200]
-
-  static Color notice(bool isDark) => isDark ? noticeDark : noticeLight;
-  static Color noticeBg(bool isDark) =>
-      Colors.orange.withValues(alpha: isDark ? 0.12 : 0.08);
-  static Color noticeBorder(bool isDark) =>
-      Colors.orange.withValues(alpha: isDark ? 0.5 : 0.45);
-  static Color catatan(bool isDark) => isDark ? catatanDark : catatanLight;
-  static Color catatanBg(bool isDark) =>
-      Colors.teal.withValues(alpha: isDark ? 0.12 : 0.06);
-  static Color catatanBorder(bool isDark) =>
-      Colors.teal.withValues(alpha: isDark ? 0.5 : 0.35);
-
   // Helper methods to get colors based on brightness
   static Color scaffold(bool isDark) => isDark ? scaffoldDark : scaffoldLight;
   static Color card(bool isDark) => isDark ? cardDark : cardLight;
