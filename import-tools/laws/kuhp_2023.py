@@ -91,18 +91,20 @@ CONFIG = LawConfig(
     penjelasan_pages=(230, 345),
     diundangkan="2023-01-02",
     berlaku_sejak="2026-01-02",
-    amendment=Amendment(
-        doc_class="uu-12026",
-        label="UU 1/2026",
-        title="UU 1/2026 (Penyesuaian Pidana)",
-        pdf="uu-nomor-1-tahun-2026.pdf",
-        pdf_url="https://peraturan.bpk.go.id/Download/400929/UU%20Nomor%201%20Tahun%202026.pdf",
-        full_title="Undang-Undang Nomor 1 Tahun 2026 tentang Penyesuaian Pidana",
-        official_url="https://peraturan.bpk.go.id/Details/337869/uu-no-1-tahun-2026",
-        diundangkan="2026-01-12",
-        # Pasal IX UU 1/2026: mulai berlaku 2 Januari 2026, sama dengan KUHP.
-        berlaku_sejak="2026-01-02",
-        repealed=("615", "616"),
+    amendments=(
+        Amendment(
+            doc_class="uu-12026",
+            label="UU 1/2026",
+            title="UU 1/2026 (Penyesuaian Pidana)",
+            pdf="uu-nomor-1-tahun-2026.pdf",
+            pdf_url="https://peraturan.bpk.go.id/Download/400929/UU%20Nomor%201%20Tahun%202026.pdf",
+            full_title="Undang-Undang Nomor 1 Tahun 2026 tentang Penyesuaian Pidana",
+            official_url="https://peraturan.bpk.go.id/Details/337869/uu-no-1-tahun-2026",
+            diundangkan="2026-01-12",
+            # Pasal IX UU 1/2026: mulai berlaku 2 Januari 2026, sama dengan KUHP.
+            berlaku_sejak="2026-01-02",
+            repealed=("615", "616"),
+        ),
     ),
     mk_notes=MK_NOTES,
     text_fixes=TEXT_FIXES,

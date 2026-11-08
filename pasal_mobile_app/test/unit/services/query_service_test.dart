@@ -700,4 +700,17 @@ void main() {
       expect(result.first.updatedAt, isNull);
     });
   });
+
+  group('QueryService.compareNomor', () {
+    test('sorts lowercase suffixes naturally', () {
+      final sorted = ['1153', '1152bis', '1152a', '1152', '5a', '5', '10']
+        ..sort(QueryService.compareNomor);
+      expect(sorted, ['5', '5a', '10', '1152', '1152a', '1152bis', '1153']);
+    });
+
+    test('suffix comparison is case-insensitive', () {
+      expect(QueryService.compareNomor('79A', '79b'), lessThan(0));
+      expect(QueryService.compareNomor('79a', '79A'), 0);
+    });
+  });
 }

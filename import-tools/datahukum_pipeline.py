@@ -2,8 +2,10 @@
 
 Alur per undang-undang (lihat konfigurasi di `laws/`):
 1. Ambil HTML terstruktur datahukum.com (buku/bab/bagian/paragraf, ayat, huruf, penjelasan).
-2. Kalau UU pernah diubah, pakai rumusan versi perubahan yang tersedia di HTML yang sama.
-3. Bandingkan tiap pasal dengan PDF resmi JDIH BPK (hasil scan + OCR) dan PDF UU perubahan.
+2. Kalau UU pernah diubah, susun semua versi rumusan per pasal dari HTML yang sama. Daftar
+   peraturan perubahan berasal dari konfigurasi atau dari bagian "Riwayat" di HTML.
+3. Kalau ada PDF resmi (JDIH BPK), bandingkan tiap pasal dengan PDF itu dan PDF UU perubahan.
+   Semua teks juga dipindai untuk sisa teks penerjemah/chatbot dan kata asing.
 4. Tulis xlsx siap upload (sheet `import`), hasil cek (sheet `review`), dan README_IMPORT.md.
 
 `keywords` diisi topik (judul bab dan bagian), `linkN_*` diisi rujukan ke pasal lain di UU yang
@@ -52,23 +54,50 @@ ORIGINAL = "asli"
 INSERTED = "disisipkan"
 REPEALED = "dihapus"
 REPEALED_TEXT = "Dihapus."
+CHANGED = "diubah"
 
 
 @dataclass(frozen=True)
 class Amendment:
-    """UU yang mengubah UU utama dan rumusannya tersedia di HTML datahukum.com."""
+    """Peraturan yang mengubah UU utama; rumusannya tersedia di HTML datahukum.com."""
 
     doc_class: str  # class section versi perubahan di HTML, contoh "uu-12026"
     label: str  # contoh "UU 1/2026"
     title: str  # contoh "UU 1/2026 (Penyesuaian Pidana)"
-    pdf: str  # nama file PDF resmi UU perubahan di folder cache, pembanding rumusan baru
-    pdf_url: str  # sumber unduhan PDF itu (BPK); diunduh ke cache kalau belum ada
     full_title: str  # contoh "Undang-Undang Nomor 1 Tahun 2026 tentang Penyesuaian Pidana"
-    official_url: str  # halaman naskah resmi (JDIH BPK)
-    diundangkan: str  # YYYY-MM-DD
-    berlaku_sejak: str  # YYYY-MM-DD
-    # Pasal yang dihapus UU perubahan. HTML datahukum masih memuat teks lamanya tanpa penanda.
+    official_url: str = ""  # halaman naskah resmi (JDIH BPK); kosong kalau tidak ada
+    diundangkan: str = ""  # YYYY-MM-DD
+    berlaku_sejak: str = ""  # YYYY-MM-DD
+    # PDF resmi pembanding rumusan baru (nama file di cache + sumber unduhan). Kosong = tidak dicek.
+    pdf: str = ""
+    pdf_url: str = ""
+    # Pasal yang dihapus/dicabut peraturan ini. Teks lama di HTML untuk pasal ini diabaikan.
     repealed: tuple[str, ...] = ()
+
+
+CATATAN_PREFIX = "Catatan CariPasal: "
+
+
+@dataclass(frozen=True)
+class CatatanRule:
+    """Catatan redaksi untuk pasal di buku/bab tertentu atau pasal tertentu.
+
+    Ditambahkan di akhir penjelasan dengan awalan `CATATAN_PREFIX`. Kosong berarti tidak membatasi.
+    Label dibandingkan persis dengan judul di HTML ("BUKU KEDUA", "BAB IV").
+    """
+
+    text: str
+    buku: str = ""
+    bab: tuple[str, ...] = ()
+    nomor: tuple[str, ...] = ()
+
+    def matches(self, nomor: str, headings: list[Heading]) -> bool:
+        labels = {h.kind: h.label for h in headings}
+        return (
+            (not self.buku or labels.get("buku") == self.buku)
+            and (not self.bab or labels.get("bab") in self.bab)
+            and (not self.nomor or nomor in self.nomor)
+        )
 
 
 @dataclass(frozen=True)
@@ -81,21 +110,27 @@ class LawConfig:
     nama_lengkap: str
     tahun: int
     datahukum_url: str
-    bpk_detail_url: str
-    bpk_pdf_url: str
     doc_class: str  # class section versi asli di HTML, contoh "uu-12023"
-    body_pages: tuple[int, int]  # halaman PDF BPK (1-based) batang tubuh
-    penjelasan_pages: tuple[int, int]  # halaman PDF BPK (1-based) penjelasan
-    amendment: Amendment | None = None
+    bpk_detail_url: str = ""  # halaman naskah resmi; kosong kalau tidak ada naskah resmi berbahasa Indonesia
+    bpk_pdf_url: str = ""  # PDF resmi pembanding; kosong = cakupan PDF tidak dihitung
+    body_pages: tuple[int, int] = (0, 0)  # halaman PDF BPK (1-based) batang tubuh
+    penjelasan_pages: tuple[int, int] = (0, 0)  # halaman PDF BPK (1-based) penjelasan
+    amendments: tuple[Amendment, ...] = ()  # urut kronologis
+    # Ambil daftar perubahan dari bagian "Riwayat" HTML (dipakai kalau perubahannya banyak).
+    amendments_from_html: bool = False
+    # Koreksi metadata perubahan dari HTML, per class: {"label": ..., "diundangkan": ..., ...}.
+    amendment_overrides: dict[str, dict[str, str]] = field(default_factory=dict)
     diundangkan: str = ""  # YYYY-MM-DD, untuk sheet riwayat
     berlaku_sejak: str = ""  # YYYY-MM-DD, untuk sheet riwayat
+    repealed_text: str = REPEALED_TEXT  # isi pasal yang dihapus/dicabut
     mk_notes: dict[str, str] = field(default_factory=dict)
     # (kolom, teks salah, teks benar); skrip berhenti kalau teks salahnya tidak ditemukan.
     text_fixes: dict[str, list[tuple[str, str, str]]] = field(default_factory=dict)
-    # Pasal berskor rendah yang sudah dicek manual ke PDF.
+    # Pasal berskor rendah atau bertanda QA yang sudah dicek manual.
     manual_review: dict[str, str] = field(default_factory=dict)
     # Bab yang isinya memetakan pasal UU lain, jadi nomornya tidak dibaca sebagai rujukan internal.
     no_link_bab_titles: frozenset[str] = frozenset({"KETENTUAN PERALIHAN", "KETENTUAN PENUTUP"})
+    catatan_rules: tuple[CatatanRule, ...] = ()
     readme_notes: tuple[str, ...] = ()
 
     @property
@@ -111,6 +146,14 @@ class Heading:
 
 
 @dataclass
+class Version:
+    status: str  # ORIGINAL, CHANGED, INSERTED, REPEALED
+    amendment: Amendment | None  # None = rumusan asli
+    isi: str
+    penjelasan: str
+
+
+@dataclass
 class PasalRecord:
     nomor: str
     headings: list[Heading]
@@ -120,6 +163,8 @@ class PasalRecord:
     original_isi: str = ""
     original_penjelasan: str = ""
     notes: list[str] = field(default_factory=list)
+    versions: list[Version] = field(default_factory=list)
+    catatan_count: int = 0  # jumlah Catatan CariPasal yang ditambahkan ke penjelasan
 
 
 class PipelineError(Exception):
@@ -293,15 +338,17 @@ def render_section(parent: Tag | None, doc_class: str | None, clean: TextCleaner
 
 
 def parse_heading(tag: Tag) -> Heading:
-    # Judul bisa berupa anak langsung (<h2>) atau dibungkus <section> (format HTML yang lebih baru).
+    # Judul bisa berupa anak langsung (<h2>) atau dibungkus <section> per versi (format HTML yang
+    # lebih baru). Kalau judulnya pernah diubah, section versi terakhir yang berlaku.
     header = None
     for child in tag.find_all(True, recursive=False):
+        if child.name == "div":
+            break
         if child.name in {"h1", "h2", "h3", "h4"}:
             header = child
-        elif child.name == "section":
-            header = child.find(["h1", "h2", "h3", "h4"])
-        if header is not None or child.name == "div":
             break
+        if child.name == "section":
+            header = child.find(["h1", "h2", "h3", "h4"]) or header
     text = squash(header.get_text(" ")) if header else ""
     label, _, title = text.partition(" - ")
     kind = {"buku": "buku", "bab": "bab", "bag": "bagian", "para": "paragraf"}[tag["class"][0]]
@@ -309,28 +356,159 @@ def parse_heading(tag: Tag) -> Heading:
 
 
 def version_classes(parent: Tag | None) -> set[str]:
-    """Class versi (`uu-...`) dari section anak langsung `parent`."""
+    """Class versi dari section anak langsung `parent`."""
     if parent is None:
         return set()
-    return {
-        name
-        for section in parent.find_all("section", recursive=False)
-        for name in section.get("class", [])
-        if name.startswith("uu-")
-    }
+    return {name for section in parent.find_all("section", recursive=False) for name in section.get("class", [])}
+
+
+MONTHS = {
+    name: index
+    for index, name in enumerate(
+        ["januari", "februari", "maret", "april", "mei", "juni", "juli", "agustus", "september", "oktober", "november", "desember"],
+        start=1,
+    )
+}
+REGULATION_TITLE = re.compile(r"^\d+\.\s*(Staatsblad|UU)\s+No\.\s*(\d+)\s+Tahun\s+(\d{4})(?:\s+tentang\s+(.*))?$", re.S)
+
+
+def indonesian_date(text: str) -> str:
+    """"6 November 1871" -> "1871-11-06"; kosong kalau tidak terbaca."""
+    match = re.search(r"(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})", text)
+    if not match or match.group(2).lower() not in MONTHS:
+        return ""
+    return f"{match.group(3)}-{MONTHS[match.group(2).lower()]:02d}-{int(match.group(1)):02d}"
+
+
+def format_date(iso: str) -> str:
+    """"1871-11-06" -> "6 November 1871"."""
+    year, month, day = iso.split("-")
+    return f"{int(day)} {list(MONTHS)[int(month) - 1].capitalize()} {year}"
+
+def nomor_key(nomor: str) -> str:
+    return nomor.strip().lower()
+
+
+def amendments_from_html(soup: BeautifulSoup, config: LawConfig, warnings: list[dict[str, str]]) -> tuple[Amendment, ...]:
+    """Daftar perubahan dari bagian "Riwayat Perundang-Undangan" HTML datahukum, urut seperti di sumber."""
+    amendments = []
+    for article in soup.select("div.riwayat article.uu--amendment"):
+        doc_class = next(c for c in article["class"] if c not in {"uu", "uu--amendment"})
+        header = squash(article.select_one(".uu-header h5").get_text(" "))
+        match = REGULATION_TITLE.match(header)
+        if match is None:
+            raise PipelineError(f"Judul peraturan perubahan tidak dikenali di bagian Riwayat: {header!r}")
+        kind, number, year, about = match.groups()
+        about = (about or "").rstrip(". ")
+        meta = {p.get_text(" ").split(":", 1)[0].strip(): p.get_text(" ").split(":", 1)[-1] for p in article.select(".uu-meta p")}
+        disahkan = indonesian_date(meta.get("Disahkan", ""))
+        diundangkan = indonesian_date(meta.get("Diundangkan", ""))
+        for name, value in (("disahkan", disahkan), ("diundangkan", diundangkan)):
+            # Sumber kadang salah ketik abad (contoh "31 agustus 1973" untuk Staatsblad 1873). Selisih
+            # beberapa tahun wajar: Staatsblad bisa terbit lama setelah keputusannya disahkan.
+            if value and abs(int(value[:4]) - int(year)) > 5:
+                warnings.append({"nomor": "", "message": f"Tanggal {name} {header[:60]!r} ({value}) tidak cocok dengan tahunnya; diabaikan."})
+                if name == "disahkan":
+                    disahkan = ""
+                else:
+                    diundangkan = ""
+        if kind == "Staatsblad":
+            label = f"Stb. {year} No. {number}"
+            full_title = f"Staatsblad Tahun {year} Nomor {number}" + (f" tentang {about}" if about else "")
+        else:
+            label = f"UU {number}/{year}"
+            full_title = f"Undang-Undang Nomor {number} Tahun {year}" + (f" tentang {about}" if about else "")
+        if disahkan and not diundangkan:
+            full_title += f" (disahkan {format_date(disahkan)})"
+        cabut = article.select_one("p.action-list.cabut")
+        repealed = tuple(
+            nomor_key(item.strip().removeprefix("Pasal "))
+            for item in (cabut.get_text().split(",") if cabut else [])
+            if item.strip()
+        )
+        fields = {
+            "doc_class": doc_class,
+            "label": label,
+            "title": label,
+            "full_title": full_title,
+            "diundangkan": diundangkan,
+            "repealed": repealed,
+        } | config.amendment_overrides.get(doc_class, {})
+        amendments.append(Amendment(**fields))
+    unknown = set(config.amendment_overrides) - {a.doc_class for a in amendments}
+    if unknown:
+        raise PipelineError(f"amendment_overrides untuk class yang tidak ada di Riwayat: {', '.join(sorted(unknown))}")
+    return tuple(amendments)
+
+
+def build_versions(
+    nomor: str,
+    content: Tag | None,
+    explanation: Tag | None,
+    config: LawConfig,
+    amendments: tuple[Amendment, ...],
+    clean: TextCleaner,
+) -> list[Version]:
+    """Semua rumusan pasal dari yang tertua ke yang berlaku, tanpa versi yang tidak mengubah teks."""
+    versions: list[Version] = []
+    isi = render_section(content, config.doc_class, clean)
+    if isi:
+        versions.append(Version(ORIGINAL, None, isi, render_section(explanation, config.doc_class, clean)))
+    for amendment in amendments:
+        previous = versions[-1] if versions else None
+        if nomor_key(nomor) in {nomor_key(n) for n in amendment.repealed}:
+            # HTML kadang masih memuat teks lama di versi peraturan yang mencabutnya.
+            if previous is not None and previous.status != REPEALED:
+                versions.append(Version(REPEALED, amendment, config.repealed_text, ""))
+            continue
+        isi = render_section(content, amendment.doc_class, clean)
+        penjelasan = render_section(explanation, amendment.doc_class, clean)
+        if not isi and not penjelasan:
+            continue
+        if previous is None or previous.status == REPEALED:
+            if isi:
+                versions.append(Version(INSERTED, amendment, isi, penjelasan))
+            continue
+        # Sumber menyalin ulang isi pasal ke versi perubahan walau yang diubah hanya penjelasannya,
+        # dan penjelasan yang tidak diubah tidak disalin.
+        isi = isi or previous.isi
+        penjelasan = penjelasan or previous.penjelasan
+        if letters(isi) == letters(previous.isi) and letters(penjelasan) == letters(previous.penjelasan):
+            continue
+        versions.append(Version(CHANGED, amendment, isi, penjelasan))
+    return versions
+
+
+def summary_status(versions: list[Version]) -> str:
+    """Status teks untuk sheet review: perubahan antara rumusan pertama dan yang berlaku."""
+    first, last = versions[0], versions[-1]
+    if last.status == REPEALED:
+        return REPEALED
+    if first.status != ORIGINAL:
+        return INSERTED
+    isi_changed = letters(first.isi) != letters(last.isi)
+    pj_changed = letters(first.penjelasan) != letters(last.penjelasan)
+    if isi_changed and pj_changed:
+        return "isi & penjelasan diubah"
+    if isi_changed:
+        return "isi diubah"
+    if pj_changed:
+        return "penjelasan diubah"
+    return ORIGINAL
 
 
 def parse_datahukum(
     path: Path,
     config: LawConfig,
-    warnings: list[dict[str, str]] | None = None,
-    unknown_versions: set[str] | None = None,
-) -> list[PasalRecord]:
-    """Baca HTML datahukum.
+    warnings: list[dict[str, str]],
+    unknown_versions: set[str],
+    strict_fixes: bool,
+) -> tuple[list[PasalRecord], tuple[Amendment, ...]]:
+    """Baca HTML datahukum: pasal beserta semua versi rumusannya, dan daftar peraturan perubahan.
 
-    Tanpa `warnings`, typo di `text_fixes` yang tidak cocok adalah error (mode xlsx). Dengan `warnings`
-    (mode --json) perbaikan itu dilewati dan dicatat. `unknown_versions` diisi class versi yang bukan
-    versi asli maupun versi perubahan di konfigurasi.
+    Dengan `strict_fixes` (mode xlsx), typo di `text_fixes` yang tidak cocok adalah error. Tanpanya
+    (mode --json) perbaikan itu dilewati dan dicatat di `warnings`. `unknown_versions` diisi class
+    versi yang bukan versi asli maupun versi perubahan yang dikenal.
     """
     soup = BeautifulSoup(path.read_text(encoding="utf-8"), "html.parser")
     body = soup.select_one("div.batangtubuh")
@@ -338,11 +516,12 @@ def parse_datahukum(
         raise PipelineError("Struktur HTML datahukum.com berubah: elemen div.batangtubuh tidak ditemukan.")
     if not soup.select("div.pasal"):
         raise PipelineError("Struktur HTML datahukum.com berubah: tidak ada elemen div.pasal.")
+    amendments = amendments_from_html(soup, config, warnings) if config.amendments_from_html else config.amendments
+    known_classes = {config.doc_class} | {a.doc_class for a in amendments}
     clean = TextCleaner(body.get_text(" "))
     structure = soup.select("div.buku, div.bab, div.bag, div.para")
     headings = {tag["data-node-id"]: parse_heading(tag) for tag in structure}
     parents = {tag["data-node-id"]: tag.get("data-parent-id", "") for tag in structure}
-    amended_class = config.amendment.doc_class if config.amendment else None
 
     records: list[PasalRecord] = []
     for pasal in soup.select("div.pasal"):
@@ -360,41 +539,20 @@ def parse_datahukum(
 
         content = pasal.select_one("div.content")
         explanation = pasal.select_one("div.penjelasan")
-        if unknown_versions is not None:
-            known_classes = {config.doc_class, amended_class}
-            unknown_versions |= (version_classes(content) | version_classes(explanation)) - known_classes
-        isi_original = render_section(content, config.doc_class, clean)
-        isi_amended = render_section(content, amended_class, clean)
-        pj_original = render_section(explanation, config.doc_class, clean)
-        pj_amended = render_section(explanation, amended_class, clean)
+        unknown_versions |= (version_classes(content) | version_classes(explanation)) - known_classes
+        versions = build_versions(nomor, content, explanation, config, amendments, clean)
+        if not versions:
+            raise PipelineError(f"Pasal {nomor} tidak punya rumusan yang bisa dibaca.")
+        latest = versions[-1]
+        # Rumusan asli mentah untuk pembanding PDF; status dihitung sebelum text_fixes dan catatan MK.
+        first = versions[0]
+        original_isi, original_penjelasan = (first.isi, first.penjelasan) if first.status == ORIGINAL else ("", "")
+        status = summary_status(versions)
 
-        # Sumber HTML menyalin ulang isi pasal ke versi perubahan walau yang diubah hanya penjelasannya.
-        isi_changed = bool(isi_original and isi_amended) and letters(isi_original) != letters(isi_amended)
-        pj_changed = bool(pj_amended) and letters(pj_original) != letters(pj_amended)
-        repealed = bool(config.amendment) and nomor in config.amendment.repealed
-        if repealed:
-            status = REPEALED
-        elif isi_amended and not isi_original:
-            status = INSERTED
-        elif isi_changed and pj_changed:
-            status = "isi & penjelasan diubah"
-        elif isi_changed:
-            status = "isi diubah"
-        elif pj_changed:
-            status = "penjelasan diubah"
-        else:
-            status = ORIGINAL
-
-        if repealed:
-            fields = {"isi": REPEALED_TEXT, "penjelasan": ""}
-        else:
-            fields = {
-                "isi": isi_amended if (isi_changed or not isi_original) else isi_original,
-                "penjelasan": pj_amended if pj_changed else pj_original,
-            }
+        fields = {"isi": latest.isi, "penjelasan": latest.penjelasan}
         for column, wrong, right in config.text_fixes.get(nomor, []):
             if wrong not in fields[column]:
-                if warnings is not None:
+                if not strict_fixes:
                     warnings.append({"nomor": nomor, "message": f"Perbaikan teks ({column}) dilewati karena {wrong!r} tidak ditemukan; periksa text_fixes."})
                     continue
                 raise ValueError(f"text_fixes Pasal {nomor}: {wrong!r} tidak ditemukan di {column}")
@@ -403,6 +561,12 @@ def parse_datahukum(
         mk_note = config.mk_notes.get(nomor)
         if mk_note:
             penjelasan = f"{penjelasan}\n{mk_note}".strip()
+        # Catatan redaksi ikut di penjelasan dengan awalan sendiri, seperti catatan Putusan MK.
+        catatan = [] if status == REPEALED else [r.text for r in config.catatan_rules if r.matches(nomor, chain)]
+        for text in catatan:
+            penjelasan = f"{penjelasan}\n{CATATAN_PREFIX}{text}".strip()
+        # Riwayat menampilkan rumusan yang berlaku persis seperti isi pasal.
+        latest.isi, latest.penjelasan = fields["isi"], penjelasan
 
         records.append(
             PasalRecord(
@@ -411,12 +575,28 @@ def parse_datahukum(
                 isi=fields["isi"],
                 penjelasan=penjelasan,
                 status=status,
-                original_isi=isi_original,
-                original_penjelasan=pj_original,
+                original_isi=original_isi,
+                original_penjelasan=original_penjelasan,
                 notes=[mk_note.split(":")[0]] if mk_note else [],
+                versions=versions,
+                catatan_count=len(catatan),
             )
         )
-    return records
+    check_catatan_rules(config, records)
+    return records, amendments
+
+
+def check_catatan_rules(config: LawConfig, records: list[PasalRecord]) -> None:
+    """Aturan catatan yang tidak mengenai satu pasal pun berarti label/nomornya salah ketik."""
+    known = {r.nomor for r in records}
+    for rule in config.catatan_rules:
+        missing = [n for n in rule.nomor if n not in known]
+        if missing:
+            raise PipelineError(f"catatan_rules: Pasal {', '.join(missing)} tidak ada.")
+        for bab in rule.bab or (None,):
+            single = CatatanRule(rule.text, rule.buku, (bab,) if bab else (), rule.nomor)
+            if not any(single.matches(r.nomor, r.headings) for r in records):
+                raise PipelineError(f"catatan_rules: tidak ada pasal di {rule.buku} {bab or ''}".strip() + ".")
 
 
 # --- Pembanding PDF resmi -------------------------------------------------------------
@@ -572,12 +752,17 @@ def keywords_for(record: PasalRecord) -> str:
     return ", ".join(topics)
 
 
-PASAL_MENTION = re.compile(r"\bPasal\s+(\d+[A-Z]?)\b((?:\s+ayat\s*\(\d+[a-z]?\))?(?:\s+huruf\s+[a-z]{1,2}\b)?(?:\s+angka\s+\d+\b)?)")
+# Nomor sisipan: "599A" (UU baru) atau "1601a"/"1152bis" (KUHPerdata).
+PASAL_MENTION = re.compile(r"\bPasal\s+(\d+(?:[A-Z]|[a-z]{1,3})?)\b((?:\s+ayat\s*\(\d+[a-z]?\))?(?:\s+huruf\s+[a-z]{1,2}\b)?(?:\s+angka\s+\d+\b)?)")
 CHAIN_GAP = re.compile(
     r"(?:\s*(?:ayat\s*\(\d+[a-z]?\)|huruf\s+[a-z]{1,2}\b|angka\s+\d+\b|,|dan/atau|dan|atau|serta|sampai\s+dengan)\s*)*",
     re.I,
 )
-EXTERNAL_LAW = re.compile(r"\s*(?:Undang-Undang|UU\b|Peraturan|Kitab|Ordonnantie|Wetboek|Staatsblad|Stbl|Perppu)", re.I)
+EXTERNAL_LAW = re.compile(
+    r"\s*(?:Undang-Undang|UU\b|Peraturan|Kitab|Ordonnantie|Ordonansi|Wetboek|Staatsblad|Stbl|Perppu"
+    r"|Ketentuan-Ketentuan Umum|Reglemen|Reglement|Faillissements)",
+    re.I,
+)
 
 
 def cross_references(record: PasalRecord, known: set[str], config: LawConfig) -> list[tuple[str, str]]:
@@ -625,7 +810,8 @@ def cross_references(record: PasalRecord, known: set[str], config: LawConfig) ->
 def status_label(record: PasalRecord, config: LawConfig) -> str:
     if record.status == ORIGINAL:
         return f"asli {config.label}"
-    return f"{record.status} {config.amendment.label}" if config.amendment else record.status
+    amendment = record.versions[-1].amendment
+    return f"{record.status} {amendment.label}" if amendment else record.status
 
 
 RIWAYAT_HEADERS = [
@@ -642,51 +828,47 @@ RIWAYAT_HEADERS = [
 ]
 
 
+def has_history(record: PasalRecord) -> bool:
+    return len(record.versions) > 1 or record.versions[0].status != ORIGINAL
+
+
 def history_rows(config: LawConfig, records: list[PasalRecord]) -> list[dict[str, object]]:
-    """Versi per pasal yang pernah berubah: rumusan asli lalu rumusan UU perubahan."""
-    amendment = config.amendment
-    if amendment is None:
-        return []
+    """Semua versi pasal yang pernah berubah, dari rumusan asli sampai rumusan yang berlaku."""
     rows: list[dict[str, object]] = []
     for record in records:
-        if record.status == ORIGINAL:
+        if not has_history(record):
             continue
-        urutan = 1
-        if record.status != INSERTED:
+        for urutan, version in enumerate(record.versions, start=1):
+            amendment = version.amendment
             rows.append(
                 {
                     "nomor": record.nomor,
                     "urutan": urutan,
-                    "status": "asli",
-                    "sumber": config.label,
-                    "judul_sumber": config.nama_lengkap,
-                    "diundangkan": config.diundangkan,
-                    "berlaku_sejak": config.berlaku_sejak,
-                    "naskah_resmi": config.bpk_detail_url,
-                    "isi": record.original_isi,
-                    "penjelasan": record.original_penjelasan,
+                    "status": version.status,
+                    "sumber": amendment.label if amendment else config.label,
+                    "judul_sumber": amendment.full_title if amendment else config.nama_lengkap,
+                    "diundangkan": amendment.diundangkan if amendment else config.diundangkan,
+                    "berlaku_sejak": amendment.berlaku_sejak if amendment else config.berlaku_sejak,
+                    "naskah_resmi": amendment.official_url if amendment else config.bpk_detail_url,
+                    "isi": version.isi,
+                    "penjelasan": version.penjelasan,
                 }
             )
-            urutan += 1
-        status = {REPEALED: "dihapus", INSERTED: "disisipkan"}.get(record.status, "diubah")
-        rows.append(
-            {
-                "nomor": record.nomor,
-                "urutan": urutan,
-                "status": status,
-                "sumber": amendment.label,
-                "judul_sumber": amendment.full_title,
-                "diundangkan": amendment.diundangkan,
-                "berlaku_sejak": amendment.berlaku_sejak,
-                "naskah_resmi": amendment.official_url,
-                "isi": record.isi,
-                "penjelasan": record.penjelasan,
-            }
-        )
     return rows
 
 
-def write_xlsx(config: LawConfig, records: list[PasalRecord], review: list[dict[str, object]]) -> dict[str, list]:
+def consolidation_label(amendments: tuple[Amendment, ...]) -> str:
+    if len(amendments) <= 3:
+        return ", ".join(a.label for a in amendments)
+    return f"{len(amendments)} peraturan perubahan, terakhir {amendments[-1].label}"
+
+
+def write_xlsx(
+    config: LawConfig,
+    records: list[PasalRecord],
+    review: list[dict[str, object]],
+    amendments: tuple[Amendment, ...],
+) -> dict[str, list]:
     wb = Workbook()
     ws = wb.active
     ws.title = "import"
@@ -709,22 +891,24 @@ def write_xlsx(config: LawConfig, records: list[PasalRecord], review: list[dict[
     for row in review:
         review_ws.append([row[h] for h in review_headers])
 
+    history = history_rows(config, records)
     history_ws = None
-    if config.amendment:
+    if history:
         history_ws = wb.create_sheet("riwayat")
         history_ws.append(RIWAYAT_HEADERS)
-        for row in history_rows(config, records):
+        for row in history:
             history_ws.append([row[h] for h in RIWAYAT_HEADERS])
 
     meta = wb.create_sheet("catatan")
-    suffix = f" (konsolidasi dengan {config.amendment.label})" if config.amendment else ""
+    suffix = f" (konsolidasi dengan {consolidation_label(amendments)})" if amendments else ""
     meta.append(["Judul", config.nama_lengkap + suffix])
     meta.append(["Jumlah pasal", len(records)])
     meta.append(["Sumber teks", config.datahukum_url])
-    meta.append(["Pembanding resmi", config.bpk_detail_url])
+    if config.bpk_detail_url:
+        meta.append(["Pembanding resmi", config.bpk_detail_url])
     meta.append(["Catatan", f"Upload file ini lewat menu Import Data. Pilih UU kode {config.kode} sebelum import."])
     if history_ws is not None:
-        meta.append(["Riwayat", "Sheet 'riwayat' ikut dibaca saat import: versi lama dan versi perubahan tiap pasal yang berubah."])
+        meta.append(["Riwayat", "Sheet 'riwayat' ikut dibaca saat import: semua versi rumusan tiap pasal yang pernah berubah."])
 
     header_fill = PatternFill("solid", fgColor="1F4E78")
     for sheet in (ws, review_ws, history_ws):
@@ -753,42 +937,117 @@ def write_xlsx(config: LawConfig, records: list[PasalRecord], review: list[dict[
     return links
 
 
-def write_readme(config: LawConfig, records: list[PasalRecord], review: list[dict[str, object]], links: dict[str, list]) -> None:
+def listing(nomors: list[str], limit: int = 60) -> str:
+    if len(nomors) <= limit:
+        return ", ".join(nomors)
+    return f"{', '.join(nomors[:limit])}, dan {len(nomors) - limit} lainnya (lihat sheet `review`)"
+
+
+def amendment_table(records: list[PasalRecord], amendments: tuple[Amendment, ...]) -> str:
+    counts = {a.doc_class: {CHANGED: 0, INSERTED: 0, REPEALED: 0} for a in amendments}
+    for record in records:
+        for version in record.versions:
+            if version.amendment is not None:
+                counts[version.amendment.doc_class][version.status] += 1
+    rows = [
+        f"| {a.label} | {a.full_title.split(' tentang ', 1)[-1] if ' tentang ' in a.full_title else '-'} | "
+        f"{counts[a.doc_class][CHANGED]} | {counts[a.doc_class][INSERTED]} | {counts[a.doc_class][REPEALED]} |"
+        for a in amendments
+    ]
+    return "| Peraturan | Tentang | Diubah | Disisipkan | Dicabut/dihapus |\n|---|---|---|---|---|\n" + "\n".join(rows)
+
+
+def write_readme(
+    config: LawConfig,
+    records: list[PasalRecord],
+    review: list[dict[str, object]],
+    links: dict[str, list],
+    amendments: tuple[Amendment, ...],
+) -> None:
     flagged = [row for row in review if row["perlu_review"] == "ya"]
     flagged_lines = "\n".join(f"| {row['nomor']} | {row['catatan']} |" for row in flagged) or "| - | - |"
     inserted = [r.nomor for r in records if r.status == INSERTED]
     numbered = [r.nomor for r in records if r.status != INSERTED]
-    span = f"Pasal {numbered[0]} sampai {numbered[-1]}" + (f" ditambah Pasal {', '.join(inserted)}" if inserted else "")
+    span = f"Pasal {numbered[0]} sampai {numbered[-1]}"
+    if inserted:
+        span += f" ditambah Pasal {', '.join(inserted)}" if len(inserted) <= 10 else f" ditambah {len(inserted)} pasal sisipan"
     link_count = sum(len(found) for found in links.values())
+    with_pdf = bool(config.bpk_pdf_url)
+    # Penjelasan resmi, tanpa catatan MK/CariPasal yang ditambahkan pipeline.
+    has_official_penjelasan = any(v.penjelasan for r in records for v in r.versions[:-1]) or any(
+        r.original_penjelasan for r in records
+    )
 
     consolidation = ""
-    sources = [
-        f"1. Teks terstruktur: {config.datahukum_url} (pihak ketiga, bukan sumber resmi)",
-        f"2. Pembanding resmi: {config.bpk_detail_url} (PDF salinan, hasil scan/OCR)",
-    ]
-    if config.amendment:
+    sources = [f"1. Teks terstruktur: {config.datahukum_url} (pihak ketiga, bukan sumber resmi)"]
+    if config.bpk_detail_url:
+        sources.append(f"{len(sources) + 1}. Pembanding resmi: {config.bpk_detail_url} (PDF salinan, hasil scan/OCR)")
+    if amendments:
         isi_changed = [r.nomor for r in records if r.status.startswith("isi")]
         pj_changed = [r.nomor for r in records if r.status == "penjelasan diubah"]
         repealed = [r.nomor for r in records if r.status == REPEALED]
+        history_count = len(history_rows(config, records))
+        title = amendments[0].title if len(amendments) == 1 else f"{len(amendments)} peraturan perubahan (tabel di bawah)"
         consolidation = (
-            f"- Teks sudah dikonsolidasi dengan {config.amendment.title}:\n"
-            f"  - isi pasal diubah ({len(isi_changed)}): {', '.join(isi_changed)}\n"
-            f"  - hanya penjelasan diubah ({len(pj_changed)}): {', '.join(pj_changed)}\n"
-            f"  - pasal sisipan ({len(inserted)}): {', '.join(inserted)}\n"
-            f"  - pasal dihapus, isinya \"{REPEALED_TEXT}\" ({len(repealed)}): {', '.join(repealed)}\n"
-            f"- Sheet `riwayat` berisi {len(history_rows(config, records))} versi untuk pasal di atas: rumusan "
-            f"{config.label} lalu rumusan {config.amendment.label}, masing-masing dengan link naskah resminya. "
-            "Import menyimpannya sebagai riwayat pasal (tampil di admin).\n"
+            f"- Teks sudah dikonsolidasi dengan {title}:\n"
+            f"  - isi pasal diubah ({len(isi_changed)}): {listing(isi_changed)}\n"
+            + (f"  - hanya penjelasan diubah ({len(pj_changed)}): {listing(pj_changed)}\n" if has_official_penjelasan else "")
+            + f"  - pasal sisipan ({len(inserted)}): {listing(inserted)}\n"
+            f"  - pasal dihapus/dicabut, isinya \"{config.repealed_text}\" ({len(repealed)}): {listing(repealed)}\n"
+            f"- Sheet `riwayat` berisi {history_count} versi: semua rumusan tiap pasal yang pernah berubah, dari "
+            f"{config.label} sampai rumusan yang berlaku, masing-masing dengan sumber dan link naskah resminya (kalau ada). "
+            "Import menyimpannya sebagai riwayat pasal.\n"
         )
-        sources.append(f"3. Rumusan perubahan {config.amendment.title}: `{config.amendment.pdf}`")
+        for amendment in amendments:
+            if amendment.pdf:
+                sources.append(f"{len(sources) + 1}. Rumusan perubahan {amendment.title}: `{amendment.pdf}`")
     mk = ""
     if config.mk_notes:
         mk = f"- Pasal {', '.join(config.mk_notes)} diberi catatan Putusan MK di kolom penjelasan.\n"
-    extra = "".join(f"- {note}\n" for note in config.readme_notes)
-    no_link = " dan ".join(title_case(t) for t in sorted(config.no_link_bab_titles))
-    comparison = (
-        f"BPK, rumusan perubahan ke PDF {config.amendment.label})" if config.amendment else "BPK)"
+    catatan = ""
+    if config.catatan_rules:
+        noted = sum(1 for r in records if r.catatan_count)
+        catatan = (
+            f"- {noted} pasal diberi catatan berawalan \"{CATATAN_PREFIX.strip()}\" di kolom penjelasan: status\n"
+            "  berlaku menurut undang-undang yang lebih baru (bukan bagian naskah). Aturannya ada di\n"
+            "  `catatan_rules` konfigurasi.\n"
+        )
+    penjelasan = (
+        "- `penjelasan` diisi penjelasan resmi.\n"
+        if has_official_penjelasan
+        else "- Undang-undang ini tidak punya penjelasan resmi.\n"
     )
+    extra = "".join(f"- {note}\n" for note in config.readme_notes)
+    no_link_titles = " dan ".join(title_case(t) for t in sorted(config.no_link_bab_titles))
+    no_link = f", begitu juga Bab {no_link_titles} (isinya memetakan pasal UU lain)" if no_link_titles else ""
+    fixes = sum(len(v) for v in config.text_fixes.values())
+
+    if with_pdf:
+        amended_pdfs = [a.label for a in amendments if a.pdf]
+        comparison = f"BPK, rumusan perubahan ke PDF {', '.join(amended_pdfs)})" if amended_pdfs else "BPK)"
+        checks = f"""Kesalahan sumber HTML yang diperbaiki otomatis: butir ayat/huruf yang hilang, label penjelasan yang
+menempel ke paragraf lain, kalimat yang terpotong jadi dua paragraf, dan judul bagian yang tergeser satu
+pasal (dicek ke PDF). Typo per pasal ada di `text_fixes` ({fixes} perbaikan, tiap entri dicek ke PDF).
+Typo dicari dari kata yang tidak dikenal kamus dan tidak ada di PDF. Typo yang kebetulan membentuk kata
+lain yang sah tidak bisa dipastikan otomatis, jadi verifikasi admin terhadap PDF resmi tetap diperlukan.
+
+`cakupan_*_pdf` = porsi huruf pada teks kita yang ditemukan di PDF resmi (rumusan asli dicek ke PDF
+{comparison}. Nilai di bawah {REVIEW_COVERAGE_THRESHOLD:.0%} atau butir ayat/huruf yang kosong ditandai
+`perlu_review`. PDF resmi adalah hasil scan, jadi skor rendah biasanya berasal dari OCR PDF (kata hilang
+di ujung baris). Pasal berskor rendah yang sudah dicek manual tercatat di `manual_review` dan kolom
+`catatan`."""
+    else:
+        checks = f"""Tidak ada naskah resmi berbahasa Indonesia untuk dibandingkan, jadi kolom `cakupan_*_pdf` kosong.
+Pemeriksaan otomatis yang dipakai: semua versi rumusan dipindai untuk sisa teks penerjemah atau chatbot
+("Berikut terjemahannya", "File ini", markdown), kata ganti percakapan, kata Belanda yang tertinggal, judul
+pasal lain di dalam isi, dan butir ayat/huruf kosong. Temuan ditandai `perlu_review`. Perbaikan per pasal
+ada di `text_fixes` ({fixes} perbaikan). Kesalahan terjemahan yang halus tidak bisa dideteksi otomatis."""
+
+    official = (
+        f"`{config.bpk_detail_url}`" if config.bpk_detail_url else "kosongkan (tidak ada naskah resmi berbahasa Indonesia)"
+    )
+    example = inserted[0] if inserted else numbered[-1]
+    table = f"\n### Peraturan perubahan\n\n{amendment_table(records, amendments)}\n" if len(amendments) > 1 else ""
 
     readme = f"""# Import {config.kode} ({config.nama_lengkap})
 
@@ -799,30 +1058,19 @@ File ini dibuat oleh `{SCRIPT} {config.slug}`. Jangan edit manual; perbaiki konf
 
 - `{config.xlsx_name}`
   - sheet `import`: {len(records)} pasal ({span}).
-  - sheet `review`: hasil pembandingan tiap pasal dengan PDF resmi.
+  - sheet `review`: hasil pemeriksaan tiap pasal{" dengan PDF resmi" if with_pdf else ""}.
 {consolidation}- `judul` diisi judul paragraf/bagian/bab tempat pasal berada (tidak ada judul per pasal).
-- `penjelasan` diisi penjelasan resmi.
-{mk}- `keywords` (topik): judul bab dan bagian tempat pasal berada. Tidak perlu diisi manual.
+{penjelasan}{mk}{catatan}- `keywords` (topik): judul bab dan bagian tempat pasal berada. Tidak perlu diisi manual.
 - `linkN_*` (pasal terkait, {link_count} link): rujukan ke pasal lain di {config.kode} yang disebut di isi
   pasal, misalnya "sebagaimana dimaksud dalam Pasal 54". Rujukan yang diikuti nama undang-undang lain
-  dilewati, begitu juga Bab {no_link} (isinya memetakan pasal UU lain).
+  dilewati{no_link}.
   Maksimal {MAX_LINKS_PER_PASAL} per pasal.
-{extra}
+{extra}{table}
 ## Sumber
 
 {chr(10).join(sources)}
 
-Kesalahan sumber HTML yang diperbaiki otomatis: butir ayat/huruf yang hilang, label penjelasan yang
-menempel ke paragraf lain, kalimat yang terpotong jadi dua paragraf, dan judul bagian yang tergeser satu
-pasal (dicek ke PDF). Typo per pasal ada di `text_fixes` ({sum(len(v) for v in config.text_fixes.values())} perbaikan, tiap entri dicek ke PDF).
-Typo dicari dari kata yang tidak dikenal kamus dan tidak ada di PDF. Typo yang kebetulan membentuk kata
-lain yang sah tidak bisa dipastikan otomatis, jadi verifikasi admin terhadap PDF resmi tetap diperlukan.
-
-`cakupan_*_pdf` = porsi huruf pada teks kita yang ditemukan di PDF resmi (rumusan asli dicek ke PDF
-{comparison}. Nilai di bawah {REVIEW_COVERAGE_THRESHOLD:.0%} atau butir ayat/huruf yang kosong ditandai
-`perlu_review`. PDF resmi adalah hasil scan, jadi skor rendah biasanya berasal dari OCR PDF (kata hilang
-di ujung baris). Pasal berskor rendah yang sudah dicek manual tercatat di `manual_review` dan kolom
-`catatan`.
+{checks}
 
 ## Cara import
 
@@ -830,12 +1078,12 @@ di ujung baris). Pasal berskor rendah yang sudah dicek manual tercatat di `manua
    - Nama: `{config.nama}`
    - Nama lengkap: `{config.nama_lengkap}`
    - Tahun: `{config.tahun}`
-   - Link naskah resmi: `{config.bpk_detail_url}`
+   - Link naskah resmi: {official}
    - Sumber teks: `{config.datahukum_url}`
 2. Menu `Import Data` → mode XLSX → pilih UU `{config.kode}` → upload file xlsx.
 3. Import memakai `updateOrCreate` per (UU, nomor): pasal yang sudah ada akan ditimpa,
    pasal lain di UU yang sama tidak dihapus.
-4. Nomor disimpan tanpa awalan "Pasal" (contoh `1`, `599A`). Data lama dengan nomor `Pasal 1`
+4. Nomor disimpan tanpa awalan "Pasal" (contoh `1`, `{example}`). Data lama dengan nomor `Pasal 1`
    tidak akan tertimpa dan jadi dobel, jadi hapus dulu pasal lama sebelum import.
 5. Pasal baru atau yang teksnya berubah masuk menu `Verifikasi` dengan status "Perlu verifikasi".
    Admin mencocokkan tiap pasal dengan naskah resmi lalu menekan "Verifikasi". Sebelum itu pasal
@@ -853,69 +1101,115 @@ Catatan tampilan: normalizer import menggabungkan anak kalimat penutup setelah d
     (config.output_dir / "README_IMPORT.md").write_text(readme, encoding="utf-8")
 
 
-def amendment_pdf_path(config: LawConfig) -> Path | None:
-    if config.amendment is None:
-        return None
-    return fetch(config.amendment.pdf_url, CACHE_DIR / config.amendment.pdf)
+# Sisa teks penerjemah/chatbot dan kata asing yang tidak semestinya ada di naskah pasal.
+ARTEFACT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\bterjemahannya\b|\bBerikut (?:ini )?(?:adalah )?terjemah", re.I), "sisa teks penerjemah"),
+    (re.compile(r"(?:^|\n)(?:Benar|Baik|Tentu|Oke|Siap)[.,!]\s"), "kalimat pembuka percakapan"),
+    (re.compile(r"\b(?:file|File|FILE)\b"), "kata 'file'"),
+    (re.compile(r"\bterlewat\b", re.I), "kata 'terlewat'"),
+    (re.compile(r"\b(?:saya|Anda|kamu)\b"), "kata ganti percakapan"),
+    (re.compile(r"\*\*|```|^#{1,6}\s", re.M), "format markdown"),
+    (re.compile(r"(?:^|\n)Pasal \d+[A-Za-z]*\s*(?:\n|$)"), "judul pasal di dalam isi"),
+)
+DUTCH_WORDS = re.compile(r"\b(?:het|een|niet|zijn|wordt|worden|ingevolge|bij|tot|ook|naar|deze|welke|zal|kan)\b")
+
+
+def artefact_findings(record: PasalRecord) -> list[str]:
+    """Temuan QA di semua versi rumusan pasal (versi lama juga tampil di riwayat)."""
+    found: list[str] = []
+    for version in record.versions:
+        text = f"{version.isi}\n{version.penjelasan}"
+        for pattern, label in ARTEFACT_PATTERNS:
+            if pattern.search(text) and label not in found:
+                found.append(label)
+        dutch = set(DUTCH_WORDS.findall(text))
+        if len(dutch) >= 3 and "kata Belanda tertinggal" not in found:
+            found.append("kata Belanda tertinggal")
+    return found
 
 
 @dataclass
 class Analysis:
     records: list[PasalRecord]
+    amendments: tuple[Amendment, ...]
     review: list[dict[str, object]]
-    body: PdfIndex
-    explanation: PdfIndex
+    body: PdfIndex | None
+    explanation: PdfIndex | None
     warnings: list[dict[str, str]]
     unknown_versions: list[str]
 
 
-def analyze(config: LawConfig, html_path: Path, pdf_path: Path, amendment_pdf: Path | None, lenient: bool) -> Analysis:
-    """Parse HTML, bandingkan dengan PDF resmi. `lenient` = mode --json (typo basi jadi peringatan)."""
+@dataclass
+class OfficialPdfs:
+    body: Path | None  # PDF BPK UU utama
+    amendments: dict[str, Path]  # doc_class -> PDF UU perubahan
+
+
+def official_pdfs(config: LawConfig) -> OfficialPdfs:
+    """Unduh (atau ambil dari cache) PDF resmi pembanding. Daftar perubahan dari HTML tidak punya PDF."""
+    body = fetch(config.bpk_pdf_url, CACHE_DIR / f"bpk_{config.slug}.pdf") if config.bpk_pdf_url else None
+    amendments = {a.doc_class: fetch(a.pdf_url, CACHE_DIR / a.pdf) for a in config.amendments if a.pdf}
+    return OfficialPdfs(body, amendments)
+
+
+def analyze(config: LawConfig, html_path: Path, pdfs: OfficialPdfs, lenient: bool) -> Analysis:
+    """Parse HTML, bandingkan dengan PDF resmi bila ada, pindai artefak. `lenient` = mode --json."""
     warnings: list[dict[str, str]] = []
     unknown: set[str] = set()
-    records = parse_datahukum(html_path, config, warnings if lenient else None, unknown)
+    records, amendments = parse_datahukum(html_path, config, warnings, unknown, strict_fixes=not lenient)
     original_order = [r.nomor for r in records if r.status != INSERTED]
 
-    pages = [page.get_text() for page in pymupdf.open(pdf_path)]
-    body = index_pdf(pages[config.body_pages[0] - 1 : config.body_pages[1]], original_order)
-    explanation = index_pdf(pages[config.penjelasan_pages[0] - 1 : config.penjelasan_pages[1]], original_order)
-    amendment_folded = (
-        ocr_fold("\n".join(page.get_text() for page in pymupdf.open(amendment_pdf))) if amendment_pdf else ""
-    )
-    heading_fixes = fix_heading_placement(records, body)
+    body = explanation = None
+    heading_fixes: dict[str, str] = {}
+    if pdfs.body is not None:
+        pages = [page.get_text() for page in pymupdf.open(pdfs.body)]
+        body = index_pdf(pages[config.body_pages[0] - 1 : config.body_pages[1]], original_order)
+        explanation = index_pdf(pages[config.penjelasan_pages[0] - 1 : config.penjelasan_pages[1]], original_order)
+        heading_fixes = fix_heading_placement(records, body)
+    amended_folded = {
+        doc_class: ocr_fold("\n".join(page.get_text() for page in pymupdf.open(path)))
+        for doc_class, path in pdfs.amendments.items()
+    }
 
     review = []
     for record in records:
         notes = list(record.notes)
         if record.nomor in heading_fixes:
             notes.append(heading_fixes[record.nomor])
+        latest = record.versions[-1].amendment
         if record.status == REPEALED:
-            notes.append(f"Dihapus oleh {config.amendment.label}; teks lama di HTML diabaikan")
+            notes.append(f"Dihapus/dicabut oleh {latest.label}; teks lama di HTML diabaikan")
 
         # Rumusan asli dicek ke PDF BPK, rumusan perubahan ke PDF UU perubahan.
-        isi_cov = official_coverage(record.original_isi, body, record.nomor, original_order) if record.original_isi else 1.0
-        if config.amendment and (record.status.startswith("isi") or record.status == INSERTED):
-            amended = fragment_coverage(record.isi, amendment_folded)
-            notes.append(f"Isi versi {config.amendment.label} cocok {amended:.0%} dengan PDF {config.amendment.label}")
-            isi_cov = min(isi_cov, amended)
-
-        pj_cov = (
-            official_coverage(record.original_penjelasan, explanation, record.nomor, original_order)
-            if record.original_penjelasan
-            else 1.0
-        )
-        if config.amendment and ("penjelasan" in record.status or (record.status == INSERTED and record.penjelasan)):
-            amended = fragment_coverage(record.penjelasan, amendment_folded)
-            notes.append(f"Penjelasan versi {config.amendment.label} cocok {amended:.0%} dengan PDF {config.amendment.label}")
-            pj_cov = min(pj_cov, amended)
+        isi_cov: float | None = None
+        pj_cov: float | None = None
+        if body is not None and explanation is not None:
+            isi_cov = official_coverage(record.original_isi, body, record.nomor, original_order) if record.original_isi else 1.0
+            pj_cov = (
+                official_coverage(record.original_penjelasan, explanation, record.nomor, original_order)
+                if record.original_penjelasan
+                else 1.0
+            )
+        folded = amended_folded.get(latest.doc_class) if latest else None
+        if folded is not None and (record.status.startswith("isi") or record.status == INSERTED):
+            amended = fragment_coverage(record.isi, folded)
+            notes.append(f"Isi versi {latest.label} cocok {amended:.0%} dengan PDF {latest.label}")
+            isi_cov = amended if isi_cov is None else min(isi_cov, amended)
+        if folded is not None and ("penjelasan" in record.status or (record.status == INSERTED and record.penjelasan)):
+            amended = fragment_coverage(record.penjelasan, folded)
+            notes.append(f"Penjelasan versi {latest.label} cocok {amended:.0%} dengan PDF {latest.label}")
+            pj_cov = amended if pj_cov is None else min(pj_cov, amended)
 
         empty_item = bool(re.search(r"^(\(\d+[a-z]?\)|[a-z]\.|\d+\.)$", record.isi + "\n" + record.penjelasan, re.M))
         if empty_item:
             notes.append("Ada butir ayat/huruf kosong")
-        low = min(isi_cov, pj_cov) < REVIEW_COVERAGE_THRESHOLD
+        low = any(cov is not None and cov < REVIEW_COVERAGE_THRESHOLD for cov in (isi_cov, pj_cov))
         if low:
             notes.append("Cakupan teks terhadap PDF rendah")
-        needs_review = low or empty_item
+        artefacts = artefact_findings(record)
+        if artefacts:
+            notes.append(f"Periksa teks: {', '.join(artefacts)}")
+        needs_review = low or empty_item or bool(artefacts)
         if record.nomor in config.manual_review:
             notes.append(config.manual_review[record.nomor])
             needs_review = empty_item
@@ -925,28 +1219,32 @@ def analyze(config: LawConfig, html_path: Path, pdf_path: Path, amendment_pdf: P
                 "nomor": record.nomor,
                 "status_teks": status_label(record, config),
                 "bab": f"{bab.label} {title_case(bab.title)}" if bab else "",
-                "cakupan_isi_pdf": round(isi_cov, 3),
-                "cakupan_penjelasan_pdf": round(pj_cov, 3),
+                "cakupan_isi_pdf": round(isi_cov, 3) if isi_cov is not None else None,
+                "cakupan_penjelasan_pdf": round(pj_cov, 3) if pj_cov is not None else None,
                 "perlu_review": "ya" if needs_review else "tidak",
                 "catatan": "; ".join(notes),
             }
         )
-    return Analysis(records, review, body, explanation, warnings, sorted(unknown))
+    return Analysis(records, amendments, review, body, explanation, warnings, sorted(unknown))
 
 
 def run(config: LawConfig) -> None:
     html_path = fetch(config.datahukum_url, CACHE_DIR / f"datahukum_{config.slug}.html")
-    pdf_path = fetch(config.bpk_pdf_url, CACHE_DIR / f"bpk_{config.slug}.pdf")
-    analysis = analyze(config, html_path, pdf_path, amendment_pdf_path(config), lenient=False)
-    records, review, body, explanation = analysis.records, analysis.review, analysis.body, analysis.explanation
+    analysis = analyze(config, html_path, official_pdfs(config), lenient=False)
+    records, review = analysis.records, analysis.review
 
-    links = write_xlsx(config, records, review)
-    write_readme(config, records, review, links)
+    links = write_xlsx(config, records, review, analysis.amendments)
+    write_readme(config, records, review, links, analysis.amendments)
 
     flagged = sum(1 for row in review if row["perlu_review"] == "ya")
     print(f"[{config.slug}] output: {config.output_dir}")
     print(f"[{config.slug}] pasal: {len(records)} | link: {sum(len(v) for v in links.values())} | perlu review: {flagged}")
-    print(f"[{config.slug}] header pasal terbaca di PDF: batang tubuh {len(body.starts)}, penjelasan {len(explanation.starts)}")
+    if analysis.body is not None and analysis.explanation is not None:
+        print(f"[{config.slug}] header pasal terbaca di PDF: batang tubuh {len(analysis.body.starts)}, penjelasan {len(analysis.explanation.starts)}")
+    for warning in analysis.warnings:
+        print(f"[{config.slug}] peringatan: {warning['message']}")
+    if analysis.unknown_versions:
+        print(f"[{config.slug}] class versi tidak dikenal: {', '.join(analysis.unknown_versions)}")
 
 
 def run_json(config: LawConfig, refresh: bool, previous_count: int | None = None) -> dict[str, object]:
@@ -958,13 +1256,12 @@ def run_json(config: LawConfig, refresh: bool, previous_count: int | None = None
             candidate = download(config.datahukum_url, html_path.with_name(html_path.name + ".new"))
         else:
             candidate = html_path
-        pdf_path = fetch(config.bpk_pdf_url, CACHE_DIR / f"bpk_{config.slug}.pdf")
-        amendment_pdf = amendment_pdf_path(config)
+        pdfs = official_pdfs(config)
     except OSError as error:
         raise PipelineError(f"Gagal mengunduh sumber: {error}") from error
 
     try:
-        analysis = analyze(config, candidate, pdf_path, amendment_pdf, lenient=True)
+        analysis = analyze(config, candidate, pdfs, lenient=True)
         if previous_count and len(analysis.records) < previous_count * 0.98:
             raise PipelineError(
                 f"Jumlah pasal turun dari {previous_count} menjadi {len(analysis.records)} (lebih dari 2%); "

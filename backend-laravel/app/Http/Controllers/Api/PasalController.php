@@ -25,7 +25,7 @@ class PasalController extends Controller
             'undangUndang',
             'verifier:id,nama,email',
             // Tanpa isi: cukup untuk label status dan link naskah resmi di daftar/antrean verifikasi.
-            'versiTerakhir:pasal_versi.id,pasal_versi.pasal_id,pasal_versi.urutan,pasal_versi.status,pasal_versi.sumber,pasal_versi.judul_sumber,pasal_versi.naskah_resmi',
+            'versiTerakhir:pasal_versi.id,pasal_versi.pasal_id,pasal_versi.urutan,pasal_versi.status,pasal_versi.sumber,pasal_versi.judul_sumber,pasal_versi.diundangkan,pasal_versi.berlaku_sejak,pasal_versi.naskah_resmi',
         ]);
         if ($request->boolean('with_trashed') || $request->boolean('trash')) {
             $query->withTrashed();

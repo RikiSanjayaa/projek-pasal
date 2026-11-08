@@ -373,7 +373,8 @@ export interface PasalWithUndangUndang extends Pasal {
   undang_undang: UndangUndang
   verifier?: Pick<AdminUser, 'id' | 'nama' | 'email'> | null
   /** Versi riwayat terakhir (rumusan berlaku). Null bila pasal belum pernah diubah UU lain. */
-  versi_terakhir?: Pick<PasalVersi, 'id' | 'urutan' | 'status' | 'sumber' | 'judul_sumber' | 'naskah_resmi'> | null
+  versi_terakhir?: Pick<PasalVersi, 'id' | 'urutan' | 'status' | 'sumber' | 'judul_sumber' | 'naskah_resmi'> &
+    Partial<Pick<PasalVersi, 'diundangkan' | 'berlaku_sejak'>> | null
 }
 
 export type PasalVersiStatus = 'asli' | 'diubah' | 'disisipkan' | 'dihapus'
