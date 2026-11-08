@@ -31,7 +31,8 @@ jobs:
       
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.38.5'
+          # Samakan dengan ARG FLUTTER_VERSION di pasal_mobile_app/Dockerfile (material_ui butuh >= 3.47).
+          flutter-version: '3.47.9'
           channel: 'stable'
       
       - name: Create env.dart
