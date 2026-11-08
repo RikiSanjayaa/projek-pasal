@@ -43,6 +43,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
   final GlobalKey _pdfKey = GlobalKey();
   String? _kodeUU;
   String? _officialUrl;
+  String? _catatanTeks;
   late PasalModel _currentPasal;
   List<PasalVersiModel> _versi = [];
   final ScrollController _scrollController = ScrollController();
@@ -95,6 +96,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
       setState(() {
         _kodeUU = kode;
         _officialUrl = uu?.officialUrl;
+        _catatanTeks = uu?.catatanTeks;
       });
     }
   }
@@ -524,6 +526,19 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                           sb.writeln("PENJELASAN");
                                           sb.writeln(_currentPasal.penjelasan);
                                         }
+                                        if (_currentPasal.catatan != null &&
+                                            _currentPasal.catatan!
+                                                .trim()
+                                                .isNotEmpty) {
+                                          sb.writeln();
+                                          sb.writeln('CATATAN CARIPASAL');
+                                          sb.writeln(_currentPasal.catatan);
+                                        }
+                                        if (_catatanTeks != null &&
+                                            _catatanTeks!.trim().isNotEmpty) {
+                                          sb.writeln();
+                                          sb.writeln('Catatan: $_catatanTeks');
+                                        }
                                         if (!_currentPasal.isVerified) {
                                           sb.writeln();
                                           sb.writeln(
@@ -581,6 +596,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                         PdfExportService.exportSinglePasal(
                                           pasal: _currentPasal,
                                           searchQuery: _localSearchQuery,
+                                          catatanTeks: _catatanTeks,
                                         );
                                       },
                                       borderRadius: BorderRadius.circular(8),
@@ -696,6 +712,12 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                           ),
                           const SizedBox(height: 24),
 
+                          if (_catatanTeks != null &&
+                              _catatanTeks!.trim().isNotEmpty) ...[
+                            CatatanTeksNotice(catatanTeks: _catatanTeks!),
+                            const SizedBox(height: 24),
+                          ],
+
                           Row(
                             children: [
                               Icon(
@@ -729,6 +751,12 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                         ],
                       ),
                     ),
+
+                    if (_currentPasal.catatan != null &&
+                        _currentPasal.catatan!.trim().isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      CatatanPasalSection(catatan: _currentPasal.catatan!),
+                    ],
 
                     if (_versi.isNotEmpty) ...[
                       const SizedBox(height: 24),
@@ -796,6 +824,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
       _currentPasal = target;
       _kodeUU = null;
       _officialUrl = null;
+      _catatanTeks = null;
       _versi = [];
     });
     _loadUUInfo();

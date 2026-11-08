@@ -84,6 +84,7 @@ class UndangUndangController extends Controller
             'nama_lengkap' => ['nullable', 'string'],
             'deskripsi' => ['nullable', 'string'],
             'tahun' => ['nullable', 'integer'],
+            'catatan_teks' => ['nullable', 'string', 'max:2000'],
             'official_url' => ['nullable', 'url', 'max:2000'],
             'source_url' => ['nullable', 'url', 'max:2000'],
             'is_active' => ['sometimes', 'boolean'],

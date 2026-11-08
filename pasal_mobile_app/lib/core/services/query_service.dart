@@ -41,6 +41,7 @@ class QueryService {
               updatedAt: row.updatedAt,
               officialUrl: row.officialUrl,
               sourceUrl: row.sourceUrl,
+              catatanTeks: row.catatanTeks,
             ),
           )
           .toList();
@@ -65,6 +66,7 @@ class QueryService {
         updatedAt: row.updatedAt,
         officialUrl: row.officialUrl,
         sourceUrl: row.sourceUrl,
+        catatanTeks: row.catatanTeks,
       );
     } catch (e) {
       print("Error getting UU by id: $e");
@@ -209,6 +211,7 @@ class QueryService {
       nomor: row.nomor,
       isi: row.isi,
       penjelasan: row.penjelasan,
+      catatan: row.catatan,
       judul: row.judul,
       keywords: _parseJsonArray(row.keywords),
       relatedIds: _parseJsonArray(row.relatedIds),

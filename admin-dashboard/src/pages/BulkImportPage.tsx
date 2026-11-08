@@ -76,6 +76,8 @@ interface ImportPasal {
   isi: string
   penjelasan?: string
   keywords?: string[]
+  /** Tidak ada = pertahankan catatan lama; null = hapus. Hanya dikirim bila xlsx punya kolom `catatan`. */
+  catatan?: string | null
   links?: PasalLink[]
   /** Ada = file membawa riwayat lengkap; backend mengganti riwayat lama pasal ini. */
   riwayat?: ImportRiwayat[]
@@ -402,6 +404,8 @@ export function BulkImportPage() {
       throw new Error('File XLSX kosong atau tidak memiliki data')
     }
 
+    const hasCatatanColumn = 'catatan' in rows[0]
+
     // Sheet opsional "riwayat": kalau ada, setiap pasal di file dikirim dengan riwayatnya (bisa kosong).
     const historySheet = workbook.Sheets['riwayat']
     const history = new Map<string, ImportRiwayat[]>()
@@ -465,6 +469,8 @@ export function BulkImportPage() {
         keywords,
         links: links.length > 0 ? links : undefined,
         riwayat: historySheet ? history.get(nomor) ?? [] : undefined,
+        // Kunci hanya dikirim bila kolom ada: kolom kosong menghapus catatan, tanpa kolom catatan lama dipertahankan.
+        ...(hasCatatanColumn ? { catatan: String(row.catatan ?? '').trim() || null } : {}),
       })
     })
   }, [])

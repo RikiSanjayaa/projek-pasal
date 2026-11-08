@@ -187,6 +187,12 @@ void main() {
         expect(pasal.verifiedAt, isNull);
       });
 
+      test('reads catatan, missing or null is null', () {
+        expect(PasalModel.fromJson({...base(), 'catatan': 'Catatan\nkedua'}).catatan, 'Catatan\nkedua');
+        expect(PasalModel.fromJson(base()).catatan, isNull);
+        expect(PasalModel.fromJson({...base(), 'catatan': null}).catatan, isNull);
+      });
+
       test('missing fields default to perlu_verifikasi', () {
         final pasal = PasalModel.fromJson(base());
         expect(pasal.verificationStatus, 'perlu_verifikasi');

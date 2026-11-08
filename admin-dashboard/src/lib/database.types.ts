@@ -27,6 +27,7 @@ export interface Database {
           is_active: boolean
           official_url: string | null
           source_url: string | null
+          catatan_teks: string | null
           created_at: string
           updated_at: string
         }
@@ -40,6 +41,7 @@ export interface Database {
           is_active?: boolean
           official_url?: string | null
           source_url?: string | null
+          catatan_teks?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -53,6 +55,7 @@ export interface Database {
           is_active?: boolean
           official_url?: string | null
           source_url?: string | null
+          catatan_teks?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -65,6 +68,7 @@ export interface Database {
           judul: string | null
           isi: string
           penjelasan: string | null
+          catatan: string | null
           keywords: string[]
           is_active: boolean
           verification_status: VerificationStatus
@@ -83,6 +87,7 @@ export interface Database {
           judul?: string | null
           isi: string
           penjelasan?: string | null
+          catatan?: string | null
           keywords?: string[]
           is_active?: boolean
           deleted_at?: string | null
@@ -98,6 +103,7 @@ export interface Database {
           judul?: string | null
           isi?: string
           penjelasan?: string | null
+          catatan?: string | null
           keywords?: string[]
           is_active?: boolean
           deleted_at?: string | null
@@ -373,7 +379,8 @@ export interface PasalWithUndangUndang extends Pasal {
   undang_undang: UndangUndang
   verifier?: Pick<AdminUser, 'id' | 'nama' | 'email'> | null
   /** Versi riwayat terakhir (rumusan berlaku). Null bila pasal belum pernah diubah UU lain. */
-  versi_terakhir?: Pick<PasalVersi, 'id' | 'urutan' | 'status' | 'sumber' | 'judul_sumber' | 'naskah_resmi'> | null
+  versi_terakhir?: Pick<PasalVersi, 'id' | 'urutan' | 'status' | 'sumber' | 'judul_sumber' | 'naskah_resmi'> &
+    Partial<Pick<PasalVersi, 'diundangkan' | 'berlaku_sejak'>> | null
 }
 
 export type PasalVersiStatus = 'asli' | 'diubah' | 'disisipkan' | 'dihapus'
@@ -475,6 +482,8 @@ export interface ImportSnap {
   judul: string | null
   isi: string | null
   penjelasan: string | null
+  /** Catatan redaksi CariPasal; snapshot lama tidak memilikinya (dianggap null). */
+  catatan?: string | null
   keywords: string[]
 }
 

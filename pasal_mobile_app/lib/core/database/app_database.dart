@@ -15,6 +15,7 @@ class UndangUndangTable extends Table {
   DateTimeColumn get updatedAt => dateTime().nullable()();
   TextColumn get officialUrl => text().nullable()();
   TextColumn get sourceUrl => text().nullable()();
+  TextColumn get catatanTeks => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -26,6 +27,7 @@ class PasalTable extends Table {
   TextColumn get nomor => text()();
   TextColumn get isi => text()();
   TextColumn get penjelasan => text().nullable()();
+  TextColumn get catatan => text().nullable()();
   TextColumn get judul => text().nullable()();
   TextColumn get keywords =>
       text().withDefault(const Constant('[]'))(); // JSON array as string
@@ -98,7 +100,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -156,6 +158,11 @@ class AppDatabase extends _$AppDatabase {
         // Riwayat perubahan pasal; data lama dibiarkan, versi diisi saat sync.
         await m.createTable(pasalVersiTable);
         await m.createIndex(idxPasalVersiPasalId);
+      }
+      if (from < 7) {
+        // Catatan status teks UU dan catatan editorial pasal; diisi saat sync.
+        await m.addColumn(undangUndangTable, undangUndangTable.catatanTeks);
+        await m.addColumn(pasalTable, pasalTable.catatan);
       }
     },
   );

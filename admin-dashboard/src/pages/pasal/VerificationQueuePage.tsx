@@ -28,7 +28,7 @@ import { notifications } from '@mantine/notifications'
 import { IconCircleCheck, IconEdit, IconExternalLink, IconSearch } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { LegalText } from '@/components/LegalText'
-import { isAmended, officialSourceFor, VERSI_STATUS } from '@/lib/pasal-versi'
+import { isAmended, officialSourceFor, shouldShowRiwayatBadge, VERSI_STATUS } from '@/lib/pasal-versi'
 import { api, toQueryString, type PaginatedResponse } from '@/lib/api'
 import type { PasalWithUndangUndang } from '@/lib/database.types'
 import { formatPasalLabel } from '@/lib/pasal-format'
@@ -193,7 +193,7 @@ export function VerificationQueuePage() {
                       <Group gap="xs">
                         <Badge variant="light">{pasal.undang_undang?.kode}</Badge>
                         <Text fw={600}>{formatPasalLabel(pasal.nomor)}</Text>
-                        {pasal.versi_terakhir && isAmended(pasal) && (
+                        {pasal.versi_terakhir && isAmended(pasal) && shouldShowRiwayatBadge(pasal.versi_terakhir) && (
                           <Badge variant="outline" color={VERSI_STATUS[pasal.versi_terakhir.status].color} size="sm">
                             {VERSI_STATUS[pasal.versi_terakhir.status].label} {pasal.versi_terakhir.sumber}
                           </Badge>

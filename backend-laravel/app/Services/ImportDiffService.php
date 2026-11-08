@@ -10,7 +10,7 @@ use InvalidArgumentException;
  * dan sumber baru (incoming). Fungsi murni: array masuk, array keluar, tanpa database.
  *
  * Bentuk masukan `current` (satu elemen per pasal di DB, termasuk yang di Sampah):
- *   ['id', 'nomor', 'judul', 'isi', 'penjelasan', 'keywords' => [], 'snapshot' => array|null,
+ *   ['id', 'nomor', 'judul', 'isi', 'penjelasan', 'catatan', 'keywords' => [], 'snapshot' => array|null,
  *    'riwayat' => [baris pasal_versi], 'trashed' => bool]
  * Bentuk masukan `incoming`: elemen `pasal` dari keluaran pipeline (lihat prepare_import.py --json).
  */
@@ -59,6 +59,7 @@ class ImportDiffService
                 'judul' => $row['judul'] ?? null,
                 'isi' => (string) ($row['isi'] ?? ''),
                 'penjelasan' => $row['penjelasan'] ?? null,
+                'catatan' => $row['catatan'] ?? null,
             ]);
             $nomor = $payload['nomor'];
             if ($nomor === '' || $payload['isi'] === '') {
@@ -150,22 +151,24 @@ class ImportDiffService
      * Bentuk baku isi pasal untuk perbandingan dan penyimpanan.
      *
      * @param  array<string, mixed>  $row
-     * @return array{judul: ?string, isi: string, penjelasan: ?string, keywords: list<string>}
+     * @return array{judul: ?string, isi: string, penjelasan: ?string, catatan: ?string, keywords: list<string>}
      */
     public function snap(array $row): array
     {
         $judul = trim((string) ($row['judul'] ?? ''));
         $penjelasan = (string) ($row['penjelasan'] ?? '');
+        $catatan = (string) ($row['catatan'] ?? '');
 
         return [
             'judul' => $judul === '' ? null : $judul,
             'isi' => (string) ($row['isi'] ?? ''),
             'penjelasan' => trim($penjelasan) === '' ? null : $penjelasan,
+            'catatan' => trim($catatan) === '' ? null : $catatan,
             'keywords' => $this->keywordList($row['keywords'] ?? []),
         ];
     }
 
-    /** Dua isi pasal sama jika judul, isi, penjelasan, dan himpunan keyword sama (urutan keyword diabaikan). */
+    /** Dua isi pasal sama jika judul, isi, penjelasan, catatan, dan himpunan keyword sama (urutan keyword diabaikan). */
     public function same(?array $a, ?array $b): bool
     {
         if ($a === null || $b === null) {
@@ -215,7 +218,7 @@ class ImportDiffService
 
     /**
      * @param  array<string, mixed>|null  $currentRow
-     * @param  array{judul: ?string, isi: string, penjelasan: ?string, keywords: list<string>}  $incoming
+     * @param  array{judul: ?string, isi: string, penjelasan: ?string, catatan: ?string, keywords: list<string>}  $incoming
      * @param  list<array<string, mixed>>  $incomingRiwayat
      * @return array<string, mixed>|null null jika identik di semua sisi
      */

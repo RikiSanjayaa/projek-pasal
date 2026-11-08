@@ -69,4 +69,23 @@ class PasalVersiModel {
     statusDihapus => 'Dihapus',
     _ => status,
   };
+
+  static final RegExp _yearInSumber = RegExp(r'(18|19|20)\d\d');
+
+  /// Tahun versi ini: tahun `diundangkan`, lalu `berlaku_sejak`, lalu tahun
+  /// 4 digit pertama (1800-2099) di `sumber` (mis. "Stb. 1872 No. 11").
+  /// Null bila tidak ada yang bisa dibaca.
+  int? get year {
+    final fromDate = diundangkanDate?.year ?? berlakuSejakDate?.year;
+    if (fromDate != null) return fromDate;
+    final m = _yearInSumber.firstMatch(sumber ?? '');
+    return m == null ? null : int.parse(m.group(0)!);
+  }
+
+  /// Versi sebelum kemerdekaan (tahun < 1945), mis. Staatsblad. Tahun tidak
+  /// diketahui dianggap bukan pra-kemerdekaan.
+  bool get isPraKemerdekaan {
+    final y = year;
+    return y != null && y < 1945;
+  }
 }

@@ -1,15 +1,67 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'query_service.dart';
 import '../../models/pasal_model.dart';
 import '../../ui/widgets/law_content_formatter.dart';
 import '../utils/search_utils.dart';
 
 class PdfExportService {
+  /// Catatan status teks per UU (id UU -> catatan), hanya yang terisi.
+  static Future<Map<String, String>> _catatanTeksByUU() async {
+    final all = await QueryService.getAllUU();
+    return {
+      for (final uu in all)
+        if (uu.catatanTeks != null && uu.catatanTeks!.trim().isNotEmpty)
+          uu.id: uu.catatanTeks!.trim(),
+    };
+  }
+
+  static pw.Widget _buildCatatanTeksNotice(String text, {double fontSize = 9}) {
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.orange50,
+        border: pw.Border.all(color: PdfColors.orange300, width: 0.8),
+        borderRadius: pw.BorderRadius.circular(4),
+      ),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(fontSize: fontSize, color: PdfColors.orange900),
+      ),
+    );
+  }
+
+  static pw.Widget _buildCatatanPasal(String text, {double fontSize = 10}) {
+    final paragraphs = text
+        .split(RegExp(r'\n+'))
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty);
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'Catatan CariPasal:',
+          style: pw.TextStyle(
+            fontSize: fontSize + 1,
+            fontWeight: pw.FontWeight.bold,
+          ),
+        ),
+        pw.SizedBox(height: 4),
+        for (final p in paragraphs) ...[
+          pw.Text(p, style: pw.TextStyle(fontSize: fontSize)),
+          pw.SizedBox(height: 3),
+        ],
+      ],
+    );
+  }
+
   /// Exports a single article as PDF and opens print preview / download.
   static Future<void> exportSinglePasal({
     required PasalModel pasal,
     String searchQuery = '',
+    String? catatanTeks,
   }) async {
     final pdf = pw.Document();
     final terms = SearchUtils.highlightTerms(searchQuery);
@@ -93,6 +145,16 @@ class PdfExportService {
                 pw.SizedBox(height: 4),
                 ..._buildPenjelasanContent(pasal.penjelasan!, terms),
               ],
+
+              if (pasal.catatan != null && pasal.catatan!.trim().isNotEmpty) ...[
+                pw.SizedBox(height: 14),
+                _buildCatatanPasal(pasal.catatan!),
+              ],
+
+              if (catatanTeks != null && catatanTeks.trim().isNotEmpty) ...[
+                pw.SizedBox(height: 14),
+                _buildCatatanTeksNotice(catatanTeks),
+              ],
             ],
           );
         },
@@ -111,6 +173,7 @@ class PdfExportService {
     required String searchQuery,
   }) async {
     final pdf = pw.Document();
+    final notices = await _catatanTeksByUU();
     final terms = SearchUtils.highlightTerms(searchQuery);
 
     pdf.addPage(
@@ -219,6 +282,18 @@ class PdfExportService {
                       ),
                       pw.SizedBox(height: 4),
                       ..._buildPenjelasanContent(pasal.penjelasan!, terms),
+                    ],
+                    if (pasal.catatan != null &&
+                        pasal.catatan!.trim().isNotEmpty) ...[
+                      pw.SizedBox(height: 6),
+                      _buildCatatanPasal(pasal.catatan!, fontSize: 9),
+                    ],
+                    if (notices[pasal.undangUndangId] != null) ...[
+                      pw.SizedBox(height: 6),
+                      _buildCatatanTeksNotice(
+                        notices[pasal.undangUndangId]!,
+                        fontSize: 8,
+                      ),
                     ],
                   ],
                 ),

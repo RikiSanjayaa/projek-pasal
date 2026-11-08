@@ -27,6 +27,7 @@ class Pasal extends Model
         'judul',
         'isi',
         'penjelasan',
+        'catatan',
         'keywords',
         'is_active',
         'verification_status',

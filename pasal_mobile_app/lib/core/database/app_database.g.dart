@@ -116,6 +116,17 @@ class $UndangUndangTableTable extends UndangUndangTable
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _catatanTeksMeta = const VerificationMeta(
+    'catatanTeks',
+  );
+  @override
+  late final GeneratedColumn<String> catatanTeks = GeneratedColumn<String>(
+    'catatan_teks',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -128,6 +139,7 @@ class $UndangUndangTableTable extends UndangUndangTable
     updatedAt,
     officialUrl,
     sourceUrl,
+    catatanTeks,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -210,6 +222,15 @@ class $UndangUndangTableTable extends UndangUndangTable
         sourceUrl.isAcceptableOrUnknown(data['source_url']!, _sourceUrlMeta),
       );
     }
+    if (data.containsKey('catatan_teks')) {
+      context.handle(
+        _catatanTeksMeta,
+        catatanTeks.isAcceptableOrUnknown(
+          data['catatan_teks']!,
+          _catatanTeksMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -259,6 +280,10 @@ class $UndangUndangTableTable extends UndangUndangTable
         DriftSqlType.string,
         data['${effectivePrefix}source_url'],
       ),
+      catatanTeks: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}catatan_teks'],
+      ),
     );
   }
 
@@ -280,6 +305,7 @@ class UndangUndangTableData extends DataClass
   final DateTime? updatedAt;
   final String? officialUrl;
   final String? sourceUrl;
+  final String? catatanTeks;
   const UndangUndangTableData({
     required this.id,
     required this.kode,
@@ -291,6 +317,7 @@ class UndangUndangTableData extends DataClass
     this.updatedAt,
     this.officialUrl,
     this.sourceUrl,
+    this.catatanTeks,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -314,6 +341,9 @@ class UndangUndangTableData extends DataClass
     }
     if (!nullToAbsent || sourceUrl != null) {
       map['source_url'] = Variable<String>(sourceUrl);
+    }
+    if (!nullToAbsent || catatanTeks != null) {
+      map['catatan_teks'] = Variable<String>(catatanTeks);
     }
     return map;
   }
@@ -340,6 +370,9 @@ class UndangUndangTableData extends DataClass
       sourceUrl: sourceUrl == null && nullToAbsent
           ? const Value.absent()
           : Value(sourceUrl),
+      catatanTeks: catatanTeks == null && nullToAbsent
+          ? const Value.absent()
+          : Value(catatanTeks),
     );
   }
 
@@ -359,6 +392,7 @@ class UndangUndangTableData extends DataClass
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
       officialUrl: serializer.fromJson<String?>(json['officialUrl']),
       sourceUrl: serializer.fromJson<String?>(json['sourceUrl']),
+      catatanTeks: serializer.fromJson<String?>(json['catatanTeks']),
     );
   }
   @override
@@ -375,6 +409,7 @@ class UndangUndangTableData extends DataClass
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
       'officialUrl': serializer.toJson<String?>(officialUrl),
       'sourceUrl': serializer.toJson<String?>(sourceUrl),
+      'catatanTeks': serializer.toJson<String?>(catatanTeks),
     };
   }
 
@@ -389,6 +424,7 @@ class UndangUndangTableData extends DataClass
     Value<DateTime?> updatedAt = const Value.absent(),
     Value<String?> officialUrl = const Value.absent(),
     Value<String?> sourceUrl = const Value.absent(),
+    Value<String?> catatanTeks = const Value.absent(),
   }) => UndangUndangTableData(
     id: id ?? this.id,
     kode: kode ?? this.kode,
@@ -400,6 +436,7 @@ class UndangUndangTableData extends DataClass
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     officialUrl: officialUrl.present ? officialUrl.value : this.officialUrl,
     sourceUrl: sourceUrl.present ? sourceUrl.value : this.sourceUrl,
+    catatanTeks: catatanTeks.present ? catatanTeks.value : this.catatanTeks,
   );
   UndangUndangTableData copyWithCompanion(UndangUndangTableCompanion data) {
     return UndangUndangTableData(
@@ -417,6 +454,9 @@ class UndangUndangTableData extends DataClass
           ? data.officialUrl.value
           : this.officialUrl,
       sourceUrl: data.sourceUrl.present ? data.sourceUrl.value : this.sourceUrl,
+      catatanTeks: data.catatanTeks.present
+          ? data.catatanTeks.value
+          : this.catatanTeks,
     );
   }
 
@@ -432,7 +472,8 @@ class UndangUndangTableData extends DataClass
           ..write('isActive: $isActive, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('officialUrl: $officialUrl, ')
-          ..write('sourceUrl: $sourceUrl')
+          ..write('sourceUrl: $sourceUrl, ')
+          ..write('catatanTeks: $catatanTeks')
           ..write(')'))
         .toString();
   }
@@ -449,6 +490,7 @@ class UndangUndangTableData extends DataClass
     updatedAt,
     officialUrl,
     sourceUrl,
+    catatanTeks,
   );
   @override
   bool operator ==(Object other) =>
@@ -463,7 +505,8 @@ class UndangUndangTableData extends DataClass
           other.isActive == this.isActive &&
           other.updatedAt == this.updatedAt &&
           other.officialUrl == this.officialUrl &&
-          other.sourceUrl == this.sourceUrl);
+          other.sourceUrl == this.sourceUrl &&
+          other.catatanTeks == this.catatanTeks);
 }
 
 class UndangUndangTableCompanion
@@ -478,6 +521,7 @@ class UndangUndangTableCompanion
   final Value<DateTime?> updatedAt;
   final Value<String?> officialUrl;
   final Value<String?> sourceUrl;
+  final Value<String?> catatanTeks;
   final Value<int> rowid;
   const UndangUndangTableCompanion({
     this.id = const Value.absent(),
@@ -490,6 +534,7 @@ class UndangUndangTableCompanion
     this.updatedAt = const Value.absent(),
     this.officialUrl = const Value.absent(),
     this.sourceUrl = const Value.absent(),
+    this.catatanTeks = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   UndangUndangTableCompanion.insert({
@@ -503,6 +548,7 @@ class UndangUndangTableCompanion
     this.updatedAt = const Value.absent(),
     this.officialUrl = const Value.absent(),
     this.sourceUrl = const Value.absent(),
+    this.catatanTeks = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        kode = Value(kode),
@@ -518,6 +564,7 @@ class UndangUndangTableCompanion
     Expression<DateTime>? updatedAt,
     Expression<String>? officialUrl,
     Expression<String>? sourceUrl,
+    Expression<String>? catatanTeks,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -531,6 +578,7 @@ class UndangUndangTableCompanion
       if (updatedAt != null) 'updated_at': updatedAt,
       if (officialUrl != null) 'official_url': officialUrl,
       if (sourceUrl != null) 'source_url': sourceUrl,
+      if (catatanTeks != null) 'catatan_teks': catatanTeks,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -546,6 +594,7 @@ class UndangUndangTableCompanion
     Value<DateTime?>? updatedAt,
     Value<String?>? officialUrl,
     Value<String?>? sourceUrl,
+    Value<String?>? catatanTeks,
     Value<int>? rowid,
   }) {
     return UndangUndangTableCompanion(
@@ -559,6 +608,7 @@ class UndangUndangTableCompanion
       updatedAt: updatedAt ?? this.updatedAt,
       officialUrl: officialUrl ?? this.officialUrl,
       sourceUrl: sourceUrl ?? this.sourceUrl,
+      catatanTeks: catatanTeks ?? this.catatanTeks,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -596,6 +646,9 @@ class UndangUndangTableCompanion
     if (sourceUrl.present) {
       map['source_url'] = Variable<String>(sourceUrl.value);
     }
+    if (catatanTeks.present) {
+      map['catatan_teks'] = Variable<String>(catatanTeks.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -615,6 +668,7 @@ class UndangUndangTableCompanion
           ..write('updatedAt: $updatedAt, ')
           ..write('officialUrl: $officialUrl, ')
           ..write('sourceUrl: $sourceUrl, ')
+          ..write('catatanTeks: $catatanTeks, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -671,6 +725,17 @@ class $PasalTableTable extends PasalTable
   @override
   late final GeneratedColumn<String> penjelasan = GeneratedColumn<String>(
     'penjelasan',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _catatanMeta = const VerificationMeta(
+    'catatan',
+  );
+  @override
+  late final GeneratedColumn<String> catatan = GeneratedColumn<String>(
+    'catatan',
     aliasedName,
     true,
     type: DriftSqlType.string,
@@ -776,6 +841,7 @@ class $PasalTableTable extends PasalTable
     nomor,
     isi,
     penjelasan,
+    catatan,
     judul,
     keywords,
     relatedIds,
@@ -833,6 +899,12 @@ class $PasalTableTable extends PasalTable
       context.handle(
         _penjelasanMeta,
         penjelasan.isAcceptableOrUnknown(data['penjelasan']!, _penjelasanMeta),
+      );
+    }
+    if (data.containsKey('catatan')) {
+      context.handle(
+        _catatanMeta,
+        catatan.isAcceptableOrUnknown(data['catatan']!, _catatanMeta),
       );
     }
     if (data.containsKey('judul')) {
@@ -919,6 +991,10 @@ class $PasalTableTable extends PasalTable
         DriftSqlType.string,
         data['${effectivePrefix}penjelasan'],
       ),
+      catatan: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}catatan'],
+      ),
       judul: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}judul'],
@@ -966,6 +1042,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
   final String nomor;
   final String isi;
   final String? penjelasan;
+  final String? catatan;
   final String? judul;
   final String keywords;
   final String relatedIds;
@@ -980,6 +1057,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
     required this.nomor,
     required this.isi,
     this.penjelasan,
+    this.catatan,
     this.judul,
     required this.keywords,
     required this.relatedIds,
@@ -998,6 +1076,9 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
     map['isi'] = Variable<String>(isi);
     if (!nullToAbsent || penjelasan != null) {
       map['penjelasan'] = Variable<String>(penjelasan);
+    }
+    if (!nullToAbsent || catatan != null) {
+      map['catatan'] = Variable<String>(catatan);
     }
     if (!nullToAbsent || judul != null) {
       map['judul'] = Variable<String>(judul);
@@ -1027,6 +1108,9 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
       penjelasan: penjelasan == null && nullToAbsent
           ? const Value.absent()
           : Value(penjelasan),
+      catatan: catatan == null && nullToAbsent
+          ? const Value.absent()
+          : Value(catatan),
       judul: judul == null && nullToAbsent
           ? const Value.absent()
           : Value(judul),
@@ -1057,6 +1141,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
       nomor: serializer.fromJson<String>(json['nomor']),
       isi: serializer.fromJson<String>(json['isi']),
       penjelasan: serializer.fromJson<String?>(json['penjelasan']),
+      catatan: serializer.fromJson<String?>(json['catatan']),
       judul: serializer.fromJson<String?>(json['judul']),
       keywords: serializer.fromJson<String>(json['keywords']),
       relatedIds: serializer.fromJson<String>(json['relatedIds']),
@@ -1078,6 +1163,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
       'nomor': serializer.toJson<String>(nomor),
       'isi': serializer.toJson<String>(isi),
       'penjelasan': serializer.toJson<String?>(penjelasan),
+      'catatan': serializer.toJson<String?>(catatan),
       'judul': serializer.toJson<String?>(judul),
       'keywords': serializer.toJson<String>(keywords),
       'relatedIds': serializer.toJson<String>(relatedIds),
@@ -1095,6 +1181,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
     String? nomor,
     String? isi,
     Value<String?> penjelasan = const Value.absent(),
+    Value<String?> catatan = const Value.absent(),
     Value<String?> judul = const Value.absent(),
     String? keywords,
     String? relatedIds,
@@ -1109,6 +1196,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
     nomor: nomor ?? this.nomor,
     isi: isi ?? this.isi,
     penjelasan: penjelasan.present ? penjelasan.value : this.penjelasan,
+    catatan: catatan.present ? catatan.value : this.catatan,
     judul: judul.present ? judul.value : this.judul,
     keywords: keywords ?? this.keywords,
     relatedIds: relatedIds ?? this.relatedIds,
@@ -1129,6 +1217,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
       penjelasan: data.penjelasan.present
           ? data.penjelasan.value
           : this.penjelasan,
+      catatan: data.catatan.present ? data.catatan.value : this.catatan,
       judul: data.judul.present ? data.judul.value : this.judul,
       keywords: data.keywords.present ? data.keywords.value : this.keywords,
       relatedIds: data.relatedIds.present
@@ -1154,6 +1243,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
           ..write('nomor: $nomor, ')
           ..write('isi: $isi, ')
           ..write('penjelasan: $penjelasan, ')
+          ..write('catatan: $catatan, ')
           ..write('judul: $judul, ')
           ..write('keywords: $keywords, ')
           ..write('relatedIds: $relatedIds, ')
@@ -1173,6 +1263,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
     nomor,
     isi,
     penjelasan,
+    catatan,
     judul,
     keywords,
     relatedIds,
@@ -1191,6 +1282,7 @@ class PasalTableData extends DataClass implements Insertable<PasalTableData> {
           other.nomor == this.nomor &&
           other.isi == this.isi &&
           other.penjelasan == this.penjelasan &&
+          other.catatan == this.catatan &&
           other.judul == this.judul &&
           other.keywords == this.keywords &&
           other.relatedIds == this.relatedIds &&
@@ -1207,6 +1299,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
   final Value<String> nomor;
   final Value<String> isi;
   final Value<String?> penjelasan;
+  final Value<String?> catatan;
   final Value<String?> judul;
   final Value<String> keywords;
   final Value<String> relatedIds;
@@ -1222,6 +1315,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     this.nomor = const Value.absent(),
     this.isi = const Value.absent(),
     this.penjelasan = const Value.absent(),
+    this.catatan = const Value.absent(),
     this.judul = const Value.absent(),
     this.keywords = const Value.absent(),
     this.relatedIds = const Value.absent(),
@@ -1238,6 +1332,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     required String nomor,
     required String isi,
     this.penjelasan = const Value.absent(),
+    this.catatan = const Value.absent(),
     this.judul = const Value.absent(),
     this.keywords = const Value.absent(),
     this.relatedIds = const Value.absent(),
@@ -1257,6 +1352,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     Expression<String>? nomor,
     Expression<String>? isi,
     Expression<String>? penjelasan,
+    Expression<String>? catatan,
     Expression<String>? judul,
     Expression<String>? keywords,
     Expression<String>? relatedIds,
@@ -1273,6 +1369,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
       if (nomor != null) 'nomor': nomor,
       if (isi != null) 'isi': isi,
       if (penjelasan != null) 'penjelasan': penjelasan,
+      if (catatan != null) 'catatan': catatan,
       if (judul != null) 'judul': judul,
       if (keywords != null) 'keywords': keywords,
       if (relatedIds != null) 'related_ids': relatedIds,
@@ -1291,6 +1388,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     Value<String>? nomor,
     Value<String>? isi,
     Value<String?>? penjelasan,
+    Value<String?>? catatan,
     Value<String?>? judul,
     Value<String>? keywords,
     Value<String>? relatedIds,
@@ -1307,6 +1405,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
       nomor: nomor ?? this.nomor,
       isi: isi ?? this.isi,
       penjelasan: penjelasan ?? this.penjelasan,
+      catatan: catatan ?? this.catatan,
       judul: judul ?? this.judul,
       keywords: keywords ?? this.keywords,
       relatedIds: relatedIds ?? this.relatedIds,
@@ -1336,6 +1435,9 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
     }
     if (penjelasan.present) {
       map['penjelasan'] = Variable<String>(penjelasan.value);
+    }
+    if (catatan.present) {
+      map['catatan'] = Variable<String>(catatan.value);
     }
     if (judul.present) {
       map['judul'] = Variable<String>(judul.value);
@@ -1375,6 +1477,7 @@ class PasalTableCompanion extends UpdateCompanion<PasalTableData> {
           ..write('nomor: $nomor, ')
           ..write('isi: $isi, ')
           ..write('penjelasan: $penjelasan, ')
+          ..write('catatan: $catatan, ')
           ..write('judul: $judul, ')
           ..write('keywords: $keywords, ')
           ..write('relatedIds: $relatedIds, ')
@@ -2641,6 +2744,7 @@ typedef $$UndangUndangTableTableCreateCompanionBuilder =
       Value<DateTime?> updatedAt,
       Value<String?> officialUrl,
       Value<String?> sourceUrl,
+      Value<String?> catatanTeks,
       Value<int> rowid,
     });
 typedef $$UndangUndangTableTableUpdateCompanionBuilder =
@@ -2655,6 +2759,7 @@ typedef $$UndangUndangTableTableUpdateCompanionBuilder =
       Value<DateTime?> updatedAt,
       Value<String?> officialUrl,
       Value<String?> sourceUrl,
+      Value<String?> catatanTeks,
       Value<int> rowid,
     });
 
@@ -2714,6 +2819,11 @@ class $$UndangUndangTableTableFilterComposer
 
   ColumnFilters<String> get sourceUrl => $composableBuilder(
     column: $table.sourceUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get catatanTeks => $composableBuilder(
+    column: $table.catatanTeks,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2776,6 +2886,11 @@ class $$UndangUndangTableTableOrderingComposer
     column: $table.sourceUrl,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get catatanTeks => $composableBuilder(
+    column: $table.catatanTeks,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$UndangUndangTableTableAnnotationComposer
@@ -2820,6 +2935,11 @@ class $$UndangUndangTableTableAnnotationComposer
 
   GeneratedColumn<String> get sourceUrl =>
       $composableBuilder(column: $table.sourceUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get catatanTeks => $composableBuilder(
+    column: $table.catatanTeks,
+    builder: (column) => column,
+  );
 }
 
 class $$UndangUndangTableTableTableManager
@@ -2872,6 +2992,7 @@ class $$UndangUndangTableTableTableManager
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<String?> officialUrl = const Value.absent(),
                 Value<String?> sourceUrl = const Value.absent(),
+                Value<String?> catatanTeks = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => UndangUndangTableCompanion(
                 id: id,
@@ -2884,6 +3005,7 @@ class $$UndangUndangTableTableTableManager
                 updatedAt: updatedAt,
                 officialUrl: officialUrl,
                 sourceUrl: sourceUrl,
+                catatanTeks: catatanTeks,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2898,6 +3020,7 @@ class $$UndangUndangTableTableTableManager
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<String?> officialUrl = const Value.absent(),
                 Value<String?> sourceUrl = const Value.absent(),
+                Value<String?> catatanTeks = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => UndangUndangTableCompanion.insert(
                 id: id,
@@ -2910,6 +3033,7 @@ class $$UndangUndangTableTableTableManager
                 updatedAt: updatedAt,
                 officialUrl: officialUrl,
                 sourceUrl: sourceUrl,
+                catatanTeks: catatanTeks,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -2948,6 +3072,7 @@ typedef $$PasalTableTableCreateCompanionBuilder =
       required String nomor,
       required String isi,
       Value<String?> penjelasan,
+      Value<String?> catatan,
       Value<String?> judul,
       Value<String> keywords,
       Value<String> relatedIds,
@@ -2965,6 +3090,7 @@ typedef $$PasalTableTableUpdateCompanionBuilder =
       Value<String> nomor,
       Value<String> isi,
       Value<String?> penjelasan,
+      Value<String?> catatan,
       Value<String?> judul,
       Value<String> keywords,
       Value<String> relatedIds,
@@ -3007,6 +3133,11 @@ class $$PasalTableTableFilterComposer
 
   ColumnFilters<String> get penjelasan => $composableBuilder(
     column: $table.penjelasan,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get catatan => $composableBuilder(
+    column: $table.catatan,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3085,6 +3216,11 @@ class $$PasalTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get catatan => $composableBuilder(
+    column: $table.catatan,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get judul => $composableBuilder(
     column: $table.judul,
     builder: (column) => ColumnOrderings(column),
@@ -3154,6 +3290,9 @@ class $$PasalTableTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get catatan =>
+      $composableBuilder(column: $table.catatan, builder: (column) => column);
+
   GeneratedColumn<String> get judul =>
       $composableBuilder(column: $table.judul, builder: (column) => column);
 
@@ -3221,6 +3360,7 @@ class $$PasalTableTableTableManager
                 Value<String> nomor = const Value.absent(),
                 Value<String> isi = const Value.absent(),
                 Value<String?> penjelasan = const Value.absent(),
+                Value<String?> catatan = const Value.absent(),
                 Value<String?> judul = const Value.absent(),
                 Value<String> keywords = const Value.absent(),
                 Value<String> relatedIds = const Value.absent(),
@@ -3236,6 +3376,7 @@ class $$PasalTableTableTableManager
                 nomor: nomor,
                 isi: isi,
                 penjelasan: penjelasan,
+                catatan: catatan,
                 judul: judul,
                 keywords: keywords,
                 relatedIds: relatedIds,
@@ -3253,6 +3394,7 @@ class $$PasalTableTableTableManager
                 required String nomor,
                 required String isi,
                 Value<String?> penjelasan = const Value.absent(),
+                Value<String?> catatan = const Value.absent(),
                 Value<String?> judul = const Value.absent(),
                 Value<String> keywords = const Value.absent(),
                 Value<String> relatedIds = const Value.absent(),
@@ -3268,6 +3410,7 @@ class $$PasalTableTableTableManager
                 nomor: nomor,
                 isi: isi,
                 penjelasan: penjelasan,
+                catatan: catatan,
                 judul: judul,
                 keywords: keywords,
                 relatedIds: relatedIds,

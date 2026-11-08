@@ -37,7 +37,19 @@ class PasalTextNormalizer
             $payload['penjelasan'] = self::normalizeBody($payload['penjelasan']) ?: null;
         }
 
+        if (array_key_exists('catatan', $payload)) {
+            $payload['catatan'] = self::normalizeCatatan($payload['catatan']);
+        }
+
         return $payload;
+    }
+
+    /** Catatan editorial: teks polos, hanya rapikan baris baru dan spasi pinggir; kosong menjadi null. */
+    public static function normalizeCatatan(mixed $value): ?string
+    {
+        $text = trim(str_replace(["\r\n", "\r"], "\n", (string) ($value ?? '')));
+
+        return $text === '' ? null : $text;
     }
 
     public static function normalizeNomor(mixed $value): string

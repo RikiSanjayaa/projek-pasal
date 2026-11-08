@@ -36,6 +36,12 @@ class PasalRiwayatChip extends StatelessWidget {
     if (latest.status == PasalVersiModel.statusAsli) {
       return const SizedBox.shrink();
     }
+    // Perubahan masa kolonial (Staatsblad, sebelum 1945) tidak ditonjolkan di
+    // header; daftar riwayat tetap menampilkan semua versi.
+    if (latest.status != PasalVersiModel.statusDihapus &&
+        latest.isPraKemerdekaan) {
+      return const SizedBox.shrink();
+    }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final color = _statusColor(latest.status, isDark);
