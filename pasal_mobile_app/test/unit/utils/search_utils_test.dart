@@ -408,5 +408,58 @@ void main() {
         expect(nomorSnippet.text.startsWith('(1) Setiap orang'), isTrue);
       });
     });
+
+    group('multi-UU search', () {
+      PasalModel make(String uu, String nomor, String isi, {String? penjelasan}) => PasalModel(
+        id: '$uu-$nomor',
+        undangUndangId: uu,
+        nomor: nomor,
+        isi: isi,
+        penjelasan: penjelasan,
+      );
+
+      final kode = {'uu-kuhp': 'KUHP', 'uu-kuhper': 'KUHPER'};
+      final list = [
+        make('uu-kuhp', '1', '(1) Tidak ada satu perbuatan pun yang dapat dikenai sanksi pidana.'),
+        make('uu-kuhp', '362', 'Setiap Orang yang menggunakan gelar tanpa hak.'),
+        make('uu-kuhper', '362', 'Pengadilan dapat menunjuk wali.'),
+        make('uu-kuhper', '1365', 'Tiap perbuatan melanggar hukum yang membawa kerugian kepada orang lain.'),
+        make(
+          'uu-kuhper',
+          '594',
+          'Hak milik atas benda diperoleh karena pengambilan untuk dimiliki.',
+          penjelasan: 'Catatan CariPasal: UU 5/1960 mencabut Buku II sepanjang mengenai tanah dan perkawinan.',
+        ),
+        make('uu-kuhper', '26', 'Undang-undang memandang perkawinan hanya dalam hubungan perdata.'),
+      ];
+
+      test('pasal number with ayat goes straight to that pasal', () {
+        final result = SearchUtils.rankPasal(list, 'pasal 1 ayat (1)');
+        expect(result.map((p) => p.id), ['uu-kuhp-1']);
+      });
+
+      test('naming the UU narrows a number search to that UU', () {
+        final result = SearchUtils.rankPasal(list, 'pasal 362 kuhper', kodeByUuId: kode);
+        expect(result.map((p) => p.id), ['uu-kuhper-362']);
+      });
+
+      test('UU alias (kuhperdata) works and does not match KUHP by prefix', () {
+        final result = SearchUtils.rankPasal(list, 'pasal 1365 kuhperdata', kodeByUuId: kode);
+        expect(result.map((p) => p.id), ['uu-kuhper-1365']);
+        final kuhp = SearchUtils.rankPasal(list, '362 kuhp', kodeByUuId: kode);
+        expect(kuhp.map((p) => p.id), ['uu-kuhp-362']);
+      });
+
+      test('Catatan CariPasal lines in penjelasan are not searched', () {
+        final result = SearchUtils.rankPasal(list, 'perkawinan');
+        expect(result.map((p) => p.id), ['uu-kuhper-26']);
+      });
+
+      test('correctQuery fixes a typo to a word that exists in the data', () {
+        expect(SearchUtils.correctQuery('perbuatn melanggar hukum', list), 'perbuatan melanggar hukum');
+        expect(SearchUtils.correctQuery('perkawinan', list), isNull);
+        expect(SearchUtils.correctQuery('pasal 1365', list), isNull);
+      });
+    });
   });
 }

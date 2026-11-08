@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import '../../core/services/pdf_export_service.dart';
 import '../../core/config/app_colors.dart';
@@ -38,6 +40,12 @@ class _HomeScreenState extends State<HomeScreen> {
   List<String> _selectedKeywords = [];
 
   String _searchQuery = '';
+
+  /// Kueri yang benar-benar dipakai: sama dengan [_searchQuery], atau hasil koreksi
+  /// ejaan ([_correctedQuery]) kalau kueri asli tidak menemukan apa pun.
+  String _effectiveQuery = '';
+  String? _correctedQuery;
+  Timer? _searchDebounce;
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
 
@@ -62,6 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     _searchFocusNode.removeListener(_onSearchFocusChange);
     _searchFocusNode.dispose();
@@ -164,8 +173,25 @@ class _HomeScreenState extends State<HomeScreen> {
           .toList();
     }
 
+    String? corrected;
     if (_searchQuery.isNotEmpty) {
-      source = SearchUtils.rankPasal(source, _searchQuery);
+      final kodeByUuId = {for (final uu in _listUU) uu.id: uu.kode};
+      final filtered = source;
+      source = SearchUtils.rankPasal(filtered, _searchQuery, kodeByUuId: kodeByUuId);
+      // Ada kata yang tidak muncul di data sama sekali (biasanya salah ketik): pakai
+      // kueri hasil koreksi kalau kueri itu menemukan pasal.
+      final candidate = SearchUtils.correctQuery(
+        _searchQuery,
+        _allPasalCache,
+        kodeByUuId: kodeByUuId,
+      );
+      if (candidate != null) {
+        final correctedResults = SearchUtils.rankPasal(filtered, candidate, kodeByUuId: kodeByUuId);
+        if (correctedResults.isNotEmpty) {
+          corrected = candidate;
+          source = correctedResults;
+        }
+      }
     }
 
     if (_selectedKeywords.isNotEmpty) {
@@ -192,6 +218,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     setState(() {
+      _correctedQuery = corrected;
+      _effectiveQuery = corrected ?? _searchQuery;
       _filteredData = source;
       _totalPages = (_filteredData.length / _itemsPerPage).ceil();
       if (_totalPages == 0) _totalPages = 1;
@@ -385,8 +413,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         : Brightness.light,
                     onChanged: (val) {
                       _searchQuery = val;
-                      _applyFilterAndSearch();
                       _updateOverlay();
+                      // Peringkat dihitung ulang setelah jeda mengetik, bukan tiap huruf.
+                      _searchDebounce?.cancel();
+                      _searchDebounce = Timer(
+                        const Duration(milliseconds: 250),
+                        _applyFilterAndSearch,
+                      );
                     },
                     decoration: InputDecoration(
                       hintText: "Cari nomor, nama atau isi pasal...",
@@ -398,6 +431,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ? IconButton(
                               icon: const Icon(Icons.clear, size: 20),
                               onPressed: () {
+                                _searchDebounce?.cancel();
                                 _searchController.clear();
                                 _searchQuery = '';
                                 _applyFilterAndSearch();
@@ -461,14 +495,27 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Text(
-                      (_searchQuery.isNotEmpty || _selectedKeywords.isNotEmpty)
-                          ? "${_filteredData.length} pasal terkait ditemukan"
-                          : "Pasal Terbaru",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          (_searchQuery.isNotEmpty || _selectedKeywords.isNotEmpty)
+                              ? "${_filteredData.length} pasal terkait ditemukan"
+                              : "Pasal Terbaru",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                        if (_correctedQuery != null)
+                          Text(
+                            'Menampilkan hasil untuk "$_correctedQuery"',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark ? Colors.grey[400] : Colors.grey[700],
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   if (_searchQuery.isNotEmpty && _filteredData.isNotEmpty) ...[
@@ -476,7 +523,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () {
                         PdfExportService.exportBatchPasal(
                           pasalList: _filteredData,
-                          searchQuery: _searchQuery,
+                          searchQuery: _effectiveQuery,
                         );
                       },
                       borderRadius: BorderRadius.circular(8),
@@ -571,7 +618,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 (p) => PasalCard(
                                   pasal: p,
                                   contextList: _filteredData,
-                                  searchQuery: _searchQuery,
+                                  searchQuery: _effectiveQuery,
                                   showUULabel: true,
                                   matchedKeywords: const [],
                                 ),
@@ -591,7 +638,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     (p) => PasalCard(
                                       pasal: p,
                                       contextList: _filteredData,
-                                      searchQuery: _searchQuery,
+                                      searchQuery: _effectiveQuery,
                                       showUULabel: true,
                                       matchedKeywords: const [],
                                     ),
@@ -642,7 +689,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         return PasalCard(
                           pasal: _paginatedData[index],
                           contextList: _filteredData,
-                          searchQuery: _searchQuery,
+                          searchQuery: _effectiveQuery,
                           showUULabel: true,
                           matchedKeywords: const [],
                         );
