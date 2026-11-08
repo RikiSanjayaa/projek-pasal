@@ -17,6 +17,11 @@ class SyncManager {
   static const String _lastSyncKey = 'last_sync_timestamp';
   static const String _dataUpdatedKey = 'data_updated_at';
   static const String _searchAliasesKey = 'search_aliases';
+  static const String _syncDataVersionKey = 'sync_data_version';
+
+  /// Naikkan setiap kali sync membawa tabel/kolom baru yang harus diisi untuk SEMUA data
+  /// (sync inkremental hanya mengirim yang berubah). 6 = riwayat pasal (pasal_versi).
+  static const int syncDataVersion = 6;
 
   /// Notifier for sync state changes
   final ValueNotifier<SyncState> state = ValueNotifier(SyncState.idle);
@@ -45,7 +50,9 @@ class SyncManager {
     try {
       final prefs = await SharedPreferences.getInstance();
       final timestamp = prefs.getInt(_lastSyncKey);
-      if (timestamp != null) {
+      // Data lokal dari versi aplikasi lama belum punya tabel baru: paksa sync penuh sekali.
+      final dataVersion = prefs.getInt(_syncDataVersionKey);
+      if (timestamp != null && dataVersion == syncDataVersion) {
         _lastSyncTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
       }
       final dataUpdated = prefs.getString(_dataUpdatedKey);
@@ -94,6 +101,7 @@ class SyncManager {
       final prefs = await SharedPreferences.getInstance();
       _lastSyncTime = DateTime.now();
       await prefs.setInt(_lastSyncKey, _lastSyncTime!.millisecondsSinceEpoch);
+      await prefs.setInt(_syncDataVersionKey, syncDataVersion);
     } catch (e) {
       print("Error saving last sync time: $e");
     }
