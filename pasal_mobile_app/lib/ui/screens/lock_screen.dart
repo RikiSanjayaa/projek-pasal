@@ -2,20 +2,62 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/config/app_colors.dart';
 import '../../core/services/auth_service.dart';
 import 'login_screen.dart';
+import 'splash_screen.dart';
 
 /// Screen shown when user's account has expired
 /// User must contact admin to re-provision their account
-class LockScreen extends StatelessWidget {
-  const LockScreen({super.key});
+class LockScreen extends StatefulWidget {
+  /// True bila akses offline 30 hari habis (akun sendiri belum tentu
+  /// kedaluwarsa). Sesi dapat diperbarui lewat koneksi internet.
+  final bool offlineLeaseExpired;
+
+  const LockScreen({super.key, this.offlineLeaseExpired = false});
+
+  @override
+  State<LockScreen> createState() => _LockScreenState();
+}
+
+class _LockScreenState extends State<LockScreen> {
+  bool _refreshing = false;
+  String? _refreshError;
+
+  Future<void> _refresh() async {
+    setState(() {
+      _refreshing = true;
+      _refreshError = null;
+    });
+    final result = await authService.restoreSession();
+    if (!mounted) return;
+    if (result == ExpiryCheckResult.valid) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const SplashScreen()),
+      );
+      return;
+    }
+    // Bila sesi dicabut, AuthWrapper sudah mengarahkan ke layar login.
+    setState(() {
+      _refreshing = false;
+      _refreshError = authService.isLoggedIn || result == ExpiryCheckResult.noData
+          ? null
+          : 'Tidak dapat memperbarui sesi. Periksa koneksi internet Anda.';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final leaseExpired = widget.offlineLeaseExpired;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: AppColors.scaffold(isDark),
       body: SafeArea(
-        child: Padding(
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -44,7 +86,7 @@ class LockScreen extends StatelessWidget {
 
               // Title
               Text(
-                "Akun Kadaluarsa",
+                leaseExpired ? "Sesi Offline Berakhir" : "Akun Kadaluarsa",
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -56,7 +98,9 @@ class LockScreen extends StatelessWidget {
 
               // Description
               Text(
-                "Masa aktif akun Anda telah berakhir.\nHubungi administrator untuk memperpanjang.",
+                leaseExpired
+                    ? "Akses offline Anda telah melewati batas 30 hari.\nHubungkan perangkat ke internet untuk memperbarui sesi."
+                    : "Masa aktif akun Anda telah berakhir.\nHubungi administrator untuk memperpanjang.",
                 style: TextStyle(
                   fontSize: 16,
                   color: AppColors.textSecondary(isDark),
@@ -104,27 +148,84 @@ class LockScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    _buildStep(
-                      "1",
-                      "Hubungi administrator kampus Anda",
-                      isDark,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildStep(
-                      "2",
-                      "Minta perpanjangan masa aktif akun",
-                      isDark,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildStep(
-                      "3",
-                      "Login kembali setelah akun diperpanjang",
-                      isDark,
-                    ),
+                    if (leaseExpired) ...[
+                      _buildStep(
+                        "1",
+                        "Sambungkan perangkat ke internet",
+                        isDark,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildStep(
+                        "2",
+                        "Tekan Perbarui Sesi untuk memverifikasi akun",
+                        isDark,
+                      ),
+                    ] else ...[
+                      _buildStep(
+                        "1",
+                        "Hubungi administrator kampus Anda",
+                        isDark,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildStep(
+                        "2",
+                        "Minta perpanjangan masa aktif akun",
+                        isDark,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildStep(
+                        "3",
+                        "Login kembali setelah akun diperpanjang",
+                        isDark,
+                      ),
+                    ],
                   ],
                 ),
               ),
               const Spacer(),
+
+              if (_refreshError != null) ...[
+                Text(
+                  _refreshError!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.error, fontSize: 14),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (leaseExpired) ...[
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: FilledButton.icon(
+                    onPressed: _refreshing ? null : _refresh,
+                    icon: _refreshing
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : const Icon(Icons.refresh),
+                    label: const Text(
+                      "Perbarui Sesi",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: FilledButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
 
               // Logout button
               SizedBox(
@@ -156,6 +257,10 @@ class LockScreen extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+      ),
+        ),
         ),
       ),
     );

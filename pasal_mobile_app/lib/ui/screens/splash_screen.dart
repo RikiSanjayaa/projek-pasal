@@ -67,10 +67,12 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (!mounted) return;
 
-    // 1. Check if user is logged in
-    final hasSession = await authService.hasValidSession();
-    if (!hasSession) {
-      // Not logged in - go to login
+    // 1. Check local session (works offline). Hanya akses offline yang habis
+    // dicoba diperbarui ke server lebih dulu.
+    final session = await authService.restoreSession();
+    if (!mounted) return;
+
+    if (session == ExpiryCheckResult.noData) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -78,20 +80,20 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
 
-    // 2. Check local expiry (works offline)
-    final expiryResult = await authService.checkExpiryOffline();
-    if (!mounted) return;
-
-    if (expiryResult == ExpiryCheckResult.expired) {
-      // Expired - show lock screen
+    if (session == ExpiryCheckResult.expired ||
+        session == ExpiryCheckResult.leaseExpired) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const LockScreen()),
+        MaterialPageRoute(
+          builder: (_) => LockScreen(
+            offlineLeaseExpired: session == ExpiryCheckResult.leaseExpired,
+          ),
+        ),
       );
       return;
     }
 
-    // 3. Check if we have local data
+    // 2. Check if we have local data
     final allPasal = await QueryService.getAllPasal();
 
     if (!mounted) return;

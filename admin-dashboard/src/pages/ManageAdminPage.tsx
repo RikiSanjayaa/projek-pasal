@@ -63,7 +63,7 @@ export function ManageAdminPage() {
   const [nama, setNama] = useState('')
   const [password, setPassword] = useState('')
   const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null)
-  const [selectedAdmin, setSelectedAdmin] = useState<AdminUser | null>(null)
+  const [selectedAdminId, setSelectedAdminId] = useState<string | null>(null)
   const [devicesOpen, devicesModal] = useDisclosure(false)
   const [addOpen, addModal] = useDisclosure(false)
 
@@ -75,6 +75,8 @@ export function ManageAdminPage() {
     },
     enabled: adminUser?.role === 'super_admin',
   })
+
+  const selectedAdmin = admins.find((admin) => admin.id === selectedAdminId)
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -133,14 +135,14 @@ export function ManageAdminPage() {
         <Table.Td><Badge color={admin.role === 'super_admin' ? 'teal' : 'blue'} variant="light">{admin.role === 'super_admin' ? 'Super admin' : 'Admin'}</Badge></Table.Td>
         <Table.Td><Badge color={admin.is_active ? 'green' : 'gray'} variant="light">{admin.is_active ? 'Aktif' : 'Nonaktif'}</Badge></Table.Td>
         <Table.Td>
-          <Tooltip label="Lihat perangkat">
+          <Tooltip label="Lihat perangkat mobile">
             <Badge
               color={activeDevices ? 'blue' : 'gray'}
               variant="light"
               leftSection={<IconDevices size={12} />}
               style={{ cursor: 'pointer' }}
               onClick={() => {
-                setSelectedAdmin(admin)
+                setSelectedAdminId(admin.id)
                 devicesModal.open()
               }}
             >
@@ -171,7 +173,7 @@ export function ManageAdminPage() {
           <Table.Th>Email</Table.Th>
           <Table.Th>Role</Table.Th>
           <Table.Th>Status</Table.Th>
-          <Table.Th>Perangkat</Table.Th>
+          <Table.Th>Perangkat mobile</Table.Th>
           <Table.Th>Aksi</Table.Th>
         </Table.Tr>
       </Table.Thead>
@@ -184,7 +186,7 @@ export function ManageAdminPage() {
       <Group justify="space-between" wrap="wrap">
         <div>
           <Title order={2}>Akun Admin</Title>
-          <Text c="dimmed">Akun untuk masuk ke dashboard admin</Text>
+          <Text c="dimmed">Akun untuk dashboard dan aplikasi mobile. Akses mobile tanpa kedaluwarsa akun, maksimal 3 perangkat aktif.</Text>
         </div>
         <Button leftSection={<IconUserPlus size={16} />} onClick={addModal.open} fullWidth={isMobile}>
           Tambah Admin
@@ -234,7 +236,10 @@ export function ManageAdminPage() {
         )}
       </Modal>
 
-      <Modal opened={devicesOpen} onClose={devicesModal.close} title={`Perangkat - ${selectedAdmin?.nama}`} size="lg" fullScreen={isMobile}>
+      <Modal opened={devicesOpen} onClose={devicesModal.close} title={`Perangkat mobile - ${selectedAdmin?.nama}`} size="lg" fullScreen={isMobile}>
+        <Text size="sm" c="dimmed" mb="md">
+          Sesi mobile hanya untuk membaca, tidak memberi akses API dashboard. Paksa keluar mencabut sesi perangkat ini; saat offline, akses lokal berhenti paling lambat setelah 30 hari tanpa verifikasi server.
+        </Text>
         <ScrollArea>
         <Table striped miw={560}>
           <Table.Thead><Table.Tr><Table.Th>Device</Table.Th><Table.Th>Terakhir Aktif</Table.Th><Table.Th>Status</Table.Th><Table.Th>Aksi</Table.Th></Table.Tr></Table.Thead>
@@ -257,6 +262,9 @@ export function ManageAdminPage() {
                 </Table.Td>
               </Table.Tr>
             ))}
+            {!selectedAdmin?.devices?.length && (
+              <Table.Tr><Table.Td colSpan={4}><Text c="dimmed" ta="center">Belum ada perangkat mobile terdaftar.</Text></Table.Td></Table.Tr>
+            )}
           </Table.Tbody>
         </Table>
         </ScrollArea>

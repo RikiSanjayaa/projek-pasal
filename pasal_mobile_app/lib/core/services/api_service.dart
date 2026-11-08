@@ -10,6 +10,26 @@ class ApiService {
   static const String tokenKey = 'mobile_api_token';
   static const String deviceIdKey = 'device_id';
 
+  /// Dipanggil saat request terautentikasi ditolak server (401, atau 403 JSON
+  /// seperti perangkat dicabut). Diatur oleh AuthService.
+  /// [requestToken] adalah token yang dikirim request tersebut.
+  static Future<void> Function(int statusCode, String? requestToken)?
+  onSessionRejected;
+
+  static const Set<String> _sessionExemptPaths = {
+    '/mobile/login',
+    '/mobile/logout',
+  };
+
+  /// 401 selalu sesi tidak valid. 403 hanya dihitung bila berupa JSON dari
+  /// aplikasi; 403 HTML/proteksi keamanan (Cloudflare) bukan pencabutan sesi.
+  static bool isSessionRejection(DioException error) {
+    final status = error.response?.statusCode;
+    if (status == 401) return true;
+    if (status == 403) return error.response?.data is Map;
+    return false;
+  }
+
   static final Dio dio =
       Dio(
           BaseOptions(
@@ -31,6 +51,24 @@ class ApiService {
                 options.headers['X-Device-ID'] = deviceId;
               }
               handler.next(options);
+            },
+            onError: (error, handler) async {
+              final hook = onSessionRejected;
+              final hadAuth = error.requestOptions.headers.containsKey(
+                'Authorization',
+              );
+              if (hook != null &&
+                  hadAuth &&
+                  !_sessionExemptPaths.contains(error.requestOptions.path) &&
+                  isSessionRejection(error)) {
+                final header = error.requestOptions.headers['Authorization'];
+                final requestToken =
+                    header is String && header.startsWith('Bearer ')
+                    ? header.substring(7)
+                    : null;
+                await hook(error.response!.statusCode!, requestToken);
+              }
+              handler.next(error);
             },
           ),
         );

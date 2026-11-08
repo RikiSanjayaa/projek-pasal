@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AdminDevice;
 use App\Models\AdminUser;
 use App\Services\AuditService;
+use App\Services\UserDeviceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -49,11 +50,12 @@ class AdminUserController extends Controller
         return $this->toggle($request, $id, false, $audit);
     }
 
-    public function deleteDevice(Request $request, string $id, string $deviceId, AuditService $audit): JsonResponse
+    public function deleteDevice(Request $request, string $id, string $deviceId, AuditService $audit, UserDeviceService $devices): JsonResponse
     {
         $device = AdminDevice::where('admin_user_id', $id)->where('id', $deviceId)->firstOrFail();
         $old = $device->replicate();
-        $device->update(['is_active' => false]);
+        $devices->deactivate($device->adminUser, $device->device_id);
+        $device->refresh();
         $audit->log($request, 'DELETE', 'admin_devices', $device->id, $old, $device);
 
         return response()->json(['message' => 'Device admin dinonaktifkan.']);
@@ -64,6 +66,9 @@ class AdminUserController extends Controller
         $admin = AdminUser::findOrFail($id);
         $old = $admin->replicate();
         $admin->update(['is_active' => $active]);
+        if (! $active) {
+            app(UserDeviceService::class)->revokeAll($admin);
+        }
         $audit->log($request, 'UPDATE', 'admin_users', $admin->id, $old, $admin);
 
         return response()->json($admin);

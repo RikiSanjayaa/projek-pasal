@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MobileUser;
 use App\Models\UserDevice;
 use App\Services\AuditService;
+use App\Services\UserDeviceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -90,7 +91,7 @@ class MobileUserController extends Controller
         return response()->json($user);
     }
 
-    public function resetPassword(Request $request, string $id, AuditService $audit): JsonResponse
+    public function resetPassword(Request $request, string $id, AuditService $audit, UserDeviceService $devices): JsonResponse
     {
         $payload = $request->validate(['password' => ['nullable', 'string', 'min:8']]);
         $user = MobileUser::findOrFail($id);
@@ -98,8 +99,7 @@ class MobileUserController extends Controller
         $plainPassword = $payload['password'] ?? $this->temporaryPassword();
 
         $user->update(['password' => $plainPassword]);
-        $user->tokens()->delete();
-        $user->devices()->update(['is_active' => false]);
+        $devices->revokeAll($user);
         $audit->log($request, 'UPDATE', 'mobile_users', $user->id, $old, $user, ['password_reset' => true]);
 
         return response()->json($user->toArray() + ['temporary_password' => $plainPassword]);
@@ -112,22 +112,22 @@ class MobileUserController extends Controller
         return response()->json($user->devices);
     }
 
-    public function deleteDevice(Request $request, string $id, string $deviceId, AuditService $audit): JsonResponse
+    public function deleteDevice(Request $request, string $id, string $deviceId, AuditService $audit, UserDeviceService $devices): JsonResponse
     {
         $device = UserDevice::where('mobile_user_id', $id)->where('id', $deviceId)->firstOrFail();
         $old = $device->replicate();
-        $device->update(['is_active' => false]);
+        $devices->deactivate($device->mobileUser, $device->device_id);
+        $device->refresh();
         $audit->log($request, 'DELETE', 'user_devices', $device->id, $old, $device);
 
         return response()->json(['message' => 'Device dinonaktifkan.']);
     }
 
-    public function destroy(Request $request, string $id, AuditService $audit): JsonResponse
+    public function destroy(Request $request, string $id, AuditService $audit, UserDeviceService $devices): JsonResponse
     {
         $user = MobileUser::findOrFail($id);
         $old = $user->replicate();
-        $user->tokens()->delete();
-        $user->devices()->update(['is_active' => false]);
+        $devices->revokeAll($user);
         $user->forceDelete();
         $audit->log($request, 'DELETE', 'mobile_users', $user->id, $old, null);
 
@@ -140,8 +140,7 @@ class MobileUserController extends Controller
         $old = $user->replicate();
         $user->update(['is_active' => $active]);
         if (! $active) {
-            $user->tokens()->delete();
-            $user->devices()->update(['is_active' => false]);
+            app(UserDeviceService::class)->revokeAll($user);
         }
         $audit->log($request, 'UPDATE', 'mobile_users', $user->id, $old, $user);
 

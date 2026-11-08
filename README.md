@@ -105,6 +105,30 @@ projek-pasal/
 |---|---|---|---|
 | ![Beranda](docs/screenshots/mobile-beranda.webp) | ![Pencarian](docs/screenshots/mobile-cari.webp) | ![Baca pasal](docs/screenshots/mobile-baca-pasal.webp) | ![Riwayat](docs/screenshots/mobile-riwayat.webp) |
 
+### Akses akun mobile
+
+- Login mobile memakai satu form email dan password untuk pengguna, admin, dan super admin. Server menentukan jenis akun dari kredensial yang cocok. Jika email ada di kedua tabel, password yang berbeda tetap mengarah ke akun masing-masing; bila keduanya cocok, akun admin didahulukan. Akun admin yang cocok tetapi nonaktif tetap ditolak, bukan dialihkan ke akun pengguna.
+- Lupa password mobile cukup mengirim email. Jika kedua jenis akun aktif memakai email yang sama, server mengirim tautan reset terpisah untuk masing-masing jenis akun; setiap tautan hanya dapat mereset akun yang dituju.
+- Admin dan super admin memakai akun dashboard yang sudah ada, tanpa membuat akun mobile kedua. Akses akun admin tidak kedaluwarsa dan tidak memakai pemeriksaan password tahunan. Akun pengguna biasa tetap mengikuti masa aktif dan pemeriksaan password tahunannya.
+- Keduanya memiliki maksimal 3 perangkat mobile aktif. Perangkat admin muncul di **Akun Admin → Perangkat mobile**; tombol **Paksa keluar** mencabut token perangkat tersebut tanpa mengakhiri sesi dashboard. Menonaktifkan akun mencabut semua sesi dan perangkat akun itu.
+- Sesi mobile admin tetap hanya mendapat akses pembaca. Token mobile tidak dapat mengakses API dashboard, dan token dashboard tidak dapat dipakai untuk sinkronisasi mobile. Token mobile terikat ke satu ID perangkat.
+- Akses offline membutuhkan metadata sesi dari server dan berlaku maksimal 30 hari sejak login atau pemeriksaan `/mobile/me` terakhir yang berhasil, serta tidak melewati masa aktif akun biasa. Setelah batas offline habis, aplikasi terkunci sampai status akun diverifikasi kembali secara online. Pemeriksaan dilakukan saat startup, resume, dan setiap menit selama aplikasi terbuka.
+- Pencabutan sesi dikenali saat request online ditolak. Perangkat yang benar-benar offline tidak dapat mengetahui perubahan status server saat itu juga; akses lokalnya berhenti saat batas offline atau masa aktif akun habis. Data hukum yang sudah diunduh tidak dihapus saat logout.
+
+Kontrak autentikasi mobile:
+
+```text
+POST /api/mobile/login
+  email, password, device_id, device_name?, platform?
+
+Login dan GET /api/mobile/me mengembalikan:
+  access.account_type: mobile | admin
+  access.expires_at: ISO-8601 | null (admin selalu null)
+  access.offline_access_until: ISO-8601
+```
+
+Deploy backend dan aplikasi mobile versi ini bersama-sama. Sesi mobile lama tanpa scope perangkat atau metadata akses harus login ulang; flag lokal lama `is_admin` tidak lagi memberi pengecualian. Sesi dashboard lama tetap dapat digunakan.
+
 ## Alur data hukum
 
 ```mermaid

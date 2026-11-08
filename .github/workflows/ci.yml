@@ -23,6 +23,41 @@ jobs:
       - name: Build
         run: cd admin-dashboard && npm run build
 
+  test-backend:
+    name: Test Backend Access
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: caripasal_test
+          POSTGRES_USER: caripasal_test
+          POSTGRES_PASSWORD: testing
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U caripasal_test -d caripasal_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: backend-laravel
+    env:
+      APP_KEY: base64:QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=
+      DB_PASSWORD: testing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_pgsql
+          coverage: none
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+      - name: Run backend regressions
+        run: vendor/bin/phpunit
+
   build-mobile:
     name: Build Mobile Web
     runs-on: ubuntu-latest
@@ -45,6 +80,9 @@ jobs:
       
       - name: Install dependencies
         run: cd pasal_mobile_app && flutter pub get
+
+      - name: Test mobile session policy
+        run: cd pasal_mobile_app && flutter test test/unit/services/auth_service_test.dart
       
       - name: Build web
         run: cd pasal_mobile_app && flutter build web --release
