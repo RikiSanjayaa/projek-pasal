@@ -1,4 +1,3 @@
-import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/config/app_colors.dart';
@@ -6,7 +5,7 @@ import '../../core/utils/date_format_id.dart';
 import '../../core/utils/word_diff.dart';
 import '../../models/pasal_model.dart';
 import '../../models/pasal_versi_model.dart';
-import 'app_notification.dart';
+import '../utils/open_link.dart';
 import 'law_content_formatter.dart';
 import 'pasal_sections.dart';
 
@@ -223,17 +222,7 @@ class _RiwayatPasalSheetState extends State<RiwayatPasalSheet> {
     });
   }
 
-  Future<void> _copyLink(String url) async {
-    await Clipboard.setData(ClipboardData(text: url));
-    if (mounted) {
-      AppNotification.show(
-        context,
-        'Tautan naskah resmi disalin. Tempel di browser untuk membuka.',
-        color: Colors.green,
-        icon: Icons.link_rounded,
-      );
-    }
-  }
+  Future<void> _openLink(String url) => openExternalLink(context, url);
 
   @override
   Widget build(BuildContext context) {
@@ -282,8 +271,8 @@ class _RiwayatPasalSheetState extends State<RiwayatPasalSheet> {
             isLatest: i == versi.length - 1,
             selected: i == _selected,
             onTap: () => setState(() => _selected = i),
-            onCopyLink: versi[i].naskahResmi?.trim().isNotEmpty == true
-                ? () => _copyLink(versi[i].naskahResmi!.trim())
+            onOpenLink: versi[i].naskahResmi?.trim().isNotEmpty == true
+                ? () => _openLink(versi[i].naskahResmi!.trim())
                 : null,
           ),
           const SizedBox(height: 8),
@@ -360,14 +349,14 @@ class _VersiTile extends StatelessWidget {
   final bool isLatest;
   final bool selected;
   final VoidCallback onTap;
-  final VoidCallback? onCopyLink;
+  final VoidCallback? onOpenLink;
 
   const _VersiTile({
     required this.versi,
     required this.isLatest,
     required this.selected,
     required this.onTap,
-    this.onCopyLink,
+    this.onOpenLink,
   });
 
   @override
@@ -452,11 +441,11 @@ class _VersiTile extends StatelessWidget {
                   ],
                 ),
               ),
-              if (onCopyLink != null)
+              if (onOpenLink != null)
                 IconButton(
-                  tooltip: 'Salin tautan naskah resmi',
-                  icon: Icon(Icons.link_rounded, size: 20, color: sub),
-                  onPressed: onCopyLink,
+                  tooltip: 'Buka naskah resmi',
+                  icon: Icon(Icons.open_in_new_rounded, size: 20, color: sub),
+                  onPressed: onOpenLink,
                 ),
             ],
           ),

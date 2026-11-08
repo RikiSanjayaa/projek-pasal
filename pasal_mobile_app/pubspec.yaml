@@ -40,6 +40,7 @@ dependencies:
   dio: ^5.8.0+1
   drift: ^2.14.0
   drift_flutter: ^0.2.4
+  url_launcher: ^6.3.2
   sqlite3_flutter_libs: ^0.5.24
   path_provider: ^2.1.1
   path: ^1.8.3

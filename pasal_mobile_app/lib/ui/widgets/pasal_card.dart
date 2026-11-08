@@ -6,7 +6,6 @@ import '../../core/services/query_service.dart';
 import '../utils/highlight_text.dart';
 import '../screens/read_pasal_screen.dart';
 import '../utils/uu_color_helper.dart';
-import 'verification_status.dart';
 
 class PasalCard extends StatelessWidget {
   final PasalModel pasal;
@@ -135,13 +134,6 @@ class PasalCard extends StatelessWidget {
                     const SizedBox(height: 6),
                   ] else ...[
                     const SizedBox(height: 2),
-                  ],
-                  if (!pasal.isVerified) ...[
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: UnverifiedChip(),
-                    ),
-                    const SizedBox(height: 6),
                   ],
                   if (matchedKeywords.isNotEmpty) ...[
                     const SizedBox(height: 8),
