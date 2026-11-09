@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
 use App\Models\MobileUser;
+use App\Services\UserDeviceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,45 +21,53 @@ class PasswordResetController extends Controller
     {
         $payload = $request->validate([
             'email' => ['required', 'email'],
-            'user_type' => ['required', Rule::in(['admin', 'mobile'])],
+            'user_type' => ['nullable', Rule::in(['admin', 'mobile'])],
             'reset_url' => ['nullable', 'url'],
         ]);
 
         $email = Str::lower($payload['email']);
-        $userType = $payload['user_type'];
-        $user = $this->findActiveUser($email, $userType);
+        // Tanpa user_type (form mobile tanpa pemilih akun), kirim tautan terpisah untuk tiap identitas aktif.
+        $userTypes = isset($payload['user_type']) ? [$payload['user_type']] : ['admin', 'mobile'];
 
-        if ($user) {
-            $plainToken = Str::random(64);
-            $expiresAt = now()->addMinutes((int) config('auth.passwords.users.expire', 60));
-            $baseResetUrl = $payload['reset_url'] ?? $this->defaultResetUrl($userType);
-            $resetLink = $baseResetUrl.'?'.http_build_query([
-                'email' => $email,
-                'type' => $userType,
-                'token' => $plainToken,
-            ]);
-
-            DB::table('password_reset_tokens')->insert([
-                'email' => $email,
-                'user_type' => $userType,
-                'token' => Hash::make($plainToken),
-                'created_at' => now(),
-                'expires_at' => $expiresAt,
-            ]);
-
-            Mail::send('emails.password-reset', [
-                'name' => $user->nama,
-                'resetLink' => $resetLink,
-                'expiresAt' => $expiresAt,
-                'userType' => $userType,
-            ], function ($message) use ($email) {
-                $message->to($email)->subject('Reset Password CariPasal');
-            });
+        foreach ($userTypes as $userType) {
+            $user = $this->findActiveUser($email, $userType);
+            if ($user) {
+                $this->sendResetLink($user, $email, $userType, $payload['reset_url'] ?? null);
+            }
         }
 
         return response()->json([
             'message' => 'Jika email terdaftar dan aktif, link reset password akan dikirim.',
         ]);
+    }
+
+    private function sendResetLink(AdminUser|MobileUser $user, string $email, string $userType, ?string $resetUrl): void
+    {
+        $plainToken = Str::random(64);
+        $expiresAt = now()->addMinutes((int) config('auth.passwords.users.expire', 60));
+        $baseResetUrl = $resetUrl ?? $this->defaultResetUrl($userType);
+        $resetLink = $baseResetUrl.'?'.http_build_query([
+            'email' => $email,
+            'type' => $userType,
+            'token' => $plainToken,
+        ]);
+
+        DB::table('password_reset_tokens')->insert([
+            'email' => $email,
+            'user_type' => $userType,
+            'token' => Hash::make($plainToken),
+            'created_at' => now(),
+            'expires_at' => $expiresAt,
+        ]);
+
+        Mail::send('emails.password-reset', [
+            'name' => $user->nama,
+            'resetLink' => $resetLink,
+            'expiresAt' => $expiresAt,
+            'userType' => $userType,
+        ], function ($message) use ($email) {
+            $message->to($email)->subject('Reset Password CariPasal');
+        });
     }
 
     public function reset(Request $request): JsonResponse
@@ -94,11 +103,7 @@ class PasswordResetController extends Controller
         }
 
         $user->update(['password' => $payload['password']]);
-        $user->tokens()->delete();
-
-        if ($user instanceof MobileUser) {
-            $user->devices()->update(['is_active' => false]);
-        }
+        app(UserDeviceService::class)->revokeAll($user);
 
         DB::table('password_reset_tokens')
             ->where('id', $token->id)

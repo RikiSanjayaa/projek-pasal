@@ -339,7 +339,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 icon: Icons.send,
               );
 
-              final success = await authService.resetPassword(email);
+              final success = await authService.resetPassword(
+                email,
+                        );
 
               if (!mounted) return;
 

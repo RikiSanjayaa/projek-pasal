@@ -1,8 +1,6 @@
 <?php
 
-use App\Http\Middleware\DeviceAllowedMiddleware;
-use App\Http\Middleware\MobileActiveMiddleware;
-use App\Http\Middleware\MobileNotExpiredMiddleware;
+use App\Http\Middleware\MobileSessionMiddleware;
 use App\Http\Middleware\RoleMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -18,9 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'role' => RoleMiddleware::class,
-            'mobile.active' => MobileActiveMiddleware::class,
-            'mobile.not_expired' => MobileNotExpiredMiddleware::class,
-            'device.allowed' => DeviceAllowedMiddleware::class,
+            'mobile.session' => MobileSessionMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

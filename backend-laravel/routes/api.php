@@ -86,7 +86,7 @@ Route::middleware(['auth:sanctum', 'role:admin,super_admin'])->prefix('admin')->
     Route::get('/audit-logs/{id}', [AuditLogController::class, 'show']);
 });
 
-Route::middleware(['auth:sanctum', 'mobile.active', 'mobile.not_expired', 'device.allowed'])->prefix('mobile')->group(function () {
+Route::middleware(['auth:sanctum', 'mobile.session'])->prefix('mobile')->group(function () {
     Route::post('/logout', [AuthController::class, 'mobileLogout']);
     Route::get('/me', [AuthController::class, 'mobileMe']);
     Route::post('/device/heartbeat', [AuthController::class, 'mobileHeartbeat']);

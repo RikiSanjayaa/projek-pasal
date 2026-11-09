@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\RoleMiddleware;
 use App\Models\AdminUser;
 use App\Models\MobileUser;
 use App\Services\AuditService;
+use App\Services\MobileAccessService;
 use App\Services\UserDeviceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -24,7 +27,7 @@ class AuthController extends Controller
         }
 
         $admin->update(['last_login_at' => now()]);
-        $token = $admin->createToken('admin-dashboard')->plainTextToken;
+        $token = $admin->createToken('admin-dashboard', [RoleMiddleware::DASHBOARD_ABILITY])->plainTextToken;
         $audit->log($request, 'LOGIN', 'admin_users', $admin->id, null, ['email' => $admin->email]);
 
         return response()->json(['token' => $token, 'user' => $admin]);
@@ -44,7 +47,7 @@ class AuthController extends Controller
         return response()->json(['message' => 'Logout berhasil.']);
     }
 
-    public function mobileLogin(Request $request, UserDeviceService $devices): JsonResponse
+    public function mobileLogin(Request $request, UserDeviceService $devices, MobileAccessService $access, AuditService $audit): JsonResponse
     {
         $payload = $request->validate([
             'email' => ['required', 'email'],
@@ -54,42 +57,69 @@ class AuthController extends Controller
             'platform' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $user = MobileUser::where('email', $payload['email'])->first();
+        // Tanpa pemilih tipe akun: kredensial admin dicocokkan lebih dulu (aktif atau tidak, agar admin
+        // nonaktif tidak bisa jatuh ke akun mobile), baru kredensial user mobile.
+        $user = AdminUser::where('email', $payload['email'])->first();
         if (! $user || ! Hash::check($payload['password'], $user->password)) {
-            throw ValidationException::withMessages(['email' => 'Email atau password salah.']);
+            $user = MobileUser::where('email', $payload['email'])->first();
+            if (! $user || ! Hash::check($payload['password'], $user->password)) {
+                throw ValidationException::withMessages(['email' => 'Email atau password salah.']);
+            }
         }
+        $model = $user::class;
 
-        if (! $user->is_active) {
-            throw ValidationException::withMessages(['email' => 'Akun tidak aktif.']);
-        }
+        // Kunci baris akun supaya batas 3 perangkat, penggantian token, dan pencabutan
+        // bersamaan (nonaktifkan/reset password) tidak saling balapan.
+        [$user, $device, $token] = DB::transaction(function () use ($model, $user, $payload, $devices, $request, $audit) {
+            $locked = $model::query()->lockForUpdate()->find($user->id);
 
-        if ($user->expires_at && $user->expires_at->isPast()) {
-            throw ValidationException::withMessages(['email' => 'Masa aktif akun sudah berakhir.']);
-        }
+            if (! $locked || $locked->password !== $user->password) {
+                throw ValidationException::withMessages(['email' => 'Email atau password salah.']);
+            }
 
-        $device = $devices->registerOrTouch($user, $payload['device_id'], $payload['device_name'] ?? null, $payload['platform'] ?? null);
-        $user->update(['last_login_at' => now()]);
-        $token = $user->createToken('mobile-app')->plainTextToken;
+            if (! $locked->is_active) {
+                throw ValidationException::withMessages(['email' => 'Akun tidak aktif.']);
+            }
 
-        return response()->json(['token' => $token, 'user' => $user, 'device' => $device]);
+            if ($locked instanceof MobileUser && $locked->expires_at && $locked->expires_at->isPast()) {
+                throw ValidationException::withMessages(['email' => 'Masa aktif akun sudah berakhir.']);
+            }
+
+            $device = $devices->registerOrTouch($locked, $payload['device_id'], $payload['device_name'] ?? null, $payload['platform'] ?? null, $request);
+            $locked->update(['last_login_at' => now()]);
+            $token = $devices->issueToken($locked, $payload['device_id']);
+
+            if ($locked instanceof AdminUser) {
+                $audit->log($request, 'LOGIN', 'admin_users', $locked->id, null, ['email' => $locked->email], ['channel' => 'mobile']);
+            }
+
+            return [$locked, $device, $token];
+        });
+
+        return response()->json([
+            'token' => $token,
+            'user' => $user,
+            'device' => $device,
+            'access' => $access->forUser($user),
+        ]);
     }
 
-    public function mobileMe(Request $request): JsonResponse
+    public function mobileMe(Request $request, MobileAccessService $access): JsonResponse
     {
-        return response()->json(['user' => $request->user()]);
-    }
-
-    public function mobileLogout(Request $request, UserDeviceService $devices): JsonResponse
-    {
-        $payload = $request->validate(['device_id' => ['nullable', 'string', 'max:255']]);
         $user = $request->user();
-        $deviceId = $payload['device_id'] ?? $request->header('X-Device-ID');
 
-        if ($user instanceof MobileUser && $deviceId) {
-            $devices->deactivate($user, $deviceId);
+        return response()->json(['user' => $user, 'access' => $access->forUser($user)]);
+    }
+
+    public function mobileLogout(Request $request, UserDeviceService $devices, AuditService $audit): JsonResponse
+    {
+        $user = $request->user();
+        $device = $request->attributes->get('mobile_device');
+
+        $devices->deactivate($user, $device->device_id);
+        if ($user instanceof AdminUser) {
+            $audit->log($request, 'LOGOUT', 'admin_users', $user->id, null, null, ['channel' => 'mobile']);
         }
-
-        $user?->currentAccessToken()?->delete();
 
         return response()->json(['message' => 'Logout berhasil.']);
     }
@@ -97,12 +127,26 @@ class AuthController extends Controller
     public function mobileHeartbeat(Request $request, UserDeviceService $devices): JsonResponse
     {
         $payload = $request->validate([
-            'device_id' => ['required', 'string', 'max:255'],
+            'device_id' => ['nullable', 'string', 'max:255'],
             'device_name' => ['nullable', 'string', 'max:255'],
             'platform' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $device = $devices->registerOrTouch($request->user(), $payload['device_id'], $payload['device_name'] ?? null, $payload['platform'] ?? null);
+        $bound = $request->attributes->get('mobile_device');
+        if (isset($payload['device_id']) && $payload['device_id'] !== $bound->device_id) {
+            abort(403, 'Token tidak berlaku untuk perangkat ini.');
+        }
+
+        $device = DB::transaction(function () use ($request, $devices, $bound, $payload) {
+            $user = $request->user();
+            $user::query()->whereKey($user->getKey())->lockForUpdate()->firstOrFail();
+            if (! $user->tokens()->whereKey($user->currentAccessToken()->getKey())->exists()
+                || ! $devices->findActive($user, $bound->device_id)) {
+                abort(403, 'Perangkat tidak aktif untuk akun ini.');
+            }
+
+            return $devices->registerOrTouch($user, $bound->device_id, $payload['device_name'] ?? null, $payload['platform'] ?? null, $request);
+        });
 
         return response()->json(['device' => $device]);
     }

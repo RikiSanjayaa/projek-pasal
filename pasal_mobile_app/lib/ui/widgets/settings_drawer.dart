@@ -6,6 +6,7 @@ import 'package:showcaseview/showcaseview.dart';
 import 'app_showcase.dart';
 import '../../core/config/theme_controller.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/utils/date_format_id.dart';
 import '../../core/services/storage_info_service.dart';
 import '../../core/services/sync_manager.dart';
 import '../../core/services/sync_progress.dart';
@@ -49,6 +50,28 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
   }
 
   bool _successFeedback = false;
+
+  /// Baris status akses akun: admin tanpa kedaluwarsa akun, pengguna dengan
+  /// tanggal kedaluwarsa bila ada, plus batas akses offline dari server.
+  List<String> _accessLines() {
+    final lines = <String>[];
+    final type = authService.accountType.value;
+    final expiresAt = authService.accountExpiresAt.value;
+    if (type == AccountType.admin) {
+      lines.add('Admin \u2022 Tanpa masa kedaluwarsa akun');
+    } else if (type == AccountType.mobile) {
+      lines.add(
+        expiresAt != null
+            ? 'Akun berlaku hingga ${DateFormatId.short(expiresAt)}'
+            : 'Akun tanpa batas masa aktif',
+      );
+    }
+    final lease = authService.offlineAccessUntil.value;
+    if (lease != null) {
+      lines.add('Akses offline hingga ${DateFormatId.short(lease)}');
+    }
+    return lines;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -182,6 +205,36 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
+                                    ),
+                                    ListenableBuilder(
+                                      listenable: Listenable.merge([
+                                        authService.accountType,
+                                        authService.accountExpiresAt,
+                                        authService.offlineAccessUntil,
+                                      ]),
+                                      builder: (context, _) {
+                                        return Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            for (final line in _accessLines())
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                  top: 2,
+                                                ),
+                                                child: Text(
+                                                  line,
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: isDark
+                                                        ? Colors.grey[500]
+                                                        : Colors.grey[600],
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        );
+                                      },
                                     ),
                                   ],
                                 ),
