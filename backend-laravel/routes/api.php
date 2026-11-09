@@ -31,6 +31,7 @@ Route::middleware(['auth:sanctum', 'role:admin,super_admin'])->prefix('admin')->
     Route::get('/search-aliases/suggestions', [SearchAliasController::class, 'suggestions']);
 
     Route::apiResource('/undang-undang', UndangUndangController::class);
+    Route::get('/undang-undang/{id}/official-document', [UndangUndangController::class, 'document']);
     Route::patch('/undang-undang/{id}/restore', [UndangUndangController::class, 'restore']);
 
     Route::post('/pasal/bulk-import', [PasalController::class, 'bulkImport']);

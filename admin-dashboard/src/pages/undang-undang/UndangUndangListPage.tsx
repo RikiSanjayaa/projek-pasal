@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Title,
   Text,
@@ -27,6 +27,7 @@ import { IconAction } from '@/components/IconAction'
 import { api } from '@/lib/api'
 import type { UndangUndang, UndangUndangInsert, UndangUndangUpdate } from '@/lib/database.types'
 import { invalidateUndangUndangData } from '@/lib/query-invalidation'
+import { LawSourceFields, lawFormData } from './LawSourceFields'
 
 interface PaginatedResponse<T> {
   data: T[]
@@ -34,6 +35,7 @@ interface PaginatedResponse<T> {
 
 export function UndangUndangListPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const queryClient = useQueryClient()
   const isMobile = useMediaQuery('(max-width: 48em)')
   const [createModal, { open: openCreate, close: closeCreate }] = useDisclosure(false)
@@ -78,6 +80,9 @@ export function UndangUndangListPage() {
       tahun: undefined,
       official_url: '',
       source_url: '',
+      official_pdf_url: '',
+      official_document: null,
+      import_config: {},
     },
     validate: {
       kode: (value) => (!value ? 'Kode wajib diisi' : null),
@@ -95,6 +100,10 @@ export function UndangUndangListPage() {
       tahun: undefined,
       official_url: '',
       source_url: '',
+      official_pdf_url: '',
+      official_document: null,
+      remove_official_document: false,
+      import_config: {},
       is_active: true,
     },
   })
@@ -102,7 +111,7 @@ export function UndangUndangListPage() {
   // Create mutation
   const createMutation = useMutation({
     mutationFn: async (data: UndangUndangInsert) => {
-      await api.post('/admin/undang-undang', data)
+      await api.post('/admin/undang-undang', lawFormData(data))
     },
     onSuccess: async () => {
       await invalidateUndangUndangData(queryClient)
@@ -126,7 +135,9 @@ export function UndangUndangListPage() {
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UndangUndangUpdate }) => {
-      await api.put(`/admin/undang-undang/${id}`, data)
+      const body = lawFormData(data)
+      body.append('_method', 'PUT')
+      await api.post(`/admin/undang-undang/${id}`, body)
     },
     onSuccess: async () => {
       await invalidateUndangUndangData(queryClient)
@@ -156,10 +167,23 @@ export function UndangUndangListPage() {
       tahun: uu.tahun || undefined,
       official_url: uu.official_url || '',
       source_url: uu.source_url || '',
+      official_pdf_url: uu.official_pdf_url || '',
+      official_document: null,
+      remove_official_document: false,
+      import_config: uu.import_source?.config ?? {},
       is_active: uu.is_active,
     })
     openEdit()
   }
+
+  useEffect(() => {
+    const id = searchParams.get('edit')
+    const uu = undangUndangList?.find(item => item.id === id)
+    if (uu) {
+      handleEdit(uu)
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, undangUndangList, setSearchParams])
 
   return (
     <Stack gap="lg">
@@ -362,6 +386,14 @@ export function UndangUndangListPage() {
               placeholder="https://www.datahukum.com/peraturan/..."
               {...createForm.getInputProps('source_url')}
             />
+            <LawSourceFields
+              pdfUrl={createForm.values.official_pdf_url ?? ''} file={createForm.values.official_document ?? null}
+              config={createForm.values.import_config ?? {}} remove={false}
+              onPdfUrl={value => createForm.setFieldValue('official_pdf_url', value)}
+              onFile={file => createForm.setFieldValue('official_document', file)}
+              onRemove={value => createForm.setFieldValue('remove_official_document', value)}
+              onConfig={value => createForm.setFieldValue('import_config', value)}
+            />
             <Group justify="flex-end" mt="md" grow={isMobile}>
               <Button variant="default" onClick={closeCreate}>
                 Batal
@@ -427,6 +459,15 @@ export function UndangUndangListPage() {
               description="Asal teks yang diimport (tidak resmi), contoh datahukum.com"
               placeholder="https://www.datahukum.com/peraturan/..."
               {...editForm.getInputProps('source_url')}
+            />
+            <LawSourceFields
+              pdfUrl={editForm.values.official_pdf_url ?? ''} file={editForm.values.official_document ?? null}
+              document={selectedUU?.official_document} remove={editForm.values.remove_official_document ?? false}
+              config={editForm.values.import_config ?? {}}
+              onPdfUrl={value => editForm.setFieldValue('official_pdf_url', value)}
+              onFile={file => editForm.setFieldValue('official_document', file)}
+              onRemove={value => editForm.setFieldValue('remove_official_document', value)}
+              onConfig={value => editForm.setFieldValue('import_config', value)}
             />
             <Switch
               label="Aktif"

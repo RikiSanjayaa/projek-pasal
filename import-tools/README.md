@@ -2,13 +2,13 @@
 
 Pipeline yang mengambil teks undang-undang dari datahukum.com, membandingkannya dengan PDF resmi
 BPK (kalau ada), lalu menghasilkan file Bulk Import (xlsx) atau JSON untuk impor dari dashboard admin.
-UU yang terdaftar ada di `laws/` (satu file per UU): `kuhp-2023`, `kuhap-2025`, `kuhper-1847`,
-`uu-ite-2008`.
+Registrasi sumber disimpan di database bersama UU melalui form Tambah/Edit UU pada dashboard.
+Konfigurasi empat sumber lama dimigrasikan dari `backend-laravel/database/data/import_sources.json`;
+file itu bukan katalog runtime kedua. Backend mengirim snapshot JSON tiap run ke pipeline.
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -r import-tools/requirements.txt
-.venv/bin/python import-tools/prepare_import.py kuhp-2023      # tulis data-import/kuhp-2023/*.xlsx
-.venv/bin/python import-tools/prepare_import.py all
+.venv/bin/python import-tools/prepare_import.py --config source.json # ekspor xlsx
 ```
 
 Sumber (HTML datahukum, PDF BPK, PDF UU perubahan) disimpan di `import-tools/.cache/`, atau di
@@ -20,10 +20,9 @@ Dashboard admin menjalankan mode ini lewat job antrean (`php artisan queue:work`
 `imports`). Mode ini tidak menulis xlsx maupun README.
 
 ```bash
-python prepare_import.py --list --json                       # daftar UU terdaftar, JSON ke stdout
-python prepare_import.py kuhp-2023 --json out.json           # pakai HTML dari cache kalau ada
-python prepare_import.py kuhp-2023 --json out.json --refresh # unduh ulang HTML datahukum
-python prepare_import.py kuhp-2023 --json out.json --previous-count 625
+python prepare_import.py --config source.json --json out.json
+python prepare_import.py --config source.json --json out.json --refresh
+python prepare_import.py --config source.json --json out.json --previous-count 625
 ```
 
 - `--refresh` mengunduh ulang HTML. Unduhan baru menggantikan cache hanya kalau lolos parse, jadi
@@ -56,7 +55,8 @@ sebagai `dihapus` lalu `disisipkan`. Sheet `riwayat` berisi semua versi itu.
 - `Amendment.derive`: rumusan suatu perubahan disusun sendiri dari versi sebelumnya, bukan dari HTML.
   Dipakai untuk UU 1/2026 di UU ITE: versi datahukum mencabut ayat yang tidak disebut dan memakai
   kembali rumusan lama, sedangkan UU 1/2026 sendiri hanya memuat daftar ayat yang dicabut dan tabel
-  ancaman pidana baru (lihat `laws/uu_ite_2008.py`).
+  ancaman pidana baru. Snapshot memakai `derive_rule: "ite-2026"`, dipetakan ke fungsi yang ditinjau
+  dalam `reviewed_rules.py`; konfigurasi tidak dapat memuat kode yang dieksekusi.
 
 ## Perbaikan teks
 
@@ -95,3 +95,22 @@ Env di image: `IMPORT_TOOLS_DIR=/opt/import-tools`, `IMPORT_PYTHON=/opt/import-v
 `IMPORT_CACHE_DIR=/var/www/html/storage/app/import-cache`. Service `queue-worker` yang menjalankan
 pipeline, jadi hanya worker yang memasang volume `caripasal_import_cache` untuk cache itu; service
 `backend` hanya membaca hasilnya dari database.
+
+Backend dan worker memasang volume privat `caripasal_law_documents` pada
+`storage/app/private/law-documents`. PDF unggahan maksimal 20 MiB disimpan dengan nama UUID;
+unduhan memerlukan autentikasi admin. Mengganti atau melepas lampiran tidak menghapus file snapshot
+run lama. `IMPORT_DOCUMENTS_DIR` membatasi lokasi PDF lokal yang boleh dibaca pipeline.
+
+## Registrasi dan batas sumber
+
+Simpan URL sumber melalui form UU; URL PDF asli dan unggahan PDF bersifat opsional. Simpan tidak
+mengambil data atau mengubah pasal. Halaman Sumber Data menampilkan registrasi meski pengambilan
+dinonaktifkan. Jalankan Periksa pembaruan untuk menghasilkan draf, tinjau, pilih item, lalu Terapkan.
+Sumber standar baru tidak memerlukan modul Python. Struktur tidak dikenal gagal dengan alasan,
+bukan dianggap berhasil. Koreksi khusus lama tetap tersimpan di konfigurasi database.
+
+Konfigurasi JSON memakai whitelist field dan tipe. HTML hanya diambil dari HTTPS datahukum.com;
+PDF dari host resmi yang disetujui. Semua alamat DNS harus publik; koneksi dipatok ke alamat yang
+divalidasi dan setiap redirect diperiksa ulang. Tidak ada akses ke localhost, jaringan privat,
+path file bebas, atau callback dari input HTTP. Cache HTML dibedakan menurut identitas sumber/URL.
+

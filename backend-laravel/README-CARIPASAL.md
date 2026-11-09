@@ -71,3 +71,23 @@ Host, port, database, dan pengguna dapat ditimpa melalui `DB_HOST`, `DB_PORT`, `
 - Password Supabase Auth tidak dimigrasikan langsung. Gunakan reset password atau password awal baru.
 - PostgreSQL jangan diekspos publik; cukup Laravel yang bisa mengakses database.
 - Admin dashboard production direncanakan di `/admin`, API di `/api`.
+
+## Sumber data dan PDF asli
+
+Tambah/Edit UU menerima `source_url`, `official_pdf_url`, `import_config`, dan unggahan PDF
+`official_document` maksimal 20 MiB. Sumber disimpan di `import_sources`, terhubung lewat ID UU.
+Simpan hanya mendaftarkan sumber; pengambilan tetap eksplisit melalui Sumber Data. Registrasi
+ditampilkan juga saat `DATAHUKUM_FETCH_ENABLED=false`. Empat konfigurasi lama dimigrasikan beserta
+koreksinya. Mengosongkan URL menyembunyikan sumber tanpa memutus identitas draf dan riwayatnya.
+
+Setiap run menyimpan `source_config` dan path lampiran privat yang tidak berubah setelah antre.
+Backend dan worker harus berbagi volume `caripasal_law_documents` pada
+`storage/app/private/law-documents`; `IMPORT_DOCUMENTS_DIR` menunjuk lokasi yang sama pada worker.
+PDF tidak dipublikasikan lewat storage link; endpoint unduhan memerlukan token admin aktif.
+Worker memeriksa ulang flag pengambilan sebelum menjalankan parser. Pengambilan HTML/PDF memakai
+host HTTPS yang disetujui, validasi DNS publik dan pemeriksaan setiap redirect.
+
+Image Docker memakai `artisan serve --no-reload` agar environment container diteruskan ke proses
+HTTP, termasuk koneksi database dan flag pengambilan. Batas PHP unggahan 20M dan request 24M;
+proxy dashboard membatasi request 24m agar multipart PDF 20 MiB dapat diterima.
+

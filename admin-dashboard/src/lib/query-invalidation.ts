@@ -30,6 +30,7 @@ export async function invalidateUndangUndangData(queryClient: QueryClient) {
     queryClient.invalidateQueries({ queryKey: ['data_mapping', 'undang_undang'] }),
     queryClient.invalidateQueries({ queryKey: ['audit_logs'] }),
     queryClient.invalidateQueries({ queryKey: ['undang_undang'] }),
+    queryClient.invalidateQueries({ queryKey: ['import', 'sources'] }),
     queryClient.invalidateQueries({ queryKey: ['pasal'] }),
   ])
 }

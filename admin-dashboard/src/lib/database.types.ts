@@ -13,6 +13,31 @@ export type AdminRole = 'admin' | 'super_admin'
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE'
 export type VerificationStatus = 'perlu_verifikasi' | 'terverifikasi'
 
+export interface LawImportConfig {
+  doc_class?: string | null
+  label?: string | null
+  diundangkan?: string | null
+  berlaku_sejak?: string | null
+  body_pages?: [number, number]
+  penjelasan_pages?: [number, number]
+}
+
+export interface LawDocument {
+  name: string
+  size: number
+  sha256: string
+  download_url: string
+}
+
+export interface LawSourceRegistration {
+  id: string
+  slug: string
+  parser: 'datahukum'
+  status: 'ready' | 'incomplete' | 'unsupported' | 'inactive'
+  status_message: string | null
+  config: LawImportConfig
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -27,6 +52,9 @@ export interface Database {
           is_active: boolean
           official_url: string | null
           source_url: string | null
+          official_pdf_url?: string | null
+          official_document?: LawDocument | null
+          import_source?: LawSourceRegistration | null
           created_at: string
           updated_at: string
         }
@@ -40,6 +68,10 @@ export interface Database {
           is_active?: boolean
           official_url?: string | null
           source_url?: string | null
+          official_pdf_url?: string | null
+          official_document?: File | null
+          remove_official_document?: boolean
+          import_config?: LawImportConfig
           created_at?: string
           updated_at?: string
         }
@@ -53,6 +85,10 @@ export interface Database {
           is_active?: boolean
           official_url?: string | null
           source_url?: string | null
+          official_pdf_url?: string | null
+          official_document?: File | null
+          remove_official_document?: boolean
+          import_config?: LawImportConfig
           created_at?: string
           updated_at?: string
         }
@@ -457,6 +493,12 @@ export interface ImportRun {
 }
 
 export interface ImportSource {
+  id: string
+  parser: 'datahukum'
+  status: LawSourceRegistration['status']
+  status_message: string | null
+  official_document: LawDocument | null
+  official_pdf_url: string | null
   slug: string
   kode: string
   nama: string

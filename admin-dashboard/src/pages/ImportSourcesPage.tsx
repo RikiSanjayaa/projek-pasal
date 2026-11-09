@@ -48,6 +48,7 @@ export function ImportSourcesPage() {
         <Text c="dimmed" size="sm">
           Periksa pembaruan undang-undang dari datahukum.com. Hasil berupa draf yang harus Anda tinjau; tidak ada data yang berubah sebelum Anda menekan Terapkan.
         </Text>
+        <Anchor component={Link} to="/undang-undang" size="sm">Tambah atau ubah sumber melalui Undang-Undang</Anchor>
       </div>
 
       {data && !enabled && (
@@ -57,6 +58,7 @@ export function ImportSourcesPage() {
       )}
       {error && <Alert color="red" title="Gagal memuat sumber data">{(error as Error).message}</Alert>}
       {isLoading && <Loader />}
+      {data?.sources.length === 0 && <Text c="dimmed">Belum ada sumber terdaftar. Isi sumber teks saat menambah atau mengedit UU.</Text>}
 
       {data?.sources.map((s) => {
         const active = s.active_run
@@ -64,20 +66,26 @@ export function ImportSourcesPage() {
         const blocked = !!active
         return (
           <Card key={s.slug} withBorder padding="md">
-            <Group justify="space-between" align="flex-start" wrap="nowrap">
+            <Group justify="space-between" align="flex-start" wrap="wrap">
               <Stack gap={4}>
                 <Group gap="xs">
                   <Title order={4}>{s.kode}</Title>
                   <Text c="dimmed" size="sm">{s.label}</Text>
                 </Group>
                 <Text size="sm">{s.nama}</Text>
+                <Badge color={s.status === 'ready' ? 'green' : s.status === 'inactive' ? 'gray' : 'yellow'}>
+                  {{ ready: 'Siap diperiksa', incomplete: 'Konfigurasi belum lengkap', unsupported: 'Format belum didukung', inactive: 'UU tidak aktif' }[s.status]}
+                </Badge>
+                {s.status_message && <Text size="sm" c="dimmed">{s.status_message}</Text>}
+                <Text size="xs" c="dimmed">{s.official_document ? `PDF tersimpan: ${s.official_document.name}` : s.official_pdf_url ? 'Pembanding: URL PDF asli' : 'Belum ada PDF pembanding; hasil perlu verifikasi manual.'}</Text>
+                <Anchor component={Link} to={`/undang-undang?edit=${s.undang_undang_id}`} size="sm">Edit UU dan sumber</Anchor>
                 <Anchor href={s.datahukum_url} target="_blank" rel="noreferrer" size="sm">
-                  <Group gap={4}>datahukum.com <IconExternalLink size={14} /></Group>
+                  <Group gap={4}>Buka sumber teks <IconExternalLink size={14} /></Group>
                 </Anchor>
               </Stack>
               <Button
                 leftSection={<IconCloudDownload size={16} />}
-                disabled={!enabled || blocked}
+                disabled={!enabled || blocked || s.status !== 'ready'}
                 loading={start.isPending && start.variables === s.slug}
                 onClick={() => start.mutate(s.slug)}
               >

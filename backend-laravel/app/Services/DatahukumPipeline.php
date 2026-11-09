@@ -12,32 +12,6 @@ use Symfony\Component\Process\Process;
  */
 class DatahukumPipeline
 {
-    /**
-     * Daftar UU yang sudah dikonfigurasi di import-tools/laws.
-     *
-     * @return list<array{slug: string, kode: string, nama: string, label: string, datahukum_url: string, bpk_detail_url?: string}>
-     */
-    public function listSources(): array
-    {
-        $process = $this->process(['--list', '--json']);
-        $process->setTimeout(30);
-        try {
-            $process->run();
-        } catch (ProcessTimedOutException) {
-            throw new RuntimeException('Daftar sumber import tidak merespons (waktu habis).');
-        }
-
-        if (! $process->isSuccessful()) {
-            throw new RuntimeException('Daftar sumber import gagal dimuat: '.$this->tail($process->getErrorOutput() ?: $process->getOutput()));
-        }
-
-        $data = json_decode($process->getOutput(), true);
-        if (! is_array($data) || ! array_is_list($data)) {
-            throw new RuntimeException('Daftar sumber import tidak berupa JSON yang valid.');
-        }
-
-        return $data;
-    }
 
     /**
      * Jalankan pipeline untuk satu UU dan kembalikan hasilnya.
@@ -46,11 +20,13 @@ class DatahukumPipeline
      *
      * @throws ProcessTimedOutException
      */
-    public function fetch(string $slug, ?int $previousCount = null): array
+    public function fetch(array $config, ?int $previousCount = null): array
     {
         $out = tempnam(sys_get_temp_dir(), 'import_');
+        $input = tempnam(sys_get_temp_dir(), 'source_');
         try {
-            $args = [$slug, '--json', $out, '--refresh'];
+            file_put_contents($input, json_encode($config, JSON_THROW_ON_ERROR));
+            $args = ['--config', $input, '--json', $out, '--refresh'];
             if ($previousCount !== null && $previousCount > 0) {
                 $args[] = '--previous-count';
                 $args[] = (string) $previousCount;
@@ -69,6 +45,7 @@ class DatahukumPipeline
             ];
         } finally {
             @unlink($out);
+            @unlink($input);
         }
     }
 
@@ -82,6 +59,7 @@ class DatahukumPipeline
         }
 
         $env = ['PYTHONIOENCODING' => 'utf-8', 'PYTHONUNBUFFERED' => '1'];
+        $env['IMPORT_DOCUMENTS_DIR'] = storage_path('app/private/law-documents');
         if ($cache = config('services.datahukum.cache_dir')) {
             $env['IMPORT_CACHE_DIR'] = (string) $cache;
         }

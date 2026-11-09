@@ -2,32 +2,38 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Cache;
+use App\Models\ImportSource;
 
-/** Daftar sumber import yang dikonfigurasi developer, di-cache beberapa menit supaya halaman admin tidak memanggil Python tiap muat. */
+/** Registrasi sumber disimpan bersama UU; pembacaan katalog tidak mengakses jaringan. */
 class ImportSourceCatalog
 {
-    private const CACHE_KEY = 'import_sources:list';
-
-    private const TTL_SECONDS = 300;
-
-    public function __construct(private readonly DatahukumPipeline $pipeline) {}
+    public function __construct(private readonly LawSourceService $sources) {}
 
     /** @return list<array<string, mixed>> */
     public function all(): array
     {
-        return Cache::remember(self::CACHE_KEY, self::TTL_SECONDS, fn () => $this->pipeline->listSources());
+        return ImportSource::with('undangUndang')->orderBy('created_at')->get()
+            ->filter(fn ($source) => (bool) $source->undangUndang?->source_url)
+            ->map(fn ($source) => $this->entry($source))->values()->all();
     }
 
     /** @return array<string, mixed>|null */
     public function find(string $slug): ?array
     {
-        foreach ($this->all() as $source) {
-            if (($source['slug'] ?? null) === $slug) {
-                return $source;
-            }
-        }
+        $source = ImportSource::with('undangUndang')->where('slug', $slug)->first();
+        return $source?->undangUndang?->source_url ? $this->entry($source) : null;
+    }
 
-        return null;
+    private function entry(ImportSource $source): array
+    {
+        $uu = $source->undangUndang;
+        return [
+            ...$this->sources->summary($source),
+            'kode' => $uu->kode, 'nama' => $uu->nama,
+            'label' => $source->config['label'] ?? $uu->kode,
+            'datahukum_url' => $source->url, 'undang_undang_id' => $uu->id,
+            'official_pdf_url' => $uu->official_pdf_url,
+            'official_document' => $this->sources->document($uu->official_document, $uu->id),
+        ];
     }
 }

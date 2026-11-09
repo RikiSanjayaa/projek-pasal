@@ -19,7 +19,6 @@ import hashlib
 import html
 import os
 import re
-import urllib.request
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -29,6 +28,7 @@ import pymupdf
 from bs4 import BeautifulSoup, Tag
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
+from secure_fetch import download
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -118,6 +118,7 @@ class LawConfig:
     doc_class: str  # class section versi asli di HTML, contoh "uu-12023"
     bpk_detail_url: str = ""  # halaman naskah resmi; kosong kalau tidak ada naskah resmi berbahasa Indonesia
     bpk_pdf_url: str = ""  # PDF resmi pembanding; kosong = cakupan PDF tidak dihitung
+    official_pdf_path: str = ""  # immutable private upload resolved by the backend
     body_pages: tuple[int, int] = (0, 0)  # halaman PDF BPK (1-based) batang tubuh
     penjelasan_pages: tuple[int, int] = (0, 0)  # halaman PDF BPK (1-based) penjelasan
     amendments: tuple[Amendment, ...] = ()  # urut kronologis
@@ -182,15 +183,6 @@ class PipelineError(Exception):
     """Kegagalan struktural; pesannya (bahasa Indonesia) ditampilkan ke admin di mode --json."""
 
 
-def download(url: str, path: Path) -> Path:
-    """Unduh `url` ke `path` lewat file sementara, jadi unduhan yang gagal tidak merusak cache."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (CariPasal import tool)"})
-    partial = path.with_name(path.name + ".part")
-    with urllib.request.urlopen(request, timeout=120) as response:
-        partial.write_bytes(response.read())
-    os.replace(partial, path)
-    return path
 
 
 def fetch(url: str, path: Path) -> Path:
@@ -1104,8 +1096,8 @@ ada di `text_fixes` ({fixes} perbaikan). Kesalahan terjemahan yang halus tidak b
 
     readme = f"""# Import {config.kode} ({config.nama_lengkap})
 
-File ini dibuat oleh `{SCRIPT} {config.slug}`. Jangan edit manual; perbaiki konfigurasi di
-`import-tools/laws/` atau mesinnya di `import-tools/datahukum_pipeline.py`, lalu jalankan ulang.
+File ini dibuat oleh `{SCRIPT} --config source.json`. Jangan edit hasil ekspor manual; perbaiki
+registrasi melalui form UU atau konfigurasi JSON tepercaya, lalu jalankan ulang.
 
 ## Isi
 
@@ -1208,14 +1200,16 @@ class OfficialPdfs:
 def official_pdfs(config: LawConfig) -> OfficialPdfs:
     """Unduh (atau ambil dari cache) PDF resmi pembanding: UU utama dan UU perubahan yang punya PDF
     (dari `amendments`, atau `pdf`/`pdf_url` di `amendment_overrides` untuk daftar dari HTML)."""
-    body = fetch(config.bpk_pdf_url, CACHE_DIR / f"bpk_{config.slug}.pdf") if config.bpk_pdf_url else None
+    body = Path(config.official_pdf_path) if config.official_pdf_path else (
+        fetch(config.bpk_pdf_url, CACHE_DIR / f"bpk_{config.slug}_{hashlib.sha256(config.bpk_pdf_url.encode()).hexdigest()[:12]}.pdf") if config.bpk_pdf_url else None
+    )
     sources = {a.doc_class: (a.pdf, a.pdf_url) for a in config.amendments if a.pdf}
     sources |= {
         doc_class: (fields["pdf"], fields["pdf_url"])
         for doc_class, fields in config.amendment_overrides.items()
         if fields.get("pdf")
     }
-    amendments = {doc_class: fetch(url, CACHE_DIR / name) for doc_class, (name, url) in sources.items()}
+    amendments = {doc_class: fetch(url, CACHE_DIR / f"{hashlib.sha256(url.encode()).hexdigest()[:12]}_{name}") for doc_class, (name, url) in sources.items()}
     return OfficialPdfs(body, amendments)
 
 
@@ -1230,7 +1224,8 @@ def analyze(config: LawConfig, html_path: Path, pdfs: OfficialPdfs, lenient: boo
     heading_fixes: dict[str, str] = {}
     if pdfs.body is not None:
         pages = [page.get_text() for page in pymupdf.open(pdfs.body)]
-        body = index_pdf(pages[config.body_pages[0] - 1 : config.body_pages[1]], original_order)
+        body_range = config.body_pages if config.body_pages != (0, 0) else (1, len(pages))
+        body = index_pdf(pages[body_range[0] - 1 : body_range[1]], original_order)
         explanation = index_pdf(pages[config.penjelasan_pages[0] - 1 : config.penjelasan_pages[1]], original_order)
         heading_fixes = fix_heading_placement(records, body)
     amended_folded = {
@@ -1323,7 +1318,8 @@ def run(config: LawConfig) -> None:
 
 def run_json(config: LawConfig, refresh: bool, previous_count: int | None = None) -> dict[str, object]:
     """Hasil pipeline sebagai dict JSON (Contract A). Tidak menulis xlsx/README."""
-    html_path = CACHE_DIR / f"datahukum_{config.slug}.html"
+    source_key = hashlib.sha256(config.datahukum_url.encode()).hexdigest()[:12]
+    html_path = CACHE_DIR / f"datahukum_{config.slug}_{source_key}.html"
     try:
         if refresh or not (html_path.exists() and html_path.stat().st_size > 0):
             # Unduhan baru dipakai (dan menggantikan cache) hanya kalau lolos parse.

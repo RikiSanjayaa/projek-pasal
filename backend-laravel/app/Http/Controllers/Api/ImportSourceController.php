@@ -7,21 +7,21 @@ use App\Http\Controllers\Controller;
 use App\Jobs\RunDatahukumImport;
 use App\Models\ImportRun;
 use App\Models\UndangUndang;
+use App\Models\ImportSource;
+use App\Services\LawSourceService;
 use App\Services\ImportSourceCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
-/** Sumber import on-demand (datahukum) yang sudah dikonfigurasi developer. */
+/** Registrasi sumber dari form UU; pengambilan menghasilkan draf yang harus ditinjau. */
 class ImportSourceController extends Controller
 {
     public function index(ImportSourceCatalog $catalog): JsonResponse
     {
         $enabled = (bool) config('services.datahukum.enabled');
-        if (! $enabled) {
-            return response()->json(['enabled' => false, 'sources' => []]);
-        }
 
         try {
             $sources = $catalog->all();
@@ -33,18 +33,13 @@ class ImportSourceController extends Controller
             $latest = fn () => ImportRun::where('slug', $source['slug'])->orderByDesc('created_at');
 
             return [
-                'slug' => $source['slug'],
-                'kode' => $source['kode'],
-                'nama' => $source['nama'],
-                'label' => $source['label'],
-                'datahukum_url' => $source['datahukum_url'],
-                'undang_undang_id' => UndangUndang::where('kode', $source['kode'])->value('id'),
+                ...$source,
                 'last_run' => $latest()->first()?->toApi(),
                 'active_run' => $latest()->whereIn('status', ImportRun::ACTIVE_STATUSES)->first()?->toApi(),
             ];
         }, $sources);
 
-        return response()->json(['enabled' => true, 'sources' => $result]);
+        return response()->json(['enabled' => $enabled, 'sources' => $result]);
     }
 
     public function startRun(Request $request, ImportSourceCatalog $catalog, string $slug): JsonResponse
@@ -62,10 +57,10 @@ class ImportSourceController extends Controller
             return response()->json(['message' => 'Sumber import tidak dikenal.'], 404);
         }
 
-        $uu = UndangUndang::where('kode', $source['kode'])->first();
-        if (! $uu) {
-            return response()->json(['message' => "Undang-undang dengan kode {$source['kode']} belum ada di database."], 422);
+        if ($source['status'] !== 'ready') {
+            return response()->json(['message' => $source['status_message'] ?? 'Konfigurasi sumber belum siap.'], 422);
         }
+        $uu = UndangUndang::findOrFail($source['undang_undang_id']);
 
         // Kunci singkat supaya dua klik bersamaan tidak membuat dua run.
         $lock = Cache::lock('import-run:'.$slug, 15);
@@ -93,13 +88,19 @@ class ImportSourceController extends Controller
                 ], 409);
             }
 
-            $run = ImportRun::create([
-                'slug' => $slug,
-                'undang_undang_id' => $uu->id,
-                'status' => ImportRun::QUEUED,
-                'requested_by' => $request->user()?->id,
-                'source_url' => $source['datahukum_url'] ?? null,
-            ]);
+            $run = DB::transaction(function () use ($uu, $slug, $request) {
+                UndangUndang::lockForUpdate()->findOrFail($uu->id);
+                $registration = ImportSource::with('undangUndang')->where('slug', $slug)->lockForUpdate()->firstOrFail();
+                $policy = app(LawSourceService::class);
+                $state = $policy->status($registration);
+                abort_unless($state['status'] === 'ready', 422, $state['status_message']);
+                return ImportRun::create([
+                    'slug' => $slug, 'undang_undang_id' => $uu->id,
+                    'status' => ImportRun::QUEUED, 'requested_by' => $request->user()?->id,
+                    'source_url' => $registration->url,
+                    'source_config' => $policy->snapshot($registration),
+                ]);
+            });
             RunDatahukumImport::dispatch($run->id);
         } finally {
             $lock->release();
