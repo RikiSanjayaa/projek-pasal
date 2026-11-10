@@ -1,8 +1,8 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../core/config/theme_controller.dart';
 import '../../core/config/app_colors.dart';
 import 'update_banner.dart';
-import '../utils/responsive_layout.dart';
 
 class MainLayout extends StatelessWidget {
   final Widget child;
@@ -11,7 +11,6 @@ class MainLayout extends StatelessWidget {
   final Widget? bottomNavigationBar;
   final PreferredSizeWidget? appBar;
   final Color? backgroundColor;
-  final Widget? endDrawer;
 
   const MainLayout({
     super.key,
@@ -21,7 +20,6 @@ class MainLayout extends StatelessWidget {
     this.bottomNavigationBar,
     this.appBar,
     this.backgroundColor,
-    this.endDrawer,
   });
 
   @override
@@ -40,13 +38,12 @@ class MainLayout extends StatelessWidget {
               children: [
                 UpdateBanner(onSyncComplete: onSyncComplete),
 
-                Expanded(child: ResponsiveContent(child: child)),
+                Expanded(child: child),
               ],
             ),
           ),
           floatingActionButton: floatingActionButton,
           bottomNavigationBar: bottomNavigationBar,
-          endDrawer: endDrawer,
         );
       },
     );

@@ -63,6 +63,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(tester.getSize(find.byType(TextField)).width, 1365);
     await tester.enterText(find.byType(TextField), 'ketentuan');
     await tester.tap(find.byType(PasalCard));
     await tester.pumpAndSettle();
@@ -95,6 +96,28 @@ void main() {
       'ketentuan',
     );
     expect(find.byType(PasalCard), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    tester.view.physicalSize = const Size(1365, 900);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: AdaptivePasalBrowser(
+            child: SizedBox.expand(
+              child: PasalCard(pasal: article, contextList: [article]),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.getSize(find.byType(PasalCard)).width, 1365);
+    await tester.tap(find.byType(PasalCard));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(find.byType(PasalCard)).width, lessThan(500));
+    await tester.tap(find.byTooltip('Kembali ke daftar'));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(find.byType(PasalCard)).width, 1365);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }

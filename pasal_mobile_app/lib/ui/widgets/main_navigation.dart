@@ -18,6 +18,7 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
+  bool _sidebarExpanded = true;
   final Set<int> _visitedPages = {0};
   final List<Widget> _pages = const [
     HomeScreen(),
@@ -34,6 +35,148 @@ class _MainNavigationState extends State<MainNavigation> {
     });
   }
 
+  Widget _sidebar(bool isDark, bool expanded, bool canToggle) {
+    const destinations = [
+      (Icons.home_outlined, Icons.home_rounded, 'Beranda'),
+      (Icons.auto_stories_outlined, Icons.auto_stories_rounded, 'Pustaka'),
+      (Icons.bookmark_outline_rounded, Icons.bookmark_rounded, 'Tersimpan'),
+    ];
+    return Container(
+      width: expanded ? 264 : 80,
+      decoration: BoxDecoration(
+        color: AppColors.card(isDark),
+        border: Border(
+          right: BorderSide(color: AppColors.border(isDark), width: 1.5),
+        ),
+      ),
+      child: CustomScrollView(
+        slivers: [
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: expanded ? 16 : 12,
+                vertical: 16,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (expanded)
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.balance_rounded,
+                          color: AppColors.primary,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'CariPasal',
+                            style: TextStyle(
+                              fontSize: 21,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Tutup sidebar',
+                          onPressed: () =>
+                              setState(() => _sidebarExpanded = false),
+                          icon: const Icon(Icons.chevron_left),
+                        ),
+                      ],
+                    )
+                  else ...[
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Icon(
+                        Icons.balance_rounded,
+                        color: AppColors.primary,
+                        size: 28,
+                      ),
+                    ),
+                    if (canToggle)
+                      IconButton(
+                        tooltip: 'Buka sidebar',
+                        onPressed: () =>
+                            setState(() => _sidebarExpanded = true),
+                        icon: const Icon(Icons.chevron_right),
+                      ),
+                  ],
+                  const SizedBox(height: 28),
+                  for (var i = 0; i < destinations.length; i++)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Tooltip(
+                        message: expanded ? '' : destinations[i].$3,
+                        child: Material(
+                          color: i == _selectedIndex
+                              ? AppColors.primary.withValues(alpha: .10)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: () => _onItemTapped(i),
+                            child: Semantics(
+                              button: true,
+                              selected: i == _selectedIndex,
+                              label: destinations[i].$3,
+                              excludeSemantics: true,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: expanded
+                                      ? MainAxisAlignment.start
+                                      : MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      i == _selectedIndex
+                                          ? destinations[i].$2
+                                          : destinations[i].$1,
+                                      size: 22,
+                                      color: i == _selectedIndex
+                                          ? AppColors.primary
+                                          : AppColors.icon(isDark),
+                                    ),
+                                    if (expanded) ...[
+                                      const SizedBox(width: 14),
+                                      Text(
+                                        destinations[i].$3,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: i == _selectedIndex
+                                              ? FontWeight.w600
+                                              : FontWeight.normal,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  const Spacer(),
+                  const SizedBox(height: 32),
+                  Material(
+                    type: MaterialType.transparency,
+                    child: SettingsControls(sidebar: true, collapsed: !expanded),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -41,122 +184,66 @@ class _MainNavigationState extends State<MainNavigation> {
     final compact = width < ResponsiveLayout.medium;
     final expanded = width >= ResponsiveLayout.expanded;
 
-    return Scaffold(
-      endDrawer: const SettingsDrawer(),
-      body: SafeArea(
-        child: Row(
-          children: [
-            SizedBox(
-              width: compact ? 0 : (expanded ? 216 : 88),
-              child: compact
-                  ? const SizedBox.shrink()
-                  : DecoratedBox(
-                      decoration: BoxDecoration(
-                        border: Border(
-                          right: BorderSide(color: AppColors.border(isDark)),
-                        ),
-                      ),
-                      child: NavigationRail(
-                        extended: expanded,
-                        minWidth: 88,
-                        minExtendedWidth: 216,
-                        backgroundColor: AppColors.scaffold(isDark),
-                        selectedIndex: _selectedIndex,
-                        onDestinationSelected: _onItemTapped,
-                        labelType: expanded
-                            ? NavigationRailLabelType.none
-                            : NavigationRailLabelType.all,
-                        leading: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 24),
-                          child: expanded
-                              ? const Text(
-                                  'CariPasal',
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                )
-                              : const Icon(Icons.balance_rounded, size: 30),
-                        ),
-                        destinations: const [
-                          NavigationRailDestination(
-                            icon: Icon(Icons.home_outlined),
-                            selectedIcon: Icon(Icons.home_rounded),
-                            label: Text('Beranda'),
-                          ),
-                          NavigationRailDestination(
-                            icon: Icon(Icons.auto_stories_outlined),
-                            selectedIcon: Icon(Icons.auto_stories_rounded),
-                            label: Text('Pustaka'),
-                          ),
-                          NavigationRailDestination(
-                            icon: Icon(Icons.bookmark_outline_rounded),
-                            selectedIcon: Icon(Icons.bookmark_rounded),
-                            label: Text('Tersimpan'),
-                          ),
-                        ],
-                        trailing: Padding(
-                          padding: const EdgeInsets.only(top: 24),
-                          child: Builder(
-                            builder: (context) => IconButton(
-                              tooltip: 'Pengaturan',
-                              onPressed: () =>
-                                  Scaffold.of(context).openEndDrawer(),
-                              icon: const Icon(Icons.settings_outlined),
+    return NavigationSettingsScope(
+      child: Scaffold(
+        body: SafeArea(
+          child: Row(
+            children: [
+              SizedBox(
+                width: compact ? 0 : (expanded && _sidebarExpanded ? 264 : 80),
+                child: compact
+                    ? const SizedBox.shrink()
+                    : _sidebar(isDark, expanded && _sidebarExpanded, expanded),
+              ),
+              // Keep this subtree in the same slot at every breakpoint.
+              Expanded(
+                child: Column(
+                  children: [
+                    const ExpiryWarningBanner(),
+                    Expanded(
+                      child: IndexedStack(
+                        index: _selectedIndex,
+                        children: [
+                          for (var i = 0; i < _pages.length; i++)
+                            TickerMode(
+                              enabled: i == _selectedIndex,
+                              child: _visitedPages.contains(i)
+                                  ? _pages[i]
+                                  : const SizedBox.shrink(),
                             ),
-                          ),
-                        ),
+                        ],
                       ),
                     ),
-            ),
-            // Keep this subtree in the same slot at every breakpoint.
-            Expanded(
-              child: Column(
-                children: [
-                  const ExpiryWarningBanner(),
-                  Expanded(
-                    child: IndexedStack(
-                      index: _selectedIndex,
-                      children: [
-                        for (var i = 0; i < _pages.length; i++)
-                          TickerMode(
-                            enabled: i == _selectedIndex,
-                            child: _visitedPages.contains(i)
-                                ? _pages[i]
-                                : const SizedBox.shrink(),
-                          ),
-                      ],
-                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        bottomNavigationBar: compact
+            ? NavigationBar(
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: _onItemTapped,
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(Icons.home_outlined),
+                    selectedIcon: Icon(Icons.home_rounded),
+                    label: 'Beranda',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.auto_stories_outlined),
+                    selectedIcon: Icon(Icons.auto_stories_rounded),
+                    label: 'Pustaka',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.bookmark_outline_rounded),
+                    selectedIcon: Icon(Icons.bookmark_rounded),
+                    label: 'Tersimpan',
                   ),
                 ],
-              ),
-            ),
-          ],
-        ),
+              )
+            : null,
       ),
-      bottomNavigationBar: compact
-          ? NavigationBar(
-              selectedIndex: _selectedIndex,
-              onDestinationSelected: _onItemTapped,
-              destinations: const [
-                NavigationDestination(
-                  icon: Icon(Icons.home_outlined),
-                  selectedIcon: Icon(Icons.home_rounded),
-                  label: 'Beranda',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.auto_stories_outlined),
-                  selectedIcon: Icon(Icons.auto_stories_rounded),
-                  label: 'Pustaka',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.bookmark_outline_rounded),
-                  selectedIcon: Icon(Icons.bookmark_rounded),
-                  label: 'Tersimpan',
-                ),
-              ],
-            )
-          : null,
     );
   }
 }

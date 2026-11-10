@@ -73,10 +73,14 @@ Satu aplikasi Flutter untuk ponsel, tablet, dan desktop. Breakpoint memakai leba
 | Lebar jendela | Navigasi | Daftar dan bacaan |
 | --- | --- | --- |
 | <600 | Bar bawah | Satu panel; tombol kembali membuka daftar yang sama. |
-| 600–1023 | Navigation rail | Satu panel dengan lebar konten dibatasi. |
-| >=1024 | Sidebar | Daftar dan pembaca berdampingan bila konten tersedia minimal 720 px. |
+| 600–1023 | Rail 80 px, ikon tanpa label | Satu panel dengan grid mengikuti lebar konten. |
+| >=1024 | Sidebar 264 px, bisa diciutkan menjadi 80 px | Daftar memakai seluruh lebar sebelum pasal dipilih; pembaca muncul berdampingan bila konten tersedia minimal 720 px. |
 
-Login dibatasi 440 px, bacaan 760 px, konten halaman 1200 px, drawer pengaturan 400 px, sheet 640 px, dan dialog 560 px. Angka tersebut adalah batas maksimum; layar sempit tetap memakai ruang yang tersedia. Pembaca standalone menampilkan daftar bab saat ruang lokal minimal 1100 px. Beranda, Pustaka, dan Tersimpan menggunakan pembaca inline yang sama.
+Sidebar punya pembatas, logo di samping brand saat expanded, pilihan tema, periksa update, dan akses akun langsung. Tampilan desktop tidak membuka drawer pengaturan tambahan. Pada ponsel, pengaturan tetap memakai drawer 400 px maksimum; dialog akun dan aksi logout dipakai bersama agar perilakunya sama.
+
+Daftar pasal memakai satu sampai tiga kolom sesuai lebar lokal, termasuk ketika kembali dari pembaca. Beranda dan Tersimpan memuat 30 pasal per halaman. Filter UU dan bab langsung terbuka pada desktop; kontrol ringkas tetap dipakai pada ponsel. Posisi grid disimpan sebelum pembaca dibuka dan dikembalikan saat ditutup, dibatasi panjang scroll yang tersedia.
+
+Login dibatasi 440 px, bacaan 760 px, konten non-browser 1200 px, sheet 640 px, dan dialog 560 px. Angka tersebut adalah batas maksimum; layar sempit tetap memakai ruang yang tersedia. Pembaca standalone menampilkan daftar bab saat ruang lokal minimal 1100 px. Beranda, Pustaka, dan Tersimpan menggunakan pembaca inline yang sama.
 
 Shell mempertahankan tab yang pernah dibuka melalui `IndexedStack`. Browser mempertahankan dua subtree daftar/pembaca melalui `Offstage`, sehingga query, pilihan UU/pasal, dan scroll tidak hilang saat resize. Mengganti pilihan pasal membuat state pembaca baru; prev/next di dalam pembaca tetap memakai konteks hasil yang dipilih. Back handler pada tab yang tidak aktif tidak menangkap navigasi kembali.
 

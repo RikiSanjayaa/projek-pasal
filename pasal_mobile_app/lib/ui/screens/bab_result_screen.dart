@@ -24,24 +24,12 @@ class BabResultScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.scaffold(isDark),
-      endDrawer: const SettingsDrawer(),
       appBar: AppBar(
         title: Text(bab, style: const TextStyle(fontSize: 16)),
         elevation: 0,
         backgroundColor: AppColors.appBar(isDark),
         foregroundColor: AppColors.textPrimary(isDark),
-        actions: [
-          Builder(
-            builder: (ctx) => IconButton(
-              onPressed: () => Scaffold.of(ctx).openEndDrawer(),
-              icon: Icon(
-                Icons.menu,
-                color: isDark ? Colors.grey[300] : Colors.grey[700],
-              ),
-              tooltip: 'Pengaturan',
-            ),
-          ),
-        ],
+        actions: const [SettingsButton()],
       ),
       body: ResponsiveContent(
         maxWidth: ResponsiveLayout.readingWidth,

@@ -1,3 +1,5 @@
+import '../widgets/settings_drawer.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/config/app_colors.dart';
@@ -115,18 +117,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                               ),
                             ),
                           ),
-                          // Hamburger menu button
-                          IconButton(
-                            onPressed: () =>
-                                Scaffold.of(context).openEndDrawer(),
-                            icon: Icon(
-                              Icons.menu,
-                              color: isDark
-                                  ? Colors.grey[300]
-                                  : Colors.grey[700],
-                            ),
-                            tooltip: 'Pengaturan',
-                          ),
+                          const SettingsButton(),
                         ],
                       ),
                       const SizedBox(height: 4),

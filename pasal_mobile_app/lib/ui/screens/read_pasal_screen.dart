@@ -168,7 +168,6 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
 
     return Scaffold(
       backgroundColor: bgColor,
-      endDrawer: const SettingsDrawer(),
       appBar: AppBar(
         backgroundColor: bgColor,
         elevation: 0,
@@ -208,17 +207,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
               tooltip: _isSearching ? 'Tutup Pencarian' : 'Cari di Pasal',
             ),
           ),
-          Builder(
-            builder: (ctx) => IconButton(
-              icon: Icon(
-                Icons.menu,
-                color: isDark ? Colors.grey[300] : Colors.grey[700],
-                size: 24,
-              ),
-              onPressed: () => Scaffold.of(ctx).openEndDrawer(),
-              tooltip: 'Pengaturan',
-            ),
-          ),
+          const SettingsButton(),
           const SizedBox(width: 4),
         ],
       ),

@@ -9,7 +9,7 @@ import '../../models/undang_undang_model.dart';
 import '../../core/services/query_service.dart';
 import '../../core/utils/search_utils.dart';
 import '../../core/utils/bab_utils.dart';
-import '../widgets/pasal_card.dart';
+import '../widgets/pasal_results_view.dart';
 import '../widgets/search_tier_header.dart';
 import '../widgets/main_layout.dart';
 import '../widgets/bab_bottom_sheet.dart';
@@ -23,6 +23,8 @@ import '../widgets/app_showcase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../widgets/adaptive_pasal_browser.dart';
+import '../widgets/settings_drawer.dart';
+import '../utils/responsive_layout.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -64,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _filtersExpanded = false;
 
   int _currentPage = 1;
-  final int _itemsPerPage = 10;
+  final int _itemsPerPage = 30;
   int _totalPages = 1;
 
   final ScrollController _listScrollController = ScrollController();
@@ -539,56 +541,37 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(
                 child: _paginatedData.isEmpty
                     ? _buildEmptySearchState(isDark)
-                    : ListView.builder(
+                    : PasalResultsView(
                         controller: _listScrollController,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: _paginatedData.length + 1,
-                        itemBuilder: (context, index) {
-                          if (index == _paginatedData.length) {
-                            return _totalPages > 1
-                                ? Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 20,
-                                    ),
-                                    child: PaginationFooter(
-                                      currentPage: _currentPage,
-                                      totalPages: _totalPages,
-                                      onPrevious: () {
-                                        setState(() {
-                                          _currentPage--;
-                                          _updatePagination();
-                                        });
-                                        _listScrollController.jumpTo(0);
-                                      },
-                                      onNext: () {
-                                        setState(() {
-                                          _currentPage++;
-                                          _updatePagination();
-                                        });
-                                        _listScrollController.jumpTo(0);
-                                      },
-                                    ),
-                                  )
-                                : const SizedBox(height: 20);
-                          }
-
-                          final card = PasalCard(
-                            pasal: _paginatedData[index],
-                            contextList: _filteredData,
-                            searchQuery: _effectiveQuery,
-                            showUULabel: true,
-                          );
-                          final header = SearchTierHeader.before(
-                            _searchResult,
-                            _paginatedData,
-                            index,
-                          );
-                          if (header == null) return card;
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [header, card],
-                          );
-                        },
+                        items: _paginatedData,
+                        contextList: _filteredData,
+                        searchQuery: _effectiveQuery,
+                        searchResult: _searchResult,
+                        footer: _totalPages > 1
+                            ? Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 20,
+                                ),
+                                child: PaginationFooter(
+                                  currentPage: _currentPage,
+                                  totalPages: _totalPages,
+                                  onPrevious: () {
+                                    setState(() {
+                                      _currentPage--;
+                                      _updatePagination();
+                                    });
+                                    _listScrollController.jumpTo(0);
+                                  },
+                                  onNext: () {
+                                    setState(() {
+                                      _currentPage++;
+                                      _updatePagination();
+                                    });
+                                    _listScrollController.jumpTo(0);
+                                  },
+                                ),
+                              )
+                            : null,
                       ),
               ),
             ],
@@ -612,191 +595,83 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 1.2,
             ),
           ),
-          // Hamburger menu button
-          IconButton(
-            onPressed: () => Scaffold.of(context).openEndDrawer(),
-            icon: Icon(
-              Icons.menu,
-              color: isDark ? Colors.grey[300] : Colors.grey[700],
-            ),
-            tooltip: 'Pengaturan',
-          ),
+          const SettingsButton(),
         ],
       ),
     );
   }
 
   Widget _buildFilterSections(bool isDark) {
-    final hasAnyFilters = _allBabGroups.isNotEmpty || _listUU.isNotEmpty;
-
-    if (!hasAnyFilters) return const SizedBox.shrink();
-
-    final blueColor = AppColors.primary;
-    final bgColor = AppColors.card(isDark);
-
+    if (_allBabGroups.isEmpty && _listUU.isEmpty)
+      return const SizedBox.shrink();
+    final desktop =
+        MediaQuery.sizeOf(context).width >= ResponsiveLayout.expanded;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header / Toggle
-          InkWell(
-            onTap: () => setState(() => _filtersExpanded = !_filtersExpanded),
-            borderRadius: _filtersExpanded
-                ? const BorderRadius.vertical(top: Radius.circular(12))
-                : BorderRadius.circular(12),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius: _filtersExpanded
-                    ? const BorderRadius.vertical(top: Radius.circular(12))
-                    : BorderRadius.circular(12),
-                border: _filtersExpanded
-                    ? Border(
-                        bottom: BorderSide(
-                          color: blueColor.withValues(alpha: 0.8),
-                        ),
-                      )
-                    : null,
+          if (!desktop)
+            ListTile(
+              dense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+              tileColor: AppColors.card(isDark),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.tune_rounded,
-                    size: 16,
-                    color: _filtersExpanded
-                        ? blueColor
-                        : (isDark ? Colors.grey[400] : Colors.grey[600]),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Filter',
+              leading: const Icon(Icons.tune_rounded, size: 18),
+              title: const Text('Filter'),
+              trailing: Icon(
+                _filtersExpanded ? Icons.expand_less : Icons.expand_more,
+              ),
+              onTap: () => setState(() => _filtersExpanded = !_filtersExpanded),
+            ),
+          if (desktop || _filtersExpanded)
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final laws = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Undang-Undang',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: _filtersExpanded
-                            ? blueColor
-                            : (isDark ? Colors.grey[200] : Colors.grey[700]),
                       ),
                     ),
-                  ),
-                  if (_selectedBab != null || _selectedFilterUUId != 'ALL')
-                    Container(
-                      margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: blueColor,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '${(_selectedBab != null ? 1 : 0) + (_selectedFilterUUId != 'ALL' ? 1 : 0)}',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                    const SizedBox(height: 8),
+                    Wrap(
+                      runSpacing: 8,
+                      children: [
+                        _buildUUChip('Semua', 'ALL', isDark),
+                        for (final uu in _listUU)
+                          _buildUUChip(uu.kode, uu.id, isDark),
+                      ],
+                    ),
+                  ],
+                );
+                return Padding(
+                  padding: EdgeInsets.only(top: desktop ? 0 : 12),
+                  child: constraints.maxWidth >= 700
+                      ? Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(flex: 2, child: laws),
+                            const SizedBox(width: 24),
+                            Expanded(child: _buildBabRow(isDark)),
+                          ],
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            laws,
+                            const SizedBox(height: 12),
+                            _buildBabRow(isDark),
+                          ],
                         ),
-                      ),
-                    ),
-                  AnimatedRotation(
-                    turns: _filtersExpanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 300),
-                    child: Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      size: 18,
-                      color: _filtersExpanded
-                          ? blueColor
-                          : (isDark ? Colors.grey[400] : Colors.grey[600]),
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
-          ),
-
-          // Content body
-          ClipRect(
-            child: AnimatedAlign(
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeInOutQuart,
-              alignment: Alignment.topCenter,
-              heightFactor: _filtersExpanded ? 1.0 : 0.0,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 300),
-                opacity: _filtersExpanded ? 1.0 : 0.0,
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                  decoration: BoxDecoration(
-                    color: bgColor,
-                    borderRadius: const BorderRadius.vertical(
-                      bottom: Radius.circular(12),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 12),
-                      // Bab section
-                      _buildBabRow(isDark),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 10),
-                      ),
-
-                      // UU section
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.menu_book_outlined,
-                                  size: 13,
-                                  color: blueColor,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Undang-Undang',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark
-                                        ? Colors.grey[400]
-                                        : Colors.grey[700],
-                                    letterSpacing: 0.3,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                _buildUUChip("Semua", 'ALL', isDark),
-                                ..._listUU
-                                    .map(
-                                      (uu) =>
-                                          _buildUUChip(uu.kode, uu.id, isDark),
-                                    )
-                                    .toList(),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );

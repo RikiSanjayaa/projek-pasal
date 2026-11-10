@@ -6,8 +6,9 @@ import '../../core/services/query_service.dart';
 import '../../core/utils/search_utils.dart';
 import '../../models/pasal_model.dart';
 import '../widgets/main_layout.dart';
-import '../widgets/pasal_card.dart';
+import '../widgets/pasal_results_view.dart';
 import '../widgets/adaptive_pasal_browser.dart';
+import '../widgets/settings_drawer.dart';
 
 class ArchiveScreen extends StatefulWidget {
   const ArchiveScreen({super.key});
@@ -22,7 +23,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   List<PasalModel> _paginatedData = [];
 
   int _currentPage = 1;
-  final int _itemsPerPage = 10;
+  final int _itemsPerPage = 30;
   int _totalPages = 1;
 
   final TextEditingController _searchController = TextEditingController();
@@ -119,14 +120,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                           height: 1.2,
                         ),
                       ),
-                      IconButton(
-                        onPressed: () => Scaffold.of(context).openEndDrawer(),
-                        icon: Icon(
-                          Icons.menu,
-                          color: isDark ? Colors.grey[300] : Colors.grey[700],
-                        ),
-                        tooltip: 'Pengaturan',
-                      ),
+                      const SettingsButton(),
                     ],
                   ),
                 ),
@@ -245,30 +239,19 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                             }
                             return false;
                           },
-                          child: ListView.builder(
+                          child: PasalResultsView(
                             controller: _scrollController,
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            itemCount: _paginatedData.length + 1,
-                            itemBuilder: (context, index) {
-                              if (index == _paginatedData.length) {
-                                return _filteredData.length > _itemsPerPage
-                                    ? Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 20,
-                                        ),
-                                        child: _buildPaginationFooter(isDark),
-                                      )
-                                    : const SizedBox(height: 80);
-                              }
-
-                              final pasal = _paginatedData[index];
-                              return PasalCard(
-                                pasal: pasal,
-                                contextList: _filteredData,
-                                searchQuery: _searchQuery,
-                                showUULabel: true,
-                              );
-                            },
+                            items: _paginatedData,
+                            contextList: _filteredData,
+                            searchQuery: _searchQuery,
+                            footer: _totalPages > 1
+                                ? Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 20,
+                                    ),
+                                    child: _buildPaginationFooter(isDark),
+                                  )
+                                : const SizedBox(height: 80),
                           ),
                         ),
                 ),

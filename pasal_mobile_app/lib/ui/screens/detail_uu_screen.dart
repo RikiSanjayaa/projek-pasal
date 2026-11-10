@@ -6,8 +6,7 @@ import '../../models/pasal_model.dart';
 import '../../core/services/query_service.dart';
 import '../../core/services/sync_manager.dart';
 import '../../core/utils/search_utils.dart';
-import '../widgets/pasal_card.dart';
-import '../widgets/search_tier_header.dart';
+import '../widgets/pasal_results_view.dart';
 import '../widgets/settings_drawer.dart';
 import '../utils/uu_color_helper.dart';
 import '../widgets/adaptive_pasal_browser.dart';
@@ -140,7 +139,6 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
     return AdaptivePasalBrowser(
       onBack: widget.onBack,
       child: Scaffold(
-        endDrawer: const SettingsDrawer(),
         appBar: AppBar(
           title: Text(
             widget.undangUndang.kode,
@@ -151,15 +149,7 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
             icon: const Icon(Icons.arrow_back_ios_new),
             onPressed: widget.onBack ?? () => Navigator.maybePop(context),
           ),
-          actions: [
-            Builder(
-              builder: (context) => IconButton(
-                onPressed: () => Scaffold.of(context).openEndDrawer(),
-                icon: Icon(Icons.menu, color: AppColors.icon(isDark)),
-                tooltip: 'Pengaturan',
-              ),
-            ),
-          ],
+          actions: const [SettingsButton()],
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -357,27 +347,12 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
                 },
                 body: _filteredPasal.isEmpty
                     ? _buildEmptySearchState(isDark)
-                    : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                        itemCount: _filteredPasal.length,
-                        itemBuilder: (context, index) {
-                          final card = PasalCard(
-                            pasal: _filteredPasal[index],
-                            contextList: _filteredPasal,
-                            searchQuery: _searchController.text,
-                            showUULabel: false,
-                          );
-                          final header = SearchTierHeader.before(
-                            _searchResult,
-                            _filteredPasal,
-                            index,
-                          );
-                          if (header == null) return card;
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [header, card],
-                          );
-                        },
+                    : PasalResultsView(
+                        items: _filteredPasal,
+                        contextList: _filteredPasal,
+                        searchQuery: _searchController.text,
+                        searchResult: _searchResult,
+                        showUULabel: false,
                       ),
               ),
       ),

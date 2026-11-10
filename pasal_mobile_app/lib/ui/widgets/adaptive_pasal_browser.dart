@@ -12,6 +12,10 @@ class AdaptivePasalBrowser extends StatefulWidget {
   final Widget child;
   final VoidCallback? onBack;
 
+  static bool isReading(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_BrowserScope>()?.reading ??
+      false;
+
   static bool open(
     BuildContext context, {
     required PasalModel pasal,
@@ -54,6 +58,7 @@ class _AdaptivePasalBrowserState extends State<AdaptivePasalBrowser> {
     final active = TickerMode.valuesOf(context).enabled;
     return _BrowserScope(
       state: this,
+      reading: _selected != null,
       child: PopScope(
         canPop: !active || (_selected == null && widget.onBack == null),
         onPopInvokedWithResult: (didPop, _) {
@@ -67,7 +72,8 @@ class _AdaptivePasalBrowserState extends State<AdaptivePasalBrowser> {
         },
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final split = expanded && constraints.maxWidth >= 720;
+            final split =
+                expanded && _selected != null && constraints.maxWidth >= 720;
             final listWidth = split
                 ? (constraints.maxWidth * 0.40).clamp(300.0, 440.0)
                 : constraints.maxWidth;
@@ -82,10 +88,7 @@ class _AdaptivePasalBrowserState extends State<AdaptivePasalBrowser> {
                     offstage: !split && _selected != null,
                     child: TickerMode(
                       enabled: split || _selected == null,
-                      child: ResponsiveContent(
-                        maxWidth: ResponsiveLayout.readingWidth,
-                        child: widget.child,
-                      ),
+                      child: widget.child,
                     ),
                   ),
                 ),
@@ -106,25 +109,9 @@ class _AdaptivePasalBrowserState extends State<AdaptivePasalBrowser> {
                   left: split ? listWidth + 1 : 0,
                   right: 0,
                   child: Offstage(
-                    offstage: !split && _selected == null,
+                    offstage: _selected == null,
                     child: _selected == null
-                        ? Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(32),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.chrome_reader_mode_outlined,
-                                    size: 48,
-                                    color: AppColors.textSecondary(isDark),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const Text('Pilih pasal untuk dibaca'),
-                                ],
-                              ),
-                            ),
-                          )
+                        ? const SizedBox.shrink()
                         : ReadPasalScreen(
                             key: ValueKey(_selection),
                             pasal: _selected!,
@@ -144,10 +131,16 @@ class _AdaptivePasalBrowserState extends State<AdaptivePasalBrowser> {
 }
 
 class _BrowserScope extends InheritedWidget {
-  const _BrowserScope({required this.state, required super.child});
+  const _BrowserScope({
+    required this.state,
+    required this.reading,
+    required super.child,
+  });
 
   final _AdaptivePasalBrowserState state;
+  final bool reading;
 
   @override
-  bool updateShouldNotify(_BrowserScope oldWidget) => false;
+  bool updateShouldNotify(_BrowserScope oldWidget) =>
+      reading != oldWidget.reading;
 }

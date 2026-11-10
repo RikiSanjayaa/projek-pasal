@@ -1,1024 +1,466 @@
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
+
 import '../../core/config/app_colors.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:showcaseview/showcaseview.dart';
-import 'app_showcase.dart';
 import '../../core/config/theme_controller.dart';
 import '../../core/services/auth_service.dart';
-import '../../core/utils/date_format_id.dart';
 import '../../core/services/storage_info_service.dart';
 import '../../core/services/sync_manager.dart';
 import '../../core/services/sync_progress.dart';
-import '../screens/login_screen.dart';
-import 'app_notification.dart';
 import '../../core/services/tutorial_service.dart';
+import '../../core/utils/date_format_id.dart';
+import '../screens/login_screen.dart';
+import '../utils/responsive_layout.dart';
 
-/// A reusable end drawer widget for settings that can be used across all screens.
-/// Usage: Add this as the endDrawer of your Scaffold and use a hamburger icon
-/// to open it with Scaffold.of(context).openEndDrawer()
-class SettingsDrawer extends StatefulWidget {
-  const SettingsDrawer({super.key});
+/// Lets routed screens distinguish the persistent shell from standalone readers.
+class NavigationSettingsScope extends InheritedWidget {
+  const NavigationSettingsScope({super.key, required super.child});
+
+  static bool contains(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<NavigationSettingsScope>() !=
+      null;
 
   @override
-  State<SettingsDrawer> createState() => _SettingsDrawerState();
+  bool updateShouldNotify(NavigationSettingsScope oldWidget) => false;
 }
 
-class _SettingsDrawerState extends State<SettingsDrawer> {
-  final GlobalKey _updateKey = GlobalKey();
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _checkAndShowTutorial(),
-    );
-  }
-
-  void _checkAndShowTutorial() async {
-    final prefs = await SharedPreferences.getInstance();
-    bool hasShown = prefs.getBool('has_shown_settings_showcase') ?? false;
-
-    if (!hasShown && mounted) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          ShowcaseView.get().startShowCase([_updateKey]);
-          prefs.setBool('has_shown_settings_showcase', true);
-        }
-      });
-    }
-  }
-
-  bool _successFeedback = false;
-
-  /// Baris status akses akun: admin tanpa kedaluwarsa akun, pengguna dengan
-  /// tanggal kedaluwarsa bila ada, plus batas akses offline dari server.
-  List<String> _accessLines() {
-    final lines = <String>[];
-    final type = authService.accountType.value;
-    final expiresAt = authService.accountExpiresAt.value;
-    if (type == AccountType.admin) {
-      lines.add('Admin \u2022 Tanpa masa kedaluwarsa akun');
-    } else if (type == AccountType.mobile) {
-      lines.add(
-        expiresAt != null
-            ? 'Akun berlaku hingga ${DateFormatId.short(expiresAt)}'
-            : 'Akun tanpa batas masa aktif',
-      );
-    }
-    final lease = authService.offlineAccessUntil.value;
-    if (lease != null) {
-      lines.add('Akses offline hingga ${DateFormatId.short(lease)}');
-    }
-    return lines;
-  }
+/// Compact screens and standalone routes have one settings entry; shell panels do not.
+class SettingsButton extends StatelessWidget {
+  const SettingsButton({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    return Drawer(
-      width: (screenWidth * 0.85).clamp(0.0, 400.0),
-      backgroundColor: AppColors.scaffold(isDark),
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: AppColors.border(isDark)),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.settings_rounded,
-                      size: 24,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Pengaturan',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : Colors.grey[800],
-                          ),
-                        ),
-                        Text(
-                          'CariPasal v1.0.0',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? Colors.grey[500] : Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close, color: AppColors.icon(isDark)),
-                  ),
-                ],
-              ),
-            ),
-
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // User section
-                    Text(
-                      'Akun',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary(isDark),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ValueListenableBuilder<String?>(
-                      valueListenable: authService.userName,
-                      builder: (context, userName, _) {
-                        return Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.inputFill(isDark),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              // User avatar
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  Icons.person_rounded,
-                                  color: AppColors.primary,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              // User info
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      userName ?? 'Pengguna',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.textPrimary(isDark),
-                                      ),
-                                    ),
-                                    Text(
-                                      authService.currentUserEmail ?? '',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: isDark
-                                            ? Colors.grey[500]
-                                            : Colors.grey[600],
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    ListenableBuilder(
-                                      listenable: Listenable.merge([
-                                        authService.accountType,
-                                        authService.accountExpiresAt,
-                                        authService.offlineAccessUntil,
-                                      ]),
-                                      builder: (context, _) {
-                                        return Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            for (final line in _accessLines())
-                                              Padding(
-                                                padding: const EdgeInsets.only(
-                                                  top: 2,
-                                                ),
-                                                child: Text(
-                                                  line,
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    color: isDark
-                                                        ? Colors.grey[500]
-                                                        : Colors.grey[600],
-                                                  ),
-                                                ),
-                                              ),
-                                          ],
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    // Action buttons row
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildCompactActionButton(
-                            icon: Icons.lock_reset_rounded,
-                            onTap: () =>
-                                _showResetPasswordDialog(context, isDark),
-                            isDark: isDark,
-                            label: 'Ganti Password',
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildCompactActionButton(
-                            icon: Icons.logout_rounded,
-                            onTap: () => _confirmLogout(context, isDark),
-                            isDark: isDark,
-                            isDestructive: true,
-                            label: 'Keluar',
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Theme section
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Tema Aplikasi',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary(isDark),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        ValueListenableBuilder<ThemeMode>(
-                          valueListenable: themeController,
-                          builder: (context, mode, _) {
-                            return Row(
-                              children: [
-                                _buildThemeOption(
-                                  icon: Icons.brightness_auto_rounded,
-                                  label: 'Sistem',
-                                  isSelected: mode == ThemeMode.system,
-                                  onTap: () => themeController.setTheme(
-                                    ThemeMode.system,
-                                  ),
-                                  isDark: isDark,
-                                ),
-                                const SizedBox(width: 8),
-                                _buildThemeOption(
-                                  icon: Icons.light_mode_rounded,
-                                  label: 'Terang',
-                                  isSelected: mode == ThemeMode.light,
-                                  onTap: () =>
-                                      themeController.setTheme(ThemeMode.light),
-                                  isDark: isDark,
-                                ),
-                                const SizedBox(width: 8),
-                                _buildThemeOption(
-                                  icon: Icons.dark_mode_rounded,
-                                  label: 'Gelap',
-                                  isSelected: mode == ThemeMode.dark,
-                                  onTap: () =>
-                                      themeController.setTheme(ThemeMode.dark),
-                                  isDark: isDark,
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Sync section
-                    AppShowcase(
-                      showcaseKey: _updateKey,
-                      title: 'Sinkronisasi Data',
-                      description:
-                          'Status data pasal:\n\n• App memeriksa pembaruan setiap kali dibuka\n• "Data diperbarui" adalah tanggal terakhir admin mengubah data di server\n• Tekan tombol ini untuk memeriksa pembaruan sekarang\n\nPembaruan data tidak terjadwal; banner muncul hanya kalau memang ada data baru.',
-                      shapeBorder: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Sinkronisasi Data',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textSecondary(isDark),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          ValueListenableBuilder<bool>(
-                            valueListenable: syncManager.updateAvailable,
-                            builder: (context, updateAvailable, _) {
-                              return ValueListenableBuilder<SyncState>(
-                                valueListenable: syncManager.state,
-                                builder: (context, state, _) {
-                                  return ValueListenableBuilder<SyncProgress?>(
-                                    valueListenable: syncManager.progress,
-                                    builder: (context, progress, _) {
-                                      final isSyncing =
-                                          state == SyncState.syncing;
-                                      final isChecking =
-                                          state == SyncState.checking;
-                                      final isBusy = isSyncing || isChecking;
-
-                                      final bool showSuccess =
-                                          _successFeedback && !isBusy;
-                                      final bool showUpdateAvailable =
-                                          updateAvailable &&
-                                          !isBusy &&
-                                          !showSuccess;
-
-                                      return GestureDetector(
-                                        onTap: isBusy
-                                            ? null
-                                            : () async {
-                                                if (showUpdateAvailable) {
-                                                  Navigator.pop(context);
-                                                  syncManager.performSync();
-                                                } else {
-                                                  final hasUpdate =
-                                                      await syncManager
-                                                          .checkForUpdates();
-                                                  if (mounted) {
-                                                    if (!hasUpdate) {
-                                                      setState(() {
-                                                        _successFeedback = true;
-                                                      });
-                                                      Future.delayed(
-                                                        const Duration(
-                                                          seconds: 3,
-                                                        ),
-                                                        () {
-                                                          if (mounted) {
-                                                            setState(() {
-                                                              _successFeedback =
-                                                                  false;
-                                                            });
-                                                          }
-                                                        },
-                                                      );
-                                                    } else {
-                                                      Navigator.pop(context);
-                                                    }
-                                                  }
-                                                }
-                                              },
-                                        child: Container(
-                                          padding: const EdgeInsets.all(16),
-                                          decoration: BoxDecoration(
-                                            color: isDark
-                                                ? AppColors.primary.withValues(
-                                                    alpha: 0.1,
-                                                  )
-                                                : AppColors.primary.withValues(
-                                                    alpha: 0.05,
-                                                  ),
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                            border: showUpdateAvailable
-                                                ? Border.all(
-                                                    color: AppColors.primary
-                                                        .withAlpha(100),
-                                                  )
-                                                : null,
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                children: [
-                                                  Container(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                          10,
-                                                        ),
-                                                    decoration: BoxDecoration(
-                                                      color: showSuccess
-                                                          ? Colors.green
-                                                                .withValues(
-                                                                  alpha: 0.1,
-                                                                )
-                                                          : AppColors.primary
-                                                                .withValues(
-                                                                  alpha: 0.1,
-                                                                ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            10,
-                                                          ),
-                                                    ),
-                                                    child: isBusy
-                                                        ? const SizedBox(
-                                                            width: 20,
-                                                            height: 20,
-                                                            child:
-                                                                CircularProgressIndicator(
-                                                                  strokeWidth:
-                                                                      2,
-                                                                ),
-                                                          )
-                                                        : Icon(
-                                                            showSuccess
-                                                                ? Icons
-                                                                      .check_circle
-                                                                : (showUpdateAvailable
-                                                                      ? Icons
-                                                                            .system_update
-                                                                      : Icons
-                                                                            .sync_rounded),
-                                                            color: showSuccess
-                                                                ? AppColors
-                                                                      .success
-                                                                : AppColors
-                                                                      .primary,
-                                                            size: 20,
-                                                          ),
-                                                  ),
-                                                  const SizedBox(width: 16),
-                                                  Expanded(
-                                                    child: Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        Text(
-                                                          showSuccess
-                                                              ? 'Data Sudah Terbaru'
-                                                              : (isChecking
-                                                                    ? 'Memeriksa...'
-                                                                    : (isSyncing
-                                                                          ? 'Sinkronisasi...'
-                                                                          : (showUpdateAvailable
-                                                                                ? 'Update Tersedia'
-                                                                                : 'Periksa Update'))),
-                                                          style: TextStyle(
-                                                            fontSize: 14,
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            color:
-                                                                AppColors.textPrimary(
-                                                                  isDark,
-                                                                ),
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                          height: 2,
-                                                        ),
-                                                        if (isSyncing)
-                                                          Text(
-                                                            progress?.currentOperation ??
-                                                                'Memproses...',
-                                                            style: TextStyle(
-                                                              fontSize: 12,
-                                                              color: isDark
-                                                                  ? Colors
-                                                                        .grey[500]
-                                                                  : Colors
-                                                                        .grey[600],
-                                                            ),
-                                                            maxLines: 1,
-                                                            overflow: TextOverflow
-                                                                .ellipsis,
-                                                          )
-                                                        else
-                                                          for (final line in [
-                                                            'Data diperbarui: ${syncManager.dataUpdatedText}',
-                                                            syncManager.lastSyncTime !=
-                                                                    null
-                                                                ? 'Sync terakhir: ${syncManager.lastSyncText}'
-                                                                : 'Belum pernah sync',
-                                                          ])
-                                                            Text(
-                                                              line,
-                                                              style: TextStyle(
-                                                                fontSize: 12,
-                                                                color: isDark
-                                                                    ? Colors
-                                                                          .grey[500]
-                                                                    : Colors
-                                                                          .grey[600],
-                                                              ),
-                                                              maxLines: 1,
-                                                              overflow:
-                                                                  TextOverflow
-                                                                      .ellipsis,
-                                                            ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  if (isSyncing)
-                                                    IconButton(
-                                                      icon: Icon(
-                                                        Icons.close_rounded,
-                                                        color: isDark
-                                                            ? Colors.grey[500]
-                                                            : Colors.grey[400],
-                                                        size: 20,
-                                                      ),
-                                                      onPressed: () =>
-                                                          syncManager
-                                                              .cancelSync(),
-                                                      tooltip: 'Batalkan',
-                                                      padding: EdgeInsets.zero,
-                                                      constraints:
-                                                          const BoxConstraints(),
-                                                    )
-                                                  else if (!isChecking &&
-                                                      !showSuccess)
-                                                    Icon(
-                                                      Icons.chevron_right,
-                                                      color: isDark
-                                                          ? Colors.grey[600]
-                                                          : Colors.grey[400],
-                                                    ),
-                                                ],
-                                              ),
-                                              if (isSyncing &&
-                                                  progress != null) ...[
-                                                const SizedBox(height: 12),
-                                                ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(4),
-                                                  child: LinearProgressIndicator(
-                                                    value: progress.progress,
-                                                    minHeight: 6,
-                                                    backgroundColor: isDark
-                                                        ? Colors.grey[700]
-                                                        : Colors.grey[300],
-                                                    valueColor:
-                                                        const AlwaysStoppedAnimation<
-                                                          Color
-                                                        >(AppColors.primary),
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 8),
-                                                Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment
-                                                          .spaceBetween,
-                                                  children: [
-                                                    Text(
-                                                      "${progress.progressPercent}%",
-                                                      style: TextStyle(
-                                                        color:
-                                                            AppColors.primary,
-                                                        fontSize: 12,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                    if (progress
-                                                            .estimatedRemainingFormatted !=
-                                                        null)
-                                                      Text(
-                                                        progress
-                                                            .estimatedRemainingFormatted!,
-                                                        style: TextStyle(
-                                                          color: isDark
-                                                              ? Colors.grey[500]
-                                                              : Colors
-                                                                    .grey[600],
-                                                          fontSize: 11,
-                                                        ),
-                                                      ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Storage Info section (only show on native platforms, not web)
-                    if (!kIsWeb) ...[
-                      const SizedBox(height: 24),
-
-                      Text(
-                        'Penyimpanan Lokal',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary(isDark),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      FutureBuilder<StorageInfo>(
-                        future: storageInfoService.getStorageInfo(),
-                        builder: (context, snapshot) {
-                          final isLoading =
-                              snapshot.connectionState ==
-                              ConnectionState.waiting;
-                          final info = snapshot.data;
-
-                          return Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: AppColors.inputFill(isDark),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primary.withValues(
-                                          alpha: 0.1,
-                                        ),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Icon(
-                                        kIsWeb
-                                            ? Icons.storage_rounded
-                                            : Icons.folder_rounded,
-                                        color: AppColors.primary,
-                                        size: 20,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            isLoading
-                                                ? 'Memuat...'
-                                                : (info?.summary ??
-                                                      'Tidak tersedia'),
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppColors.textPrimary(
-                                                isDark,
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            isLoading
-                                                ? 'Menghitung ukuran...'
-                                                : (info?.storageType ??
-                                                      'Tidak tersedia'),
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: isDark
-                                                  ? Colors.grey[500]
-                                                  : Colors.grey[600],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (!isLoading &&
-                                    info != null &&
-                                    info.isAvailable) ...[
-                                  const SizedBox(height: 12),
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: isDark
-                                          ? AppColors.bottomNav(isDark)
-                                          : AppColors.scaffold(isDark),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        _buildStorageInfoItem(
-                                          icon: Icons.article_rounded,
-                                          label: 'Pasal',
-                                          value: '${info.pasalCount}',
-                                          isDark: isDark,
-                                        ),
-                                        Container(
-                                          width: 1,
-                                          height: 30,
-                                          color: isDark
-                                              ? Colors.grey[700]
-                                              : Colors.grey[300],
-                                        ),
-                                        _buildStorageInfoItem(
-                                          icon: Icons.auto_stories_rounded,
-                                          label: 'UU',
-                                          value: '${info.uuCount}',
-                                          isDark: isDark,
-                                        ),
-                                        if (!kIsWeb) ...[
-                                          Container(
-                                            width: 1,
-                                            height: 30,
-                                            color: isDark
-                                                ? Colors.grey[700]
-                                                : Colors.grey[300],
-                                          ),
-                                          _buildStorageInfoItem(
-                                            icon: Icons.data_usage_rounded,
-                                            label: 'Ukuran',
-                                            value: info.formattedSize,
-                                            isDark: isDark,
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ], // end of if (!kIsWeb)
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCompactActionButton({
-    required IconData icon,
-    required VoidCallback onTap,
-    required bool isDark,
-    required String label,
-    bool isDestructive = false,
-  }) {
-    final color = isDestructive ? AppColors.error : AppColors.primary;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: isDark ? 0.15 : 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showResetPasswordDialog(BuildContext context, bool isDark) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.card(isDark),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          "Ganti Password",
-          style: TextStyle(
-            color: AppColors.textPrimary(isDark),
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          "Reset password email belum tersedia di backend Laravel lokal. Hubungi admin untuk dibuatkan password awal baru.",
-          style: TextStyle(color: AppColors.textSecondary(isDark)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.textSecondary(isDark),
-            ),
-            child: const Text("Batal"),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              Navigator.pop(context);
-
-              if (context.mounted) {
-                AppNotification.show(
-                  context,
-                  'Reset password belum tersedia di backend Laravel.',
-                  color: AppColors.warning,
-                  icon: Icons.info_outline_rounded,
-                );
-              }
-            },
-            style: TextButton.styleFrom(foregroundColor: AppColors.primary),
-            child: const Text("Mengerti"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmLogout(BuildContext context, bool isDark) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.card(isDark),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          "Keluar dari Akun?",
-          style: TextStyle(
-            color: AppColors.textPrimary(isDark),
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          "Anda perlu login kembali untuk mengakses aplikasi.",
-          style: TextStyle(color: AppColors.textSecondary(isDark)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.textSecondary(isDark),
-            ),
-            child: const Text("Batal"),
-          ),
-          TextButton(
-            onPressed: () async {
-              await TutorialService.resetAll();
-              await authService.logout();
-
-              if (!dialogContext.mounted) return;
-
-              Navigator.pop(dialogContext);
-              Navigator.pushAndRemoveUntil(
-                dialogContext,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
-            },
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text("Keluar"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildThemeOption({
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required bool isDark,
-  }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.primary.withValues(alpha: isDark ? 0.1 : 0.05)
-                : AppColors.inputFill(isDark),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected
-                  ? AppColors.primary.withValues(alpha: isDark ? 0.5 : 0.3)
-                  : Colors.transparent,
-              width: 2,
-            ),
-          ),
-          child: Column(
-            children: [
-              Icon(
-                icon,
-                size: 24,
-                color: isSelected
-                    ? AppColors.primary
-                    : (isDark ? Colors.grey[500] : Colors.grey[600]),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  color: isSelected
-                      ? AppColors.primary
-                      : AppColors.textSecondary(isDark),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStorageInfoItem({
-    required IconData icon,
-    required String label,
-    required String value,
-    required bool isDark,
-  }) {
-    return Expanded(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 16,
-            color: isDark ? Colors.grey[400] : Colors.grey[600],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(isDark),
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: isDark ? Colors.grey[500] : Colors.grey[600],
-            ),
-          ),
-        ],
-      ),
+    if (MediaQuery.sizeOf(context).width >= ResponsiveLayout.medium &&
+        NavigationSettingsScope.contains(context)) {
+      return const SizedBox.shrink();
+    }
+    return IconButton(
+      tooltip: 'Pengaturan',
+      icon: const Icon(Icons.settings_outlined),
+      onPressed: () => openSettingsDrawer(context),
     );
   }
 }
 
-/// Helper function to show settings drawer
-/// Use this when you need to open the drawer programmatically from a hamburger icon
-void openSettingsDrawer(BuildContext context) {
-  Scaffold.of(context).openEndDrawer();
+bool _settingsOpen = false;
+
+Future<void> openSettingsDrawer(BuildContext context) async {
+  if (_settingsOpen) return;
+  _settingsOpen = true;
+  try {
+    await showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Tutup pengaturan',
+      pageBuilder: (context, _, _) => const Align(
+        alignment: Alignment.centerRight,
+        child: SettingsDrawer(),
+      ),
+    );
+  } finally {
+    _settingsOpen = false;
+  }
+}
+
+class SettingsDrawer extends StatelessWidget {
+  const SettingsDrawer({super.key});
+
+  @override
+  Widget build(BuildContext context) => Drawer(
+    width: (MediaQuery.sizeOf(context).width * .9).clamp(0.0, 400.0),
+    backgroundColor: AppColors.card(
+      Theme.of(context).brightness == Brightness.dark,
+    ),
+    child: SafeArea(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 8, 8),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Pengaturan',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Tutup pengaturan',
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          const Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(20),
+              child: SettingsControls(),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Shared controls for the mobile panel and the persistent desktop sidebar.
+class SettingsControls extends StatefulWidget {
+  const SettingsControls({
+    super.key,
+    this.sidebar = false,
+    this.collapsed = false,
+    this.accountOnly = false,
+  });
+
+  final bool sidebar;
+  final bool collapsed;
+  final bool accountOnly;
+
+  @override
+  State<SettingsControls> createState() => _SettingsControlsState();
+}
+
+class _SettingsControlsState extends State<SettingsControls> {
+  bool _success = false;
+
+  List<String> _accessLines() {
+    final lines = <String>[];
+    final expires = authService.accountExpiresAt.value;
+    if (authService.accountType.value == AccountType.admin) {
+      lines.add('Admin • Tanpa masa kedaluwarsa akun');
+    } else if (authService.accountType.value == AccountType.mobile) {
+      lines.add(
+        expires == null
+            ? 'Akun tanpa batas masa aktif'
+            : 'Akun berlaku hingga ${DateFormatId.short(expires)}',
+      );
+    }
+    final lease = authService.offlineAccessUntil.value;
+    if (lease != null)
+      lines.add('Akses offline hingga ${DateFormatId.short(lease)}');
+    return lines;
+  }
+
+  Future<void> _accountDialog() => showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Akun'),
+      content: const SizedBox(
+        width: 340,
+        child: SingleChildScrollView(
+          child: SettingsControls(accountOnly: true),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Tutup'),
+        ),
+      ],
+    ),
+  );
+
+  Future<void> _passwordDialog() => showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Ganti Password'),
+      content: const Text(
+        'Reset password email belum tersedia di backend Laravel lokal. Hubungi admin untuk dibuatkan password awal baru.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Mengerti'),
+        ),
+      ],
+    ),
+  );
+
+  Future<void> _logout() => showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Keluar dari Akun?'),
+      content: const Text('Anda perlu login kembali untuk mengakses aplikasi.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Batal'),
+        ),
+        TextButton(
+          onPressed: () async {
+            final navigator = Navigator.of(dialogContext);
+            await TutorialService.resetAll();
+            await authService.logout();
+            if (!dialogContext.mounted) return;
+            navigator.pushAndRemoveUntil(
+              MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+              (_) => false,
+            );
+          },
+          style: TextButton.styleFrom(foregroundColor: AppColors.error),
+          child: const Text('Keluar'),
+        ),
+      ],
+    ),
+  );
+
+  Future<void> _checkUpdate() async {
+    if (syncManager.state.value == SyncState.checking ||
+        syncManager.state.value == SyncState.syncing)
+      return;
+    if (syncManager.updateAvailable.value) {
+      await syncManager.performSync();
+    } else {
+      final hasUpdate = await syncManager.checkForUpdates();
+      if (!mounted) return;
+      setState(
+        () =>
+            _success = !hasUpdate && syncManager.state.value == SyncState.idle,
+      );
+    }
+  }
+
+  Widget _themes() => ValueListenableBuilder<ThemeMode>(
+    valueListenable: themeController,
+    builder: (context, mode, _) {
+      const options = [
+        (ThemeMode.system, Icons.brightness_auto_outlined, 'Sistem'),
+        (ThemeMode.light, Icons.light_mode_outlined, 'Terang'),
+        (ThemeMode.dark, Icons.dark_mode_outlined, 'Gelap'),
+      ];
+      if (widget.collapsed) {
+        return PopupMenuButton<ThemeMode>(
+          tooltip: 'Tema aplikasi',
+          initialValue: mode,
+          icon: Icon(options.firstWhere((o) => o.$1 == mode).$2),
+          onSelected: themeController.setTheme,
+          itemBuilder: (_) => [
+            for (final option in options)
+              CheckedPopupMenuItem(
+                value: option.$1,
+                checked: option.$1 == mode,
+                child: Text(option.$3),
+              ),
+          ],
+        );
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Tema',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              for (final option in options)
+                Expanded(
+                  child: Tooltip(
+                    message: option.$3,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: TextButton(
+                        onPressed: () => themeController.setTheme(option.$1),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          backgroundColor: mode == option.$1
+                              ? AppColors.primary.withValues(alpha: .1)
+                              : null,
+                          foregroundColor: mode == option.$1
+                              ? AppColors.primary
+                              : AppColors.textSecondary(
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark,
+                                ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(option.$2, size: 20),
+                            const SizedBox(height: 4),
+                            Text(
+                              option.$3,
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      );
+    },
+  );
+
+  Widget _sync() => ValueListenableBuilder<SyncState>(
+    valueListenable: syncManager.state,
+    builder: (context, state, _) => ValueListenableBuilder<bool>(
+      valueListenable: syncManager.updateAvailable,
+      builder: (context, available, _) => ValueListenableBuilder<SyncProgress?>(
+        valueListenable: syncManager.progress,
+        builder: (context, progress, _) {
+          final busy =
+              state == SyncState.checking || state == SyncState.syncing;
+          final label = switch (state) {
+            SyncState.checking => 'Memeriksa...',
+            SyncState.syncing => 'Sinkronisasi...',
+            _ =>
+              available
+                  ? 'Update Tersedia'
+                  : (_success ? 'Data Sudah Terbaru' : 'Periksa Update'),
+          };
+          final icon = busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Icon(
+                  available ? Icons.system_update_outlined : Icons.sync_rounded,
+                  size: 20,
+                );
+          if (widget.collapsed) {
+            return IconButton(
+              tooltip: label,
+              onPressed: busy ? null : _checkUpdate,
+              icon: icon,
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: icon,
+                title: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: Text(
+                  state == SyncState.syncing
+                      ? (progress?.currentOperation ?? 'Memproses...')
+                      : 'Data: ${syncManager.dataUpdatedText}\nSync: ${syncManager.lastSyncText}',
+                  style: const TextStyle(fontSize: 11),
+                ),
+                onTap: busy ? null : _checkUpdate,
+              ),
+              if (state == SyncState.syncing) ...[
+                LinearProgressIndicator(value: progress?.progress),
+                TextButton.icon(
+                  onPressed: syncManager.cancelSync,
+                  icon: const Icon(Icons.close, size: 16),
+                  label: const Text('Batalkan'),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    ),
+  );
+
+  Widget _account() => ValueListenableBuilder<String?>(
+    valueListenable: authService.userName,
+    builder: (context, name, _) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          name ?? 'Pengguna',
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          authService.currentUserEmail ?? '',
+          style: const TextStyle(fontSize: 12),
+        ),
+        for (final line in _accessLines())
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(line, style: const TextStyle(fontSize: 11)),
+          ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: [
+            TextButton.icon(
+              onPressed: _passwordDialog,
+              icon: const Icon(Icons.lock_reset, size: 18),
+              label: const Text('Ganti Password'),
+            ),
+            TextButton.icon(
+              onPressed: _logout,
+              icon: const Icon(Icons.logout, size: 18),
+              label: const Text('Keluar'),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.accountOnly) return _account();
+    return Column(
+      crossAxisAlignment: widget.collapsed
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (!widget.sidebar) ...[_account(), const Divider(height: 32)],
+        _themes(),
+        const SizedBox(height: 8),
+        _sync(),
+        if (widget.sidebar) ...[
+          const Divider(height: 24),
+          ValueListenableBuilder<String?>(
+            valueListenable: authService.userName,
+            builder: (context, name, _) => widget.collapsed
+                ? IconButton(
+                    tooltip: 'Akun',
+                    onPressed: _accountDialog,
+                    icon: const Icon(Icons.account_circle_outlined),
+                  )
+                : ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.account_circle_outlined),
+                    title: Text(
+                      name ?? 'Pengguna',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    subtitle: const Text(
+                      'Akun',
+                      style: TextStyle(fontSize: 11),
+                    ),
+                    onTap: _accountDialog,
+                  ),
+          ),
+        ],
+        if (!kIsWeb && !widget.sidebar) ...[
+          const Divider(height: 32),
+          FutureBuilder<StorageInfo>(
+            future: storageInfoService.getStorageInfo(),
+            builder: (context, snapshot) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.storage_outlined),
+              title: Text(snapshot.data?.summary ?? 'Memuat penyimpanan...'),
+              subtitle: Text(snapshot.data?.formattedSize ?? ''),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 }
