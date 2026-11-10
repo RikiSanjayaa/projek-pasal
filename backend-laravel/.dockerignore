@@ -3,3 +3,7 @@
 node_modules
 storage/logs/*.log
 vendor
+storage/app
+storage/framework/testing
+.env
+.env.docker

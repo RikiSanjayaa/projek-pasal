@@ -31,6 +31,8 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:${BACKEND_PORT}:8000"
+    volumes:
+      - caripasal_law_documents:/var/www/html/storage/app/private/law-documents
     depends_on:
       postgres:
         condition: service_healthy
@@ -53,6 +55,7 @@ services:
     restart: unless-stopped
     volumes:
       - caripasal_import_cache:/var/www/html/storage/app/import-cache
+      - caripasal_law_documents:/var/www/html/storage/app/private/law-documents
     depends_on:
       postgres:
         condition: service_healthy
@@ -82,3 +85,4 @@ services:
 volumes:
   caripasal_postgres_data:
   caripasal_import_cache:
+  caripasal_law_documents:

@@ -26,11 +26,19 @@ class ImportRunProcessor
 
     public function process(ImportRun $run): void
     {
+        if (! config('services.datahukum.enabled')) {
+            $this->fail($run, 'Pengambilan sumber dinonaktifkan. Tidak ada data yang diubah.');
+            return;
+        }
+        if (! $run->source_config) {
+            $this->fail($run, 'Snapshot konfigurasi tidak tersedia. Buat pengecekan baru.');
+            return;
+        }
         $run->update(['status' => ImportRun::RUNNING, 'started_at' => now(), 'error' => null]);
 
         try {
             $previous = Pasal::where('undang_undang_id', $run->undang_undang_id)->count();
-            $result = $this->pipeline->fetch($run->slug, $previous);
+            $result = $this->pipeline->fetch($run->source_config, $previous);
         } catch (ProcessTimedOutException) {
             $this->fail($run, 'Pengambilan data melewati batas waktu. Coba lagi nanti.');
 
@@ -65,7 +73,7 @@ class ImportRunProcessor
             $run->update($meta + [
                 'status' => ImportRun::NEEDS_CONFIG,
                 'finished_at' => now(),
-                'error' => 'Sumber memuat versi UU yang belum dikonfigurasi ('.implode(', ', $meta['unknown_versions']).'). Minta developer menambahkannya di import-tools/laws. Tidak ada data yang diubah.',
+                'error' => 'Sumber memuat versi UU yang belum dikenali ('.implode(', ', $meta['unknown_versions']).'). Tinjau konfigurasi sumber bersama pengelola teknis. Tidak ada data yang diubah.',
             ]);
 
             return;

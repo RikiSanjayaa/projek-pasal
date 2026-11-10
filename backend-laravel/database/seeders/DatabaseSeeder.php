@@ -50,10 +50,10 @@ class DatabaseSeeder extends Seeder
                 "kode" => "KUHAP",
                 "nama" => "Kitab Undang-Undang Hukum Acara Pidana",
                 "nama_lengkap" =>
-                    "Undang-Undang Nomor 8 Tahun 1981 tentang Hukum Acara Pidana",
+                    "Undang-Undang Nomor 20 Tahun 2025 tentang Kitab Undang-Undang Hukum Acara Pidana",
                 "deskripsi" =>
                     "Kerangka hukum acara pidana untuk melengkapi referensi pidana materiil.",
-                "tahun" => 1981,
+                "tahun" => 2025,
                 "is_active" => true,
             ],
             [
