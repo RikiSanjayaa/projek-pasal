@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/config/app_colors.dart';
 import '../../core/config/app_theme.dart';
+import 'interactive_surface.dart';
 import '../../core/config/theme_controller.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/storage_info_service.dart';
@@ -232,6 +233,7 @@ class _SettingsControlsState extends State<SettingsControls> {
   Widget _themes() => ValueListenableBuilder<ThemeMode>(
     valueListenable: themeController,
     builder: (context, mode, _) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
       const options = [
         (ThemeMode.system, Icons.brightness_auto_outlined, 'Sistem'),
         (ThemeMode.light, Icons.light_mode_outlined, 'Terang'),
@@ -258,10 +260,10 @@ class _SettingsControlsState extends State<SettingsControls> {
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           backgroundColor: mode == option.$1
-                              ? AppColors.primary.withValues(alpha: .1)
+                              ? AppColors.selected(isDark)
                               : null,
                           foregroundColor: mode == option.$1
-                              ? AppColors.primary
+                              ? AppColors.accent(isDark)
                               : AppColors.textSecondary(
                                   Theme.of(context).brightness ==
                                       Brightness.dark,
@@ -326,23 +328,29 @@ class _SettingsControlsState extends State<SettingsControls> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: icon,
-                title: Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+              InteractiveSurface(
+                borderRadius: BorderRadius.circular(10),
+                showBorder: false,
+                onTap: busy ? null : _checkUpdate,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  minLeadingWidth: 24,
+                  horizontalTitleGap: 12,
+                  leading: icon,
+                  title: Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    state == SyncState.syncing
+                        ? (progress?.currentOperation ?? 'Memproses...')
+                        : 'Data: ${syncManager.dataUpdatedText}\nSync: ${syncManager.lastSyncText}',
+                    style: const TextStyle(fontSize: 11),
                   ),
                 ),
-                subtitle: Text(
-                  state == SyncState.syncing
-                      ? (progress?.currentOperation ?? 'Memproses...')
-                      : 'Data: ${syncManager.dataUpdatedText}\nSync: ${syncManager.lastSyncText}',
-                  style: const TextStyle(fontSize: 11),
-                ),
-                onTap: busy ? null : _checkUpdate,
               ),
               if (state == SyncState.syncing) ...[
                 LinearProgressIndicator(value: progress?.progress),
@@ -431,20 +439,28 @@ class _SettingsControlsState extends State<SettingsControls> {
                     onPressed: _accountDialog,
                     icon: const Icon(Icons.account_circle_outlined),
                   )
-                : ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.account_circle_outlined),
-                    title: Text(
-                      name ?? 'Pengguna',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                    subtitle: const Text(
-                      'Profil',
-                      style: TextStyle(fontSize: 11),
-                    ),
+                : InteractiveSurface(
+                    borderRadius: BorderRadius.circular(10),
+                    showBorder: false,
                     onTap: _accountDialog,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                      ),
+                      minLeadingWidth: 24,
+                      horizontalTitleGap: 12,
+                      leading: const Icon(Icons.account_circle_outlined),
+                      title: Text(
+                        name ?? 'Pengguna',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                      subtitle: const Text(
+                        'Profil',
+                        style: TextStyle(fontSize: 11),
+                      ),
+                    ),
                   ),
           ),
         ],

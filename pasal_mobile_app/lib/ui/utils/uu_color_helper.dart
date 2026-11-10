@@ -38,8 +38,35 @@ class UUColorHelper {
     Color(0xFF4338CA), // Indigo 700
   ];
 
-  /// Get a consistent color for a given UU Code.
-  static Color getColor(String? code) {
+  /// Foreground shades retain the law hue while remaining readable on tints.
+  static Color getColor(String? code, {required bool isDark}) {
+    final shades = _foregroundShades[_getBaseColor(code).toARGB32()]!;
+    return isDark ? shades.$2 : shades.$1;
+  }
+
+  static const _foregroundShades = <int, (Color, Color)>{
+    0xFFDC2626: (Color(0xFFB91C1C), Color(0xFFFCA5A5)),
+    0xFF2563EB: (Color(0xFF1D4ED8), Color(0xFF93C5FD)),
+    0xFF059669: (Color(0xFF047857), Color(0xFF6EE7B7)),
+    0xFFD97706: (Color(0xFF92400E), Color(0xFFFCD34D)),
+    0xFF7C3AED: (Color(0xFF6D28D9), Color(0xFFC4B5FD)),
+    0xFFDB2777: (Color(0xFFBE185D), Color(0xFFF9A8D4)),
+    0xFF0891B2: (Color(0xFF0E7490), Color(0xFF67E8F9)),
+    0xFF4F46E5: (Color(0xFF4338CA), Color(0xFFA5B4FC)),
+    0xFFEA580C: (Color(0xFF9A3412), Color(0xFFFDBA74)),
+    0xFF65A30D: (Color(0xFF3F6212), Color(0xFFBEF264)),
+    0xFF0D9488: (Color(0xFF0F766E), Color(0xFF5EEAD4)),
+    0xFF9333EA: (Color(0xFF7E22CE), Color(0xFFD8B4FE)),
+    0xFFC026D3: (Color(0xFFA21CAF), Color(0xFFF0ABFC)),
+    0xFFE11D48: (Color(0xFFBE123C), Color(0xFFFDA4AF)),
+    0xFF4B5563: (Color(0xFF4B5563), Color(0xFFCBD5E1)),
+    0xFFB45309: (Color(0xFF92400E), Color(0xFFFCD34D)),
+    0xFF15803D: (Color(0xFF166534), Color(0xFF86EFAC)),
+    0xFF4338CA: (Color(0xFF3730A3), Color(0xFFA5B4FC)),
+    0xFF9E9E9E: (Color(0xFF4B5563), Color(0xFFCBD5E1)),
+  };
+
+  static Color _getBaseColor(String? code) {
     if (code == null || code.trim().isEmpty) {
       return Colors.grey;
     }

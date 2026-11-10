@@ -9,12 +9,12 @@ import '../../models/undang_undang_model.dart';
 import '../../core/services/query_service.dart';
 import '../../core/utils/search_utils.dart';
 import '../../core/utils/bab_utils.dart';
-import '../widgets/pasal_results_view.dart';
+import '../widgets/explore_pasal_results.dart';
 import '../widgets/search_tier_header.dart';
 import '../widgets/main_layout.dart';
 import '../widgets/bab_bottom_sheet.dart';
-import '../widgets/pagination_footer.dart';
 import '../widgets/filter_widgets.dart';
+import '../widgets/interactive_surface.dart';
 
 import 'package:showcaseview/showcaseview.dart';
 
@@ -24,7 +24,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../widgets/adaptive_pasal_browser.dart';
 import '../widgets/settings_drawer.dart';
-import '../utils/responsive_layout.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -39,7 +38,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<PasalModel> _allPasalCache = [];
   List<PasalModel> _filteredData = [];
-  List<PasalModel> _paginatedData = [];
   List<UndangUndangModel> _listUU = [];
   List<BabGroup> _allBabGroups = [];
 
@@ -64,10 +62,6 @@ class _HomeScreenState extends State<HomeScreen> {
   final FocusNode _searchFocusNode = FocusNode();
 
   bool _filtersExpanded = false;
-
-  int _currentPage = 1;
-  final int _itemsPerPage = 30;
-  int _totalPages = 1;
 
   final ScrollController _listScrollController = ScrollController();
 
@@ -239,22 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _searchResult = result;
       _effectiveQuery = corrected ?? _searchQuery;
       _filteredData = source;
-      _totalPages = (_filteredData.length / _itemsPerPage).ceil();
-      if (_totalPages == 0) _totalPages = 1;
-      _currentPage = 1;
-      _updatePagination();
     });
-  }
-
-  void _updatePagination() {
-    int startIndex = (_currentPage - 1) * _itemsPerPage;
-    int endIndex = startIndex + _itemsPerPage;
-    if (startIndex >= _filteredData.length) {
-      _paginatedData = [];
-    } else {
-      if (endIndex > _filteredData.length) endIndex = _filteredData.length;
-      _paginatedData = _filteredData.sublist(startIndex, endIndex);
-    }
   }
 
   Widget _buildEmptySearchState(bool isDark) {
@@ -289,7 +268,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 "Coba cari dengan kata ini:",
                 style: TextStyle(
-                  color: isDark ? Colors.grey[500] : Colors.grey[600],
+                  color: AppColors.textSecondary(isDark),
                   fontSize: 12,
                 ),
                 textAlign: TextAlign.center,
@@ -343,13 +322,19 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeader(isDark),
+              Container(
+                width: double.infinity,
+                color: AppColors.appBar(isDark),
+                foregroundDecoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: AppColors.border(isDark)),
+                  ),
+                ),
+                child: _buildHeader(isDark),
+              ),
 
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 5,
-                ),
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 5),
                 child: AppShowcase(
                   showcaseKey: _searchKey,
                   title: 'Cari Pasal',
@@ -375,7 +360,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     decoration: InputDecoration(
                       hintText: "Cari nomor, nama atau isi pasal...",
                       hintStyle: TextStyle(
-                        color: isDark ? Colors.white70 : Colors.black54,
+                        color: AppColors.textSecondary(isDark),
                       ),
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: _searchQuery.isNotEmpty
@@ -391,10 +376,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           : null,
                       filled: true,
                       fillColor: AppColors.inputFill(isDark),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
@@ -484,7 +465,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     if (_searchQuery.isNotEmpty &&
                         _filteredData.isNotEmpty) ...[
-                      InkWell(
+                      InteractiveSurface(
                         onTap: () {
                           PdfExportService.exportBatchPasal(
                             pasalList: _filteredData,
@@ -492,16 +473,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           );
                         },
                         borderRadius: BorderRadius.circular(8),
-                        child: Container(
+                        showBorder: false,
+                        color: Color.alphaBlend(
+                          AppColors.primary.withValues(
+                            alpha: isDark ? 0.15 : 0.08,
+                          ),
+                          AppColors.scaffold(isDark),
+                        ),
+                        child: Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8.0,
                             vertical: 8.0,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(
-                              alpha: isDark ? 0.15 : 0.08,
-                            ),
-                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -509,7 +491,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               Icon(
                                 Icons.picture_as_pdf_outlined,
                                 size: 20,
-                                color: AppColors.primary,
+                                color: AppColors.accent(isDark),
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -517,7 +499,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.primary,
+                                  color: AppColors.accent(isDark),
                                 ),
                               ),
                             ],
@@ -539,39 +521,13 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 10),
 
               Expanded(
-                child: _paginatedData.isEmpty
+                child: _filteredData.isEmpty
                     ? _buildEmptySearchState(isDark)
-                    : PasalResultsView(
+                    : ExplorePasalResults(
                         controller: _listScrollController,
-                        items: _paginatedData,
-                        contextList: _filteredData,
+                        items: _filteredData,
                         searchQuery: _effectiveQuery,
                         searchResult: _searchResult,
-                        footer: _totalPages > 1
-                            ? Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 20,
-                                ),
-                                child: PaginationFooter(
-                                  currentPage: _currentPage,
-                                  totalPages: _totalPages,
-                                  onPrevious: () {
-                                    setState(() {
-                                      _currentPage--;
-                                      _updatePagination();
-                                    });
-                                    _listScrollController.jumpTo(0);
-                                  },
-                                  onNext: () {
-                                    setState(() {
-                                      _currentPage++;
-                                      _updatePagination();
-                                    });
-                                    _listScrollController.jumpTo(0);
-                                  },
-                                ),
-                              )
-                            : null,
                       ),
               ),
             ],
@@ -583,6 +539,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHeader(bool isDark) {
     return Container(
+      constraints: const BoxConstraints(minHeight: kToolbarHeight),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -604,120 +561,96 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildFilterSections(bool isDark) {
     if (_allBabGroups.isEmpty && _listUU.isEmpty)
       return const SizedBox.shrink();
-    final desktop =
-        MediaQuery.sizeOf(context).width >= ResponsiveLayout.expanded;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!desktop)
-            ListTile(
-              dense: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-              tileColor: AppColors.card(isDark),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              leading: const Icon(Icons.tune_rounded, size: 18),
-              title: const Text('Filter'),
-              trailing: Icon(
-                _filtersExpanded ? Icons.expand_less : Icons.expand_more,
-              ),
-              onTap: () => setState(() => _filtersExpanded = !_filtersExpanded),
-            ),
-          if (desktop || _filtersExpanded)
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final laws = Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Undang-Undang',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
+    return LayoutBuilder(
+      builder: (context, panelConstraints) {
+        // Keep 700 px for the two filter columns plus their 40 px page inset.
+        final wide = panelConstraints.maxWidth >= 740;
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!wide)
+                InteractiveSurface(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () =>
+                      setState(() => _filtersExpanded = !_filtersExpanded),
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      runSpacing: 8,
+                    leading: const Icon(Icons.tune_rounded, size: 18),
+                    title: const Text('Filter'),
+                    trailing: Icon(
+                      _filtersExpanded ? Icons.expand_less : Icons.expand_more,
+                    ),
+                  ),
+                ),
+              if (wide || _filtersExpanded)
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final laws = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildUUChip('Semua', 'ALL', isDark),
-                        for (final uu in _listUU)
-                          _buildUUChip(uu.kode, uu.id, isDark),
-                      ],
-                    ),
-                  ],
-                );
-                return Padding(
-                  padding: EdgeInsets.only(top: desktop ? 0 : 12),
-                  child: constraints.maxWidth >= 700
-                      ? Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        const Text(
+                          'Undang-Undang',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          runSpacing: 8,
                           children: [
-                            Expanded(flex: 2, child: laws),
-                            const SizedBox(width: 24),
-                            Expanded(child: _buildBabRow(isDark)),
-                          ],
-                        )
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            laws,
-                            const SizedBox(height: 12),
-                            _buildBabRow(isDark),
+                            _buildUUChip('Semua', 'ALL', isDark),
+                            for (final uu in _listUU)
+                              _buildUUChip(uu.kode, uu.id, isDark),
                           ],
                         ),
-                );
-              },
-            ),
-        ],
-      ),
+                      ],
+                    );
+                    return Padding(
+                      padding: EdgeInsets.only(top: wide ? 0 : 12),
+                      child: constraints.maxWidth >= 700
+                          ? Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(flex: 2, child: laws),
+                                const SizedBox(width: 24),
+                                Expanded(child: _buildBabRow(isDark)),
+                              ],
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                laws,
+                                const SizedBox(height: 12),
+                                _buildBabRow(isDark),
+                              ],
+                            ),
+                    );
+                  },
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildUUChip(String label, String id, bool isDark) {
-    final bool isSelected = _selectedFilterUUId == id;
-    final blueColor = AppColors.primary;
-
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: InkWell(
-        onTap: () => _selectUU(id),
-        borderRadius: BorderRadius.circular(20),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? blueColor : AppColors.card(isDark),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isSelected
-                  ? blueColor
-                  : (isDark ? Colors.grey[700]! : Colors.grey[200]!),
-              width: 1,
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              color: isSelected
-                  ? Colors.white
-                  : (isDark ? Colors.grey[300] : Colors.grey[600]),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _buildUUChip(String label, String id, bool isDark) => SelectableChip(
+    label: label,
+    isSelected: _selectedFilterUUId == id,
+    onTap: () => _selectUU(id),
+  );
 
   Widget _buildBabRow(bool isDark) {
     if (_babGroups.isEmpty) return const SizedBox.shrink();
 
-    final blueColor = AppColors.primary;
+    final blueColor = AppColors.accent(isDark);
     final label = _selectedBabLabel ?? 'Pilih bab (${_babGroups.length})';
 
     return Column(
@@ -741,21 +674,13 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        InkWell(
+        InteractiveSurface(
           onTap: _showBabBottomSheet,
           borderRadius: BorderRadius.circular(12),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: AppColors.card(isDark),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: _selectedBab != null
-                    ? blueColor
-                    : (isDark ? Colors.grey[700]! : Colors.grey[200]!),
-              ),
-            ),
+          selected: _selectedBab != null,
+          borderColor: _selectedBab != null ? blueColor : null,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 11),
             child: Row(
               children: [
                 Expanded(
@@ -766,14 +691,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: isDark ? Colors.grey[300] : Colors.grey[600],
+                      color: AppColors.textSecondary(isDark),
                     ),
                   ),
                 ),
                 Icon(
                   Icons.chevron_right_rounded,
                   size: 18,
-                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  color: AppColors.icon(isDark),
                 ),
               ],
             ),

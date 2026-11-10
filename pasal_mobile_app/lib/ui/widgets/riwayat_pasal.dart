@@ -8,6 +8,7 @@ import '../../models/pasal_versi_model.dart';
 import '../utils/open_link.dart';
 import 'law_content_formatter.dart';
 import 'pasal_sections.dart';
+import 'interactive_surface.dart';
 
 Color _statusColor(String status, bool isDark) {
   switch (status) {
@@ -55,7 +56,7 @@ class PasalRiwayatChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: isDark ? 0.15 : 0.12),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.5), width: 0.5),
+        border: Border.all(color: AppColors.border(isDark)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -85,7 +86,11 @@ class RiwayatPasalEntry extends StatelessWidget {
   final List<PasalVersiModel> versi;
   final VoidCallback onTap;
 
-  const RiwayatPasalEntry({super.key, required this.versi, required this.onTap});
+  const RiwayatPasalEntry({
+    super.key,
+    required this.versi,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +115,11 @@ class RiwayatPasalEntry extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(Icons.history_rounded, color: AppColors.primary, size: 22),
+              Icon(
+                Icons.history_rounded,
+                color: AppColors.accent(isDark),
+                size: 22,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -210,10 +219,8 @@ class _RiwayatPasalSheetState extends State<RiwayatPasalSheet> {
   List<DiffSegment> _isiDiff(int index) {
     return _isiDiffCache.putIfAbsent(
       index,
-      () => diffLegalTexts(
-        widget.versi[index - 1].isi,
-        widget.versi[index].isi,
-      ),
+      () =>
+          diffLegalTexts(widget.versi[index - 1].isi, widget.versi[index].isi),
     );
   }
 
@@ -292,7 +299,7 @@ class _RiwayatPasalSheetState extends State<RiwayatPasalSheet> {
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primary.withValues(alpha: 0.8),
+                  color: AppColors.accent(isDark),
                   letterSpacing: 1.2,
                 ),
               ),
@@ -379,82 +386,70 @@ class _VersiTile extends StatelessWidget {
       if (berlaku != null) 'Berlaku sejak ${DateFormatId.short(berlaku)}',
     ].join(' · ');
 
-    return Material(
-      color: selected
-          ? AppColors.primary.withValues(alpha: isDark ? 0.12 : 0.06)
-          : AppColors.card(isDark),
+    return InteractiveSurface(
+      selected: selected,
+      borderColor: selected ? AppColors.accent(isDark) : null,
       borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: selected
-                  ? AppColors.primary.withValues(alpha: 0.6)
-                  : AppColors.border(isDark),
-            ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        _Tag(label: versi.statusLabel, color: statusColor),
-                        if (isLatest)
-                          _Tag(
-                            label: 'Berlaku',
-                            color: isDark
-                                ? Colors.green[300]!
-                                : Colors.green[800]!,
-                            filled: true,
-                          )
-                        else
-                          _Tag(label: 'Tidak berlaku lagi', color: sub),
-                      ],
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(15, 13, 7, 13),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      _Tag(label: versi.statusLabel, color: statusColor),
+                      if (isLatest)
+                        _Tag(
+                          label: 'Berlaku',
+                          color: isDark
+                              ? Colors.green[300]!
+                              : Colors.green[800]!,
+                          filled: true,
+                        )
+                      else
+                        _Tag(label: 'Tidak berlaku lagi', color: sub),
+                    ],
+                  ),
+                  if (sumber.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      sumber,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary(isDark),
+                      ),
                     ),
-                    if (sumber.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        sumber,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary(isDark),
-                        ),
-                      ),
-                    ],
-                    if (judul.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        judul,
-                        style: TextStyle(fontSize: 12, color: sub, height: 1.3),
-                      ),
-                    ],
-                    if (dates.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(dates, style: TextStyle(fontSize: 11, color: sub)),
-                    ],
                   ],
-                ),
+                  if (judul.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      judul,
+                      style: TextStyle(fontSize: 12, color: sub, height: 1.3),
+                    ),
+                  ],
+                  if (dates.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(dates, style: TextStyle(fontSize: 11, color: sub)),
+                  ],
+                ],
               ),
-              if (onOpenLink != null)
-                IconButton(
-                  tooltip: 'Buka naskah resmi',
-                  icon: Icon(Icons.open_in_new_rounded, size: 20, color: sub),
-                  onPressed: onOpenLink,
-                ),
-            ],
-          ),
+            ),
+            if (onOpenLink != null)
+              IconButton(
+                tooltip: 'Buka naskah resmi',
+                icon: Icon(Icons.open_in_new_rounded, size: 20, color: sub),
+                onPressed: onOpenLink,
+              ),
+          ],
         ),
       ),
     );
@@ -475,7 +470,11 @@ class _Tag extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: filled ? 0.18 : 0.08),
         borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: color.withValues(alpha: 0.45), width: 0.5),
+        border: Border.all(
+          color: AppColors.border(
+            Theme.of(context).brightness == Brightness.dark,
+          ),
+        ),
       ),
       child: Text(
         label,
@@ -496,7 +495,10 @@ class _DiffLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = TextStyle(fontSize: 12, color: AppColors.textSecondary(isDark));
+    final style = TextStyle(
+      fontSize: 12,
+      color: AppColors.textSecondary(isDark),
+    );
     return Wrap(
       spacing: 12,
       runSpacing: 4,
@@ -539,11 +541,9 @@ class _PenjelasanDiff extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: isDark ? 0.1 : 0.05),
+        color: AppColors.selected(isDark),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.primary.withValues(alpha: isDark ? 0.5 : 0.3),
-        ),
+        border: Border.all(color: AppColors.border(isDark)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -553,7 +553,7 @@ class _PenjelasanDiff extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: AppColors.primary.withValues(alpha: 0.8),
+              color: AppColors.accent(isDark),
               letterSpacing: 0.5,
             ),
           ),

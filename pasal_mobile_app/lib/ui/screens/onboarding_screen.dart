@@ -116,10 +116,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             decoration: BoxDecoration(
               color: AppColors.error.withValues(alpha: isDark ? 0.1 : 0.05),
               shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.error.withValues(alpha: isDark ? 0.5 : 0.3),
-                width: 2,
-              ),
+              border: Border.all(color: AppColors.border(isDark)),
             ),
             child: const Icon(
               Icons.cloud_off_rounded,
@@ -277,7 +274,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: AppColors.primary),
+          Icon(icon, size: 20, color: AppColors.accent(isDark)),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -392,10 +389,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: isDark ? 0.1 : 0.05),
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: color.withValues(alpha: isDark ? 0.5 : 0.3),
-                    width: 2,
-                  ),
+                  border: Border.all(color: AppColors.border(isDark)),
                 ),
                 child: Icon(page['icon'] as IconData, size: 55, color: color),
               ),
@@ -451,11 +445,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   color: (isError ? AppColors.error : AppColors.primary)
                       .withValues(alpha: isDark ? 0.1 : 0.05),
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: (isError ? AppColors.error : AppColors.primary)
-                        .withValues(alpha: isDark ? 0.5 : 0.3),
-                    width: 2,
-                  ),
+                  border: Border.all(color: AppColors.border(isDark)),
                 ),
                 child: Icon(
                   _getPhaseIcon(progress?.phase),
@@ -507,7 +497,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+                      color: AppColors.accent(isDark),
                     ),
                   ),
                   if (progress?.estimatedRemainingFormatted != null)
@@ -633,22 +623,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: isDark ? 0.1 : 0.05),
+        color: AppColors.selected(isDark),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppColors.primary.withValues(alpha: isDark ? 0.5 : 0.3),
-        ),
+        border: Border.all(color: AppColors.border(isDark)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: AppColors.primary),
+          Icon(icon, size: 16, color: AppColors.accent(isDark)),
           const SizedBox(width: 6),
           Text(
             text,
             style: TextStyle(
               fontSize: 12,
-              color: AppColors.primary,
+              color: AppColors.accent(isDark),
               fontWeight: FontWeight.w600,
             ),
           ),

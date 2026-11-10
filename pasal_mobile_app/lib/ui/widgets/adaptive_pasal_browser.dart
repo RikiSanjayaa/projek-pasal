@@ -16,6 +16,10 @@ class AdaptivePasalBrowser extends StatefulWidget {
       context.dependOnInheritedWidgetOfExactType<_BrowserScope>()?.reading ??
       false;
 
+  static String? selectedPasalIdOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<_BrowserScope>()
+      ?.selectedPasalId;
+
   static bool open(
     BuildContext context, {
     required PasalModel pasal,
@@ -58,7 +62,7 @@ class _AdaptivePasalBrowserState extends State<AdaptivePasalBrowser> {
     final active = TickerMode.valuesOf(context).enabled;
     return _BrowserScope(
       state: this,
-      reading: _selected != null,
+      selectedPasalId: _selected?.id,
       child: PopScope(
         canPop: !active || (_selected == null && widget.onBack == null),
         onPopInvokedWithResult: (didPop, _) {
@@ -133,14 +137,16 @@ class _AdaptivePasalBrowserState extends State<AdaptivePasalBrowser> {
 class _BrowserScope extends InheritedWidget {
   const _BrowserScope({
     required this.state,
-    required this.reading,
+    required this.selectedPasalId,
     required super.child,
   });
 
   final _AdaptivePasalBrowserState state;
-  final bool reading;
+  final String? selectedPasalId;
+
+  bool get reading => selectedPasalId != null;
 
   @override
   bool updateShouldNotify(_BrowserScope oldWidget) =>
-      reading != oldWidget.reading;
+      selectedPasalId != oldWidget.selectedPasalId;
 }

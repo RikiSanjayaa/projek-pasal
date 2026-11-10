@@ -80,19 +80,37 @@ Sidebar punya pembatas, logo brand CariPasal sesuai tema (`logo.png`/`logo-dark.
 
 Drawer Pengaturan berada di kanan layar dan menetapkan bentuknya sendiri: sudut kiri atas/bawah mengikuti radius sheet, sisi kanan rata. Bentuk ini tidak bergantung pada default drawer kiri Material karena panel dibuka melalui dialog.
 
-Daftar pasal memakai satu sampai tiga kolom sesuai lebar lokal, termasuk ketika kembali dari pembaca. Tinggi kartu dalam satu baris mengikuti kartu tertinggi agar isi pendek tetap rata, tanpa memotong judul panjang. Pengukuran tinggi hanya dilakukan untuk baris grid yang dibangun (maksimal tiga kartu); daftar satu kolom mempertahankan tinggi alami. Beranda dan Tersimpan memuat 30 pasal per halaman. Filter UU dan bab langsung terbuka pada desktop; kontrol ringkas tetap dipakai pada ponsel. Posisi grid disimpan sebelum pembaca dibuka dan dikembalikan saat ditutup, dibatasi panjang scroll yang tersedia.
+Daftar pasal memakai satu sampai tiga kolom sesuai lebar lokal, termasuk ketika kembali dari pembaca. Tinggi kartu dalam satu baris mengikuti kartu tertinggi agar isi pendek tetap rata, tanpa memotong judul panjang. Pengukuran tinggi hanya dilakukan untuk baris grid yang dibangun (maksimal tiga kartu); daftar satu kolom mempertahankan tinggi alami. Jelajahi Pasal memakai pilihan Per halaman: Otomatis, 10, 20, 30, atau 50. Dropdown berada di bawah daftar, berdampingan dengan kontrol pagination, dan tetap tersedia pada hasil satu halaman. Otomatis memuat 30 pasal pada desktop tanpa detail terbuka, dan 10 pada ponsel/tablet atau panel daftar saat detail terbuka. Pilihan manual tersimpan di perangkat dan tidak ditimpa saat resize atau membuka detail; memilih Otomatis menghapus override. Ketika daftar penuh beralih ke panel sempit, halaman menampung pasal yang dibuka, bukan selalu halaman pertama. Dalam mode Otomatis, menutup detail mengembalikan halaman dan posisi scroll daftar sebelumnya. Tersimpan tetap memuat 30 pasal per halaman. Filter UU dan bab langsung terbuka bila lebar panel daftar minimal 740 px; di bawahnya memakai dropdown Filter, termasuk saat pembaca inline mempersempit daftar pada desktop.
+
+Teks dropdown Per halaman, baik nilai terpilih maupun opsi menu, mengikuti gaya teks indikator nomor halaman agar ukurannya konsisten.
+
+Saat ukuran halaman Otomatis berubah karena resize desktop/ponsel, pasal pada baris teratas yang masih terlihat menjadi anchor. Halaman baru dipilih berdasarkan pasal tersebut, lalu barisnya ditampilkan kembali; resize tidak lagi mengembalikan daftar ke awal halaman. Restorasi tetap memakai baris lazy, tanpa membangun seluruh daftar hukum.
 
 Login dibatasi 440 px, bacaan 760 px, konten non-browser 1200 px, sheet 640 px, dan dialog 560 px. Angka tersebut adalah batas maksimum; layar sempit tetap memakai ruang yang tersedia. Pembaca standalone menampilkan daftar bab saat ruang lokal minimal 1100 px. Beranda, Pustaka, dan Tersimpan menggunakan pembaca inline yang sama.
 
-Shell mempertahankan tab yang pernah dibuka melalui `IndexedStack`. Browser mempertahankan dua subtree daftar/pembaca melalui `Offstage`, sehingga query, pilihan UU/pasal, dan scroll tidak hilang saat resize. Mengganti pilihan pasal membuat state pembaca baru; prev/next di dalam pembaca tetap memakai konteks hasil yang dipilih. Back handler pada tab yang tidak aktif tidak menangkap navigasi kembali.
+Background dan border bawah pencarian di dalam detail mengikuti seluruh lebar kolom pembaca, dengan padding input di bagian dalam. Batas bacaan 760 px hanya membatasi isi pasal, bukan strip pencarian, sehingga tidak meninggalkan celah kiri/kanan di bawah toolbar.
 
-Regresi memakai SQLite in-memory: query serta offset baca bertahan saat `1365 -> 390 -> 800 -> 1365`, lalu kembali ke daftar. Kartu dengan isi pendek, isi panjang, dan judul panjang diperiksa agar sejajar dalam grid dan tidak dipaksa sama tinggi saat menjadi satu kolom:
+Pencarian Beranda memakai jarak atas 24 px dari header, sama dengan inset atas card Baca Pasal. Header Jelajahi Pasal memiliki tinggi minimum toolbar agar keduanya sejajar pada tampilan dua panel. Di desktop, tombol Sebelumnya/Selanjutnya tetap ringkas di ujung kiri/kanan panel baca, tidak mengikuti batas card atau bergeser saat sidebar bab muncul. Sneak peek terpisah dari tombol memakai ruang kosong di antaranya, cukup kode UU dan nomor pasal (misalnya `KUHP - Pasal 3`), tanpa judul, isi, atau label urutan. Bila panel desktop menyempit, dua tujuan disusun vertikal di ruang tengah. Ponsel dan tablet di bawah breakpoint desktop tidak menampilkan sneak peek; tombol tetap berlabel Sebelumnya/Selanjutnya, maksimal 180 px, dengan celah minimum 12 px. Tombol di batas awal/akhir daftar atau UU nonaktif.
+
+Shell mempertahankan tab yang pernah dibuka melalui `IndexedStack`. Browser mempertahankan dua subtree daftar/pembaca melalui `Offstage`, sehingga query, pilihan UU/pasal, dan scroll tidak hilang saat resize. Mengganti pilihan pasal membuat state pembaca baru. Prev/next mengikuti daftar saat pasal dibuka: urutan pembaruan di Pasal Terbaru, hasil pencarian, atau daftar UU. Memilih pasal lewat daftar isi secara eksplisit beralih ke urutan nomor pasal dalam UU; urutan itu tidak kembali ke daftar asal saat melewati pasal yang ada di kedua daftar. Ini bukan riwayat kunjungan. Back handler pada tab yang tidak aktif tidak menangkap navigasi kembali.
+
+Regresi memakai SQLite in-memory: query serta offset baca bertahan saat `1365 -> 390 -> 800 -> 1365`, lalu kembali ke daftar. Navigasi memeriksa batas daftar, tujuan lintas UU, serta perpindahan eksplisit dari urutan daftar ke urutan UU. Sneak peek hilang saat beralih ke ponsel, navigasi tetap berfungsi, dan tujuan kembali terlihat saat resize ke desktop. Kartu dengan isi pendek, isi panjang, dan judul panjang diperiksa agar sejajar dalam grid dan tidak dipaksa sama tinggi saat menjadi satu kolom:
 
 ```bash
 flutter test test/unit/widgets/adaptive_pasal_browser_test.dart
+flutter test test/unit/widgets/explore_pasal_results_test.dart
 ```
 
 Runtime Linux untuk tes membutuhkan `libsqlite3-dev`. Screenshot browser: [desktop](../docs/screenshots/responsive-desktop.webp), [tablet](../docs/screenshots/responsive-tablet.webp), [ponsel](../docs/screenshots/responsive-mobile.webp). Screenshot memakai data sinkronisasi sungguhan; bukan bukti pengujian perangkat fisik.
+
+### Warna dan border
+
+Palet terang/gelap berada di `AppColors`; tema komponen dan ketebalan garis berada di `AppTheme`. Tombol dengan teks putih memakai biru solid `primary`, sedangkan tautan, ikon aktif, dan fokus memakai `accent(isDark)`. Warna teks UU mengikuti tema melalui `UUColorHelper.getColor(kode, isDark: isDark)`; warna terang untuk tema gelap tidak dipasangkan dengan teks putih pada badge solid.
+
+Hanya baris judul Jelajahi Pasal dan header Baca Pasal yang memakai warna bidang header dan garis bawah 1 logical px, tanpa bayangan. Pencarian, filter UU, dan pemilih bab mengikuti latar halaman/list pasal di bawahnya. Kartu, panel, input, sidebar, badge berbingkai, dan divider memakai warna border netral yang sama per tema; pilihan aktif boleh memakai warna aksen, tetapi tetap 1 px.
+
+Fokus keyboard memakai garis 2 px. `InteractiveSurface` mengecat hover di permukaan kontrol dan fokus di atas isinya, sehingga child yang opak tidak menutup state interaksi. Garis fokus tidak menambah padding atau mengubah ukuran kontrol; tombol/chip solid memakai fokus putih agar tetap terlihat di atas biru. Konten harus memiliki inset di dalam area interaksi, bukan tepat di tepi outline: profil dan periksa update memakai inset horizontal 16 px seperti navigasi rail. Aksi pasal/PDF, tautan pasal terkait, dan penghapus filter menggunakan permukaan interaktif yang sama; tombol ikon kecil tetap memiliki padding untuk memisahkan ikon dari hover/fokus.
+
 
 ## Fitur Utama
 

@@ -87,16 +87,14 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
             const SizedBox(height: 12),
             Text(
               'Tidak ditemukan',
-              style: TextStyle(
-                color: isDark ? Colors.grey[500] : Colors.grey[600],
-              ),
+              style: TextStyle(color: AppColors.textSecondary(isDark)),
             ),
             if (query.trim().isNotEmpty && suggestions.isNotEmpty) ...[
               const SizedBox(height: 14),
               Text(
                 'Coba cari dengan kata ini:',
                 style: TextStyle(
-                  color: isDark ? Colors.grey[500] : Colors.grey[600],
+                  color: AppColors.textSecondary(isDark),
                   fontSize: 12,
                 ),
               ),
@@ -126,14 +124,13 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
     return UUColorHelper.getIcon(kode);
   }
 
-  Color _getUUColor(String kode) {
-    return UUColorHelper.getColor(kode);
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = _getUUColor(widget.undangUndang.kode);
+    final color = UUColorHelper.getColor(
+      widget.undangUndang.kode,
+      isDark: isDark,
+    );
     final icon = _getUUIcon(widget.undangUndang.kode);
 
     return AdaptivePasalBrowser(
@@ -183,9 +180,7 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
                                     ),
                                     borderRadius: BorderRadius.circular(14),
                                     border: Border.all(
-                                      color: color.withValues(
-                                        alpha: isDark ? 0.5 : 0.3,
-                                      ),
+                                      color: AppColors.border(isDark),
                                     ),
                                   ),
                                   child: Icon(icon, color: color, size: 28),
@@ -209,10 +204,12 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
                                         ),
                                         child: Text(
                                           widget.undangUndang.kode,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.bold,
-                                            color: Colors.white,
+                                            color: isDark
+                                                ? const Color(0xFF10243B)
+                                                : Colors.white,
                                           ),
                                         ),
                                       ),
@@ -282,9 +279,7 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
                                   ),
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
-                                    color: color.withValues(
-                                      alpha: isDark ? 0.5 : 0.3,
-                                    ),
+                                    color: AppColors.border(isDark),
                                   ),
                                 ),
                                 child: Column(
@@ -427,12 +422,12 @@ class _StickySearchHeaderDelegate extends SliverPersistentHeaderDelegate {
             decoration: InputDecoration(
               hintText: "Cari dalam $undangNama...",
               hintStyle: TextStyle(
-                color: isDark ? Colors.grey[500] : Colors.grey[400],
+                color: AppColors.textSecondary(isDark),
                 fontSize: 13,
               ),
               prefixIcon: Icon(
                 Icons.search,
-                color: isDark ? Colors.grey[500] : Colors.grey[400],
+                color: AppColors.icon(isDark),
                 size: 20,
               ),
               suffixIcon: searchController.text.isNotEmpty
@@ -440,17 +435,13 @@ class _StickySearchHeaderDelegate extends SliverPersistentHeaderDelegate {
                       icon: Icon(
                         Icons.clear,
                         size: 18,
-                        color: isDark ? Colors.grey[500] : Colors.grey[400],
+                        color: AppColors.icon(isDark),
                       ),
                       onPressed: onClear,
                     )
                   : null,
               filled: true,
               fillColor: AppColors.inputFill(isDark),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 14,
                 vertical: 10,
@@ -477,7 +468,7 @@ class _StickySearchHeaderDelegate extends SliverPersistentHeaderDelegate {
                   '$filteredCount pasal',
                   style: TextStyle(
                     fontSize: 11,
-                    color: isDark ? Colors.grey[500] : Colors.grey[600],
+                    color: AppColors.textSecondary(isDark),
                   ),
                 ),
               ],

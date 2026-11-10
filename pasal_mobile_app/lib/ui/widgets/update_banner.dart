@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
+
 import '../../core/config/app_colors.dart';
 import '../../core/services/sync_manager.dart';
 import '../../core/services/sync_progress.dart';
@@ -158,7 +159,7 @@ class _UpdateBannerState extends State<UpdateBanner>
             },
             child: Text(
               "Lanjut Download",
-              style: TextStyle(color: AppColors.primary),
+              style: TextStyle(color: Theme.of(context).colorScheme.primary),
             ),
           ),
           TextButton(
@@ -201,11 +202,8 @@ class _UpdateBannerState extends State<UpdateBanner>
               margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(24),
-                color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                border: Border.all(
-                  color: isDark ? Colors.white10 : Colors.grey[200]!,
-                  width: 1,
-                ),
+                color: AppColors.card(isDark),
+                border: Border.all(color: AppColors.border(isDark)),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(24),
@@ -236,7 +234,7 @@ class _UpdateBannerState extends State<UpdateBanner>
             ),
             child: Icon(
               Icons.system_update_rounded,
-              color: AppColors.primary,
+              color: AppColors.accent(isDark),
               size: 20,
             ),
           ),
@@ -325,7 +323,7 @@ class _UpdateBannerState extends State<UpdateBanner>
                       ),
                       child: Icon(
                         Icons.sync,
-                        color: AppColors.primary,
+                        color: AppColors.accent(isDark),
                         size: 20,
                       ),
                     ),
@@ -370,9 +368,7 @@ class _UpdateBannerState extends State<UpdateBanner>
                       size: 20,
                     ),
                     tooltip: "Batalkan",
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.all(8),
                   ),
                 ],
               ),
@@ -393,7 +389,7 @@ class _UpdateBannerState extends State<UpdateBanner>
                   Text(
                     "${progress?.progressPercent ?? 0}%",
                     style: TextStyle(
-                      color: AppColors.primary,
+                      color: AppColors.accent(isDark),
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
@@ -463,7 +459,7 @@ class SyncStatusIndicator extends StatelessWidget {
                     message: "Update tersedia",
                     child: Icon(
                       Icons.system_update_rounded,
-                      color: AppColors.primary,
+                      color: Theme.of(context).colorScheme.primary,
                       size: 20,
                     ),
                   );

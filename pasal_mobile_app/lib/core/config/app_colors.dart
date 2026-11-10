@@ -2,8 +2,8 @@ import 'package:material_ui/material_ui.dart';
 
 class AppColors {
   // Primary Brand Colors
-  static const Color primary = Colors.blue;
-  static const Color secondary = Colors.green;
+  static const Color primary = Color(0xFF1565C0);
+  static const Color secondary = Color(0xFF047857);
 
   // Backgrounds
   static const Color scaffoldLight = Color(0xFFF5F7FA);
@@ -15,8 +15,8 @@ class AppColors {
   static const Color inputFillLight = Colors.white;
   static const Color inputFillDark = Color(0xFF2C2C2C);
 
-  static const Color appBarLight = Color(0xFFF5F7FA);
-  static const Color appBarDark = Color(0xFF121212);
+  static const Color appBarLight = Color(0xFFEDF2F8);
+  static const Color appBarDark = Color(0xFF202A38);
 
   static const Color bottomNavLight = Colors.white;
   static const Color bottomNavDark = Color(0xFF1E1E1E);
@@ -25,12 +25,12 @@ class AppColors {
   static const Color textPrimaryLight = Colors.black87;
   static const Color textPrimaryDark = Colors.white;
 
-  static const Color textSecondaryLight = Color(0xFF757575); // Colors.grey[600]
+  static const Color textSecondaryLight = Color(0xFF5B6573);
   static const Color textSecondaryDark = Color(0xFFBDBDBD); // Colors.grey[400]
 
   // Borders & Dividers
-  static const Color borderLight = Color(0xFFE0E0E0); // Colors.grey[300]
-  static const Color borderDark = Color(0xFF616161); // Colors.grey[700]
+  static const Color borderLight = Color(0xFFCDD5DF);
+  static const Color borderDark = Color(0xFF465264);
 
   // Semantic Colors
   static const Color success = Colors.green;
@@ -59,6 +59,12 @@ class AppColors {
   static Color textSecondary(bool isDark) =>
       isDark ? textSecondaryDark : textSecondaryLight;
   static Color border(bool isDark) => isDark ? borderDark : borderLight;
+  static Color accent(bool isDark) =>
+      isDark ? const Color(0xFF90CAF9) : primary;
+  static Color hover(bool isDark) =>
+      isDark ? const Color(0xFF263244) : const Color(0xFFEFF4FA);
+  static Color selected(bool isDark) =>
+      isDark ? const Color(0xFF17324D) : const Color(0xFFE8F1FC);
   static Color bottomNav(bool isDark) =>
       isDark ? bottomNavDark : bottomNavLight;
   static Color appBar(bool isDark) => isDark ? appBarDark : appBarLight;

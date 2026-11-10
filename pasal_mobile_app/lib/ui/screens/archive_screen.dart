@@ -143,7 +143,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                     decoration: InputDecoration(
                       hintText: "Cari nomor, nama atau isi pasal...",
                       hintStyle: TextStyle(
-                        color: isDark ? Colors.white70 : Colors.black54,
+                        color: AppColors.textSecondary(isDark),
                       ),
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: _searchQuery.isNotEmpty
@@ -159,10 +159,6 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                           : null,
                       filled: true,
                       fillColor: AppColors.inputFill(isDark),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
@@ -216,7 +212,9 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                                 _searchQuery.isNotEmpty
                                     ? "Tidak ditemukan."
                                     : "Belum ada pasal tersimpan.",
-                                style: TextStyle(color: Colors.grey[500]),
+                                style: TextStyle(
+                                  color: AppColors.textSecondary(isDark),
+                                ),
                               ),
                               if (_searchQuery.isEmpty) ...[
                                 const SizedBox(height: 6),
@@ -225,7 +223,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: Colors.grey[500],
+                                    color: AppColors.textSecondary(isDark),
                                   ),
                                 ),
                               ],

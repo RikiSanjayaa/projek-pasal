@@ -21,6 +21,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/services/pdf_export_service.dart';
 import '../widgets/app_showcase.dart';
+import '../widgets/interactive_surface.dart';
 import '../utils/open_link.dart';
 import '../widgets/riwayat_pasal.dart';
 import '../../core/services/data_service.dart';
@@ -58,6 +59,8 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
   List<PasalModel> _chapterPasal = [];
   Map<String, List<PasalModel>> _chapters = {};
   String? _chapterUUId;
+  final Map<String, String> _lawCodes = {};
+  late bool _followingContextList;
 
   bool _isSearching = false;
   late TextEditingController _searchController;
@@ -87,11 +90,14 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
       }
     });
     _currentPasal = widget.pasal;
+    _followingContextList =
+        widget.contextList?.any((p) => p.id == widget.pasal.id) == true;
     _localSearchQuery = widget.searchQuery;
     _searchController = TextEditingController(text: widget.searchQuery);
     _isSearching = widget.searchQuery.isNotEmpty;
     _loadUUInfo();
     _loadVersi();
+    _loadLawCodes();
   }
 
   @override
@@ -126,6 +132,16 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
     }
   }
 
+  Future<void> _loadLawCodes() async {
+    final laws = await QueryService.getAllUU();
+    if (!mounted) return;
+    setState(() {
+      for (final law in laws) {
+        _lawCodes[law.id] = law.kode;
+      }
+    });
+  }
+
   Future<void> _loadVersi() async {
     final pasalId = _currentPasal.id;
     try {
@@ -147,8 +163,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
     PasalModel? prevPasal;
     PasalModel? nextPasal;
 
-    final navigationList =
-        widget.contextList?.any((p) => p.id == _currentPasal.id) == true
+    final navigationList = _followingContextList
         ? widget.contextList!
         : _chapterPasal;
     if (navigationList.isNotEmpty) {
@@ -164,12 +179,12 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = AppColors.scaffold(isDark);
     final textColor = AppColors.textPrimary(isDark);
-    final uuColor = UUColorHelper.getColor(_kodeUU);
+    final uuColor = UUColorHelper.getColor(_kodeUU, isDark: isDark);
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: bgColor,
+        backgroundColor: AppColors.appBar(isDark),
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new, color: textColor, size: 20),
@@ -213,70 +228,70 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
       ),
 
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
         decoration: BoxDecoration(
           color: AppColors.bottomNav(isDark),
-          border: Border(
-            top: BorderSide(
-              color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
-            ),
-          ),
+          border: Border(top: BorderSide(color: AppColors.border(isDark))),
         ),
         child: SafeArea(
-          child: ResponsiveContent(
-            maxWidth: ResponsiveLayout.readingWidth,
-            child: Row(
-              children: [
-                // Previous button
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: prevPasal != null
-                        ? () => _navigate(context, prevPasal!)
-                        : null,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: isDark
-                          ? Colors.grey[300]
-                          : Colors.grey[700],
-                      side: BorderSide(
-                        color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    icon: const Icon(Icons.chevron_left, size: 18),
-                    label: const Text(
-                      'Sebelumnya',
-                      style: TextStyle(fontSize: 13),
-                    ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final desktop =
+                  MediaQuery.sizeOf(context).width >= ResponsiveLayout.expanded;
+              final buttonWidth = desktop
+                  ? 136.0
+                  : ((constraints.maxWidth - 12) / 2).clamp(0.0, 180.0);
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  SizedBox(
+                    width: buttonWidth,
+                    child: _navigationButton(prevPasal, next: false),
                   ),
-                ),
-                const SizedBox(width: 12),
-                // Next button
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: nextPasal != null
-                        ? () => _navigate(context, nextPasal!)
-                        : null,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: uuColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                  if (desktop) ...[
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, space) => space.maxWidth >= 300
+                            ? Row(
+                                children: [
+                                  Expanded(
+                                    child: _navigationPreview(
+                                      prevPasal,
+                                      next: false,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 24),
+                                  Expanded(
+                                    child: _navigationPreview(
+                                      nextPasal,
+                                      next: true,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _navigationPreview(prevPasal, next: false),
+                                  if (prevPasal != null && nextPasal != null)
+                                    const SizedBox(height: 8),
+                                  _navigationPreview(nextPasal, next: true),
+                                ],
+                              ),
                       ),
-                      elevation: 0,
                     ),
-                    icon: const Text(
-                      'Selanjutnya',
-                      style: TextStyle(fontSize: 13),
-                    ),
-                    label: const Icon(Icons.chevron_right, size: 18),
+                    const SizedBox(width: 16),
+                  ] else
+                    const SizedBox(width: 12),
+                  SizedBox(
+                    width: buttonWidth,
+                    child: _navigationButton(nextPasal, next: true),
                   ),
-                ),
-              ],
-            ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -294,74 +309,64 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                     : const SizedBox.shrink(),
               ),
               Expanded(
-                child: ResponsiveContent(
-                  maxWidth: ResponsiveLayout.readingWidth,
-                  child: Column(
-                    children: [
-                      if (_isSearching)
-                        Container(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                          decoration: BoxDecoration(
-                            color: bgColor,
-                            border: Border(
-                              bottom: BorderSide(
-                                color: isDark
-                                    ? Colors.white.withValues(alpha: 0.05)
-                                    : Colors.black.withValues(alpha: 0.05),
-                              ),
-                            ),
-                          ),
-                          child: SizedBox(
-                            height: 45,
-                            child: TextField(
-                              controller: _searchController,
-                              autofocus: true,
-                              style: TextStyle(color: textColor, fontSize: 14),
-                              textAlignVertical: TextAlignVertical.center,
-                              decoration: InputDecoration(
-                                hintText: 'Cari dalam pasal...',
-                                hintStyle: TextStyle(
-                                  color: isDark
-                                      ? Colors.grey[500]
-                                      : Colors.grey[400],
-                                  fontSize: 14,
-                                ),
-                                prefixIcon: Icon(
-                                  Icons.search,
-                                  size: 20,
-                                  color: isDark
-                                      ? Colors.grey[400]
-                                      : Colors.grey[600],
-                                ),
-                                suffixIcon: _localSearchQuery.isNotEmpty
-                                    ? IconButton(
-                                        icon: const Icon(Icons.clear, size: 20),
-                                        onPressed: () {
-                                          _searchController.clear();
-                                          setState(() {
-                                            _localSearchQuery = '';
-                                          });
-                                        },
-                                      )
-                                    : null,
-                                filled: true,
-                                fillColor: AppColors.inputFill(isDark),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                              onChanged: (val) {
-                                setState(() {
-                                  _localSearchQuery = val;
-                                });
-                              },
-                            ),
+                child: Column(
+                  children: [
+                    if (_isSearching)
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                        decoration: BoxDecoration(
+                          color: AppColors.appBar(isDark),
+                          border: Border(
+                            bottom: BorderSide(color: AppColors.border(isDark)),
                           ),
                         ),
+                        child: SizedBox(
+                          height: 45,
+                          child: TextField(
+                            controller: _searchController,
+                            autofocus: true,
+                            style: TextStyle(color: textColor, fontSize: 14),
+                            textAlignVertical: TextAlignVertical.center,
+                            decoration: InputDecoration(
+                              hintText: 'Cari dalam pasal...',
+                              hintStyle: TextStyle(
+                                color: AppColors.textSecondary(isDark),
+                                fontSize: 14,
+                              ),
+                              prefixIcon: Icon(
+                                Icons.search,
+                                size: 20,
+                                color: isDark
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
+                              ),
+                              suffixIcon: _localSearchQuery.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear, size: 20),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() {
+                                          _localSearchQuery = '';
+                                        });
+                                      },
+                                    )
+                                  : null,
+                              filled: true,
+                              fillColor: AppColors.inputFill(isDark),
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            onChanged: (val) {
+                              setState(() {
+                                _localSearchQuery = val;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
 
-                      Expanded(
+                    Expanded(
+                      child: ResponsiveContent(
+                        maxWidth: ResponsiveLayout.readingWidth,
                         child: SingleChildScrollView(
                           controller: _scrollController,
                           child: Padding(
@@ -379,12 +384,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                     color: AppColors.card(isDark),
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                      color: isDark
-                                          ? Colors.white.withValues(alpha: 0.08)
-                                          : Colors.black.withValues(
-                                              alpha: 0.05,
-                                            ),
-                                      width: 1,
+                                      color: AppColors.border(isDark),
                                     ),
                                   ),
                                   child: Column(
@@ -481,28 +481,20 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                             description: 'Simpan pasal, salin isinya, cetak PDF, buka naskah resmi, dan lihat riwayat perubahan ada di sini.',
                                             child: Tooltip(
                                               message: 'Aksi pasal',
-                                              child: InkWell(
+                                              child: InteractiveSurface(
                                                 onTap: _showActions,
+                                                showBorder: false,
+                                                color: Color.alphaBlend(
+                                                  Colors.grey.withValues(
+                                                    alpha: isDark ? 0.1 : 0.05,
+                                                  ),
+                                                  AppColors.card(isDark),
+                                                ),
                                                 borderRadius:
                                                     BorderRadius.circular(8),
-                                                child: Container(
+                                                child: Padding(
                                                   padding: const EdgeInsets.all(
                                                     8.0,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: isDark
-                                                        ? Colors.grey
-                                                              .withValues(
-                                                                alpha: 0.1,
-                                                              )
-                                                        : Colors.grey
-                                                              .withValues(
-                                                                alpha: 0.05,
-                                                              ),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          8,
-                                                        ),
                                                   ),
                                                   child: Icon(
                                                     Icons.more_horiz_rounded,
@@ -537,10 +529,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                               borderRadius:
                                                   BorderRadius.circular(20),
                                               border: Border.all(
-                                                color: uuColor.withValues(
-                                                  alpha: 0.2,
-                                                ),
-                                                width: 1,
+                                                color: AppColors.border(isDark),
                                               ),
                                             ),
                                             child: Row(
@@ -593,9 +582,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                             style: TextStyle(
                                               fontSize: 10,
                                               fontWeight: FontWeight.bold,
-                                              color: uuColor.withValues(
-                                                alpha: 0.8,
-                                              ),
+                                              color: uuColor,
                                               letterSpacing: 1.2,
                                             ),
                                           ),
@@ -619,13 +606,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                       Container(
                                         height: 1,
                                         width: double.infinity,
-                                        color: isDark
-                                            ? Colors.white.withValues(
-                                                alpha: 0.1,
-                                              )
-                                            : Colors.black.withValues(
-                                                alpha: 0.1,
-                                              ),
+                                        color: AppColors.border(isDark),
                                       ),
                                       const SizedBox(height: 24),
 
@@ -634,9 +615,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                           Icon(
                                             Icons.menu_book_outlined,
                                             size: 14,
-                                            color: uuColor.withValues(
-                                              alpha: 0.8,
-                                            ),
+                                            color: uuColor,
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
@@ -644,9 +623,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                                             style: TextStyle(
                                               fontSize: 10,
                                               fontWeight: FontWeight.bold,
-                                              color: uuColor.withValues(
-                                                alpha: 0.8,
-                                              ),
+                                              color: uuColor,
                                               letterSpacing: 1.2,
                                             ),
                                           ),
@@ -710,14 +687,65 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ],
           );
         },
       ),
+    );
+  }
+
+  Widget _navigationButton(PasalModel? target, {required bool next}) {
+    final content = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (!next) ...[
+          const Icon(Icons.chevron_left, size: 18),
+          const SizedBox(width: 6),
+        ],
+        Flexible(
+          child: Text(
+            next ? 'Selanjutnya' : 'Sebelumnya',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 13),
+          ),
+        ),
+        if (next) ...[
+          const SizedBox(width: 6),
+          const Icon(Icons.chevron_right, size: 18),
+        ],
+      ],
+    );
+    const style = ButtonStyle(
+      padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12)),
+    );
+    final onPressed = target == null ? null : () => _navigate(context, target);
+    return next
+        ? FilledButton(onPressed: onPressed, style: style, child: content)
+        : OutlinedButton(onPressed: onPressed, style: style, child: content);
+  }
+
+  Widget _navigationPreview(PasalModel? target, {required bool next}) {
+    if (target == null) return const SizedBox.shrink();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final code =
+        _lawCodes[target.undangUndangId] ??
+        (target.undangUndangId == _currentPasal.undangUndangId
+            ? _kodeUU
+            : null);
+    final number = target.nomor.toLowerCase().startsWith('pasal')
+        ? target.nomor
+        : 'Pasal ${target.nomor}';
+    return Text(
+      '${code ?? 'UU'} - $number',
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: next ? TextAlign.right : TextAlign.left,
+      style: TextStyle(fontSize: 12, color: AppColors.textSecondary(isDark)),
     );
   }
 
@@ -746,7 +774,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
                   dense: true,
                   selected: article.id == _currentPasal.id,
                   title: Text('Pasal ${article.nomor}'),
-                  onTap: () => _navigate(context, article),
+                  onTap: () => _navigate(context, article, inLawOrder: true),
                 ),
             ],
           ),
@@ -836,7 +864,7 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.all(8),
         child: Row(
           children: [
             Expanded(
@@ -895,8 +923,13 @@ class _ReadPasalScreenState extends State<ReadPasalScreen> {
     return u.isEmpty ? null : u;
   }
 
-  void _navigate(BuildContext context, PasalModel target) {
+  void _navigate(
+    BuildContext context,
+    PasalModel target, {
+    bool inLawOrder = false,
+  }) {
     setState(() {
+      if (inLawOrder) _followingContextList = false;
       _currentPasal = target;
       _kodeUU = null;
       _officialUrl = null;

@@ -18,6 +18,8 @@ class AppTheme {
   static const double radiusCard = 16; // kartu, panel
   static const double radiusSheet = 20; // bottom sheet, dialog
   static const double radiusChip = 20; // chip pil
+  static const double borderWidth = 1;
+  static const double focusBorderWidth = 2;
 
   static ThemeData _build(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
@@ -27,8 +29,8 @@ class AppTheme {
           seedColor: AppColors.primary,
           brightness: brightness,
         ).copyWith(
-          primary: AppColors.primary,
-          onPrimary: Colors.white,
+          primary: AppColors.accent(isDark),
+          onPrimary: isDark ? const Color(0xFF10243B) : Colors.white,
           secondary: AppColors.secondary,
           error: AppColors.error,
           surface: AppColors.card(isDark),
@@ -37,6 +39,8 @@ class AppTheme {
           outline: AppColors.border(isDark),
           outlineVariant: AppColors.border(isDark),
           surfaceTint: Colors.transparent,
+          primaryContainer: AppColors.selected(isDark),
+          onPrimaryContainer: AppColors.accent(isDark),
         );
 
     final cardShape = RoundedRectangleBorder(
@@ -48,6 +52,29 @@ class AppTheme {
     );
     const buttonPadding = EdgeInsets.symmetric(horizontal: 20, vertical: 14);
     const buttonText = TextStyle(fontSize: 15, fontWeight: FontWeight.w600);
+    final inputBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(radiusControl),
+      borderSide: BorderSide(
+        color: AppColors.border(isDark),
+        width: borderWidth,
+      ),
+    );
+    final focusBorder = inputBorder.copyWith(
+      borderSide: BorderSide(
+        color: AppColors.accent(isDark),
+        width: focusBorderWidth,
+      ),
+    );
+    final focusSide = WidgetStateProperty.resolveWith<BorderSide>(
+      (states) => states.contains(WidgetState.focused)
+          ? BorderSide(color: AppColors.accent(isDark), width: focusBorderWidth)
+          : BorderSide.none,
+    );
+    final filledFocusSide = WidgetStateProperty.resolveWith<BorderSide>(
+      (states) => states.contains(WidgetState.focused)
+          ? const BorderSide(color: Colors.white, width: focusBorderWidth)
+          : BorderSide.none,
+    );
 
     return ThemeData(
       useMaterial3: true,
@@ -57,6 +84,8 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.scaffold(isDark),
       cardColor: AppColors.card(isDark),
       dividerColor: AppColors.border(isDark),
+      hoverColor: AppColors.accent(isDark).withValues(alpha: .06),
+      focusColor: AppColors.accent(isDark).withValues(alpha: .14),
       textTheme: _textTheme(isDark),
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.appBar(isDark),
@@ -64,6 +93,12 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0, // M3 menggeser warna saat scroll
         surfaceTintColor: Colors.transparent,
+        shape: Border(
+          bottom: BorderSide(
+            color: AppColors.border(isDark),
+            width: borderWidth,
+          ),
+        ),
       ),
       cardTheme: CardThemeData(
         color: AppColors.card(isDark),
@@ -74,7 +109,7 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.inputFill(isDark),
-        selectedColor: AppColors.primary.withValues(alpha: isDark ? 0.3 : 0.15),
+        selectedColor: AppColors.selected(isDark),
         side: BorderSide(color: AppColors.border(isDark)),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusChip),
@@ -87,43 +122,73 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
           minimumSize: const Size(64, 48),
           padding: buttonPadding,
           shape: buttonShape,
           textStyle: buttonText,
           elevation: 0,
-        ),
+        ).copyWith(side: filledFocusSide),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
           minimumSize: const Size(64, 48),
           padding: buttonPadding,
           shape: buttonShape,
           textStyle: buttonText,
           elevation: 0,
-        ),
+        ).copyWith(side: filledFocusSide),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size(64, 48),
-          padding: buttonPadding,
-          shape: buttonShape,
-          side: BorderSide(color: AppColors.border(isDark)),
-        ),
+        style:
+            OutlinedButton.styleFrom(
+              minimumSize: const Size(64, 48),
+              padding: buttonPadding,
+              shape: buttonShape,
+              side: BorderSide(color: AppColors.border(isDark)),
+            ).copyWith(
+              side: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.focused)
+                    ? BorderSide(
+                        color: AppColors.accent(isDark),
+                        width: focusBorderWidth,
+                      )
+                    : BorderSide(
+                        color: AppColors.border(isDark),
+                        width: borderWidth,
+                      ),
+              ),
+            ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           minimumSize: const Size(48, 44),
           shape: buttonShape,
-        ),
+        ).copyWith(side: focusSide),
       ),
+      iconButtonTheme: IconButtonThemeData(style: ButtonStyle(side: focusSide)),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.inputFill(isDark),
         hintStyle: TextStyle(color: AppColors.textSecondary(isDark)),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(radiusControl),
-          borderSide: BorderSide.none,
+        border: inputBorder,
+        enabledBorder: inputBorder,
+        disabledBorder: inputBorder,
+        focusedBorder: focusBorder,
+        errorBorder: inputBorder.copyWith(
+          borderSide: const BorderSide(
+            color: AppColors.error,
+            width: borderWidth,
+          ),
+        ),
+        focusedErrorBorder: inputBorder.copyWith(
+          borderSide: const BorderSide(
+            color: AppColors.error,
+            width: focusBorderWidth,
+          ),
         ),
       ),
       bottomSheetTheme: BottomSheetThemeData(
@@ -147,7 +212,7 @@ class AppTheme {
       ),
       dividerTheme: DividerThemeData(
         color: AppColors.border(isDark),
-        thickness: 1,
+        thickness: borderWidth,
         space: 1,
       ),
       snackBarTheme: SnackBarThemeData(
@@ -169,38 +234,46 @@ class AppTheme {
     final primary = AppColors.textPrimary(isDark);
     final secondary = AppColors.textSecondary(isDark);
     return TextTheme(
-      headlineSmall: const TextStyle(
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-        height: 1.3,
-      ),
-      titleLarge: const TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        height: 1.3,
-      ),
-      titleMedium: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        height: 1.4,
-      ),
-      titleSmall: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        height: 1.4,
-      ),
-      bodyLarge: const TextStyle(fontSize: 16, height: 1.7),
-      bodyMedium: const TextStyle(fontSize: 14, height: 1.6),
-      bodySmall: const TextStyle(fontSize: 12, height: 1.5),
-      labelLarge: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-      labelMedium: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-      labelSmall: const TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.5,
-      ),
-    ).apply(bodyColor: primary, displayColor: primary).copyWith(
-      bodySmall: TextStyle(fontSize: 12, height: 1.5, color: secondary),
-    );
+          headlineSmall: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            height: 1.3,
+          ),
+          titleLarge: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            height: 1.3,
+          ),
+          titleMedium: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            height: 1.4,
+          ),
+          titleSmall: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            height: 1.4,
+          ),
+          bodyLarge: const TextStyle(fontSize: 16, height: 1.7),
+          bodyMedium: const TextStyle(fontSize: 14, height: 1.6),
+          bodySmall: const TextStyle(fontSize: 12, height: 1.5),
+          labelLarge: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+          labelMedium: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+          labelSmall: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+        )
+        .apply(bodyColor: primary, displayColor: primary)
+        .copyWith(
+          bodySmall: TextStyle(fontSize: 12, height: 1.5, color: secondary),
+        );
   }
 }

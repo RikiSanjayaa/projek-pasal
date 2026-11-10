@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../core/config/app_colors.dart';
 import '../../core/services/query_service.dart';
 import '../../models/pasal_model.dart';
@@ -6,6 +7,7 @@ import '../../models/pasal_link_model.dart';
 import '../utils/highlight_text.dart';
 import '../utils/uu_color_helper.dart';
 import 'law_content_formatter.dart';
+import 'interactive_surface.dart';
 
 /// Widget displaying the "Penjelasan" (explanation) section for a Pasal
 class PenjelasanSection extends StatelessWidget {
@@ -31,11 +33,9 @@ class PenjelasanSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: isDark ? 0.1 : 0.05),
+        color: AppColors.selected(isDark),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.primary.withValues(alpha: isDark ? 0.5 : 0.3),
-        ),
+        border: Border.all(color: AppColors.border(isDark)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,7 +45,7 @@ class PenjelasanSection extends StatelessWidget {
               Icon(
                 Icons.lightbulb_outline,
                 size: 14,
-                color: AppColors.primary.withValues(alpha: 0.8),
+                color: AppColors.accent(isDark),
               ),
               const SizedBox(width: 6),
               Text(
@@ -53,7 +53,7 @@ class PenjelasanSection extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.primary.withValues(alpha: 0.8),
+                  color: AppColors.accent(isDark),
                   letterSpacing: 0.5,
                 ),
               ),
@@ -68,7 +68,7 @@ class PenjelasanSection extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.primary.withValues(alpha: 0.9),
+                  color: AppColors.accent(isDark),
                   letterSpacing: 0.3,
                 ),
               ),
@@ -142,85 +142,84 @@ class RelatedPasalLinks extends StatelessWidget {
                 future: QueryService.getKodeUU(relatedPasal.undangUndangId),
                 builder: (context, kodeSnapshot) {
                   final kodeUU = kodeSnapshot.data ?? "UU";
-                  final relColor = UUColorHelper.getColor(kodeUU);
+                  final relColor = UUColorHelper.getColor(
+                    kodeUU,
+                    isDark: isDark,
+                  );
 
-                  return GestureDetector(
-                    onTap: () => onNavigate(relatedPasal),
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withValues(
-                          alpha: isDark ? 0.1 : 0.05,
-                        ),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: Colors.orange.withValues(
-                            alpha: isDark ? 0.5 : 0.3,
-                          ),
-                        ),
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: InteractiveSurface(
+                      onTap: () => onNavigate(relatedPasal),
+                      borderRadius: BorderRadius.circular(10),
+                      color: Color.alphaBlend(
+                        Colors.orange.withValues(alpha: isDark ? 0.1 : 0.05),
+                        AppColors.scaffold(isDark),
                       ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: relColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: relColor.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                getUUIcon(kodeUU),
+                                size: 16,
+                                color: relColor,
+                              ),
                             ),
-                            child: Icon(
-                              getUUIcon(kodeUU),
-                              size: 16,
-                              color: relColor,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      "Pasal ${relatedPasal.nomor}",
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13,
-                                        color: textColor,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        "Pasal ${relatedPasal.nomor}",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                          color: textColor,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 10),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        kodeUU,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: relColor,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (link.keterangan != null &&
+                                      link.keterangan!.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
                                     Text(
-                                      kodeUU,
+                                      link.keterangan!,
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: relColor,
-                                        fontWeight: FontWeight.w500,
+                                        color: subTextColor,
+                                        fontStyle: FontStyle.italic,
                                       ),
                                     ),
                                   ],
-                                ),
-                                if (link.keterangan != null &&
-                                    link.keterangan!.isNotEmpty) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    link.keterangan!,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: subTextColor,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
                                 ],
-                              ],
+                              ),
                             ),
-                          ),
-                          Icon(
-                            Icons.chevron_right_rounded,
-                            size: 20,
-                            color: subTextColor,
-                          ),
-                        ],
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              size: 20,
+                              color: subTextColor,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );

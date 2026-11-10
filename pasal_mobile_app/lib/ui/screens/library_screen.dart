@@ -10,6 +10,7 @@ import 'detail_uu_screen.dart';
 import '../widgets/main_layout.dart';
 import '../utils/uu_color_helper.dart';
 import '../utils/responsive_layout.dart';
+import '../widgets/interactive_surface.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -75,11 +76,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
     }
   }
 
-  // Get color for each UU type - delegated to centralized helper
-  Color _getUUColor(String kode) {
-    return UUColorHelper.getColor(kode);
-  }
-
   // Get icon for each UU type - delegated to centralized helper
   IconData _getUUIcon(String kode) {
     return UUColorHelper.getIcon(kode);
@@ -125,7 +121,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         "Koleksi peraturan perundang-undangan Indonesia",
                         style: TextStyle(
                           fontSize: 14,
-                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          color: AppColors.textSecondary(isDark),
                         ),
                       ),
                     ],
@@ -141,7 +137,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         icon: Icons.auto_stories_rounded,
                         value: '${_allUU.length}',
                         label: 'Sumber',
-                        color: AppColors.primary,
+                        color: AppColors.accent(isDark),
                         isDark: isDark,
                       ),
                       const SizedBox(width: 12),
@@ -174,7 +170,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         "${_filteredUU.length} tersedia",
                         style: TextStyle(
                           fontSize: 12,
-                          color: isDark ? Colors.grey[500] : Colors.grey[500],
+                          color: AppColors.textSecondary(isDark),
                         ),
                       ),
                     ],
@@ -224,9 +220,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         decoration: BoxDecoration(
           color: color.withValues(alpha: isDark ? 0.1 : 0.05),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: color.withValues(alpha: isDark ? 0.5 : 0.3),
-          ),
+          border: Border.all(color: AppColors.border(isDark)),
         ),
         child: Row(
           children: [
@@ -266,24 +260,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _buildUUCard(UndangUndangModel uu, bool isDark) {
-    final color = _getUUColor(uu.kode);
+    final color = UUColorHelper.getColor(uu.kode, isDark: isDark);
     final icon = _getUUIcon(uu.kode);
     final pasalCount = _pasalCounts[uu.id] ?? 0;
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: () => setState(() => _selectedUU = uu),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: isDark ? 0.1 : 0.05),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: color.withValues(alpha: isDark ? 0.5 : 0.3),
-          ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: InteractiveSurface(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => setState(() => _selectedUU = uu),
+        color: Color.alphaBlend(
+          color.withValues(alpha: isDark ? .1 : .05),
+          AppColors.card(isDark),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(17),
           child: Row(
             children: [
               // Icon container
@@ -293,7 +284,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: color.withValues(alpha: 0.3)),
+                  border: Border.all(color: AppColors.border(isDark)),
                 ),
                 child: Icon(icon, color: color, size: 28),
               ),
@@ -318,10 +309,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           ),
                           child: Text(
                             uu.kode,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: isDark
+                                  ? const Color(0xFF10243B)
+                                  : Colors.white,
                             ),
                           ),
                         ),
@@ -330,7 +323,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           'Tahun ${uu.tahun}',
                           style: TextStyle(
                             fontSize: 11,
-                            color: isDark ? Colors.grey[500] : Colors.grey[500],
+                            color: AppColors.textSecondary(isDark),
                           ),
                         ),
                       ],
@@ -357,14 +350,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         Icon(
                           Icons.article_outlined,
                           size: 14,
-                          color: isDark ? Colors.grey[500] : Colors.grey[500],
+                          color: AppColors.icon(isDark),
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '$pasalCount Pasal',
                           style: TextStyle(
                             fontSize: 12,
-                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                            color: AppColors.textSecondary(isDark),
                           ),
                         ),
                         if (uu.deskripsi != null &&
@@ -373,7 +366,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           Icon(
                             Icons.info_outline,
                             size: 14,
-                            color: isDark ? Colors.grey[500] : Colors.grey[500],
+                            color: AppColors.icon(isDark),
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -393,10 +386,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               ),
 
               // Arrow
-              Icon(
-                Icons.chevron_right_rounded,
-                color: isDark ? Colors.grey[600] : Colors.grey[400],
-              ),
+              Icon(Icons.chevron_right_rounded, color: AppColors.icon(isDark)),
             ],
           ),
         ),
@@ -420,7 +410,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.grey[500] : Colors.grey[600],
+              color: AppColors.textSecondary(isDark),
             ),
           ),
           const SizedBox(height: 4),
@@ -428,7 +418,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             "Coba kata kunci lain",
             style: TextStyle(
               fontSize: 14,
-              color: isDark ? Colors.grey[600] : Colors.grey[500],
+              color: AppColors.textSecondary(isDark),
             ),
           ),
         ],

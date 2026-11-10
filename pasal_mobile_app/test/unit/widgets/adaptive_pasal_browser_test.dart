@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -119,6 +120,104 @@ void main() {
     await tester.tap(find.byTooltip('Kembali ke daftar'));
     await tester.pumpAndSettle();
     expect(tester.getSize(find.byType(PasalCard)).width, 1365);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('reader keeps list order until an explicit chapter selection', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1568, 1000);
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({
+      'has_shown_read_pasal_showcase': true,
+      'has_shown_read_pasal_showcase_v2': true,
+    });
+    ShowcaseView.register();
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    DataService.useDatabase(db);
+    addTearDown(db.close);
+    for (final law in ['A', 'B']) {
+      await db
+          .into(db.undangUndangTable)
+          .insert(
+            UndangUndangTableCompanion.insert(id: law, kode: law, nama: law),
+          );
+    }
+    final articles = [
+      for (final number in ['1', '2', '3'])
+        PasalModel(
+          id: 'A-$number',
+          undangUndangId: 'A',
+          nomor: number,
+          isi: 'Isi ketentuan A $number',
+          judul: 'Ketentuan A $number',
+          bab: 'Bab I',
+        ),
+      PasalModel(
+        id: 'B-9',
+        undangUndangId: 'B',
+        nomor: '9',
+        isi: 'Isi ketentuan B 9',
+        judul: 'Ketentuan B 9',
+        bab: 'Bab I',
+      ),
+    ];
+    for (final article in articles) {
+      await db
+          .into(db.pasalTable)
+          .insert(
+            PasalTableCompanion.insert(
+              id: article.id,
+              undangUndangId: article.undangUndangId,
+              nomor: article.nomor,
+              isi: article.isi,
+              judul: Value(article.judul),
+              bab: Value(article.bab),
+            ),
+          );
+    }
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: ReadPasalScreen(
+          pasal: articles[2],
+          contextList: [articles[2], articles[3], articles[0]],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final next = find.byType(FilledButton);
+    final previous = find.byType(OutlinedButton);
+    Finder preview(String number) => find.textContaining(' - Pasal $number');
+    expect(tester.widget<OutlinedButton>(previous).onPressed, isNull);
+    expect(preview('9'), findsOneWidget);
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.pumpAndSettle();
+    expect(preview('9'), findsNothing);
+    await tester.tap(next);
+    await tester.pumpAndSettle();
+    tester.view.physicalSize = const Size(1568, 1000);
+    await tester.pumpAndSettle();
+    expect(preview('1'), findsOneWidget);
+    expect(preview('3'), findsOneWidget);
+    await tester.tap(next);
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilledButton>(next).onPressed, isNull);
+    await tester.tap(previous);
+    await tester.pumpAndSettle();
+    await tester.tap(previous);
+    await tester.pumpAndSettle();
+    // Choosing a chapter article switches to book order, even when later
+    // articles are also present in the original cross-law opening list.
+    await tester.tap(find.widgetWithText(ListTile, 'Pasal 2'));
+    await tester.pumpAndSettle();
+    expect(preview('3'), findsOneWidget);
+    expect(preview('1'), findsOneWidget);
+    await tester.tap(next);
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilledButton>(next).onPressed, isNull);
+    expect(preview('2'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
   });
   testWidgets('grid cards share row height with unequal legal text', (

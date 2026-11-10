@@ -8,6 +8,7 @@ import '../screens/home_screen.dart';
 import '../screens/library_screen.dart';
 import '../screens/archive_screen.dart';
 import '../utils/responsive_layout.dart';
+import 'interactive_surface.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -45,9 +46,7 @@ class _MainNavigationState extends State<MainNavigation> {
       width: expanded ? 264 : 80,
       decoration: BoxDecoration(
         color: AppColors.card(isDark),
-        border: Border(
-          right: BorderSide(color: AppColors.border(isDark), width: 1.5),
-        ),
+        border: Border(right: BorderSide(color: AppColors.border(isDark))),
       ),
       child: CustomScrollView(
         slivers: [
@@ -118,52 +117,51 @@ class _MainNavigationState extends State<MainNavigation> {
                       padding: const EdgeInsets.only(bottom: 6),
                       child: Tooltip(
                         message: expanded ? '' : destinations[i].$3,
-                        child: Material(
-                          color: i == _selectedIndex
-                              ? AppColors.primary.withValues(alpha: .10)
-                              : Colors.transparent,
+                        child: InteractiveSurface(
+                          selected: i == _selectedIndex,
+                          showBorder: false,
                           borderRadius: BorderRadius.circular(10),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(10),
-                            onTap: () => _onItemTapped(i),
-                            child: Semantics(
-                              button: true,
-                              selected: i == _selectedIndex,
-                              label: destinations[i].$3,
-                              excludeSemantics: true,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 14,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: expanded
-                                      ? MainAxisAlignment.start
-                                      : MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      i == _selectedIndex
-                                          ? destinations[i].$2
-                                          : destinations[i].$1,
-                                      size: 22,
-                                      color: i == _selectedIndex
-                                          ? AppColors.primary
-                                          : AppColors.icon(isDark),
-                                    ),
-                                    if (expanded) ...[
-                                      const SizedBox(width: 14),
-                                      Text(
-                                        destinations[i].$3,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: i == _selectedIndex
-                                              ? FontWeight.w600
-                                              : FontWeight.normal,
-                                        ),
+                          onTap: () => _onItemTapped(i),
+                          child: Semantics(
+                            button: true,
+                            selected: i == _selectedIndex,
+                            label: destinations[i].$3,
+                            excludeSemantics: true,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: expanded
+                                    ? MainAxisAlignment.start
+                                    : MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    i == _selectedIndex
+                                        ? destinations[i].$2
+                                        : destinations[i].$1,
+                                    size: 22,
+                                    color: i == _selectedIndex
+                                        ? AppColors.accent(isDark)
+                                        : AppColors.icon(isDark),
+                                  ),
+                                  if (expanded) ...[
+                                    const SizedBox(width: 14),
+                                    Text(
+                                      destinations[i].$3,
+                                      style: TextStyle(
+                                        color: i == _selectedIndex
+                                            ? AppColors.accent(isDark)
+                                            : AppColors.textPrimary(isDark),
+                                        fontSize: 14,
+                                        fontWeight: i == _selectedIndex
+                                            ? FontWeight.w600
+                                            : FontWeight.normal,
                                       ),
-                                    ],
+                                    ),
                                   ],
-                                ),
+                                ],
                               ),
                             ),
                           ),

@@ -45,9 +45,7 @@ class BabResultScreen extends StatelessWidget {
               return Center(
                 child: Text(
                   'Tidak ada pasal di bab ini',
-                  style: TextStyle(
-                    color: isDark ? Colors.grey[400] : Colors.grey[600],
-                  ),
+                  style: TextStyle(color: AppColors.textSecondary(isDark)),
                 ),
               );
             }
