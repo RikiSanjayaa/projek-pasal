@@ -29,11 +29,11 @@ RUN apk add --no-cache python3 py3-pip
 COPY --from=import-tools requirements.txt /opt/import-tools/requirements.txt
 RUN python3 -m venv /opt/import-venv \
     && /opt/import-venv/bin/pip install --no-cache-dir --prefer-binary -r /opt/import-tools/requirements.txt
-COPY --from=import-tools prepare_import.py datahukum_pipeline.py /opt/import-tools/
-COPY --from=import-tools laws /opt/import-tools/laws
+COPY --from=import-tools prepare_import.py datahukum_pipeline.py source_config.py secure_fetch.py reviewed_rules.py /opt/import-tools/
 ENV IMPORT_TOOLS_DIR=/opt/import-tools \
     IMPORT_PYTHON=/opt/import-venv/bin/python \
-    IMPORT_CACHE_DIR=/var/www/html/storage/app/import-cache
+    IMPORT_CACHE_DIR=/var/www/html/storage/app/import-cache \
+    IMPORT_DOCUMENTS_DIR=/var/www/html/storage/app/private/law-documents
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -48,6 +48,7 @@ RUN composer install \
 
 COPY . .
 COPY docker/entrypoint.sh /usr/local/bin/caripasal-entrypoint
+COPY docker/uploads.ini /usr/local/etc/php/conf.d/caripasal-uploads.ini
 
 RUN composer dump-autoload --optimize \
     && chmod +x /usr/local/bin/caripasal-entrypoint \
@@ -57,4 +58,4 @@ RUN composer dump-autoload --optimize \
 EXPOSE 8000
 
 ENTRYPOINT ["caripasal-entrypoint"]
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000", "--no-reload"]

@@ -1,0 +1,1373 @@
+[
+  {
+    "slug": "kuhp-2023",
+    "xlsx_name": "01_kuhp_2023_konsolidasi_ready.xlsx",
+    "kode": "KUHP",
+    "label": "UU 1/2023",
+    "nama": "Kitab Undang-Undang Hukum Pidana",
+    "nama_lengkap": "Undang-Undang Nomor 1 Tahun 2023 tentang Kitab Undang-Undang Hukum Pidana",
+    "tahun": 2023,
+    "datahukum_url": "https://www.datahukum.com/peraturan/UU_1_Tahun_2023.html",
+    "doc_class": "uu-12023",
+    "bpk_detail_url": "https://peraturan.bpk.go.id/Details/234935/uu-no-1-tahun-2023",
+    "bpk_pdf_url": "https://peraturan.bpk.go.id/Download/287456/UU%20Nomor%201%20Tahun%202023.pdf",
+    "body_pages": [
+      2,
+      229
+    ],
+    "penjelasan_pages": [
+      230,
+      345
+    ],
+    "amendments": [
+      {
+        "doc_class": "uu-12026",
+        "label": "UU 1/2026",
+        "title": "UU 1/2026 (Penyesuaian Pidana)",
+        "full_title": "Undang-Undang Nomor 1 Tahun 2026 tentang Penyesuaian Pidana",
+        "official_url": "https://peraturan.bpk.go.id/Details/337869/uu-no-1-tahun-2026",
+        "diundangkan": "2026-01-12",
+        "berlaku_sejak": "2026-01-02",
+        "pdf": "uu-nomor-1-tahun-2026.pdf",
+        "pdf_url": "https://peraturan.bpk.go.id/Download/400929/UU%20Nomor%201%20Tahun%202026.pdf",
+        "repealed": [
+          "615",
+          "616"
+        ]
+      }
+    ],
+    "amendments_from_html": false,
+    "amendment_overrides": {},
+    "diundangkan": "2023-01-02",
+    "berlaku_sejak": "2026-01-02",
+    "repealed_text": "Dihapus.",
+    "mk_notes": {
+      "220": "Catatan Putusan MK Nomor 275/PUU-XXIII/2025: Pasal 220 ayat (1) bertentangan dengan UUD 1945 dan tidak mempunyai kekuatan hukum mengikat secara bersyarat sepanjang tidak dimaknai \"(1) Tindak Pidana sebagaimana dimaksud dalam Pasal 218 dan Pasal 219 hanya dapat dituntut berdasarkan aduan oleh Presiden dan/atau Wakil Presiden\".",
+      "237": "Catatan Putusan MK Nomor 27/PUU-XXIV/2026: Pasal 237 huruf c bertentangan dengan UUD 1945 dan tidak mempunyai kekuatan hukum mengikat."
+    },
+    "text_fixes": {
+      "3": [
+        [
+          "isi",
+          "sesuai dengan Tingkat pemeriksaan",
+          "sesuai dengan tingkat pemeriksaan"
+        ]
+      ],
+      "46": [
+        [
+          "penjelasan",
+          "termasuk yang berkedudukan.\nberkedudukan sebagai",
+          "termasuk yang berkedudukan sebagai"
+        ]
+      ],
+      "66": [
+        [
+          "isi",
+          "pencabutan izin Tertentu",
+          "pencabutan izin tertentu"
+        ],
+        [
+          "penjelasan",
+          "perlindongan",
+          "perlindungan"
+        ]
+      ],
+      "76": [
+        [
+          "penjelasan",
+          "Tindak Pidana iti\"",
+          "Tindak Pidana itu\""
+        ],
+        [
+          "penjelasan",
+          "pemasyarakalan",
+          "pemasyarakatan"
+        ]
+      ],
+      "79": [
+        [
+          "penjelasan",
+          "moneter. Penetapan tingkatan",
+          "moneter.\nPenetapan tingkatan"
+        ],
+        [
+          "penjelasan",
+          "\nc. Maksimum kategori denda",
+          "\na. Maksimum kategori denda"
+        ],
+        [
+          "penjelasan",
+          "\nd. Untuk kategori II adalah",
+          "\nb. Untuk kategori II adalah"
+        ],
+        [
+          "penjelasan",
+          "\ne. Untuk kategori V sampai",
+          "\nc. Untuk kategori V sampai"
+        ]
+      ],
+      "81": [
+        [
+          "penjelasan",
+          "antara lain•",
+          "antara lain:"
+        ]
+      ],
+      "90": [
+        [
+          "isi",
+          "\nKetentuan sebagaimana dimaksud pada ayat (1) huruf b",
+          "\n(2) Ketentuan sebagaimana dimaksud pada ayat (1) huruf b"
+        ],
+        [
+          "isi",
+          "\n(2) Pidana pencabutan hak mulai berlaku",
+          "\n(3) Pidana pencabutan hak mulai berlaku"
+        ]
+      ],
+      "95": [
+        [
+          "isi",
+          "dûakukan",
+          "dilakukan"
+        ]
+      ],
+      "103": [
+        [
+          "isi",
+          "dan/alan",
+          "dan/atau"
+        ]
+      ],
+      "196": [
+        [
+          "isi",
+          "denğan",
+          "dengan"
+        ]
+      ],
+      "269": [
+        [
+          "penjelasan",
+          "adalah hang atau ruang",
+          "adalah liang atau ruang"
+        ]
+      ],
+      "300": [
+        [
+          "isi",
+          "terlulis",
+          "tertulis"
+        ]
+      ],
+      "407": [
+        [
+          "penjelasan",
+          "contemporariy",
+          "contemporary"
+        ]
+      ],
+      "433": [
+        [
+          "penjelasan",
+          "kehormalan",
+          "kehormatan"
+        ]
+      ],
+      "457": [
+        [
+          "isi",
+          "palsu, atar tanpa",
+          "palsu, atau tanpa"
+        ]
+      ],
+      "473": [
+        [
+          "isi",
+          "memberi atar menjanjikan",
+          "memberi atau menjanjikan"
+        ]
+      ],
+      "622": [
+        [
+          "isi",
+          "Nomor O Tahun 2023",
+          "Nomor 6 Tahun 2023"
+        ],
+        [
+          "isi",
+          "tentang Pembahan atas",
+          "tentang Perubahan atas"
+        ],
+        [
+          "isi",
+          "dalam mtab Undang-Undang",
+          "dalam Kitab Undang-Undang"
+        ],
+        [
+          "isi",
+          "Nomor l3 Tahun 2006",
+          "Nomor 13 Tahun 2006"
+        ],
+        [
+          "isi",
+          "Tahun 2023 Nomor 4 1,",
+          "Tahun 2023 Nomor 41,"
+        ],
+        [
+          "isi",
+          "Nomor 49 19)",
+          "Nomor 4919)"
+        ],
+        [
+          "isi",
+          "Nomor S 164)",
+          "Nomor 5164)"
+        ],
+        [
+          "isi",
+          "6OD",
+          "606"
+        ],
+        [
+          "isi",
+          "\nCC. ",
+          "\ncc. "
+        ]
+      ]
+    },
+    "version_fixes": {},
+    "ocr_fixes": [],
+    "manual_review": {
+      "6": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "25": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "69": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "82": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "95": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "120": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "121": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "196": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "200": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "203": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "209": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "269": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "281": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "296": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "332": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "353": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "375": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "382": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "403": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "407": "Dicek manual: selisih berasal dari OCR PDF, teks sudah sesuai",
+      "90": "Dicek manual: penomoran ayat (2) dan (3) diperbaiki sesuai PDF UU 1/2026"
+    },
+    "no_link_bab_titles": [
+      "KETENTUAN PENUTUP",
+      "KETENTUAN PERALIHAN"
+    ],
+    "catatan_rules": [],
+    "readme_notes": []
+  },
+  {
+    "slug": "kuhap-2025",
+    "xlsx_name": "01_kuhap_2025_ready.xlsx",
+    "kode": "KUHAP",
+    "label": "UU 20/2025",
+    "nama": "Kitab Undang-Undang Hukum Acara Pidana",
+    "nama_lengkap": "Undang-Undang Nomor 20 Tahun 2025 tentang Kitab Undang-Undang Hukum Acara Pidana",
+    "tahun": 2025,
+    "datahukum_url": "https://www.datahukum.com/peraturan/UU_20_Tahun_2025.html",
+    "doc_class": "uu-202025",
+    "bpk_detail_url": "https://peraturan.bpk.go.id/Details/337302/uu-no-20-tahun-2025",
+    "bpk_pdf_url": "https://peraturan.bpk.go.id/Download/400351/UU%20Nomor%2020%20Tahun%202025.pdf",
+    "body_pages": [
+      2,
+      184
+    ],
+    "penjelasan_pages": [
+      185,
+      238
+    ],
+    "amendments": [],
+    "amendments_from_html": false,
+    "amendment_overrides": {},
+    "diundangkan": "",
+    "berlaku_sejak": "",
+    "repealed_text": "Dihapus.",
+    "mk_notes": {},
+    "text_fixes": {
+      "1": [
+        [
+          "isi",
+          "alau hak terpidana",
+          "atau hak terpidana"
+        ],
+        [
+          "isi",
+          "aÍau korban",
+          "atau korban"
+        ],
+        [
+          "isi",
+          "badan u saha milik daerah",
+          "badan usaha milik daerah"
+        ]
+      ],
+      "4": [
+        [
+          "penjelasan",
+          "menemııkan",
+          "menemukan"
+        ]
+      ],
+      "6": [
+        [
+          "isi",
+          "Terlentu",
+          "Tertentu"
+        ],
+        [
+          "isi",
+          "sertifıkasi",
+          "sertifikasi"
+        ]
+      ],
+      "7": [
+        [
+          "isi",
+          "atau Banda pengenal",
+          "atau tanda pengenal"
+        ],
+        [
+          "isi",
+          "Tindak mdana Korupsi",
+          "Tindak Pidana Korupsi"
+        ],
+        [
+          "penjelasan",
+          "poiice line",
+          "police line"
+        ]
+      ],
+      "31": [
+        [
+          "isi",
+          "Advokat afiau",
+          "Advokat atau"
+        ]
+      ],
+      "45": [
+        [
+          "isi",
+          "Keloarganya",
+          "Keluarganya"
+        ]
+      ],
+      "56": [
+        [
+          "isi",
+          "yang hans mendapat",
+          "yang harus mendapat"
+        ]
+      ],
+      "64": [
+        [
+          "penjelasan",
+          "Penunlutan",
+          "Penuntutan"
+        ]
+      ],
+      "71": [
+        [
+          "isi",
+          "Penuntulan",
+          "Penuntutan"
+        ]
+      ],
+      "87": [
+        [
+          "isi",
+          "Ptıtusan",
+          "Putusan"
+        ]
+      ],
+      "95": [
+        [
+          "isi",
+          "Pembanlu",
+          "Pembantu"
+        ]
+      ],
+      "106": [
+        [
+          "isi",
+          "Mahkamah Agiing",
+          "Mahkamah Agung"
+        ]
+      ],
+      "108": [
+        [
+          "isi",
+          "orusan",
+          "urusan"
+        ],
+        [
+          "isi",
+          "pemerinlahan",
+          "pemerintahan"
+        ]
+      ],
+      "120": [
+        [
+          "isi",
+          "siluasi",
+          "situasi"
+        ]
+      ],
+      "127": [
+        [
+          "isi",
+          "Penyilaan",
+          "Penyitaan"
+        ]
+      ],
+      "143": [
+        [
+          "isi",
+          "maupon",
+          "maupun"
+        ],
+        [
+          "isi",
+          "transporlasi",
+          "transportasi"
+        ]
+      ],
+      "144": [
+        [
+          "isi",
+          "sampai balas pelindungan",
+          "sampai batas pelindungan"
+        ]
+      ],
+      "146": [
+        [
+          "isi",
+          "pertanggunğawaban",
+          "pertanggungjawaban"
+        ]
+      ],
+      "147": [
+        [
+          "penjelasan",
+          ") lahun",
+          ") tahun"
+        ]
+      ],
+      "148": [
+        [
+          "isi",
+          "flsik",
+          "fisik"
+        ]
+      ],
+      "156": [
+        [
+          "isi",
+          "menandalangani",
+          "menandatangani"
+        ]
+      ],
+      "167": [
+        [
+          "isi",
+          "ûndak",
+          "tindak"
+        ],
+        [
+          "isi",
+          "düakukan",
+          "dilakukan"
+        ]
+      ],
+      "169": [
+        [
+          "isi",
+          "peninjaoan",
+          "peninjauan"
+        ]
+      ],
+      "178": [
+        [
+          "isi",
+          "danJ atau",
+          "dan/atau"
+        ]
+      ],
+      "189": [
+        [
+          "isi",
+          "dapaÍ",
+          "dapat"
+        ]
+      ],
+      "190": [
+        [
+          "isi",
+          "guga£an",
+          "gugatan"
+        ]
+      ],
+      "196": [
+        [
+          "penjelasan",
+          "pelimpahan bara",
+          "pelimpahan baru"
+        ]
+      ],
+      "201": [
+        [
+          "isi",
+          "danJ atau",
+          "dan/atau"
+        ]
+      ],
+      "204": [
+        [
+          "isi",
+          "bakan merupakan",
+          "bukan merupakan"
+        ],
+        [
+          "isi",
+          "tindakpidana",
+          "tindak pidana"
+        ]
+      ],
+      "205": [
+        [
+          "isi",
+          "fısik",
+          "fisik"
+        ]
+      ],
+      "214": [
+        [
+          "isi",
+          "mengklarifıkasi",
+          "mengklarifikasi"
+        ],
+        [
+          "penjelasan",
+          "mengcilur",
+          "mengulur"
+        ]
+      ],
+      "216": [
+        [
+          "isi",
+          "Terdakwa alan Saksi",
+          "Terdakwa atau Saksi"
+        ]
+      ],
+      "235": [
+        [
+          "isi",
+          "hokum",
+          "hukum"
+        ],
+        [
+          "penjelasan",
+          "eridence",
+          "evidence"
+        ],
+        [
+          "penjelasan",
+          "physico/evidence",
+          "physical evidence"
+        ]
+      ],
+      "239": [
+        [
+          "isi",
+          "ketalalaksanaan",
+          "ketatalaksanaan"
+        ]
+      ],
+      "240": [
+        [
+          "isi",
+          "bukû",
+          "bukti"
+        ]
+      ],
+      "245": [
+        [
+          "isi",
+          "Penuntufi",
+          "Penuntut"
+        ]
+      ],
+      "246": [
+        [
+          "isi",
+          "yaito",
+          "yaitu"
+        ]
+      ],
+      "250": [
+        [
+          "isi",
+          "kualifıkasinya",
+          "kualifikasinya"
+        ],
+        [
+          "isi",
+          "di maria letaknya",
+          "di mana letaknya"
+        ]
+      ],
+      "257": [
+        [
+          "isi",
+          "gina kepentingan",
+          "guna kepentingan"
+        ]
+      ],
+      "260": [
+        [
+          "isi",
+          "lertulis",
+          "tertulis"
+        ]
+      ],
+      "269": [
+        [
+          "penjelasan",
+          "timbolnya",
+          "timbulnya"
+        ]
+      ],
+      "281": [
+        [
+          "isi",
+          "lerletak",
+          "terletak"
+        ]
+      ],
+      "306": [
+        [
+          "isi",
+          "Hakilll",
+          "Hakim"
+        ]
+      ],
+      "326": [
+        [
+          "isi",
+          "Pertanggunğawaban",
+          "Pertanggungjawaban"
+        ]
+      ],
+      "328": [
+        [
+          "isi",
+          "Hakim nutuk",
+          "Hakim untuk"
+        ]
+      ],
+      "329": [
+        [
+          "isi",
+          "aktapendirian",
+          "akta pendirian"
+        ]
+      ],
+      "330": [
+        [
+          "isi",
+          "pertanggunğawaban",
+          "pertanggungjawaban"
+        ]
+      ],
+      "341": [
+        [
+          "isi",
+          "Peratiiran",
+          "Peraturan"
+        ]
+      ],
+      "344": [
+        [
+          "penjelasan",
+          "unÍuk",
+          "untuk"
+        ]
+      ],
+      "349": [
+        [
+          "isi",
+          "danpembimbingan",
+          "dan pembimbingan"
+        ]
+      ],
+      "353": [
+        [
+          "isi",
+          "selako",
+          "selaku"
+        ]
+      ]
+    },
+    "version_fixes": {},
+    "ocr_fixes": [],
+    "manual_review": {},
+    "no_link_bab_titles": [
+      "KETENTUAN PENUTUP",
+      "KETENTUAN PERALIHAN"
+    ],
+    "catatan_rules": [],
+    "readme_notes": []
+  },
+  {
+    "slug": "kuhper-1847",
+    "xlsx_name": "01_kuhper_1847_ready.xlsx",
+    "kode": "KUHPER",
+    "label": "Stb. 1847 No. 23",
+    "nama": "Kitab Undang-Undang Hukum Perdata",
+    "nama_lengkap": "Kitab Undang-Undang Hukum Perdata (Burgerlijk Wetboek, Staatsblad 1847 Nomor 23)",
+    "tahun": 1847,
+    "datahukum_url": "https://www.datahukum.com/peraturan/STB_23_Tahun_1847-bw.html",
+    "doc_class": "stb-231847-bw",
+    "bpk_detail_url": "",
+    "bpk_pdf_url": "",
+    "body_pages": [
+      0,
+      0
+    ],
+    "penjelasan_pages": [
+      0,
+      0
+    ],
+    "amendments": [],
+    "amendments_from_html": true,
+    "amendment_overrides": {
+      "uu-232006": {
+        "full_title": "Undang-Undang Nomor 23 Tahun 2006 tentang Administrasi Kependudukan",
+        "official_url": "https://peraturan.bpk.go.id/Details/40202/uu-no-23-tahun-2006",
+        "diundangkan": "2006-12-29",
+        "berlaku_sejak": "2006-12-29"
+      }
+    },
+    "diundangkan": "1847-04-30",
+    "berlaku_sejak": "1848-05-01",
+    "repealed_text": "Dicabut.",
+    "mk_notes": {},
+    "text_fixes": {
+      "912": [
+        [
+          "isi",
+          "\nBenar. File yang terakhir ini sebenarnya memuat Pasal 913 sampai Pasal 956. Jadi bagian itu terlewat. Berikut terjemahannya lengkap dari Pasal 913 sampai pasal terakhir dalam file, yaitu Pasal 956.",
+          ""
+        ]
+      ],
+      "461": [
+        [
+          "isi",
+          "\nKetentuan Penutup",
+          ""
+        ]
+      ],
+      "568": [
+        [
+          "isi",
+          "\nKetentuan Penutup",
+          ""
+        ]
+      ],
+      "1992": [
+        [
+          "isi",
+          "\nKetentuan Penutup",
+          ""
+        ]
+      ]
+    },
+    "version_fixes": {},
+    "ocr_fixes": [],
+    "manual_review": {},
+    "no_link_bab_titles": [],
+    "catatan_rules": [
+      {
+        "text": "Pasal 66 UU 1/1974 tentang Perkawinan menyatakan ketentuan KUHPerdata tentang perkawinan tidak berlaku sejauh hal itu telah diatur dalam UU Perkawinan. Periksa UU 1/1974 (diubah UU 16/2019) sebelum memakai pasal ini.",
+        "buku": "BUKU KESATU",
+        "bab": [
+          "BAB IV",
+          "BAB V",
+          "BAB VI",
+          "BAB VII",
+          "BAB VIII",
+          "BAB IX",
+          "BAB X",
+          "BAB XI",
+          "BAB XII",
+          "BAB XIV",
+          "BAB XIVA",
+          "BAB XV"
+        ],
+        "nomor": []
+      },
+      {
+        "text": "Bab ini mengatur hak dan kewajiban yang berkaitan dengan tanah. UU 5/1960 tentang Peraturan Dasar Pokok-Pokok Agraria mencabut Buku II KUHPerdata sepanjang mengenai bumi, air, dan kekayaan alam yang terkandung di dalamnya, sehingga ketentuan bab ini tidak berlaku lagi untuk tanah. Hak atas tanah sekarang diatur UUPA.",
+        "buku": "BUKU KEDUA",
+        "bab": [
+          "BAB IV",
+          "BAB V",
+          "BAB VI",
+          "BAB VII",
+          "BAB VIII",
+          "BAB IX"
+        ],
+        "nomor": []
+      },
+      {
+        "text": "UU 5/1960 tentang Peraturan Dasar Pokok-Pokok Agraria mencabut Buku II KUHPerdata sepanjang mengenai bumi, air, dan kekayaan alam yang terkandung di dalamnya, kecuali ketentuan hipotek. Untuk tanah, pasal ini tidak berlaku lagi; hak atas tanah diatur UUPA.",
+        "buku": "BUKU KEDUA",
+        "bab": [
+          "BAB I",
+          "BAB II",
+          "BAB III",
+          "BAB X",
+          "BAB XI"
+        ],
+        "nomor": []
+      },
+      {
+        "text": "Pasal 29 UU 4/1996 tentang Hak Tanggungan menyatakan ketentuan hipotek dalam Buku II KUHPerdata tidak berlaku lagi sepanjang mengenai pembebanan hak tanggungan pada hak atas tanah beserta benda yang berkaitan dengan tanah. Untuk hipotek kapal, lihat juga UU 17/2008 tentang Pelayaran.",
+        "buku": "BUKU KEDUA",
+        "bab": [
+          "BAB XXI"
+        ],
+        "nomor": []
+      },
+      {
+        "text": "Hubungan kerja sekarang terutama diatur dalam UU 13/2003 tentang Ketenagakerjaan beserta perubahannya. Periksa undang-undang itu sebelum memakai pasal ini.",
+        "buku": "BUKU KETIGA",
+        "bab": [
+          "BAB VIIA"
+        ],
+        "nomor": []
+      },
+      {
+        "text": "Melalui SEMA Nomor 3 Tahun 1963, Mahkamah Agung menganggap pasal ini tidak berlaku lagi. SEMA bukan undang-undang, jadi kedudukannya sebagai dasar pencabutan masih diperdebatkan.",
+        "buku": "",
+        "bab": [],
+        "nomor": [
+          "108"
+        ]
+      },
+      {
+        "text": "Melalui SEMA Nomor 3 Tahun 1963, Mahkamah Agung menganggap pasal ini tidak berlaku lagi. SEMA bukan undang-undang, jadi kedudukannya sebagai dasar pencabutan masih diperdebatkan.",
+        "buku": "",
+        "bab": [],
+        "nomor": [
+          "110"
+        ]
+      },
+      {
+        "text": "Melalui SEMA Nomor 3 Tahun 1963, Mahkamah Agung menganggap ayat (3) pasal ini tidak berlaku lagi. SEMA bukan undang-undang, jadi kedudukannya sebagai dasar pencabutan masih diperdebatkan.",
+        "buku": "",
+        "bab": [],
+        "nomor": [
+          "284"
+        ]
+      },
+      {
+        "text": "Melalui SEMA Nomor 3 Tahun 1963, Mahkamah Agung menganggap pasal ini tidak berlaku lagi. SEMA bukan undang-undang, jadi kedudukannya sebagai dasar pencabutan masih diperdebatkan.",
+        "buku": "",
+        "bab": [],
+        "nomor": [
+          "1238"
+        ]
+      },
+      {
+        "text": "Melalui SEMA Nomor 3 Tahun 1963, Mahkamah Agung menganggap pasal ini tidak berlaku lagi. SEMA bukan undang-undang, jadi kedudukannya sebagai dasar pencabutan masih diperdebatkan.",
+        "buku": "",
+        "bab": [],
+        "nomor": [
+          "1460"
+        ]
+      },
+      {
+        "text": "Melalui SEMA Nomor 3 Tahun 1963, Mahkamah Agung menganggap pasal ini tidak berlaku lagi. SEMA bukan undang-undang, jadi kedudukannya sebagai dasar pencabutan masih diperdebatkan.",
+        "buku": "",
+        "bab": [],
+        "nomor": [
+          "1579"
+        ]
+      },
+      {
+        "text": "Melalui SEMA Nomor 3 Tahun 1963, Mahkamah Agung menganggap ayat (1) dan (2) pasal ini tidak berlaku lagi. SEMA bukan undang-undang, jadi kedudukannya sebagai dasar pencabutan masih diperdebatkan.",
+        "buku": "",
+        "bab": [],
+        "nomor": [
+          "1603x"
+        ]
+      },
+      {
+        "text": "Melalui SEMA Nomor 3 Tahun 1963, Mahkamah Agung menganggap pasal ini tidak berlaku lagi. SEMA bukan undang-undang, jadi kedudukannya sebagai dasar pencabutan masih diperdebatkan.",
+        "buku": "",
+        "bab": [],
+        "nomor": [
+          "1682"
+        ]
+      }
+    ],
+    "readme_notes": []
+  },
+  {
+    "slug": "uu-ite-2008",
+    "xlsx_name": "01_uu_ite_2008_konsolidasi_ready.xlsx",
+    "kode": "UU-ITE",
+    "label": "UU 11/2008",
+    "nama": "Undang-Undang Informasi dan Transaksi Elektronik",
+    "nama_lengkap": "Undang-Undang Nomor 11 Tahun 2008 tentang Informasi dan Transaksi Elektronik",
+    "tahun": 2008,
+    "datahukum_url": "https://www.datahukum.com/peraturan/UU_11_Tahun_2008.html",
+    "doc_class": "uu-112008",
+    "bpk_detail_url": "https://peraturan.bpk.go.id/Details/37589/uu-no-11-tahun-2008",
+    "bpk_pdf_url": "https://peraturan.bpk.go.id/Download/26683/UU%20Nomor%2011%20Tahun%202008.pdf",
+    "body_pages": [
+      1,
+      25
+    ],
+    "penjelasan_pages": [
+      26,
+      38
+    ],
+    "amendments": [],
+    "amendments_from_html": true,
+    "amendment_overrides": {
+      "uu-192016": {
+        "full_title": "Undang-Undang Nomor 19 Tahun 2016 tentang Perubahan atas Undang-Undang Nomor 11 Tahun 2008 tentang Informasi dan Transaksi Elektronik",
+        "official_url": "https://peraturan.bpk.go.id/Details/37582/uu-no-19-tahun-2016",
+        "diundangkan": "2016-11-25",
+        "berlaku_sejak": "2016-11-25",
+        "pdf": "uu-nomor-19-tahun-2016.pdf",
+        "pdf_url": "https://peraturan.bpk.go.id/Download/26676/UU%20Nomor%20%2019%20Tahun%202016.pdf"
+      },
+      "uu-12024": {
+        "full_title": "Undang-Undang Nomor 1 Tahun 2024 tentang Perubahan Kedua atas Undang-Undang Nomor 11 Tahun 2008 tentang Informasi dan Transaksi Elektronik",
+        "official_url": "https://peraturan.bpk.go.id/Details/274494/uu-no-1-tahun-2024",
+        "diundangkan": "2024-01-02",
+        "berlaku_sejak": "2024-01-02",
+        "pdf": "uu-nomor-1-tahun-2024.pdf",
+        "pdf_url": "https://peraturan.bpk.go.id/Download/332870/UU%20Nomor%201%20Tahun%202024.pdf"
+      },
+      "uu-12026": {
+        "full_title": "Undang-Undang Nomor 1 Tahun 2026 tentang Penyesuaian Pidana",
+        "official_url": "https://peraturan.bpk.go.id/Details/337869/uu-no-1-tahun-2026",
+        "diundangkan": "2026-01-12",
+        "berlaku_sejak": "2026-01-02",
+        "repealed": [
+          "30",
+          "36",
+          "46",
+          "47"
+        ],
+        "derive_rule": "ite-2026"
+      }
+    },
+    "diundangkan": "2008-04-21",
+    "berlaku_sejak": "2008-04-21",
+    "repealed_text": "Dicabut.",
+    "mk_notes": {
+      "5": "Catatan Putusan MK Nomor 20/PUU-XIV/2016: frasa \"Informasi Elektronik dan/atau Dokumen Elektronik\" dalam Pasal 5 ayat (1) dan ayat (2) serta Pasal 44 huruf b UU 11/2008 bertentangan dengan UUD 1945 dan tidak mempunyai kekuatan hukum mengikat sepanjang tidak dimaknai khususnya frasa \"Informasi Elektronik dan/atau Dokumen Elektronik\" sebagai alat bukti dilakukan dalam rangka penegakan hukum atas permintaan kepolisian, kejaksaan, dan/atau institusi penegak hukum lainnya yang ditetapkan berdasarkan undang-undang sebagaimana ditentukan dalam Pasal 31 ayat (3) UU 11/2008.",
+      "44": "Catatan Putusan MK Nomor 20/PUU-XIV/2016: frasa \"Informasi Elektronik dan/atau Dokumen Elektronik\" dalam Pasal 5 ayat (1) dan ayat (2) serta Pasal 44 huruf b UU 11/2008 bertentangan dengan UUD 1945 dan tidak mempunyai kekuatan hukum mengikat sepanjang tidak dimaknai khususnya frasa \"Informasi Elektronik dan/atau Dokumen Elektronik\" sebagai alat bukti dilakukan dalam rangka penegakan hukum atas permintaan kepolisian, kejaksaan, dan/atau institusi penegak hukum lainnya yang ditetapkan berdasarkan undang-undang sebagaimana ditentukan dalam Pasal 31 ayat (3) UU 11/2008.",
+      "27A": "Catatan Putusan MK Nomor 105/PUU-XXII/2024: dalam Pasal 27A dan Pasal 45 ayat (4) UU 1/2024, frasa \"orang lain\" bertentangan dengan UUD 1945 dan tidak mempunyai kekuatan hukum mengikat secara bersyarat sepanjang tidak dimaknai \"kecuali lembaga pemerintah, sekelompok orang dengan identitas spesifik atau tertentu, institusi, korporasi, profesi atau jabatan\"; frasa \"suatu hal\" bertentangan dengan UUD 1945 dan tidak mempunyai kekuatan hukum mengikat secara bersyarat sepanjang tidak dimaknai \"suatu perbuatan yang merendahkan kehormatan atau nama baik seseorang\".",
+      "45": "Catatan Putusan MK Nomor 105/PUU-XXII/2024: dalam Pasal 27A dan Pasal 45 ayat (4) UU 1/2024, frasa \"orang lain\" bertentangan dengan UUD 1945 dan tidak mempunyai kekuatan hukum mengikat secara bersyarat sepanjang tidak dimaknai \"kecuali lembaga pemerintah, sekelompok orang dengan identitas spesifik atau tertentu, institusi, korporasi, profesi atau jabatan\"; frasa \"suatu hal\" bertentangan dengan UUD 1945 dan tidak mempunyai kekuatan hukum mengikat secara bersyarat sepanjang tidak dimaknai \"suatu perbuatan yang merendahkan kehormatan atau nama baik seseorang\".",
+      "28": "Catatan Putusan MK Nomor 105/PUU-XXII/2024: dalam Pasal 28 ayat (2) dan Pasal 45A ayat (2) UU 1/2024, frasa \"mendistribusikan dan/atau mentransmisikan informasi elektronik dan/atau dokumen elektronik yang sifatnya menghasut, mengajak, atau memengaruhi orang lain sehingga menimbulkan rasa kebencian atau permusuhan terhadap individu dan/atau kelompok masyarakat tertentu\" bertentangan dengan UUD 1945 dan tidak mempunyai kekuatan hukum mengikat secara bersyarat sepanjang tidak dimaknai \"hanya Informasi Elektronik dan/atau Dokumen Elektronik yang secara substantif memuat tindakan/penyebaran kebencian berdasar identitas tertentu yang dilakukan secara sengaja dan di depan umum, yang menimbulkan risiko nyata terhadap diskriminasi, permusuhan, atau kekerasan\".\nCatatan Putusan MK Nomor 115/PUU-XXII/2024: kata \"kerusuhan\" dalam Pasal 28 ayat (3) dan Pasal 45A ayat (3) UU 1/2024 bertentangan dengan UUD 1945 dan tidak mempunyai kekuatan hukum mengikat secara bersyarat sepanjang tidak dimaknai \"kerusuhan adalah kondisi yang mengganggu ketertiban umum di ruang fisik, bukan kondisi di ruang digital/siber\".",
+      "45A": "Catatan Putusan MK Nomor 105/PUU-XXII/2024: dalam Pasal 28 ayat (2) dan Pasal 45A ayat (2) UU 1/2024, frasa \"mendistribusikan dan/atau mentransmisikan informasi elektronik dan/atau dokumen elektronik yang sifatnya menghasut, mengajak, atau memengaruhi orang lain sehingga menimbulkan rasa kebencian atau permusuhan terhadap individu dan/atau kelompok masyarakat tertentu\" bertentangan dengan UUD 1945 dan tidak mempunyai kekuatan hukum mengikat secara bersyarat sepanjang tidak dimaknai \"hanya Informasi Elektronik dan/atau Dokumen Elektronik yang secara substantif memuat tindakan/penyebaran kebencian berdasar identitas tertentu yang dilakukan secara sengaja dan di depan umum, yang menimbulkan risiko nyata terhadap diskriminasi, permusuhan, atau kekerasan\".\nCatatan Putusan MK Nomor 115/PUU-XXII/2024: kata \"kerusuhan\" dalam Pasal 28 ayat (3) dan Pasal 45A ayat (3) UU 1/2024 bertentangan dengan UUD 1945 dan tidak mempunyai kekuatan hukum mengikat secara bersyarat sepanjang tidak dimaknai \"kerusuhan adalah kondisi yang mengganggu ketertiban umum di ruang fisik, bukan kondisi di ruang digital/siber\"."
+    },
+    "text_fixes": {},
+    "version_fixes": {
+      "1": [
+        [
+          "uu-192016",
+          "isi",
+          "eiectronic data interchonpe",
+          "electronic data interchange"
+        ],
+        [
+          "uu-192016",
+          "isi",
+          "surat elektronik\n!electronic mni9,",
+          "surat elektronik (electronic mail),"
+        ],
+        [
+          "uu-192016",
+          "isi",
+          "yang bempa kode",
+          "yang berupa kode"
+        ],
+        [
+          "uu-192016",
+          "isi",
+          "subjek hakum",
+          "subjek hukum"
+        ]
+      ],
+      "5": [
+        [
+          "uu-12024",
+          "penjelasan",
+          "danJ atau",
+          "dan/atau"
+        ]
+      ],
+      "6": [
+        [
+          "uu-112008",
+          "penjelasan",
+          "termasuk medial elektronik",
+          "termasuk media elektronik"
+        ]
+      ],
+      "13": [
+        [
+          "uu-12024",
+          "isi",
+          "untuk pemboatan",
+          "untuk pembuatan"
+        ]
+      ],
+      "13A": [
+        [
+          "uu-12024",
+          "isi",
+          "danJ atau",
+          "dan/atau"
+        ],
+        [
+          "uu-12024",
+          "penjelasan",
+          "bukti lerkait",
+          "bukti terkait"
+        ]
+      ],
+      "15": [
+        [
+          "uu-12024",
+          "penjelasan",
+          "memenohi",
+          "memenuhi"
+        ]
+      ],
+      "16A": [
+        [
+          "uu-12024",
+          "isi",
+          "pelindongan",
+          "pelindungan"
+        ],
+        [
+          "uu-12024",
+          "penjelasan",
+          "dan fAur yang",
+          "dan fitur yang"
+        ],
+        [
+          "uu-12024",
+          "penjelasan",
+          "maupon psikis",
+          "maupun psikis"
+        ]
+      ],
+      "16B": [
+        [
+          "uu-12024",
+          "isi",
+          "semenlara",
+          "sementara"
+        ]
+      ],
+      "17": [
+        [
+          "uu-12024",
+          "isi",
+          "Seriifikat",
+          "Sertifikat"
+        ]
+      ],
+      "18": [
+        [
+          "uu-112008",
+          "penjelasan",
+          "menekankan panda tempat",
+          "menekankan pada tempat"
+        ]
+      ],
+      "18A": [
+        [
+          "uu-12024",
+          "isi",
+          "Transalxsi",
+          "Transaksi"
+        ],
+        [
+          "uu-12024",
+          "penjelasan",
+          "klausola baku",
+          "klausula baku"
+        ]
+      ],
+      "23": [
+        [
+          "uu-112008",
+          "isi",
+          "harus di dasarkan",
+          "harus didasarkan"
+        ]
+      ],
+      "26": [
+        [
+          "uu-192016",
+          "isi",
+          "pemndang-undangan",
+          "perundang-undangan"
+        ],
+        [
+          "uu-192016",
+          "penjelasan",
+          "pribadi mempakan",
+          "pribadi merupakan"
+        ]
+      ],
+      "27": [
+        [
+          "uu-12024",
+          "isi",
+          "memperlunjukkan",
+          "mempertunjukkan"
+        ],
+        [
+          "uu-12024",
+          "penjelasan",
+          "disesoaikan",
+          "disesuaikan"
+        ],
+        [
+          "uu-12024",
+          "penjelasan",
+          "oleh kompulan orang",
+          "oleh kumpulan orang"
+        ]
+      ],
+      "40": [
+        [
+          "uu-192016",
+          "isi",
+          "Dokomen Elektronik",
+          "Dokumen Elektronik"
+        ],
+        [
+          "uu-192016",
+          "penjelasan",
+          "masyarakat has,",
+          "masyarakat luas,"
+        ],
+        [
+          "uu-12024",
+          "isi",
+          "perundang-ondangan",
+          "perundang-undangan"
+        ],
+        [
+          "uu-12024",
+          "penjelasan",
+          "Cokup jelas",
+          "Cukup jelas"
+        ]
+      ],
+      "40A": [
+        [
+          "uu-12024",
+          "penjelasan",
+          "penambahan fltur",
+          "penambahan fitur"
+        ],
+        [
+          "uu-12024",
+          "penjelasan",
+          "me ujudkan",
+          "mewujudkan"
+        ]
+      ],
+      "42": [
+        [
+          "uu-112008",
+          "isi",
+          "dimaksud. dalam",
+          "dimaksud dalam"
+        ]
+      ],
+      "43": [
+        [
+          "uu-192016",
+          "isi",
+          "saksi sehobungan",
+          "saksi sehubungan"
+        ],
+        [
+          "uu-12024",
+          "isi",
+          "kepada Penontut Umum",
+          "kepada Penuntut Umum"
+        ],
+        [
+          "uu-12024",
+          "isi",
+          "yang patot diduga",
+          "yang patut diduga"
+        ],
+        [
+          "uu-12024",
+          "isi",
+          "bekerja sanna",
+          "bekerja sama"
+        ],
+        [
+          "uu-12024",
+          "penjelasan",
+          "bidang komonikasi",
+          "bidang komunikasi"
+        ]
+      ],
+      "45": [
+        [
+          "uu-12024",
+          "isi",
+          "ilmo pengetahuan",
+          "ilmu pengetahuan"
+        ],
+        [
+          "uu-12024",
+          "isi",
+          "kehormatan atas nama baik",
+          "kehormatan atau nama baik"
+        ],
+        [
+          "uu-12024",
+          "isi",
+          "(empat) tahon",
+          "(empat) tahun"
+        ],
+        [
+          "uu-12024",
+          "isi",
+          "mengyntungkan",
+          "menguntungkan"
+        ],
+        [
+          "uu-12024",
+          "penjelasan",
+          "dilakukan intuk kepentingan",
+          "dilakukan untuk kepentingan"
+        ]
+      ],
+      "45A": [
+        [
+          "uu-192016",
+          "isi",
+          "Rpl.000.000.000,00",
+          "Rp1.000.000.000,00"
+        ],
+        [
+          "uu-192016",
+          "isi",
+          "mengakibatkan kemgian",
+          "mengakibatkan kerugian"
+        ],
+        [
+          "uu-12024",
+          "isi",
+          "(3) Setiap Orang yang dengan sengaja dan tanpa hak mendistribusikan",
+          "(2) Setiap Orang yang dengan sengaja dan tanpa hak mendistribusikan"
+        ]
+      ],
+      "45B": [
+        [
+          "uu-192016",
+          "penjelasan",
+          "!cyber btt!Iying) yang mengandurig susar ancaman kekerasan atau meriakut-nakuti",
+          "(cyber bullying) yang mengandung unsur ancaman kekerasan atau menakut-nakuti"
+        ]
+      ]
+    },
+    "ocr_fixes": [
+      [
+        "ı",
+        "i"
+      ],
+      [
+        "Í",
+        "t"
+      ],
+      [
+        "ğ",
+        "gj"
+      ],
+      [
+        "ъ",
+        ""
+      ],
+      [
+        "-?¬-?",
+        "-"
+      ],
+      [
+        "\\n?TAMBAHAN LEMBARAN NEGARA REPUBLIK INDONESIA NOMOR \\d+",
+        ""
+      ],
+      [
+        "\\n?Agar setiap orang mengetahuinya, memerintahkan pengundangan[^\\n]*",
+        ""
+      ]
+    ],
+    "manual_review": {
+      "1": "Dicek manual: selisih berasal dari OCR PDF perubahan, teks sudah sesuai",
+      "5": "Dicek manual: selisih berasal dari OCR PDF perubahan, teks sudah sesuai",
+      "13": "Dicek manual: selisih berasal dari OCR PDF perubahan, teks sudah sesuai",
+      "13A": "Dicek manual: selisih berasal dari OCR PDF perubahan, teks sudah sesuai",
+      "15": "Dicek manual: selisih berasal dari OCR PDF perubahan, teks sudah sesuai",
+      "16A": "Dicek manual: selisih berasal dari OCR PDF perubahan, teks sudah sesuai",
+      "16B": "Dicek manual: selisih berasal dari OCR PDF perubahan, teks sudah sesuai",
+      "18A": "Dicek manual: selisih berasal dari OCR PDF perubahan, teks sudah sesuai",
+      "26": "Dicek manual: selisih berasal dari OCR PDF perubahan, teks sudah sesuai",
+      "27A": "Dicek manual: selisih berasal dari OCR PDF perubahan, teks sudah sesuai",
+      "27B": "Dicek manual: selisih berasal dari OCR PDF perubahan, teks sudah sesuai",
+      "28": "Dicek manual: selisih berasal dari OCR PDF perubahan, teks sudah sesuai",
+      "29": "Dicek manual: selisih berasal dari OCR PDF perubahan, teks sudah sesuai",
+      "40": "Dicek manual: selisih berasal dari OCR PDF perubahan, teks sudah sesuai",
+      "40A": "Dicek manual: selisih berasal dari OCR PDF perubahan, teks sudah sesuai",
+      "43": "Dicek manual: selisih berasal dari OCR PDF perubahan, teks sudah sesuai",
+      "45": "Dicek manual: selisih berasal dari OCR PDF perubahan, teks sudah sesuai"
+    },
+    "no_link_bab_titles": [
+      "KETENTUAN PENUTUP",
+      "KETENTUAN PERALIHAN"
+    ],
+    "catatan_rules": [
+      {
+        "text": "UU 1/2026 mencabut Pasal 27 ayat (1) dan ayat (3) serta Pasal 45 ayat (1) dan ayat (3) UU ITE sebagaimana diubah terakhir dengan UU 1/2024. Penomoran itu mengikuti UU 19/2016: dalam rumusan UU 1/2024, Pasal 27 tidak lagi punya ayat (3) dan Pasal 45 ayat (3) memuat ancaman pidana perjudian. Periksa naskah resmi UU 1/2026 sebelum memakai ketentuan ini.",
+        "buku": "",
+        "bab": [],
+        "nomor": [
+          "27",
+          "45"
+        ]
+      }
+    ],
+    "readme_notes": []
+  }
+]

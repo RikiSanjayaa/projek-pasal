@@ -254,11 +254,25 @@ npm run dev
 
 ## Menyiapkan data hukum
 
-Pipeline ada di `import-tools/` (detail: [import-tools/README.md](import-tools/README.md)).
+Tambah atau edit **Admin > Undang-Undang** untuk menyimpan URL sumber teks, URL PDF asli atau unggahan
+PDF maksimal 20 MiB. Link naskah resmi tetap terpisah dari tautan langsung PDF. Sumber otomatis muncul
+di **Sumber Data**, termasuk saat pengambilan dinonaktifkan. Menyimpan UU tidak mengunduh sumber,
+menjalankan antrean, atau mengubah pasal. UU tanpa sumber tetap dapat diisi manual.
+
+Sumber datahukum baru dengan struktur yang didukung tidak memerlukan file Python per UU. Saat
+pemeriksaan, parser mendeteksi versi asli dan identitas perubahan dari metadata HTML, bukan nomor
+atau tahun yang ditebak dari judul. Penanda versi asli di form hanya override opsional. Konfigurasi
+lengkap berarti pemeriksaan boleh dijalankan, bukan bukti bahwa sumber sudah berhasil diparse.
+Badge parsing terpisah memakai hasil pemeriksaan snapshot konfigurasi dan PDF yang sama; mengubah
+sumber atau PDF membatalkan bukti lama. Judul umum seperti Amandemen I–IV dipertahankan, tanggal
+pengesahan tidak disalin menjadi tanggal pengundangan, dan riwayat ambigu tetap diblokir.
+
+Pipeline ada di `import-tools/` (detail: [import-tools/README.md](import-tools/README.md)). Untuk
+ekspor manual dengan snapshot konfigurasi JSON tepercaya:
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -r import-tools/requirements.txt
-.venv/bin/python import-tools/prepare_import.py kuhp-2023   # atau kuhap-2025, atau all
+.venv/bin/python import-tools/prepare_import.py --config source.json
 ```
 
 Hasilnya ada di `data-import/<slug>/`:
@@ -274,7 +288,8 @@ terbaca. Pasal baru atau yang teksnya berubah otomatis masuk antrean verifikasi.
 Untuk memperbarui data yang sudah ada, pakai **Admin > Sumber Data > Periksa pembaruan**. Job di
 `queue-worker` menjalankan pipeline yang sama, lalu menampilkan perubahan per kategori (baru, berubah
 di sumber, konflik, diedit admin, hilang dari sumber, riwayat berubah) untuk ditinjau sebelum
-diterapkan. Menambah undang-undang baru tetap lewat file konfigurasi di `import-tools/laws/`.
+diterapkan. Draf menyimpan snapshot sumber dan PDF yang tidak berubah ketika UU diedit. Hanya item
+yang dipilih yang diterapkan; hasil impor tetap perlu verifikasi naskah resmi.
 
 datahukum.com bukan sumber resmi dan izin pemakaian datanya masih diurus (issue #21). Karena itu
 fitur Sumber Data mati secara default.
