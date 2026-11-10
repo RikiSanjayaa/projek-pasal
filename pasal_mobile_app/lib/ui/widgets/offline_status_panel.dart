@@ -236,7 +236,11 @@ class _OfflineStatusPanelState extends State<OfflineStatusPanel>
             TextButton.icon(
               onPressed: _install,
               icon: const Icon(Icons.install_mobile_outlined, size: 18),
-              label: const Text('Pasang aplikasi'),
+              label: Text(
+                shell.installStatus == 'available'
+                    ? 'Pasang aplikasi'
+                    : 'Cara pasang di layar utama',
+              ),
             ),
         ],
       );
