@@ -35,7 +35,7 @@ class LawSourceTest extends TestCase
         Queue::fake();
         $headers = $this->headers();
         $saved = $this->postJson('/api/admin/undang-undang', $this->law(), $headers)->assertCreated();
-        $saved->assertJsonPath('import_source.status', 'ready')->assertJsonPath('import_source.config.doc_class', 'uu-122024');
+        $saved->assertJsonPath('import_source.status', 'ready');
         $id = $saved->json('id');
         $catalog = $this->getJson('/api/admin/import-sources', $headers)->assertOk()->assertJsonPath('enabled', false);
         $entry = collect($catalog->json('sources'))->firstWhere('undang_undang_id', $id);
@@ -65,11 +65,12 @@ class LawSourceTest extends TestCase
     public function test_replacing_source_url_does_not_reuse_inherited_document_class(): void
     {
         $headers = $this->headers();
-        $saved = $this->postJson('/api/admin/undang-undang', $this->law(), $headers)->assertCreated();
-        $this->putJson('/api/admin/undang-undang/'.$saved->json('id'), [
+        $saved = $this->postJson('/api/admin/undang-undang', $this->law(['import_config' => ['doc_class' => 'uu-122024']]), $headers)->assertCreated();
+        $updated = $this->putJson('/api/admin/undang-undang/'.$saved->json('id'), [
             'source_url' => 'https://www.datahukum.com/peraturan/UU_13_Tahun_2024.html',
             'import_config' => $saved->json('import_source.config'),
-        ], $headers)->assertOk()->assertJsonPath('import_source.config.doc_class', 'uu-132024');
+        ], $headers)->assertOk();
+        $this->assertNotSame('uu-122024', $updated->json('import_source.config.doc_class'));
     }
 
     public function test_restoring_source_keeps_pending_draft_visible_and_prevents_another_run(): void
@@ -154,6 +155,39 @@ class LawSourceTest extends TestCase
         $this->assertSame('failed', $run->fresh()->status);
         $this->assertStringContainsString('dinonaktifkan', $run->fresh()->error);
         $this->assertDatabaseMissing('import_run_items', ['import_run_id' => $run->id]);
+    }
+
+    public function test_source_without_manual_original_marker_can_be_checked_but_is_not_yet_parser_verified(): void
+    {
+        config(['services.datahukum.enabled' => true]);
+        Queue::fake();
+        $headers = $this->headers();
+        $saved = $this->postJson('/api/admin/undang-undang', $this->law([
+            'kode' => 'UUD_1945', 'tahun' => 1945, 'source_url' => 'https://www.datahukum.com/peraturan/UUD_1945.html',
+        ]), $headers)->assertCreated()->assertJsonPath('import_source.status', 'ready');
+        $catalog = $this->getJson('/api/admin/import-sources', $headers)->assertOk();
+        $entry = collect($catalog->json('sources'))->firstWhere('slug', $saved->json('import_source.slug'));
+        $this->assertSame('unverified', $entry['parse_status']);
+        $this->postJson('/api/admin/import-sources/'.$entry['slug'].'/runs', [], $headers)->assertAccepted();
+        Queue::assertPushed(RunDatahukumImport::class);
+    }
+
+    public function test_parser_evidence_belongs_to_the_checked_snapshot_not_just_the_source_slug(): void
+    {
+        $headers = $this->headers();
+        $saved = $this->postJson('/api/admin/undang-undang', $this->law(), $headers)->assertCreated();
+        $source = ImportSource::with('undangUndang')->where('slug', $saved->json('import_source.slug'))->firstOrFail();
+        $run = ImportRun::create([
+            'slug' => $source->slug, 'undang_undang_id' => $source->undang_undang_id,
+            'source_config' => app(\App\Services\LawSourceService::class)->snapshot($source),
+            'status' => ImportRun::READY, 'html_sha256' => str_repeat('a', 64),
+        ]);
+        $entry = fn () => collect($this->getJson('/api/admin/import-sources', $headers)->assertOk()->json('sources'))->firstWhere('slug', $source->slug);
+        $this->assertSame('passed', $entry()['parse_status']);
+        $run->update(['status' => ImportRun::FAILED, 'error' => 'Riwayat ambigu']);
+        $this->assertSame('failed', $entry()['parse_status']);
+        $this->putJson('/api/admin/undang-undang/'.$source->undang_undang_id, ['source_url' => 'https://www.datahukum.com/peraturan/UU_13_Tahun_2024.html'], $headers)->assertOk();
+        $this->assertSame('unverified', $entry()['parse_status']);
     }
 
     public function test_rejects_executable_configuration_pdf_destination_and_invalid_document(): void

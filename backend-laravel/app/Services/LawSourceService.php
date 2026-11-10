@@ -29,9 +29,6 @@ class LawSourceService
             }
         }
         $config = array_replace($config, $input);
-        if (! ($config['doc_class'] ?? '')) {
-            $config['doc_class'] = $this->documentClass($uu->source_url) ?? '';
-        }
         $slug = $source?->slug ?? 'uu-'.Str::lower(Str::uuid()->toString());
         $config = array_replace($config, [
             'slug' => $slug, 'xlsx_name' => $slug.'.xlsx', 'kode' => $uu->kode,
@@ -48,12 +45,6 @@ class LawSourceService
         $uu->unsetRelation('sourceRegistration');
     }
 
-    public function documentClass(string $url): ?string
-    {
-        $path = parse_url($url, PHP_URL_PATH) ?: '';
-        return preg_match('~/UU_(\d+)_Tahun_(\d{4})\.html$~i', $path, $matches)
-            ? 'uu-'.$matches[1].$matches[2] : null;
-    }
 
     public function status(ImportSource $source): array
     {
@@ -67,8 +58,8 @@ class LawSourceService
             || isset($url['user']) || isset($url['pass']) || (isset($url['port']) && $url['port'] !== 443)) {
             return ['status' => 'unsupported', 'status_message' => 'Parser hanya mendukung halaman HTTPS datahukum.com. Sumber tersimpan, tetapi belum dapat diimpor.'];
         }
-        if (! preg_match('/^[a-z0-9-]+$/', $source->config['doc_class'] ?? '') || ! $uu->tahun) {
-            return ['status' => 'incomplete', 'status_message' => 'Lengkapi tahun UU dan penanda versi asli pada pengaturan sumber.'];
+        if (! $uu->tahun) {
+            return ['status' => 'incomplete', 'status_message' => 'Lengkapi tahun UU sebelum memeriksa sumber.'];
         }
         return ['status' => 'ready', 'status_message' => null];
     }

@@ -109,6 +109,30 @@ dinonaktifkan. Jalankan Periksa pembaruan untuk menghasilkan draf, tinjau, pilih
 Sumber standar baru tidak memerlukan modul Python. Struktur tidak dikenal gagal dengan alasan,
 bukan dianggap berhasil. Koreksi khusus lama tetap tersimpan di konfigurasi database.
 
+Identitas versi asli dan perubahan dibaca dari class metadata riwayat HTML dan section isi.
+`doc_class` bersifat opsional untuk override yang sudah ditinjau; nilai yang bertentangan dengan
+metadata asli ditolak. Judul perubahan tidak harus berbentuk UU bernomor: label seperti
+`Amandemen I` tetap disimpan, tanpa membuat nomor UU atau mengambil tahun dari class HTML.
+Urutan riwayat mengikuti sumber, dengan pemeriksaan tanggal/tahun yang tersedia. Tanggal pengesahan
+dan pengundangan tetap terpisah. Untuk registrasi Staatsblad, tahun registrasi tidak diganti oleh
+tanggal keputusan kerajaan yang lebih awal. Metadata tanpa tanggal diberi peringatan.
+
+Fixture UUD 1945 mempertahankan 79 node pasal dan empat amandemen. Pasal Romawi diberi lingkup
+bagian, misalnya `I (ATURAN PERALIHAN)` dan `I (ATURAN TAMBAHAN)`, agar riwayat dan penerapannya tidak
+bercampur. Induk DOM digunakan ketika atribut referensi induk sumber rusak. Pencabutan Bab IV tidak
+mencabut Pasal 16; pencabutan Pasal IV tetap tercatat pada Aturan Peralihan. Ayat bernomor eksplisit
+dalam markup daftar yang salah tersarang tetap dipertahankan.
+
+Berhasil diparse bukan verifikasi kebenaran hukum atau kelengkapan historis sumber. Fixture tetap
+memuat label `25E`, beberapa salah ketik, dan versi pasal yang tidak lengkap. Parser tidak mengubahnya
+menjadi `25A`, mengarang rumusan yang hilang, atau mengisi tanggal yang tidak ada. Draf perlu ditinjau
+terhadap naskah resmi sebelum diterapkan. Koreksi empat sumber lama dan aturan UU ITE tetap berlaku.
+
+API katalog memisahkan `status` konfigurasi dari `parse_status` (`unverified`, `passed`, `failed`).
+Bukti parsing hanya berlaku untuk snapshot konfigurasi/dokumen yang sama. Simpan atau edit tidak
+menjalankan parser; hasil gagal tetap dapat diperiksa ulang setelah masalah diperbaiki.
+
+
 Konfigurasi JSON memakai whitelist field dan tipe. HTML hanya diambil dari HTTPS datahukum.com;
 PDF dari host resmi yang disetujui. Semua alamat DNS harus publik; koneksi dipatok ke alamat yang
 divalidasi dan setiap redirect diperiksa ulang. Tidak ada akses ke localhost, jaringan privat,

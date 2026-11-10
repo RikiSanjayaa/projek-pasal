@@ -25,6 +25,12 @@ class DatahukumPipeline
         $out = tempnam(sys_get_temp_dir(), 'import_');
         $input = tempnam(sys_get_temp_dir(), 'source_');
         try {
+            // PostgreSQL JSON is decoded as PHP arrays. Restore object types for empty parser maps.
+            foreach (['amendment_overrides', 'mk_notes', 'text_fixes', 'version_fixes', 'manual_review'] as $key) {
+                if (array_key_exists($key, $config)) {
+                    $config[$key] = (object) $config[$key];
+                }
+            }
             file_put_contents($input, json_encode($config, JSON_THROW_ON_ERROR));
             $args = ['--config', $input, '--json', $out, '--refresh'];
             if ($previousCount !== null && $previousCount > 0) {

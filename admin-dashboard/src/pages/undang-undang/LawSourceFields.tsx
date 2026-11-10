@@ -65,9 +65,9 @@ export function LawSourceFields({ pdfUrl, file, document, remove, config, onPdfU
         <Accordion.Item value="configuration">
           <Accordion.Control>Pengaturan parser dan pembanding PDF</Accordion.Control>
           <Accordion.Panel><Stack gap="md">
-            <Text size="sm" c="dimmed">Format datahukum standar dideteksi dari URL. Struktur khusus perlu ditinjau pengelola teknis. Sumber yang belum siap tetap muncul dengan penjelasan status.</Text>
+            <Text size="sm" c="dimmed">Konfigurasi lengkap berarti sumber dapat diperiksa, bukan berarti parsing sudah berhasil. Penanda versi asli dideteksi dari HTML saat pemeriksaan. Struktur khusus tetap perlu ditinjau pengelola teknis.</Text>
             <TextInput label="Label sumber" placeholder="Contoh: UU 12/2024" value={config.label ?? ''} onChange={event => set('label', event.currentTarget.value)} />
-            <TextInput label="Penanda versi asli" description="Opsional untuk URL UU standar; contoh uu-122024. Isi hanya bila penanda HTML sudah diketahui." value={config.doc_class ?? ''} onChange={event => set('doc_class', event.currentTarget.value)} />
+            <TextInput label="Penanda versi asli" description="Override opsional, misalnya uu-122024. Kosongkan agar versi asli dideteksi otomatis dari HTML saat pemeriksaan; isi hanya untuk mengganti hasil deteksi dengan penanda yang sudah diketahui." value={config.doc_class ?? ''} onChange={event => set('doc_class', event.currentTarget.value)} />
             <TextInput type="date" label="Tanggal diundangkan" value={config.diundangkan ?? ''} onChange={event => set('diundangkan', event.currentTarget.value)} />
             <TextInput type="date" label="Mulai berlaku" value={config.berlaku_sejak ?? ''} onChange={event => set('berlaku_sejak', event.currentTarget.value)} />
             {(['body_pages', 'penjelasan_pages'] as const).map(key => (

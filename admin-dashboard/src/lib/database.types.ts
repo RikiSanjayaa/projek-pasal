@@ -496,6 +496,7 @@ export interface ImportSource {
   id: string
   parser: 'datahukum'
   status: LawSourceRegistration['status']
+  parse_status: 'unverified' | 'passed' | 'failed'
   status_message: string | null
   official_document: LawDocument | null
   official_pdf_url: string | null

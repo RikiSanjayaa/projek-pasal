@@ -259,9 +259,13 @@ PDF maksimal 20 MiB. Link naskah resmi tetap terpisah dari tautan langsung PDF. 
 di **Sumber Data**, termasuk saat pengambilan dinonaktifkan. Menyimpan UU tidak mengunduh sumber,
 menjalankan antrean, atau mengubah pasal. UU tanpa sumber tetap dapat diisi manual.
 
-Sumber standar datahukum baru tidak memerlukan file Python per UU. Penanda versi asli diturunkan
-dari URL; tanggal dan rentang halaman PDF dapat diisi lewat pengaturan parser. Sumber yang belum
-lengkap atau belum didukung tetap tampil dengan alasan dan tidak dapat dijalankan.
+Sumber datahukum baru dengan struktur yang didukung tidak memerlukan file Python per UU. Saat
+pemeriksaan, parser mendeteksi versi asli dan identitas perubahan dari metadata HTML, bukan nomor
+atau tahun yang ditebak dari judul. Penanda versi asli di form hanya override opsional. Konfigurasi
+lengkap berarti pemeriksaan boleh dijalankan, bukan bukti bahwa sumber sudah berhasil diparse.
+Badge parsing terpisah memakai hasil pemeriksaan snapshot konfigurasi dan PDF yang sama; mengubah
+sumber atau PDF membatalkan bukti lama. Judul umum seperti Amandemen I–IV dipertahankan, tanggal
+pengesahan tidak disalin menjadi tanggal pengundangan, dan riwayat ambigu tetap diblokir.
 
 Pipeline ada di `import-tools/` (detail: [import-tools/README.md](import-tools/README.md)). Untuk
 ekspor manual dengan snapshot konfigurasi JSON tepercaya:

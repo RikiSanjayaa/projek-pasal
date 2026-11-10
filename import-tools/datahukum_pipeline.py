@@ -1,6 +1,6 @@
 """Mesin import undang-undang dari datahukum.com untuk Bulk Import admin.
 
-Alur per undang-undang (lihat konfigurasi di `laws/`):
+Alur per sumber (snapshot konfigurasi JSON dari database):
 1. Ambil HTML terstruktur datahukum.com (buku/bab/bagian/paragraf, ayat, huruf, penjelasan).
 2. Kalau UU pernah diubah, susun semua versi rumusan per pasal dari HTML yang sama. Daftar
    peraturan perubahan berasal dari konfigurasi atau dari bagian "Riwayat" di HTML.
@@ -19,8 +19,9 @@ import hashlib
 import html
 import os
 import re
+from collections import Counter
 from datetime import datetime, timezone
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Callable
 
@@ -115,7 +116,7 @@ class LawConfig:
     nama_lengkap: str
     tahun: int
     datahukum_url: str
-    doc_class: str  # class section versi asli di HTML, contoh "uu-12023"
+    doc_class: str = ""  # optional override; normally detected from source version metadata
     bpk_detail_url: str = ""  # halaman naskah resmi; kosong kalau tidak ada naskah resmi berbahasa Indonesia
     bpk_pdf_url: str = ""  # PDF resmi pembanding; kosong = cakupan PDF tidak dihitung
     official_pdf_path: str = ""  # immutable private upload resolved by the backend
@@ -239,7 +240,7 @@ def list_marker(ol: Tag, index: int, li: Tag) -> str:
     return f"{number}."
 
 
-BLOCK_TAGS = {"p", "ol", "ul", "div", "section", "h4"}
+BLOCK_TAGS = {"p", "ol", "ul", "li", "div", "section", "h4"}
 
 
 def render_flow(container: Tag, clean: TextCleaner) -> list[str]:
@@ -277,6 +278,15 @@ def render_flow(container: Tag, clean: TextCleaner) -> list[str]:
                 lines.extend(body)
         elif child.name in {"ol", "ul"}:
             lines.extend(render_ol(child, clean))
+        elif child.name == "li":
+            # Some sources nest a sibling li without closing the previous one. Its explicit value is authoritative.
+            ol = child.find_parent(["ol", "ul"])
+            if ol is None or not str(child.get("value", "")).isdigit():
+                raise PipelineError("Penomoran daftar bertingkat sumber ambigu; periksa struktur HTML.")
+            body = render_flow(child, clean)
+            if body:
+                lines.append(f"{list_marker(ol, 0, child)} {body[0]}")
+                lines.extend(body[1:])
         elif child.name == "p":
             text = clean(child.get_text(" "))
             if text:
@@ -392,37 +402,89 @@ def nomor_key(nomor: str) -> str:
     return nomor.strip().lower()
 
 
+def version_identity(article: Tag, content_classes: set[str]) -> str:
+    classes = set(article.get("class", [])) - {"uu", "uu--original", "uu--amendment"}
+    candidates = classes & content_classes or classes
+    if len(candidates) != 1:
+        raise PipelineError("Identitas versi pada riwayat tidak tunggal; periksa penanda HTML sumber.")
+    return next(iter(candidates))
+
+
+def original_identity(soup: BeautifulSoup, config: LawConfig) -> str:
+    content_classes = set().union(*(version_classes(tag) for tag in soup.select("div.content, div.penjelasan")))
+    originals = soup.select("div.riwayat article.uu--original")
+    if len(originals) > 1:
+        raise PipelineError("Sumber memuat lebih dari satu identitas versi asli.")
+    if originals:
+        detected = version_identity(originals[0], content_classes)
+        if config.doc_class and config.doc_class != detected:
+            raise PipelineError("Penanda versi asli konfigurasi berbeda dari metadata sumber.")
+        return detected
+    if config.doc_class:
+        return config.doc_class
+    amendments = {version_identity(tag, content_classes) for tag in soup.select("div.riwayat article.uu--amendment")}
+    candidates = content_classes - amendments
+    if len(candidates) != 1:
+        raise PipelineError("Identitas versi asli tidak dapat ditentukan; isi penanda versi asli setelah meninjau sumber.")
+    return next(iter(candidates))
+
+
 def amendments_from_html(soup: BeautifulSoup, config: LawConfig, warnings: list[dict[str, str]]) -> tuple[Amendment, ...]:
     """Daftar perubahan dari bagian "Riwayat Perundang-Undangan" HTML datahukum, urut seperti di sumber."""
     amendments = []
+    content_classes = set().union(*(version_classes(tag) for tag in soup.select("div.content, div.penjelasan")))
+    seen = {config.doc_class}
+    previous_date = ""
+    previous_year = 0
     for article in soup.select("div.riwayat article.uu--amendment"):
-        doc_class = next(c for c in article["class"] if c not in {"uu", "uu--amendment"})
-        header = squash(article.select_one(".uu-header h5").get_text(" "))
+        doc_class = version_identity(article, content_classes)
+        if doc_class in seen:
+            raise PipelineError("Identitas versi duplikat pada riwayat sumber: "+doc_class)
+        seen.add(doc_class)
+        title_tag = article.select_one(".uu-header h5, .uu-header h4")
+        header = squash(title_tag.get_text(" ")) if title_tag else ""
+        if not header:
+            raise PipelineError("Riwayat perubahan tidak memiliki judul.")
         match = REGULATION_TITLE.match(header)
-        if match is None:
-            raise PipelineError(f"Judul peraturan perubahan tidak dikenali di bagian Riwayat: {header!r}")
-        kind, number, year, about = match.groups()
-        about = (about or "").rstrip(". ")
         meta = {p.get_text(" ").split(":", 1)[0].strip(): p.get_text(" ").split(":", 1)[-1] for p in article.select(".uu-meta p")}
         disahkan = indonesian_date(meta.get("Disahkan", ""))
         diundangkan = indonesian_date(meta.get("Diundangkan", ""))
-        for name, value in (("disahkan", disahkan), ("diundangkan", diundangkan)):
-            # Sumber kadang salah ketik abad (contoh "31 agustus 1973" untuk Staatsblad 1873). Selisih
-            # beberapa tahun wajar: Staatsblad bisa terbit lama setelah keputusannya disahkan.
-            if value and abs(int(value[:4]) - int(year)) > 5:
-                warnings.append({"nomor": "", "message": f"Tanggal {name} {header[:60]!r} ({value}) tidak cocok dengan tahunnya; diabaikan."})
-                if name == "disahkan":
-                    disahkan = ""
-                else:
-                    diundangkan = ""
-        if kind == "Staatsblad":
-            label = f"Stb. {year} No. {number}"
-            full_title = f"Staatsblad Tahun {year} Nomor {number}" + (f" tentang {about}" if about else "")
+        if match:
+            kind, number, year, about = match.groups()
+            about = (about or "").rstrip(". ")
+            for name, value in (("disahkan", disahkan), ("diundangkan", diundangkan)):
+                if value and abs(int(value[:4]) - int(year)) > 5:
+                    warnings.append({"nomor": "", "message": f"Tanggal {name} {header[:60]!r} ({value}) tidak cocok dengan tahunnya; diabaikan."})
+                    if name == "disahkan":
+                        disahkan = ""
+                    else:
+                        diundangkan = ""
+            if kind == "Staatsblad":
+                label = f"Stb. {year} No. {number}"
+                full_title = f"Staatsblad Tahun {year} Nomor {number}" + (f" tentang {about}" if about else "")
+            else:
+                label = f"UU {number}/{year}"
+                full_title = f"Undang-Undang Nomor {number} Tahun {year}" + (f" tentang {about}" if about else "")
         else:
-            label = f"UU {number}/{year}"
-            full_title = f"Undang-Undang Nomor {number} Tahun {year}" + (f" tentang {about}" if about else "")
+            label = full_title = header
+            warnings.append({"nomor": "", "message": f"Judul riwayat {header!r} dipertahankan sesuai sumber; nomor dan jenis peraturan tidak ditebak."})
         if disahkan and not diundangkan:
             full_title += f" (disahkan {format_date(disahkan)})"
+        chronological_date = config.amendment_overrides.get(doc_class, {}).get("diundangkan") or diundangkan or (disahkan if not match else "")
+        # Numbered registries establish publication year independently of a decree's signature date.
+        chronological_year = int(match.group(3)) if match else int(chronological_date[:4]) if chronological_date else 0
+        if match and disahkan and int(disahkan[:4]) != chronological_year:
+            warnings.append({"nomor": "", "message": f"Tanggal pengesahan {header[:60]!r} berbeda dari tahun registrasi; tanggal sumber dipertahankan, urutan memakai tahun registrasi."})
+        if not chronological_year:
+            warnings.append({"nomor": "", "message": f"Tanggal riwayat {header!r} tidak tersedia; urutan mengikuti HTML sumber dan perlu ditinjau."})
+        if chronological_year and previous_year and (
+            chronological_year < previous_year
+            or chronological_year == previous_year and chronological_date and previous_date and chronological_date < previous_date
+        ):
+            raise PipelineError(f"Urutan riwayat tidak kronologis pada {header!r}; tinjau tanggal dan urutan sumber.")
+        if chronological_year:
+            previous_year = chronological_year
+            previous_date = chronological_date
         cabut = article.select_one("p.action-list.cabut")
         repealed = tuple(
             nomor_key(item.strip().removeprefix("Pasal "))
@@ -539,33 +601,46 @@ def parse_datahukum(
         raise PipelineError("Struktur HTML datahukum.com berubah: elemen div.batangtubuh tidak ditemukan.")
     if not soup.select("div.pasal"):
         raise PipelineError("Struktur HTML datahukum.com berubah: tidak ada elemen div.pasal.")
+    config = replace(config, doc_class=original_identity(soup, config))
     amendments = amendments_from_html(soup, config, warnings) if config.amendments_from_html else config.amendments
     known_classes = {config.doc_class} | {a.doc_class for a in amendments}
     clean = TextCleaner(body.get_text(" "))
     structure = soup.select("div.buku, div.bab, div.bag, div.para")
-    # Format HTML baru menautkan pasal ke judulnya lewat data-parent-id; format lama (contoh UU ITE)
-    # menyarangkan div.pasal di dalam div.bab/div.bag.
-    linked = all(tag.has_attr("data-node-id") for tag in structure)
-    headings = {tag["data-node-id"]: parse_heading(tag) for tag in structure} if linked else {}
-    parents = {tag["data-node-id"]: tag.get("data-parent-id", "") for tag in structure} if linked else {}
-    nested = {id(tag): parse_heading(tag) for tag in structure} if not linked else {}
+    # Nested DOM ancestry remains authoritative when source data-parent-id values are malformed.
+    headings = {tag["data-node-id"]: parse_heading(tag) for tag in structure if tag.get("data-node-id")}
+    parents = {tag["data-node-id"]: tag.get("data-parent-id", "") for tag in structure if tag.get("data-node-id")}
+    nested = {id(tag): parse_heading(tag) for tag in structure}
+    pasals = body.select("div.pasal")
+    numbers = Counter(squash(tag.select_one(".pasal-header h5").get_text(" ")).removeprefix("Pasal ").strip() for tag in pasals)
+    for amendment in amendments:
+        if any(numbers.get(number.upper(), numbers.get(number, 0)) > 1 for number in amendment.repealed):
+            raise PipelineError("Rujukan pencabutan ambigu karena nomor pasal dipakai dalam beberapa bagian.")
+    seen_numbers: set[str] = set()
 
     records: list[PasalRecord] = []
-    for pasal in soup.select("div.pasal"):
+    for pasal in pasals:
         nomor = squash(pasal.select_one(".pasal-header h5").get_text(" ")).removeprefix("Pasal ").strip()
-
-        chain = []
-        if linked:
+        chain = [nested[id(tag)] for tag in pasal.parents if id(tag) in nested]
+        if not chain:
             parent = pasal.get("data-parent-id", "")
+            visited: set[str] = set()
             while parent:
+                if parent not in headings or parent in visited:
+                    raise PipelineError(f"Induk struktur Pasal {nomor} tidak dapat ditentukan.")
+                visited.add(parent)
                 chain.append(headings[parent])
                 parent = parents.get(parent, "")
-        else:
-            chain = [nested[id(tag)] for tag in pasal.parents if id(tag) in nested]
         chain.reverse()
         if not chain and records:
             # Pasal sisipan (contoh 599A) tidak punya induk di HTML; ikut struktur pasal sebelumnya.
             chain = list(records[-1].headings)
+        canonical_nomor = nomor
+        if chain and (numbers[nomor] > 1 or re.fullmatch(r"[IVXLCDM]+", nomor)):
+            scope = " / ".join(squash(f"{heading.label} {heading.title}") for heading in chain)
+            canonical_nomor = f"{nomor} ({scope})"
+        if canonical_nomor in seen_numbers:
+            raise PipelineError(f"Identitas Pasal {canonical_nomor} duplikat; lingkup bagian tidak dapat dibedakan.")
+        seen_numbers.add(canonical_nomor)
 
         content = pasal.select_one("div.content")
         explanation = pasal.select_one("div.penjelasan")
@@ -600,7 +675,7 @@ def parse_datahukum(
 
         records.append(
             PasalRecord(
-                nomor=nomor,
+                nomor=canonical_nomor,
                 headings=chain,
                 isi=fields["isi"],
                 penjelasan=penjelasan,

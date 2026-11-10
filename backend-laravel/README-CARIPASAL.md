@@ -80,6 +80,14 @@ Simpan hanya mendaftarkan sumber; pengambilan tetap eksplisit melalui Sumber Dat
 ditampilkan juga saat `DATAHUKUM_FETCH_ENABLED=false`. Empat konfigurasi lama dimigrasikan beserta
 koreksinya. Mengosongkan URL menyembunyikan sumber tanpa memutus identitas draf dan riwayatnya.
 
+Penanda versi asli opsional; worker mendeteksinya dari metadata HTML saat pemeriksaan. Status
+konfigurasi `ready` tidak menyatakan parser sudah berhasil. Katalog menyertakan `parse_status`
+`unverified|passed|failed`, berdasarkan hasil run terminal yang cocok dengan snapshot konfigurasi
+dan lampiran saat ini. Mengganti URL, metadata, atau PDF tidak mewarisi bukti parsing snapshot lama.
+Wrapper CLI menjaga field peta JSON tetap object setelah round-trip PostgreSQL/PHP, termasuk peta
+koreksi kosong, agar empat konfigurasi migrasi tetap dapat dijalankan.
+
+
 Setiap run menyimpan `source_config` dan path lampiran privat yang tidak berubah setelah antre.
 Backend dan worker harus berbagi volume `caripasal_law_documents` pada
 `storage/app/private/law-documents`; `IMPORT_DOCUMENTS_DIR` menunjuk lokasi yang sama pada worker.

@@ -57,8 +57,8 @@ def load_config(path: Path) -> LawConfig:
         validate_url(value['datahukum_url'], SOURCE_HOSTS)
         if value.get('bpk_pdf_url'):
             validate_url(value['bpk_pdf_url'], PDF_HOSTS)
-        if not re.fullmatch(r'[a-z0-9-]+', value.get('doc_class', '')):
-            raise PipelineError('Penanda versi asli belum dikonfigurasi.')
+        if value.get('doc_class') and not re.fullmatch(r'[a-z0-9-]+', value['doc_class']):
+            raise PipelineError('Penanda versi asli tidak valid.')
         for key in ('body_pages', 'penjelasan_pages'):
             pair = value.get(key, [0, 0])
             if not isinstance(pair, list) or len(pair) != 2 or any(type(n) is not int or n < 0 for n in pair) or pair[0] > pair[1] or ((pair[0] == 0) != (pair[1] == 0)):
