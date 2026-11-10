@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
+
 import '../../core/services/pdf_export_service.dart';
 import '../../core/config/app_colors.dart';
 import '../../models/pasal_model.dart';
@@ -14,9 +15,14 @@ import '../widgets/main_layout.dart';
 import '../widgets/bab_bottom_sheet.dart';
 import '../widgets/pagination_footer.dart';
 import '../widgets/filter_widgets.dart';
+
 import 'package:showcaseview/showcaseview.dart';
+
 import '../widgets/app_showcase.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../widgets/adaptive_pasal_browser.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -200,7 +206,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_searchQuery.isNotEmpty) {
       final kodeByUuId = {for (final uu in _listUU) uu.id: uu.kode};
       final filtered = source;
-      result = SearchUtils.search(filtered, _searchQuery, kodeByUuId: kodeByUuId);
+      result = SearchUtils.search(
+        filtered,
+        _searchQuery,
+        kodeByUuId: kodeByUuId,
+      );
       // Ada kata yang tidak muncul di data sama sekali (biasanya salah ketik): pakai
       // kueri hasil koreksi kalau kueri itu menemukan pasal.
       final candidate = SearchUtils.correctQuery(
@@ -209,7 +219,11 @@ class _HomeScreenState extends State<HomeScreen> {
         kodeByUuId: kodeByUuId,
       );
       if (candidate != null) {
-        final correctedResult = SearchUtils.search(filtered, candidate, kodeByUuId: kodeByUuId);
+        final correctedResult = SearchUtils.search(
+          filtered,
+          candidate,
+          kodeByUuId: kodeByUuId,
+        );
         if (correctedResult.pasal.isNotEmpty) {
           corrected = candidate;
           result = correctedResult;
@@ -319,26 +333,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return MainLayout(
       onSyncComplete: _loadPasalData,
-      child: GestureDetector(
-        onTap: () {
-          _searchFocusNode.unfocus();
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(isDark),
+      child: AdaptivePasalBrowser(
+        child: GestureDetector(
+          onTap: () {
+            _searchFocusNode.unfocus();
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(isDark),
 
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-              child: AppShowcase(
-                showcaseKey: _searchKey,
-                title: 'Cari Pasal',
-                description:
-                    'Ketik untuk mencari pasal berdasarkan:\n\n• Nomor pasal (contoh: "Pasal 1")\n• Judul pasal\n• Isi konten pasal\n\nHasil akan langsung ditampilkan saat Anda mengetik.',
-                shapeBorder: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 5,
                 ),
-                child: TextField(
+                child: AppShowcase(
+                  showcaseKey: _searchKey,
+                  title: 'Cari Pasal',
+                  description: 'Ketik untuk mencari pasal berdasarkan:\n\n• Nomor pasal (contoh: "Pasal 1")\n• Judul pasal\n• Isi konten pasal\n\nHasil akan langsung ditampilkan saat Anda mengetik.',
+                  shapeBorder: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TextField(
                     controller: _searchController,
                     focusNode: _searchFocusNode,
                     keyboardAppearance: isDark
@@ -367,7 +384,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 _searchController.clear();
                                 _searchQuery = '';
                                 _applyFilterAndSearch();
-                                        },
+                              },
                             )
                           : null,
                       filled: true,
@@ -379,190 +396,203 @@ class _HomeScreenState extends State<HomeScreen> {
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
+                ),
               ),
-            ),
 
-            ActiveFiltersSection(
-              selectedBabLabel: _selectedBabLabel,
-              selectedUUName: _selectedFilterUUId != 'ALL'
-                  ? _listUU
-                        .where((u) => u.id == _selectedFilterUUId)
-                        .firstOrNull
-                        ?.kode
-                  : null,
+              ActiveFiltersSection(
+                selectedBabLabel: _selectedBabLabel,
+                selectedUUName: _selectedFilterUUId != 'ALL'
+                    ? _listUU
+                          .where((u) => u.id == _selectedFilterUUId)
+                          .firstOrNull
+                          ?.kode
+                    : null,
 
-              onClearAll: () {
-                setState(() {
-                  _selectedBab = null;
-                  _selectedBabJudul = null;
-                  _selectedFilterUUId = 'ALL';
-                  _refreshBabGroups();
-                  _applyFilterAndSearch();
-                });
-              },
+                onClearAll: () {
+                  setState(() {
+                    _selectedBab = null;
+                    _selectedBabJudul = null;
+                    _selectedFilterUUId = 'ALL';
+                    _refreshBabGroups();
+                    _applyFilterAndSearch();
+                  });
+                },
 
-              onRemoveUU: () {
-                setState(() {
-                  _selectedFilterUUId = 'ALL';
-                  _refreshBabGroups();
-                  _applyFilterAndSearch();
-                });
-              },
+                onRemoveUU: () {
+                  setState(() {
+                    _selectedFilterUUId = 'ALL';
+                    _refreshBabGroups();
+                    _applyFilterAndSearch();
+                  });
+                },
 
-              onRemoveBab: _removeBab,
-            ),
-            AppShowcase(
-              showcaseKey: _filterKey,
-              title: 'Filter Pencarian',
-              description:
-                  'Persempit hasil pencarian dengan memilih:\n\n• Bab - bagian tertentu dari undang-undang\n• Undang-Undang - sumber hukum tertentu\n\nKombinasi filter menghasilkan pencarian lebih akurat.',
-              shapeBorder: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                onRemoveBab: _removeBab,
               ),
-              child: _buildFilterSections(isDark),
-            ),
+              AppShowcase(
+                showcaseKey: _filterKey,
+                title: 'Filter Pencarian',
+                description: 'Persempit hasil pencarian dengan memilih:\n\n• Bab - bagian tertentu dari undang-undang\n• Undang-Undang - sumber hukum tertentu\n\nKombinasi filter menghasilkan pencarian lebih akurat.',
+                shapeBorder: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: _buildFilterSections(isDark),
+              ),
 
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          (_searchQuery.isNotEmpty || _selectedBab != null)
-                              ? "${_filteredData.length} pasal terkait ditemukan"
-                              : "Pasal Terbaru",
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                        if (_correctedQuery != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            'Menampilkan hasil untuk "$_correctedQuery"',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark ? Colors.grey[400] : Colors.grey[700],
+                            (_searchQuery.isNotEmpty || _selectedBab != null)
+                                ? "${_filteredData.length} pasal terkait ditemukan"
+                                : "Pasal Terbaru",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
                             ),
                           ),
-                        if (SearchTierHeader.noPhraseNotice(_searchResult) case final notice?)
-                          Text(
-                            notice,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark ? Colors.grey[400] : Colors.grey[700],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  if (_searchQuery.isNotEmpty && _filteredData.isNotEmpty) ...[
-                    InkWell(
-                      onTap: () {
-                        PdfExportService.exportBatchPasal(
-                          pasalList: _filteredData,
-                          searchQuery: _effectiveQuery,
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8.0,
-                          vertical: 8.0,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(
-                            alpha: isDark ? 0.15 : 0.08,
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.picture_as_pdf_outlined,
-                              size: 20,
-                              color: AppColors.primary,
-                            ),
-                            const SizedBox(width: 4),
+                          if (_correctedQuery != null)
                             Text(
-                              "Cetak PDF",
+                              'Menampilkan hasil untuk "$_correctedQuery"',
                               style: TextStyle(
                                 fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primary,
+                                color: isDark
+                                    ? Colors.grey[400]
+                                    : Colors.grey[700],
                               ),
                             ),
-                          ],
-                        ),
+                          if (SearchTierHeader.noPhraseNotice(_searchResult)
+                              case final notice?)
+                            Text(
+                              notice,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark
+                                    ? Colors.grey[400]
+                                    : Colors.grey[700],
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                  ] else ...[
-                    Text(
-                      "Total: ${_filteredData.length}",
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
+                    if (_searchQuery.isNotEmpty &&
+                        _filteredData.isNotEmpty) ...[
+                      InkWell(
+                        onTap: () {
+                          PdfExportService.exportBatchPasal(
+                            pasalList: _filteredData,
+                            searchQuery: _effectiveQuery,
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8.0,
+                            vertical: 8.0,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(
+                              alpha: isDark ? 0.15 : 0.08,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.picture_as_pdf_outlined,
+                                size: 20,
+                                color: AppColors.primary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                "Cetak PDF",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      Text(
+                        "Total: ${_filteredData.length}",
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 10),
+              const SizedBox(height: 10),
 
-            Expanded(
-              child: _paginatedData.isEmpty
-                  ? _buildEmptySearchState(isDark)
-                  : ListView.builder(
-                      controller: _listScrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: _paginatedData.length + 1,
-                      itemBuilder: (context, index) {
-                        if (index == _paginatedData.length) {
-                          return _totalPages > 1
-                              ? Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 20,
-                                  ),
-                                  child: PaginationFooter(
-                                    currentPage: _currentPage,
-                                    totalPages: _totalPages,
-                                    onPrevious: () {
-                                      setState(() {
-                                        _currentPage--;
-                                        _updatePagination();
-                                      });
-                                      _listScrollController.jumpTo(0);
-                                    },
-                                    onNext: () {
-                                      setState(() {
-                                        _currentPage++;
-                                        _updatePagination();
-                                      });
-                                      _listScrollController.jumpTo(0);
-                                    },
-                                  ),
-                                )
-                              : const SizedBox(height: 20);
-                        }
+              Expanded(
+                child: _paginatedData.isEmpty
+                    ? _buildEmptySearchState(isDark)
+                    : ListView.builder(
+                        controller: _listScrollController,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: _paginatedData.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index == _paginatedData.length) {
+                            return _totalPages > 1
+                                ? Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 20,
+                                    ),
+                                    child: PaginationFooter(
+                                      currentPage: _currentPage,
+                                      totalPages: _totalPages,
+                                      onPrevious: () {
+                                        setState(() {
+                                          _currentPage--;
+                                          _updatePagination();
+                                        });
+                                        _listScrollController.jumpTo(0);
+                                      },
+                                      onNext: () {
+                                        setState(() {
+                                          _currentPage++;
+                                          _updatePagination();
+                                        });
+                                        _listScrollController.jumpTo(0);
+                                      },
+                                    ),
+                                  )
+                                : const SizedBox(height: 20);
+                          }
 
-                        final card = PasalCard(
-                          pasal: _paginatedData[index],
-                          contextList: _filteredData,
-                          searchQuery: _effectiveQuery,
-                          showUULabel: true,
-                        );
-                        final header = SearchTierHeader.before(_searchResult, _paginatedData, index);
-                        if (header == null) return card;
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [header, card],
-                        );
-                      },
-                    ),
-            ),
-          ],
+                          final card = PasalCard(
+                            pasal: _paginatedData[index],
+                            contextList: _filteredData,
+                            searchQuery: _effectiveQuery,
+                            showUULabel: true,
+                          );
+                          final header = SearchTierHeader.before(
+                            _searchResult,
+                            _paginatedData,
+                            index,
+                          );
+                          if (header == null) return card;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [header, card],
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -597,8 +627,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildFilterSections(bool isDark) {
-    final hasAnyFilters =
-        _allBabGroups.isNotEmpty || _listUU.isNotEmpty;
+    final hasAnyFilters = _allBabGroups.isNotEmpty || _listUU.isNotEmpty;
 
     if (!hasAnyFilters) return const SizedBox.shrink();
 
@@ -654,8 +683,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                  if (_selectedBab != null ||
-                      _selectedFilterUUId != 'ALL')
+                  if (_selectedBab != null || _selectedFilterUUId != 'ALL')
                     Container(
                       margin: const EdgeInsets.only(right: 8),
                       padding: const EdgeInsets.symmetric(

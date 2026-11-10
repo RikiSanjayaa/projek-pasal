@@ -1,8 +1,10 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../core/config/app_colors.dart';
 import '../../core/services/auth_service.dart';
 import '../widgets/app_notification.dart';
 import 'onboarding_screen.dart';
+import '../utils/responsive_layout.dart';
 
 class LoginScreen extends StatefulWidget {
   final String? deactivationMessage;
@@ -339,9 +341,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 icon: Icons.send,
               );
 
-              final success = await authService.resetPassword(
-                email,
-                        );
+              final success = await authService.resetPassword(email);
 
               if (!mounted) return;
 
@@ -386,244 +386,256 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(32),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Logo Kampus UBG (Gantikan icon menu_book)
-                  Image.asset(
-                    isDark
-                        ? 'assets/images/logo-ubg putih.png'
-                        : 'assets/images/logo-ubg hitam.png',
-                    height: 110,
-                    fit: BoxFit.contain,
-                  ),
-                  const SizedBox(height: 28),
-
-                  // Title
-                  Text(
-                    "CariPasal",
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary(isDark),
+            child: ResponsiveContent(
+              maxWidth: 440,
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Logo Kampus UBG (Gantikan icon menu_book)
+                    Image.asset(
+                      isDark
+                          ? 'assets/images/logo-ubg putih.png'
+                          : 'assets/images/logo-ubg hitam.png',
+                      height: 110,
+                      fit: BoxFit.contain,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Masuk untuk melanjutkan",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: AppColors.textSecondary(isDark),
-                    ),
-                  ),
-                  const SizedBox(height: 48),
+                    const SizedBox(height: 28),
 
-                  // Email field
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                    decoration: InputDecoration(
-                      labelText: "Email",
-                      hintText: "Masukkan email Anda",
-                      prefixIcon: const Icon(Icons.email_outlined),
-                      filled: true,
-                      fillColor: AppColors.inputFill(isDark),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: AppColors.border(isDark)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: AppColors.border(isDark)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: AppColors.primary,
-                          width: 2,
-                        ),
-                      ),
-                      errorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.error),
+                    // Title
+                    Text(
+                      "CariPasal",
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary(isDark),
                       ),
                     ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Email tidak boleh kosong';
-                      }
-                      if (!RegExp(
-                        r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
-                      ).hasMatch(value.trim())) {
-                        return 'Format email tidak valid';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Password field
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _handleLogin(),
-                    decoration: InputDecoration(
-                      labelText: "Password",
-                      hintText: "Masukkan password Anda",
-                      prefixIcon: const Icon(Icons.lock_outlined),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                        ),
-                        onPressed: () {
-                          setState(() => _obscurePassword = !_obscurePassword);
-                        },
-                      ),
-                      filled: true,
-                      fillColor: AppColors.inputFill(isDark),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: AppColors.border(isDark)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: AppColors.border(isDark)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: AppColors.primary,
-                          width: 2,
-                        ),
-                      ),
-                      errorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.error),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Masuk untuk melanjutkan",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: AppColors.textSecondary(isDark),
                       ),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Password tidak boleh kosong';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
+                    const SizedBox(height: 48),
 
-                  // Forgot Password
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: _handleForgotPassword,
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: const Text(
-                        "Lupa Password?",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Error message
-                  if (_errorMessage != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.error.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppColors.error.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.error_outline,
-                            color: AppColors.error,
-                            size: 20,
+                    // Email field
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(
+                        labelText: "Email",
+                        hintText: "Masukkan email Anda",
+                        prefixIcon: const Icon(Icons.email_outlined),
+                        filled: true,
+                        fillColor: AppColors.inputFill(isDark),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: AppColors.border(isDark),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              _errorMessage!,
-                              style: const TextStyle(
-                                color: AppColors.error,
-                                fontSize: 14,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: AppColors.border(isDark),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: AppColors.primary,
+                            width: 2,
+                          ),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppColors.error),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Email tidak boleh kosong';
+                        }
+                        if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+                            .hasMatch(value.trim())) {
+                          return 'Format email tidak valid';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Password field
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _handleLogin(),
+                      decoration: InputDecoration(
+                        labelText: "Password",
+                        hintText: "Masukkan password Anda",
+                        prefixIcon: const Icon(Icons.lock_outlined),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            );
+                          },
+                        ),
+                        filled: true,
+                        fillColor: AppColors.inputFill(isDark),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: AppColors.border(isDark),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: AppColors.border(isDark),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: AppColors.primary,
+                            width: 2,
+                          ),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppColors.error),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Password tidak boleh kosong';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Forgot Password
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _handleForgotPassword,
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text(
+                          "Lupa Password?",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // Error message
+                    if (_errorMessage != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.error.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: AppColors.error,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: const TextStyle(
+                                  color: AppColors.error,
+                                  fontSize: 14,
+                                ),
                               ),
                             ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+
+                    // Login button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: FilledButton(
+                        onPressed: _isLoading ? null : _handleLogin,
+                        style: FilledButton.styleFrom(
+                          disabledBackgroundColor: AppColors.primary.withValues(
+                            alpha: 0.5,
                           ),
-                        ],
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "Masuk",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Icon(Icons.arrow_forward_rounded, size: 20),
+                                ],
+                              ),
                       ),
                     ),
                     const SizedBox(height: 24),
-                  ],
 
-                  // Login button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: FilledButton(
-                      onPressed: _isLoading ? null : _handleLogin,
-                      style: FilledButton.styleFrom(
-                        disabledBackgroundColor: AppColors.primary.withValues(
-                          alpha: 0.5,
-                        ),
+                    // Help text
+                    Text(
+                      "Hubungi administrator jika Anda\nbelum memiliki akun",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary(isDark),
+                        height: 1.5,
                       ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
-                                ),
-                              ),
-                            )
-                          : const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  "Masuk",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(width: 8),
-                                Icon(Icons.arrow_forward_rounded, size: 20),
-                              ],
-                            ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Help text
-                  Text(
-                    "Hubungi administrator jika Anda\nbelum memiliki akun",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary(isDark),
-                      height: 1.5,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

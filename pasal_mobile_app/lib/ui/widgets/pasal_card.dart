@@ -6,6 +6,7 @@ import '../../core/services/query_service.dart';
 import '../utils/highlight_text.dart';
 import '../screens/read_pasal_screen.dart';
 import '../utils/uu_color_helper.dart';
+import 'adaptive_pasal_browser.dart';
 
 class PasalCard extends StatelessWidget {
   final PasalModel pasal;
@@ -59,6 +60,12 @@ class PasalCard extends StatelessWidget {
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
             onTap: () {
+              if (AdaptivePasalBrowser.open(
+                context,
+                pasal: pasal,
+                contextList: contextList,
+                searchQuery: searchQuery,
+              )) return;
               Navigator.push(
                 context,
                 MaterialPageRoute(

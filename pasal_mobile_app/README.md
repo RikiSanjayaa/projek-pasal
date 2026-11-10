@@ -12,11 +12,11 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 | :------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------- |
 | **`splash_screen.dart`**         | Layar pembuka. Mengecek database dan menginisialisasi SyncManager. Jika kosong -> Onboarding. Jika ada -> MainNavigation + cek update.    |
 | **`onboarding_screen.dart`**     | Layar download awal database dari server (Supabase) ke HP (Drift/SQLite). Hanya muncul saat instalasi pertama.                            |
-| **`main_navigation.dart`**       | Mengatur Bottom Navigation Bar (Tab Home vs Tab Pustaka).                                                                                 |
+| **`../widgets/main_navigation.dart`** | Navigasi Beranda, Pustaka, dan Tersimpan: bar bawah, rail, atau sidebar menurut lebar jendela. Tab yang pernah dibuka mempertahankan state. |
 | **`home_screen.dart`**           | **Dashboard Utama**. Fitur: Search Global (hasil dikelompokkan per kecocokan), Filter Bab lalu Judul, Filter Kategori UU, List Pasal Terbaru |
-| **`library_screen.dart`**        | **Tab Pustaka**. Menampilkan daftar "Buku/Kitab UU" (KUHP, ITE, dll) dalam bentuk Grid.                                                   |
-| **`detail_uu_screen.dart`**      | Halaman isi buku. Muncul saat buku di Pustaka diklik. Menampilkan daftar pasal + deskripsi UU jika tersedia.                              |
-| **`read_pasal_screen.dart`**     | **Mode Baca Detail**. Muncul saat kartu pasal diklik. Fitur: Next/Prev Pasal, Highlight Teks, Pasal Terkait, Riwayat Perubahan, dan Share.|
+| **`library_screen.dart`**        | Tab Pustaka. Daftar UU dan pilihan UU tetap tersimpan saat resize atau berganti tab. |
+| **`detail_uu_screen.dart`**      | Daftar pasal dalam UU beserta pencariannya; layar lebar menampilkan daftar dan pembaca berdampingan. |
+| **`read_pasal_screen.dart`**     | Pembaca pasal dengan lebar teks terbatas, pencarian, prev/next, penjelasan, pasal terkait, dan riwayat. Sidebar bab muncul bila ruang panel cukup. `onBack` opsional menutup pembaca inline; pemanggil route tetap kembali lewat Navigator. |
 | **`search_screen.dart`**         | _(Legacy/Opsional)_ Halaman pencarian khusus jika menggunakan `showSearch` bawaan Flutter. Saat ini pencarian sudah terintegrasi di Home. |
 | **`bab_result_screen.dart`**     | Daftar semua pasal dalam satu bab. Dibuka dari baris bab di layar baca pasal.                                                            |
 
@@ -25,9 +25,10 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 | File                     | Fungsi                                                                                                      |
 | :----------------------- | :---------------------------------------------------------------------------------------------------------- |
 | **`law_content_formatter.dart`** | Pemformat teks hukum (daftar `(1)`, `a.`, `1.`, indentasi, highlight pencarian). Dipakai untuk **Isi** dan **Penjelasan**; label penjelasan (`Ayat (n)`, `Huruf x`, `Angka n`) menjadi sub-judul. Ekspor PDF memakai logika pemisahan yang sama. |
-| **`main_layout.dart`**   | Wrapper utama semua halaman. Menghandle Background Color & Dark Mode Listener agar konsisten.               |
+| **`main_layout.dart`**   | Scaffold, banner pembaruan, SafeArea, dan konten terpusat maksimum 1200 logical px. |
 | **`pasal_card.dart`**    | Komponen UI Kartu Pasal. Digunakan berulang-ulang di Home, DetailUU, dan Search Result.                     |
 | **`update_banner.dart`** | Banner notifikasi update. Muncul otomatis jika ada data baru di server dan sync sudah lama tidak dilakukan. |
+| **`adaptive_pasal_browser.dart`** | Pemilik pilihan pasal dan konteks hasil. Daftar/pembaca tetap mounted saat resize; `PasalCard` memakai browser terdekat, atau route biasa jika tidak ada browser. Back pada panel aktif menutup pasal dahulu, lalu kembali ke pilihan UU. |
 
 ### Services (`lib/core/services/`)
 
@@ -52,6 +53,7 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 | **`utils/image_helper.dart`**      | Mengatur logika gambar cover buku dan warna tema per buku (Merah untuk KUHP, Hijau untuk ITE, dll). |
 | **`config/app_theme.dart`**        | Satu-satunya definisi tema Material 3 (terang + gelap), dibangun dari warna merek di `app_colors.dart`. |
 | **`config/theme_controller.dart`** | Mengatur State Dark Mode/Light Mode dan menyimpannya ke memori HP (Shared Preferences).             |
+| **`ui/utils/responsive_layout.dart`** | Breakpoint bersama dan `ResponsiveContent` untuk membatasi lebar tanpa membuat scroll atau controller baru. |
 | **`config/env.dart`**              | Konfigurasi environment (Supabase URL dan Anon Key).                                                |
 
 ### Models (`lib/models/`)
@@ -63,6 +65,28 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 | **`undang_undang_model.dart`** | Model data untuk Undang-Undang. Termasuk `deskripsi` untuk informasi tambahan. |
 
 ---
+
+## Layout adaptif
+
+Satu aplikasi Flutter untuk ponsel, tablet, dan desktop. Breakpoint memakai lebar jendela dalam logical px, bukan user-agent. Pembagian panel juga memperhitungkan constraints lokal agar pembaca yang sempit tidak dipaksa memiliki sidebar.
+
+| Lebar jendela | Navigasi | Daftar dan bacaan |
+| --- | --- | --- |
+| <600 | Bar bawah | Satu panel; tombol kembali membuka daftar yang sama. |
+| 600–1023 | Navigation rail | Satu panel dengan lebar konten dibatasi. |
+| >=1024 | Sidebar | Daftar dan pembaca berdampingan bila konten tersedia minimal 720 px. |
+
+Login dibatasi 440 px, bacaan 760 px, konten halaman 1200 px, drawer pengaturan 400 px, sheet 640 px, dan dialog 560 px. Angka tersebut adalah batas maksimum; layar sempit tetap memakai ruang yang tersedia. Pembaca standalone menampilkan daftar bab saat ruang lokal minimal 1100 px. Beranda, Pustaka, dan Tersimpan menggunakan pembaca inline yang sama.
+
+Shell mempertahankan tab yang pernah dibuka melalui `IndexedStack`. Browser mempertahankan dua subtree daftar/pembaca melalui `Offstage`, sehingga query, pilihan UU/pasal, dan scroll tidak hilang saat resize. Mengganti pilihan pasal membuat state pembaca baru; prev/next di dalam pembaca tetap memakai konteks hasil yang dipilih. Back handler pada tab yang tidak aktif tidak menangkap navigasi kembali.
+
+Regresi resize memakai SQLite in-memory dan menguji query serta offset baca saat `1365 -> 390 -> 800 -> 1365`, lalu kembali ke daftar:
+
+```bash
+flutter test test/unit/widgets/adaptive_pasal_browser_test.dart
+```
+
+Runtime Linux untuk tes membutuhkan `libsqlite3-dev`. Screenshot browser: [desktop](../docs/screenshots/responsive-desktop.webp), [tablet](../docs/screenshots/responsive-tablet.webp), [ponsel](../docs/screenshots/responsive-mobile.webp). Screenshot memakai data sinkronisasi sungguhan; bukan bukti pengujian perangkat fisik.
 
 ## Fitur Utama
 

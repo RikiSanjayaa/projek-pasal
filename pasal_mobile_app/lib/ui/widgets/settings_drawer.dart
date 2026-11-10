@@ -79,7 +79,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
     final screenWidth = MediaQuery.of(context).size.width;
 
     return Drawer(
-      width: screenWidth * 0.85, // 85% of screen width
+      width: (screenWidth * 0.85).clamp(0.0, 400.0),
       backgroundColor: AppColors.scaffold(isDark),
       child: SafeArea(
         child: Column(

@@ -1,9 +1,11 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../core/config/app_colors.dart';
 import '../../core/services/sync_manager.dart';
 import '../../core/services/sync_progress.dart';
 import '../widgets/app_notification.dart';
 import '../widgets/main_navigation.dart';
+import '../utils/responsive_layout.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -24,15 +26,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<Map<String, dynamic>> _pages = [
     {
       "title": "Selamat Datang",
-      "desc":
-          "Baca dan cari pasal undang-undang Indonesia kapan saja, langsung dari genggaman Anda.",
+      "desc": "Baca dan cari pasal undang-undang Indonesia kapan saja, langsung dari genggaman Anda.",
       "icon": Icons.menu_book_rounded,
       "color": AppColors.primary,
     },
     {
       "title": "Pencarian Cepat",
-      "desc":
-          "Cari pasal berdasarkan nomor atau kata kunci dengan fitur highlight pintar.",
+      "desc": "Cari pasal berdasarkan nomor atau kata kunci dengan fitur highlight pintar.",
       "icon": Icons.search_rounded,
       "color": AppColors.success,
     },
@@ -341,18 +341,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: _isDownloading
-                  ? _buildDownloadingView(isDark)
-                  : _downloadError != null
-                  ? _buildErrorView(isDark)
-                  : _buildOnboardingPages(isDark),
-            ),
-            if (!_isDownloading && _downloadError == null)
-              _buildBottomSection(isDark),
-          ],
+        child: ResponsiveContent(
+          maxWidth: ResponsiveLayout.readingWidth,
+          child: Column(
+            children: [
+              Expanded(
+                child: _isDownloading
+                    ? _buildDownloadingView(isDark)
+                    : _downloadError != null
+                    ? _buildErrorView(isDark)
+                    : _buildOnboardingPages(isDark),
+              ),
+              if (!_isDownloading && _downloadError == null)
+                _buildBottomSection(isDark),
+            ],
+          ),
         ),
       ),
     );

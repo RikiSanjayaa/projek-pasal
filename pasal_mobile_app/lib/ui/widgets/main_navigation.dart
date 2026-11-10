@@ -1,11 +1,13 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+
 import '../../core/config/app_colors.dart';
 import 'settings_drawer.dart';
 import 'expiry_warning_banner.dart';
 import '../screens/home_screen.dart';
 import '../screens/library_screen.dart';
 import '../screens/archive_screen.dart';
+import '../utils/responsive_layout.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -16,179 +18,145 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
-
-  final List<Widget> _pages = [
-    const HomeScreen(),
-    const LibraryScreen(),
-    const ArchiveScreen(),
+  final Set<int> _visitedPages = {0};
+  final List<Widget> _pages = const [
+    HomeScreen(),
+    LibraryScreen(),
+    ArchiveScreen(),
   ];
 
   void _onItemTapped(int index) {
+    if (_selectedIndex == index) return;
     HapticFeedback.lightImpact();
     setState(() {
       _selectedIndex = index;
+      _visitedPages.add(index);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final width = MediaQuery.sizeOf(context).width;
+    final compact = width < ResponsiveLayout.medium;
+    final expanded = width >= ResponsiveLayout.expanded;
 
     return Scaffold(
-      extendBody: true, // Allow body to extend behind navbar
       endDrawer: const SettingsDrawer(),
-      body: Column(
-        children: [
-          const ExpiryWarningBanner(),
-          Expanded(child: _pages[_selectedIndex]),
-        ],
-      ),
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.15),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: Container(
-            height: 78,
-            decoration: BoxDecoration(
-              color: AppColors.bottomNav(isDark),
-              border: Border.all(
-                color: AppColors.border(isDark).withValues(alpha: 0.2),
-              ),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildNavItem(
-                  index: 0,
-                  icon: Icons.home_rounded,
-                  activeIcon: Icons.home_rounded,
-                  label: 'Beranda',
-                  isDark: isDark,
-                ),
-                _buildNavItem(
-                  index: 1,
-                  icon: Icons.auto_stories_outlined,
-                  activeIcon: Icons.auto_stories_rounded,
-                  label: 'Pustaka',
-                  isDark: isDark,
-                ),
-                // Bookmarks (coming soon)
-                _buildNavItem(
-                  index: 2,
-                  icon: Icons.bookmark_outline_rounded,
-                  activeIcon: Icons.bookmark_rounded,
-                  label: 'Tersimpan',
-                  isDark: isDark,
-                  // disabled: true,
-                  // comingSoon: true,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem({
-    required int index,
-    required IconData icon,
-    required IconData activeIcon,
-    required String label,
-    required bool isDark,
-    bool disabled = false,
-    bool comingSoon = false,
-  }) {
-    final isSelected = _selectedIndex == index;
-    final color = disabled
-        ? AppColors.textSecondary(isDark).withValues(alpha: 0.5)
-        : isSelected
-        ? AppColors.primary
-        : AppColors.textSecondary(isDark);
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: disabled ? null : () => _onItemTapped(index),
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeOutCubic,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isSelected ? 16 : 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.primary.withValues(alpha: 0.15)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      isSelected ? activeIcon : icon,
-                      size: 22,
-                      color: color,
-                    ),
-                  ),
-                  if (comingSoon)
-                    Positioned(
-                      top: -2,
-                      right: -2,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 1,
+      body: SafeArea(
+        child: Row(
+          children: [
+            SizedBox(
+              width: compact ? 0 : (expanded ? 216 : 88),
+              child: compact
+                  ? const SizedBox.shrink()
+                  : DecoratedBox(
+                      decoration: BoxDecoration(
+                        border: Border(
+                          right: BorderSide(color: AppColors.border(isDark)),
                         ),
-                        decoration: BoxDecoration(
-                          color: AppColors.warning,
-                          borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: NavigationRail(
+                        extended: expanded,
+                        minWidth: 88,
+                        minExtendedWidth: 216,
+                        backgroundColor: AppColors.scaffold(isDark),
+                        selectedIndex: _selectedIndex,
+                        onDestinationSelected: _onItemTapped,
+                        labelType: expanded
+                            ? NavigationRailLabelType.none
+                            : NavigationRailLabelType.all,
+                        leading: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          child: expanded
+                              ? const Text(
+                                  'CariPasal',
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )
+                              : const Icon(Icons.balance_rounded, size: 30),
                         ),
-                        child: const Text(
-                          'SOON',
-                          style: TextStyle(
-                            fontSize: 6,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                        destinations: const [
+                          NavigationRailDestination(
+                            icon: Icon(Icons.home_outlined),
+                            selectedIcon: Icon(Icons.home_rounded),
+                            label: Text('Beranda'),
+                          ),
+                          NavigationRailDestination(
+                            icon: Icon(Icons.auto_stories_outlined),
+                            selectedIcon: Icon(Icons.auto_stories_rounded),
+                            label: Text('Pustaka'),
+                          ),
+                          NavigationRailDestination(
+                            icon: Icon(Icons.bookmark_outline_rounded),
+                            selectedIcon: Icon(Icons.bookmark_rounded),
+                            label: Text('Tersimpan'),
+                          ),
+                        ],
+                        trailing: Padding(
+                          padding: const EdgeInsets.only(top: 24),
+                          child: Builder(
+                            builder: (context) => IconButton(
+                              tooltip: 'Pengaturan',
+                              onPressed: () =>
+                                  Scaffold.of(context).openEndDrawer(),
+                              icon: const Icon(Icons.settings_outlined),
+                            ),
                           ),
                         ),
                       ),
                     ),
+            ),
+            // Keep this subtree in the same slot at every breakpoint.
+            Expanded(
+              child: Column(
+                children: [
+                  const ExpiryWarningBanner(),
+                  Expanded(
+                    child: IndexedStack(
+                      index: _selectedIndex,
+                      children: [
+                        for (var i = 0; i < _pages.length; i++)
+                          TickerMode(
+                            enabled: i == _selectedIndex,
+                            child: _visitedPages.contains(i)
+                                ? _pages[i]
+                                : const SizedBox.shrink(),
+                          ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
+      bottomNavigationBar: compact
+          ? NavigationBar(
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: _onItemTapped,
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home_rounded),
+                  label: 'Beranda',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.auto_stories_outlined),
+                  selectedIcon: Icon(Icons.auto_stories_rounded),
+                  label: 'Pustaka',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.bookmark_outline_rounded),
+                  selectedIcon: Icon(Icons.bookmark_rounded),
+                  label: 'Tersimpan',
+                ),
+              ],
+            )
+          : null,
     );
   }
 }

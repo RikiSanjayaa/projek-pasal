@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../core/config/app_colors.dart';
 import '../../models/undang_undang_model.dart';
 import '../../models/pasal_model.dart';
@@ -9,10 +10,12 @@ import '../widgets/pasal_card.dart';
 import '../widgets/search_tier_header.dart';
 import '../widgets/settings_drawer.dart';
 import '../utils/uu_color_helper.dart';
+import '../widgets/adaptive_pasal_browser.dart';
 
 class DetailUUScreen extends StatefulWidget {
   final UndangUndangModel undangUndang;
-  const DetailUUScreen({super.key, required this.undangUndang});
+  final VoidCallback? onBack;
+  const DetailUUScreen({super.key, required this.undangUndang, this.onBack});
 
   @override
   State<DetailUUScreen> createState() => _DetailUUScreenState();
@@ -47,11 +50,12 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
 
   void _loadPasal() async {
     final pasal = await QueryService.getPasalByUU(widget.undangUndang.id);
+    if (!mounted) return;
     setState(() {
       _allPasal = pasal;
-      _filteredPasal = _allPasal;
       _isLoading = false;
     });
+    _filterLocalPasal(_searchController.text);
   }
 
   void _filterLocalPasal(String query) {
@@ -133,230 +137,250 @@ class _DetailUUScreenState extends State<DetailUUScreen> {
     final color = _getUUColor(widget.undangUndang.kode);
     final icon = _getUUIcon(widget.undangUndang.kode);
 
-    return Scaffold(
-      endDrawer: const SettingsDrawer(),
-      appBar: AppBar(
-        title: Text(
-          widget.undangUndang.kode,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          Builder(
-            builder: (context) => IconButton(
-              onPressed: () => Scaffold.of(context).openEndDrawer(),
-              icon: Icon(Icons.menu, color: AppColors.icon(isDark)),
-              tooltip: 'Pengaturan',
-            ),
+    return AdaptivePasalBrowser(
+      onBack: widget.onBack,
+      child: Scaffold(
+        endDrawer: const SettingsDrawer(),
+        appBar: AppBar(
+          title: Text(
+            widget.undangUndang.kode,
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : NestedScrollView(
-              headerSliverBuilder: (context, innerBoxIsScrolled) {
-                return [
-                  // Non-sticky Header UU Details (Scrolls away)
-                  SliverToBoxAdapter(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.card(isDark),
-                        border: Border(
-                          bottom: BorderSide(color: AppColors.border(isDark)),
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new),
+            onPressed: widget.onBack ?? () => Navigator.maybePop(context),
+          ),
+          actions: [
+            Builder(
+              builder: (context) => IconButton(
+                onPressed: () => Scaffold.of(context).openEndDrawer(),
+                icon: Icon(Icons.menu, color: AppColors.icon(isDark)),
+                tooltip: 'Pengaturan',
+              ),
+            ),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : NestedScrollView(
+                headerSliverBuilder: (context, innerBoxIsScrolled) {
+                  return [
+                    // Non-sticky Header UU Details (Scrolls away)
+                    SliverToBoxAdapter(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
                         ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
+                        decoration: BoxDecoration(
+                          color: AppColors.card(isDark),
+                          border: Border(
+                            bottom: BorderSide(color: AppColors.border(isDark)),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 56,
+                                  height: 56,
+                                  decoration: BoxDecoration(
+                                    color: color.withValues(
+                                      alpha: isDark ? 0.1 : 0.05,
+                                    ),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: color.withValues(
+                                        alpha: isDark ? 0.5 : 0.3,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Icon(icon, color: color, size: 28),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: color,
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          widget.undangUndang.kode,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        widget.undangUndang.nama,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textPrimary(isDark),
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      if (widget.undangUndang.namaLengkap !=
+                                              null &&
+                                          widget
+                                              .undangUndang
+                                              .namaLengkap!
+                                              .isNotEmpty)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 2,
+                                          ),
+                                          child: Text(
+                                            widget.undangUndang.namaLengkap!,
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: AppColors.textSecondary(
+                                                isDark,
+                                              ),
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                _buildStatBadge(
+                                  Icons.calendar_today_outlined,
+                                  'Tahun ${widget.undangUndang.tahun}',
+                                  isDark,
+                                ),
+                                const SizedBox(width: 12),
+                                _buildStatBadge(
+                                  Icons.article_outlined,
+                                  '${_allPasal.length} Pasal',
+                                  isDark,
+                                  highlight: true,
+                                ),
+                              ],
+                            ),
+                            if (widget.undangUndang.deskripsi != null &&
+                                widget.undangUndang.deskripsi!.isNotEmpty) ...[
+                              const SizedBox(height: 12),
                               Container(
-                                width: 56,
-                                height: 56,
+                                padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: color.withValues(
                                     alpha: isDark ? 0.1 : 0.05,
                                   ),
-                                  borderRadius: BorderRadius.circular(14),
+                                  borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
                                     color: color.withValues(
                                       alpha: isDark ? 0.5 : 0.3,
                                     ),
                                   ),
                                 ),
-                                child: Icon(icon, color: color, size: 28),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: color,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        widget.undangUndang.kode,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.info_outline,
+                                          size: 14,
+                                          color: color,
                                         ),
-                                      ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          "Tentang",
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: color,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     const SizedBox(height: 6),
                                     Text(
-                                      widget.undangUndang.nama,
+                                      widget.undangUndang.deskripsi!,
                                       style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.textPrimary(isDark),
+                                        fontSize: 12,
+                                        color: isDark
+                                            ? Colors.grey[300]
+                                            : Colors.grey[700],
+                                        height: 1.4,
                                       ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    if (widget.undangUndang.namaLengkap != null &&
-                                        widget.undangUndang.namaLengkap!.isNotEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 2),
-                                        child: Text(
-                                          widget.undangUndang.namaLengkap!,
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: AppColors.textSecondary(isDark),
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
                                   ],
                                 ),
                               ),
                             ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              _buildStatBadge(
-                                Icons.calendar_today_outlined,
-                                'Tahun ${widget.undangUndang.tahun}',
-                                isDark,
-                              ),
-                              const SizedBox(width: 12),
-                              _buildStatBadge(
-                                Icons.article_outlined,
-                                '${_allPasal.length} Pasal',
-                                isDark,
-                                highlight: true,
-                              ),
-                            ],
-                          ),
-                          if (widget.undangUndang.deskripsi != null &&
-                              widget.undangUndang.deskripsi!.isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: color.withValues(alpha: isDark ? 0.1 : 0.05),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: color.withValues(
-                                    alpha: isDark ? 0.5 : 0.3,
-                                  ),
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.info_outline,
-                                        size: 14,
-                                        color: color,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        "Tentang",
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: color,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    widget.undangUndang.deskripsi!,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: isDark
-                                          ? Colors.grey[300]
-                                          : Colors.grey[700],
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                           ],
-                        ],
+                        ),
                       ),
                     ),
-                  ),
 
-                  // Sticky Search Bar Header (Stays pinned when scrolled)
-                  SliverPersistentHeader(
-                    pinned: true,
-                    delegate: _StickySearchHeaderDelegate(
-                      isDark: isDark,
-                      searchController: _searchController,
-                      undangNama: widget.undangUndang.nama,
-                      filteredCount: _filteredPasal.length,
-                      onChanged: _filterLocalPasal,
-                      onClear: () {
-                        _searchController.clear();
-                        _filterLocalPasal('');
-                      },
+                    // Sticky Search Bar Header (Stays pinned when scrolled)
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _StickySearchHeaderDelegate(
+                        isDark: isDark,
+                        searchController: _searchController,
+                        undangNama: widget.undangUndang.nama,
+                        filteredCount: _filteredPasal.length,
+                        onChanged: _filterLocalPasal,
+                        onClear: () {
+                          _searchController.clear();
+                          _filterLocalPasal('');
+                        },
+                      ),
                     ),
-                  ),
-                ];
-              },
-              body: _filteredPasal.isEmpty
-                  ? _buildEmptySearchState(isDark)
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                      itemCount: _filteredPasal.length,
-                      itemBuilder: (context, index) {
-                        final card = PasalCard(
-                          pasal: _filteredPasal[index],
-                          contextList: _filteredPasal,
-                          searchQuery: _searchController.text,
-                          showUULabel: false,
-                        );
-                        final header = SearchTierHeader.before(_searchResult, _filteredPasal, index);
-                        if (header == null) return card;
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [header, card],
-                        );
-                      },
-                    ),
-            ),
+                  ];
+                },
+                body: _filteredPasal.isEmpty
+                    ? _buildEmptySearchState(isDark)
+                    : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                        itemCount: _filteredPasal.length,
+                        itemBuilder: (context, index) {
+                          final card = PasalCard(
+                            pasal: _filteredPasal[index],
+                            contextList: _filteredPasal,
+                            searchQuery: _searchController.text,
+                            showUULabel: false,
+                          );
+                          final header = SearchTierHeader.before(
+                            _searchResult,
+                            _filteredPasal,
+                            index,
+                          );
+                          if (header == null) return card;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [header, card],
+                          );
+                        },
+                      ),
+              ),
+      ),
     );
   }
 

@@ -127,6 +127,7 @@ class AppTheme {
         ),
       ),
       bottomSheetTheme: BottomSheetThemeData(
+        constraints: const BoxConstraints(maxWidth: 640),
         backgroundColor: AppColors.card(isDark),
         surfaceTintColor: Colors.transparent,
         showDragHandle: false,
@@ -137,6 +138,7 @@ class AppTheme {
         ),
       ),
       dialogTheme: DialogThemeData(
+        constraints: const BoxConstraints(maxWidth: 560),
         backgroundColor: AppColors.card(isDark),
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
