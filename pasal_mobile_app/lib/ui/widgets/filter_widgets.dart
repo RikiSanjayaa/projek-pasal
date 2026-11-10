@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../core/config/app_colors.dart';
+import 'interactive_surface.dart';
 
 /// Active filter chip showing a single active filter with remove option
 class ActiveFilterChip extends StatelessWidget {
@@ -40,9 +42,19 @@ class ActiveFilterChip extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 4),
-          GestureDetector(
-            onTap: onRemove,
-            child: const Icon(Icons.close, size: 14, color: Colors.white70),
+          Tooltip(
+            message: 'Hapus filter $label',
+            child: InteractiveSurface(
+              onTap: onRemove,
+              selected: true,
+              color: AppColors.primary,
+              showBorder: false,
+              borderRadius: BorderRadius.circular(12),
+              child: const Padding(
+                padding: EdgeInsets.all(6),
+                child: Icon(Icons.close, size: 14, color: Colors.white),
+              ),
+            ),
           ),
         ],
       ),
@@ -79,11 +91,9 @@ class ActiveFiltersSection extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: isDark ? 0.1 : 0.05),
+        color: AppColors.selected(isDark),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.primary.withValues(alpha: isDark ? 0.5 : 0.3),
-        ),
+        border: Border.all(color: AppColors.border(isDark)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,7 +106,7 @@ class ActiveFiltersSection extends StatelessWidget {
                   Icon(
                     Icons.filter_alt,
                     size: 14,
-                    color: AppColors.primary.withValues(alpha: 0.8),
+                    color: AppColors.accent(isDark),
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -104,18 +114,25 @@ class ActiveFiltersSection extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.primary.withValues(alpha: 0.8),
+                      color: AppColors.accent(isDark),
                     ),
                   ),
                 ],
               ),
-              GestureDetector(
-                onTap: onClearAll,
+              TextButton(
+                onPressed: onClearAll,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
+                  minimumSize: const Size(0, 32),
+                ),
                 child: Text(
                   'Hapus Semua',
                   style: TextStyle(
                     fontSize: 11,
-                    color: AppColors.primary.withValues(alpha: 0.8),
+                    color: AppColors.accent(isDark),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -167,22 +184,14 @@ class SelectableChip extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: InkWell(
+      child: InteractiveSurface(
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? blueColor : AppColors.card(isDark),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isSelected
-                  ? blueColor
-                  : (isDark ? Colors.grey[700]! : Colors.grey[200]!),
-              width: 1,
-            ),
-          ),
+        selected: isSelected,
+        color: isSelected ? blueColor : null,
+        borderColor: isSelected ? blueColor : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 9),
           child: Text(
             label,
             style: TextStyle(
@@ -190,7 +199,7 @@ class SelectableChip extends StatelessWidget {
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               color: isSelected
                   ? Colors.white
-                  : (isDark ? Colors.grey[300] : Colors.grey[600]),
+                  : AppColors.textSecondary(isDark),
             ),
           ),
         ),

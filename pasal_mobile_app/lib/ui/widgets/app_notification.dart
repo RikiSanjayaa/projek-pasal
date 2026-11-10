@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/config/app_colors.dart';
@@ -156,7 +157,7 @@ class _AnimatedNotificationState extends State<_AnimatedNotification>
                     onTap: _handleDismiss,
                     borderRadius: BorderRadius.circular(20),
                     child: Container(
-                      padding: const EdgeInsets.all(4),
+                      padding: const EdgeInsets.all(8),
                       child: const Icon(
                         Icons.close_rounded,
                         color: Colors.white,

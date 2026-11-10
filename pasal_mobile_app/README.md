@@ -12,11 +12,11 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 | :------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------- |
 | **`splash_screen.dart`**         | Layar pembuka. Mengecek database dan menginisialisasi SyncManager. Jika kosong -> Onboarding. Jika ada -> MainNavigation + cek update.    |
 | **`onboarding_screen.dart`**     | Layar download awal database dari server (Supabase) ke HP (Drift/SQLite). Hanya muncul saat instalasi pertama.                            |
-| **`main_navigation.dart`**       | Mengatur Bottom Navigation Bar (Tab Home vs Tab Pustaka).                                                                                 |
+| **`../widgets/main_navigation.dart`** | Navigasi Beranda, Pustaka, dan Tersimpan: bar bawah, rail, atau sidebar menurut lebar jendela. Tab yang pernah dibuka mempertahankan state. |
 | **`home_screen.dart`**           | **Dashboard Utama**. Fitur: Search Global (hasil dikelompokkan per kecocokan), Filter Bab lalu Judul, Filter Kategori UU, List Pasal Terbaru |
-| **`library_screen.dart`**        | **Tab Pustaka**. Menampilkan daftar "Buku/Kitab UU" (KUHP, ITE, dll) dalam bentuk Grid.                                                   |
-| **`detail_uu_screen.dart`**      | Halaman isi buku. Muncul saat buku di Pustaka diklik. Menampilkan daftar pasal + deskripsi UU jika tersedia.                              |
-| **`read_pasal_screen.dart`**     | **Mode Baca Detail**. Muncul saat kartu pasal diklik. Fitur: Next/Prev Pasal, Highlight Teks, Pasal Terkait, Riwayat Perubahan, dan Share.|
+| **`library_screen.dart`**        | Tab Pustaka. Daftar UU dan pilihan UU tetap tersimpan saat resize atau berganti tab. |
+| **`detail_uu_screen.dart`**      | Daftar pasal dalam UU beserta pencariannya; layar lebar menampilkan daftar dan pembaca berdampingan. |
+| **`read_pasal_screen.dart`**     | Pembaca pasal dengan lebar teks terbatas, pencarian, prev/next, penjelasan, pasal terkait, dan riwayat. Sidebar bab muncul bila ruang panel cukup. `onBack` opsional menutup pembaca inline; pemanggil route tetap kembali lewat Navigator. |
 | **`search_screen.dart`**         | _(Legacy/Opsional)_ Halaman pencarian khusus jika menggunakan `showSearch` bawaan Flutter. Saat ini pencarian sudah terintegrasi di Home. |
 | **`bab_result_screen.dart`**     | Daftar semua pasal dalam satu bab. Dibuka dari baris bab di layar baca pasal.                                                            |
 
@@ -25,9 +25,10 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 | File                     | Fungsi                                                                                                      |
 | :----------------------- | :---------------------------------------------------------------------------------------------------------- |
 | **`law_content_formatter.dart`** | Pemformat teks hukum (daftar `(1)`, `a.`, `1.`, indentasi, highlight pencarian). Dipakai untuk **Isi** dan **Penjelasan**; label penjelasan (`Ayat (n)`, `Huruf x`, `Angka n`) menjadi sub-judul. Ekspor PDF memakai logika pemisahan yang sama. |
-| **`main_layout.dart`**   | Wrapper utama semua halaman. Menghandle Background Color & Dark Mode Listener agar konsisten.               |
+| **`main_layout.dart`**   | Scaffold, banner pembaruan, SafeArea, dan konten terpusat maksimum 1200 logical px. |
 | **`pasal_card.dart`**    | Komponen UI Kartu Pasal. Digunakan berulang-ulang di Home, DetailUU, dan Search Result.                     |
 | **`update_banner.dart`** | Banner notifikasi update. Muncul otomatis jika ada data baru di server dan sync sudah lama tidak dilakukan. |
+| **`adaptive_pasal_browser.dart`** | Pemilik pilihan pasal dan konteks hasil. Daftar/pembaca tetap mounted saat resize; `PasalCard` memakai browser terdekat, atau route biasa jika tidak ada browser. Back pada panel aktif menutup pasal dahulu, lalu kembali ke pilihan UU. |
 
 ### Services (`lib/core/services/`)
 
@@ -52,6 +53,7 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 | **`utils/image_helper.dart`**      | Mengatur logika gambar cover buku dan warna tema per buku (Merah untuk KUHP, Hijau untuk ITE, dll). |
 | **`config/app_theme.dart`**        | Satu-satunya definisi tema Material 3 (terang + gelap), dibangun dari warna merek di `app_colors.dart`. |
 | **`config/theme_controller.dart`** | Mengatur State Dark Mode/Light Mode dan menyimpannya ke memori HP (Shared Preferences).             |
+| **`ui/utils/responsive_layout.dart`** | Breakpoint bersama dan `ResponsiveContent` untuk membatasi lebar tanpa membuat scroll atau controller baru. |
 | **`config/env.dart`**              | Konfigurasi environment (Supabase URL dan Anon Key).                                                |
 
 ### Models (`lib/models/`)
@@ -63,6 +65,52 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 | **`undang_undang_model.dart`** | Model data untuk Undang-Undang. Termasuk `deskripsi` untuk informasi tambahan. |
 
 ---
+
+## Layout adaptif
+
+Satu aplikasi Flutter untuk ponsel, tablet, dan desktop. Breakpoint memakai lebar jendela dalam logical px, bukan user-agent. Pembagian panel juga memperhitungkan constraints lokal agar pembaca yang sempit tidak dipaksa memiliki sidebar.
+
+| Lebar jendela | Navigasi | Daftar dan bacaan |
+| --- | --- | --- |
+| <600 | Bar bawah | Satu panel; tombol kembali membuka daftar yang sama. |
+| 600–1023 | Rail 80 px, ikon tanpa label | Satu panel dengan grid mengikuti lebar konten. |
+| >=1024 | Sidebar 264 px, bisa diciutkan menjadi 80 px | Daftar memakai seluruh lebar sebelum pasal dipilih; pembaca muncul berdampingan bila konten tersedia minimal 720 px. |
+
+Sidebar punya pembatas, logo brand CariPasal sesuai tema (`logo.png`/`logo-dark.png`), periksa update, dan akses profil langsung. Logo tetap terlihat saat rail diciutkan. Pilihan tema Sistem/Terang/Gelap berada di dialog Profil bersama informasi akun dan aksi logout, bukan di sidebar. Tampilan desktop tidak membuka drawer pengaturan tambahan. Pada ponsel, pengaturan tetap memakai drawer 400 px maksimum dengan kontrol akun/tema yang sama.
+
+Drawer Pengaturan berada di kanan layar dan menetapkan bentuknya sendiri: sudut kiri atas/bawah mengikuti radius sheet, sisi kanan rata. Bentuk ini tidak bergantung pada default drawer kiri Material karena panel dibuka melalui dialog.
+
+Daftar pasal memakai satu sampai tiga kolom sesuai lebar lokal, termasuk ketika kembali dari pembaca. Tinggi kartu dalam satu baris mengikuti kartu tertinggi agar isi pendek tetap rata, tanpa memotong judul panjang. Pengukuran tinggi hanya dilakukan untuk baris grid yang dibangun (maksimal tiga kartu); daftar satu kolom mempertahankan tinggi alami. Jelajahi Pasal memakai pilihan Per halaman: Otomatis, 10, 20, 30, atau 50. Dropdown berada di bawah daftar, berdampingan dengan kontrol pagination, dan tetap tersedia pada hasil satu halaman. Otomatis memuat 30 pasal pada desktop tanpa detail terbuka, dan 10 pada ponsel/tablet atau panel daftar saat detail terbuka. Pilihan manual tersimpan di perangkat dan tidak ditimpa saat resize atau membuka detail; memilih Otomatis menghapus override. Ketika daftar penuh beralih ke panel sempit, halaman menampung pasal yang dibuka, bukan selalu halaman pertama. Dalam mode Otomatis, menutup detail mengembalikan halaman dan posisi scroll daftar sebelumnya. Tersimpan tetap memuat 30 pasal per halaman. Filter UU dan bab langsung terbuka bila lebar panel daftar minimal 740 px; di bawahnya memakai dropdown Filter, termasuk saat pembaca inline mempersempit daftar pada desktop.
+
+Teks dropdown Per halaman, baik nilai terpilih maupun opsi menu, mengikuti gaya teks indikator nomor halaman agar ukurannya konsisten.
+
+Saat ukuran halaman Otomatis berubah karena resize desktop/ponsel, pasal pada baris teratas yang masih terlihat menjadi anchor. Halaman baru dipilih berdasarkan pasal tersebut, lalu barisnya ditampilkan kembali; resize tidak lagi mengembalikan daftar ke awal halaman. Restorasi tetap memakai baris lazy, tanpa membangun seluruh daftar hukum.
+
+Login dibatasi 440 px, bacaan 760 px, konten non-browser 1200 px, sheet 640 px, dan dialog 560 px. Angka tersebut adalah batas maksimum; layar sempit tetap memakai ruang yang tersedia. Pembaca standalone menampilkan daftar bab saat ruang lokal minimal 1100 px. Beranda, Pustaka, dan Tersimpan menggunakan pembaca inline yang sama.
+
+Background dan border bawah pencarian di dalam detail mengikuti seluruh lebar kolom pembaca, dengan padding input di bagian dalam. Batas bacaan 760 px hanya membatasi isi pasal, bukan strip pencarian, sehingga tidak meninggalkan celah kiri/kanan di bawah toolbar.
+
+Pencarian Beranda memakai jarak atas 24 px dari header, sama dengan inset atas card Baca Pasal. Header Jelajahi Pasal memiliki tinggi minimum toolbar agar keduanya sejajar pada tampilan dua panel. Di desktop, tombol Sebelumnya/Selanjutnya tetap ringkas di ujung kiri/kanan panel baca, tidak mengikuti batas card atau bergeser saat sidebar bab muncul. Sneak peek terpisah dari tombol memakai ruang kosong di antaranya, cukup kode UU dan nomor pasal (misalnya `KUHP - Pasal 3`), tanpa judul, isi, atau label urutan. Bila panel desktop menyempit, dua tujuan disusun vertikal di ruang tengah. Ponsel dan tablet di bawah breakpoint desktop tidak menampilkan sneak peek; tombol tetap berlabel Sebelumnya/Selanjutnya, maksimal 180 px, dengan celah minimum 12 px. Tombol di batas awal/akhir daftar atau UU nonaktif.
+
+Shell mempertahankan tab yang pernah dibuka melalui `IndexedStack`. Browser mempertahankan dua subtree daftar/pembaca melalui `Offstage`, sehingga query, pilihan UU/pasal, dan scroll tidak hilang saat resize. Mengganti pilihan pasal membuat state pembaca baru. Prev/next mengikuti daftar saat pasal dibuka: urutan pembaruan di Pasal Terbaru, hasil pencarian, atau daftar UU. Memilih pasal lewat daftar isi secara eksplisit beralih ke urutan nomor pasal dalam UU; urutan itu tidak kembali ke daftar asal saat melewati pasal yang ada di kedua daftar. Ini bukan riwayat kunjungan. Back handler pada tab yang tidak aktif tidak menangkap navigasi kembali.
+
+Regresi memakai SQLite in-memory: query serta offset baca bertahan saat `1365 -> 390 -> 800 -> 1365`, lalu kembali ke daftar. Navigasi memeriksa batas daftar, tujuan lintas UU, serta perpindahan eksplisit dari urutan daftar ke urutan UU. Sneak peek hilang saat beralih ke ponsel, navigasi tetap berfungsi, dan tujuan kembali terlihat saat resize ke desktop. Kartu dengan isi pendek, isi panjang, dan judul panjang diperiksa agar sejajar dalam grid dan tidak dipaksa sama tinggi saat menjadi satu kolom:
+
+```bash
+flutter test test/unit/widgets/adaptive_pasal_browser_test.dart
+flutter test test/unit/widgets/explore_pasal_results_test.dart
+```
+
+Runtime Linux untuk tes membutuhkan `libsqlite3-dev`. Screenshot browser: [desktop](../docs/screenshots/responsive-desktop.webp), [tablet](../docs/screenshots/responsive-tablet.webp), [ponsel](../docs/screenshots/responsive-mobile.webp). Screenshot memakai data sinkronisasi sungguhan; bukan bukti pengujian perangkat fisik.
+
+### Warna dan border
+
+Palet terang/gelap berada di `AppColors`; tema komponen dan ketebalan garis berada di `AppTheme`. Tombol dengan teks putih memakai biru solid `primary`, sedangkan tautan, ikon aktif, dan fokus memakai `accent(isDark)`. Warna teks UU mengikuti tema melalui `UUColorHelper.getColor(kode, isDark: isDark)`; warna terang untuk tema gelap tidak dipasangkan dengan teks putih pada badge solid.
+
+Hanya baris judul Jelajahi Pasal dan header Baca Pasal yang memakai warna bidang header dan garis bawah 1 logical px, tanpa bayangan. Pencarian, filter UU, dan pemilih bab mengikuti latar halaman/list pasal di bawahnya. Kartu, panel, input, sidebar, badge berbingkai, dan divider memakai warna border netral yang sama per tema; pilihan aktif boleh memakai warna aksen, tetapi tetap 1 px.
+
+Fokus keyboard memakai garis 2 px. `InteractiveSurface` mengecat hover di permukaan kontrol dan fokus di atas isinya, sehingga child yang opak tidak menutup state interaksi. Garis fokus tidak menambah padding atau mengubah ukuran kontrol; tombol/chip solid memakai fokus putih agar tetap terlihat di atas biru. Konten harus memiliki inset di dalam area interaksi, bukan tepat di tepi outline: profil dan periksa update memakai inset horizontal 16 px seperti navigasi rail. Aksi pasal/PDF, tautan pasal terkait, dan penghapus filter menggunakan permukaan interaktif yang sama; tombol ikon kecil tetap memiliki padding untuk memisahkan ikon dari hover/fokus.
+
 
 ## Fitur Utama
 

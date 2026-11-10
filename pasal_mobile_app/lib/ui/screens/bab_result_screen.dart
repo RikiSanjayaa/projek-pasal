@@ -1,9 +1,11 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../core/config/app_colors.dart';
 import '../../core/services/query_service.dart';
 import '../../models/pasal_model.dart';
 import '../widgets/pasal_card.dart';
 import '../widgets/settings_drawer.dart';
+import '../utils/responsive_layout.dart';
 
 /// Daftar pasal dalam satu bab di satu undang-undang, urut nomor.
 class BabResultScreen extends StatelessWidget {
@@ -22,54 +24,43 @@ class BabResultScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.scaffold(isDark),
-      endDrawer: const SettingsDrawer(),
       appBar: AppBar(
         title: Text(bab, style: const TextStyle(fontSize: 16)),
         elevation: 0,
         backgroundColor: AppColors.appBar(isDark),
         foregroundColor: AppColors.textPrimary(isDark),
-        actions: [
-          Builder(
-            builder: (ctx) => IconButton(
-              onPressed: () => Scaffold.of(ctx).openEndDrawer(),
-              icon: Icon(
-                Icons.menu,
-                color: isDark ? Colors.grey[300] : Colors.grey[700],
-              ),
-              tooltip: 'Pengaturan',
-            ),
-          ),
-        ],
+        actions: const [SettingsButton()],
       ),
-      body: FutureBuilder<List<PasalModel>>(
-        future: QueryService.getPasalByBab(undangUndangId, bab),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: ResponsiveContent(
+        maxWidth: ResponsiveLayout.readingWidth,
+        child: FutureBuilder<List<PasalModel>>(
+          future: QueryService.getPasalByBab(undangUndangId, bab),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          final results = snapshot.data ?? const <PasalModel>[];
-          if (results.isEmpty) {
-            return Center(
-              child: Text(
-                'Tidak ada pasal di bab ini',
-                style: TextStyle(
-                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+            final results = snapshot.data ?? const <PasalModel>[];
+            if (results.isEmpty) {
+              return Center(
+                child: Text(
+                  'Tidak ada pasal di bab ini',
+                  style: TextStyle(color: AppColors.textSecondary(isDark)),
                 ),
+              );
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: results.length,
+              itemBuilder: (context, index) => PasalCard(
+                pasal: results[index],
+                contextList: results,
+                showUULabel: false,
               ),
             );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: results.length,
-            itemBuilder: (context, index) => PasalCard(
-              pasal: results[index],
-              contextList: results,
-              showUULabel: false,
-            ),
-          );
-        },
+          },
+        ),
       ),
     );
   }

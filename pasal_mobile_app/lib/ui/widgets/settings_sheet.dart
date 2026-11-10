@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../core/config/app_colors.dart';
 import '../../core/config/theme_controller.dart';
 import '../../core/services/sync_manager.dart';
@@ -176,9 +177,9 @@ class _SettingsSheetState extends State<SettingsSheet> {
                                           strokeWidth: 2,
                                         ),
                                       )
-                                    : const Icon(
+                                    : Icon(
                                         Icons.sync_rounded,
-                                        color: AppColors.primary,
+                                        color: AppColors.accent(isDark),
                                         size: 20,
                                       ),
                               ),
@@ -208,7 +209,9 @@ class _SettingsSheetState extends State<SettingsSheet> {
                                         line,
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: AppColors.textSecondary(isDark),
+                                          color: AppColors.textSecondary(
+                                            isDark,
+                                          ),
                                         ),
                                       ),
                                   ],
@@ -264,15 +267,10 @@ class _SettingsSheetState extends State<SettingsSheet> {
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             color: isSelected
-                ? AppColors.primary.withValues(alpha: isDark ? 0.1 : 0.05)
+                ? AppColors.selected(isDark)
                 : AppColors.inputFill(isDark),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected
-                  ? AppColors.primary.withValues(alpha: isDark ? 0.5 : 0.3)
-                  : Colors.transparent,
-              width: 2,
-            ),
+            border: Border.all(color: AppColors.border(isDark)),
           ),
           child: Column(
             children: [
@@ -280,7 +278,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                 icon,
                 size: 24,
                 color: isSelected
-                    ? AppColors.primary
+                    ? AppColors.accent(isDark)
                     : AppColors.textSecondary(isDark),
               ),
               const SizedBox(height: 4),
@@ -290,7 +288,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                   fontSize: 12,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   color: isSelected
-                      ? AppColors.primary
+                      ? AppColors.accent(isDark)
                       : AppColors.textSecondary(isDark),
                 ),
               ),

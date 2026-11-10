@@ -1,4 +1,7 @@
+import '../widgets/settings_drawer.dart';
+
 import 'package:material_ui/material_ui.dart';
+
 import '../../core/config/app_colors.dart';
 import '../../core/services/query_service.dart';
 import '../../models/undang_undang_model.dart';
@@ -6,6 +9,8 @@ import '../../core/services/sync_manager.dart';
 import 'detail_uu_screen.dart';
 import '../widgets/main_layout.dart';
 import '../utils/uu_color_helper.dart';
+import '../utils/responsive_layout.dart';
+import '../widgets/interactive_surface.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -21,6 +26,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
   int _totalPasal = 0;
+  UndangUndangModel? _selectedUU;
 
   @override
   void initState() {
@@ -70,11 +76,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
     }
   }
 
-  // Get color for each UU type - delegated to centralized helper
-  Color _getUUColor(String kode) {
-    return UUColorHelper.getColor(kode);
-  }
-
   // Get icon for each UU type - delegated to centralized helper
   IconData _getUUIcon(String kode) {
     return UUColorHelper.getIcon(kode);
@@ -85,115 +86,122 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return MainLayout(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: IndexedStack(
+        index: _selectedUU == null ? 0 : 1,
         children: [
-          // Header section
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          ResponsiveContent(
+            maxWidth: ResponsiveLayout.readingWidth,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        "Pustaka Hukum",
+                // Header section
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              "Pustaka Hukum",
+                              style: TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                          const SettingsButton(),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Koleksi peraturan perundang-undangan Indonesia",
                         style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          height: 1.2,
+                          fontSize: 14,
+                          color: AppColors.textSecondary(isDark),
                         ),
                       ),
-                    ),
-                    // Hamburger menu button
-                    IconButton(
-                      onPressed: () => Scaffold.of(context).openEndDrawer(),
-                      icon: Icon(
-                        Icons.menu,
-                        color: isDark ? Colors.grey[300] : Colors.grey[700],
+                    ],
+                  ),
+                ),
+
+                // Stats row
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  child: Row(
+                    children: [
+                      _buildStatCard(
+                        icon: Icons.auto_stories_rounded,
+                        value: '${_allUU.length}',
+                        label: 'Sumber',
+                        color: AppColors.accent(isDark),
+                        isDark: isDark,
                       ),
-                      tooltip: 'Pengaturan',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "Koleksi peraturan perundang-undangan Indonesia",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      const SizedBox(width: 12),
+                      _buildStatCard(
+                        icon: Icons.article_rounded,
+                        value: '$_totalPasal',
+                        label: 'Pasal',
+                        color: AppColors.secondary,
+                        isDark: isDark,
+                      ),
+                    ],
                   ),
+                ),
+
+                // Section header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Semua Undang-Undang",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.grey[400] : Colors.grey[700],
+                        ),
+                      ),
+                      Text(
+                        "${_filteredUU.length} tersedia",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary(isDark),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // UU List
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _filteredUU.isEmpty
+                      ? _buildEmptyState(isDark)
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+                          itemCount: _filteredUU.length,
+                          itemBuilder: (context, index) {
+                            final uu = _filteredUU[index];
+                            return _buildUUCard(uu, isDark);
+                          },
+                        ),
                 ),
               ],
             ),
           ),
-
-          // Stats row
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-            child: Row(
-              children: [
-                _buildStatCard(
-                  icon: Icons.auto_stories_rounded,
-                  value: '${_allUU.length}',
-                  label: 'Sumber',
-                  color: AppColors.primary,
-                  isDark: isDark,
+          _selectedUU == null
+              ? const SizedBox.shrink()
+              : DetailUUScreen(
+                  key: ValueKey(_selectedUU!.id),
+                  undangUndang: _selectedUU!,
+                  onBack: () => setState(() => _selectedUU = null),
                 ),
-                const SizedBox(width: 12),
-                _buildStatCard(
-                  icon: Icons.article_rounded,
-                  value: '$_totalPasal',
-                  label: 'Pasal',
-                  color: AppColors.secondary,
-                  isDark: isDark,
-                ),
-              ],
-            ),
-          ),
-
-          // Section header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Semua Undang-Undang",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.grey[400] : Colors.grey[700],
-                  ),
-                ),
-                Text(
-                  "${_filteredUU.length} tersedia",
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark ? Colors.grey[500] : Colors.grey[500],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // UU List
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _filteredUU.isEmpty
-                ? _buildEmptyState(isDark)
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-                    itemCount: _filteredUU.length,
-                    itemBuilder: (context, index) {
-                      final uu = _filteredUU[index];
-                      return _buildUUCard(uu, isDark);
-                    },
-                  ),
-          ),
         ],
       ),
     );
@@ -212,9 +220,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         decoration: BoxDecoration(
           color: color.withValues(alpha: isDark ? 0.1 : 0.05),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: color.withValues(alpha: isDark ? 0.5 : 0.3),
-          ),
+          border: Border.all(color: AppColors.border(isDark)),
         ),
         child: Row(
           children: [
@@ -254,30 +260,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _buildUUCard(UndangUndangModel uu, bool isDark) {
-    final color = _getUUColor(uu.kode);
+    final color = UUColorHelper.getColor(uu.kode, isDark: isDark);
     final icon = _getUUIcon(uu.kode);
     final pasalCount = _pasalCounts[uu.id] ?? 0;
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DetailUUScreen(undangUndang: uu),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: isDark ? 0.1 : 0.05),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: color.withValues(alpha: isDark ? 0.5 : 0.3),
-          ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: InteractiveSurface(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => setState(() => _selectedUU = uu),
+        color: Color.alphaBlend(
+          color.withValues(alpha: isDark ? .1 : .05),
+          AppColors.card(isDark),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(17),
           child: Row(
             children: [
               // Icon container
@@ -287,7 +284,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: color.withValues(alpha: 0.3)),
+                  border: Border.all(color: AppColors.border(isDark)),
                 ),
                 child: Icon(icon, color: color, size: 28),
               ),
@@ -312,10 +309,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           ),
                           child: Text(
                             uu.kode,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: isDark
+                                  ? const Color(0xFF10243B)
+                                  : Colors.white,
                             ),
                           ),
                         ),
@@ -324,7 +323,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           'Tahun ${uu.tahun}',
                           style: TextStyle(
                             fontSize: 11,
-                            color: isDark ? Colors.grey[500] : Colors.grey[500],
+                            color: AppColors.textSecondary(isDark),
                           ),
                         ),
                       ],
@@ -351,14 +350,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         Icon(
                           Icons.article_outlined,
                           size: 14,
-                          color: isDark ? Colors.grey[500] : Colors.grey[500],
+                          color: AppColors.icon(isDark),
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '$pasalCount Pasal',
                           style: TextStyle(
                             fontSize: 12,
-                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                            color: AppColors.textSecondary(isDark),
                           ),
                         ),
                         if (uu.deskripsi != null &&
@@ -367,7 +366,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           Icon(
                             Icons.info_outline,
                             size: 14,
-                            color: isDark ? Colors.grey[500] : Colors.grey[500],
+                            color: AppColors.icon(isDark),
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -387,10 +386,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               ),
 
               // Arrow
-              Icon(
-                Icons.chevron_right_rounded,
-                color: isDark ? Colors.grey[600] : Colors.grey[400],
-              ),
+              Icon(Icons.chevron_right_rounded, color: AppColors.icon(isDark)),
             ],
           ),
         ),
@@ -414,7 +410,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.grey[500] : Colors.grey[600],
+              color: AppColors.textSecondary(isDark),
             ),
           ),
           const SizedBox(height: 4),
@@ -422,7 +418,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             "Coba kata kunci lain",
             style: TextStyle(
               fontSize: 14,
-              color: isDark ? Colors.grey[600] : Colors.grey[500],
+              color: AppColors.textSecondary(isDark),
             ),
           ),
         ],

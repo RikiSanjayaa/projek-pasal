@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../core/config/app_colors.dart';
 import '../../core/utils/search_utils.dart';
 import '../../models/pasal_model.dart';
@@ -6,6 +7,8 @@ import '../../core/services/query_service.dart';
 import '../utils/highlight_text.dart';
 import '../screens/read_pasal_screen.dart';
 import '../utils/uu_color_helper.dart';
+import 'adaptive_pasal_browser.dart';
+import 'interactive_surface.dart';
 
 class PasalCard extends StatelessWidget {
   final PasalModel pasal;
@@ -27,47 +30,39 @@ class PasalCard extends StatelessWidget {
     final textColor = AppColors.textPrimary(isDark);
     final subTextColor = AppColors.textSecondary(isDark);
 
-    final displayNomor =
-        pasal.nomor.toLowerCase().startsWith('pasal')
-            ? pasal.nomor
-            : "Pasal ${pasal.nomor}";
+    final displayNomor = pasal.nomor.toLowerCase().startsWith('pasal')
+        ? pasal.nomor
+        : "Pasal ${pasal.nomor}";
 
     return FutureBuilder<String>(
       future: QueryService.getKodeUU(pasal.undangUndangId),
       builder: (context, snapshot) {
         final kodeUU = snapshot.data ?? "UU";
 
-        final baseColor = UUColorHelper.getColor(kodeUU);
+        final baseColor = UUColorHelper.getColor(kodeUU, isDark: isDark);
+        final labelBgColor = baseColor.withValues(alpha: isDark ? .12 : .08);
+        final labelTextColor = baseColor;
 
-        final cardBgColor = AppColors.card(isDark);
-
-        final labelBgColor =
-            isDark
-                ? baseColor.withValues(alpha: 0.6)
-                : baseColor.withValues(alpha: 0.1);
-
-        final labelTextColor =
-            isDark ? Colors.white.withValues(alpha: 0.8) : baseColor;
-
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          elevation: 0,
-          color: cardBgColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: InkWell(
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: InteractiveSurface(
             borderRadius: BorderRadius.circular(12),
             onTap: () {
+              if (AdaptivePasalBrowser.open(
+                context,
+                pasal: pasal,
+                contextList: contextList,
+                searchQuery: searchQuery,
+              ))
+                return;
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder:
-                      (_) => ReadPasalScreen(
-                        pasal: pasal,
-                        contextList: contextList,
-                        searchQuery: searchQuery,
-                      ),
+                  builder: (_) => ReadPasalScreen(
+                    pasal: pasal,
+                    contextList: contextList,
+                    searchQuery: searchQuery,
+                  ),
                 ),
               );
             },
@@ -151,17 +146,12 @@ class PasalCard extends StatelessWidget {
                                 vertical: 2.5,
                               ),
                               decoration: BoxDecoration(
-                                color:
-                                    isDark
-                                        ? Colors.amber.withValues(alpha: 0.15)
-                                        : Colors.amber.withValues(alpha: 0.2),
+                                color: isDark
+                                    ? Colors.amber.withValues(alpha: 0.15)
+                                    : Colors.amber.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(5),
                                 border: Border.all(
-                                  color:
-                                      isDark
-                                          ? Colors.amber.withValues(alpha: 0.4)
-                                          : Colors.amber.withValues(alpha: 0.5),
-                                  width: 0.5,
+                                  color: AppColors.border(isDark),
                                 ),
                               ),
                               child: Row(
@@ -170,10 +160,9 @@ class PasalCard extends StatelessWidget {
                                   Icon(
                                     Icons.info_outline_rounded,
                                     size: 11,
-                                    color:
-                                        isDark
-                                            ? Colors.amber[300]
-                                            : Colors.amber[800],
+                                    color: isDark
+                                        ? Colors.amber[300]
+                                        : Colors.amber[800],
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
@@ -181,10 +170,9 @@ class PasalCard extends StatelessWidget {
                                     style: TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.w600,
-                                      color:
-                                          isDark
-                                              ? Colors.amber[300]
-                                              : Colors.amber[900],
+                                      color: isDark
+                                          ? Colors.amber[300]
+                                          : Colors.amber[900],
                                     ),
                                   ),
                                 ],

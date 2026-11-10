@@ -1,11 +1,14 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../core/config/app_colors.dart';
 import '../../core/services/archive_service.dart';
 import '../../core/services/query_service.dart';
 import '../../core/utils/search_utils.dart';
 import '../../models/pasal_model.dart';
 import '../widgets/main_layout.dart';
-import '../widgets/pasal_card.dart';
+import '../widgets/pasal_results_view.dart';
+import '../widgets/adaptive_pasal_browser.dart';
+import '../widgets/settings_drawer.dart';
 
 class ArchiveScreen extends StatefulWidget {
   const ArchiveScreen({super.key});
@@ -20,7 +23,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   List<PasalModel> _paginatedData = [];
 
   int _currentPage = 1;
-  final int _itemsPerPage = 10;
+  final int _itemsPerPage = 30;
   int _totalPages = 1;
 
   final TextEditingController _searchController = TextEditingController();
@@ -90,185 +93,170 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return MainLayout(
-      child: ValueListenableBuilder<List<String>>(
-        valueListenable: archiveService.archivedIds,
-        builder: (_, archivedIds, child) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_filteredData.length != archivedIds.length &&
-                _searchQuery.isEmpty) {
-              _applyFilterAndPagination();
-            }
-          });
+      child: AdaptivePasalBrowser(
+        child: ValueListenableBuilder<List<String>>(
+          valueListenable: archiveService.archivedIds,
+          builder: (_, archivedIds, child) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_filteredData.length != archivedIds.length &&
+                  _searchQuery.isEmpty) {
+                _applyFilterAndPagination();
+              }
+            });
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      "Pasal Tersimpan",
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        height: 1.2,
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Pasal Tersimpan",
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          height: 1.2,
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      onPressed: () => Scaffold.of(context).openEndDrawer(),
-                      icon: Icon(
-                        Icons.menu,
-                        color: isDark ? Colors.grey[300] : Colors.grey[700],
-                      ),
-                      tooltip: 'Pengaturan',
-                    ),
-                  ],
-                ),
-              ),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 5,
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  keyboardAppearance: isDark
-                      ? Brightness.dark
-                      : Brightness.light,
-                  onChanged: (val) {
-                    _searchQuery = val;
-                    _currentPage = 1;
-                    _applyFilterAndPagination();
-                  },
-                  decoration: InputDecoration(
-                    hintText: "Cari nomor, nama atau isi pasal...",
-                    hintStyle: TextStyle(
-                      color: isDark ? Colors.white70 : Colors.black54,
-                    ),
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 20),
-                            onPressed: () {
-                              _searchController.clear();
-                              _searchQuery = '';
-                              _currentPage = 1;
-                              _applyFilterAndPagination();
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: AppColors.inputFill(isDark),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: EdgeInsets.zero,
+                      const SettingsButton(),
+                    ],
                   ),
                 ),
-              ),
 
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 5,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      _searchQuery.isNotEmpty
-                          ? "Hasil Pencarian"
-                          : "Daftar Koleksi",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 5,
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    keyboardAppearance: isDark
+                        ? Brightness.dark
+                        : Brightness.light,
+                    onChanged: (val) {
+                      _searchQuery = val;
+                      _currentPage = 1;
+                      _applyFilterAndPagination();
+                    },
+                    decoration: InputDecoration(
+                      hintText: "Cari nomor, nama atau isi pasal...",
+                      hintStyle: TextStyle(
+                        color: AppColors.textSecondary(isDark),
                       ),
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 20),
+                              onPressed: () {
+                                _searchController.clear();
+                                _searchQuery = '';
+                                _currentPage = 1;
+                                _applyFilterAndPagination();
+                              },
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: AppColors.inputFill(isDark),
+                      contentPadding: EdgeInsets.zero,
                     ),
-                    Text(
-                      "Total: ${_filteredData.length}",
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 5,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _searchQuery.isNotEmpty
+                            ? "Hasil Pencarian"
+                            : "Daftar Koleksi",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(
+                        "Total: ${_filteredData.length}",
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
-              Expanded(
-                child: _filteredData.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.bookmark_border_rounded,
-                              size: 64,
-                              color: isDark
-                                  ? Colors.grey[700]
-                                  : Colors.grey[300],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _searchQuery.isNotEmpty
-                                  ? "Tidak ditemukan."
-                                  : "Belum ada pasal tersimpan.",
-                              style: TextStyle(color: Colors.grey[500]),
-                            ),
-                            if (_searchQuery.isEmpty) ...[
-                              const SizedBox(height: 6),
+                const SizedBox(height: 10),
+
+                Expanded(
+                  child: _filteredData.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.bookmark_border_rounded,
+                                size: 64,
+                                color: isDark
+                                    ? Colors.grey[700]
+                                    : Colors.grey[300],
+                              ),
+                              const SizedBox(height: 16),
                               Text(
-                                'Ketuk ikon penanda di halaman baca pasal untuk menyimpan.',
-                                textAlign: TextAlign.center,
+                                _searchQuery.isNotEmpty
+                                    ? "Tidak ditemukan."
+                                    : "Belum ada pasal tersimpan.",
                                 style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey[500],
+                                  color: AppColors.textSecondary(isDark),
                                 ),
                               ),
+                              if (_searchQuery.isEmpty) ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Ketuk ikon penanda di halaman baca pasal untuk menyimpan.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.textSecondary(isDark),
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
-                        ),
-                      )
-                    : NotificationListener<ScrollNotification>(
-                        onNotification: (scrollInfo) {
-                          if (scrollInfo is UserScrollNotification) {
-                            FocusScope.of(context).unfocus();
-                          }
-                          return false;
-                        },
-                        child: ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          itemCount: _paginatedData.length + 1,
-                          itemBuilder: (context, index) {
-                            if (index == _paginatedData.length) {
-                              return _filteredData.length > _itemsPerPage
-                                  ? Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 20,
-                                      ),
-                                      child: _buildPaginationFooter(isDark),
-                                    )
-                                  : const SizedBox(height: 80);
+                          ),
+                        )
+                      : NotificationListener<ScrollNotification>(
+                          onNotification: (scrollInfo) {
+                            if (scrollInfo is UserScrollNotification) {
+                              FocusScope.of(context).unfocus();
                             }
-
-                            final pasal = _paginatedData[index];
-                            return PasalCard(
-                              pasal: pasal,
-                              contextList: _filteredData,
-                              searchQuery: _searchQuery,
-                              showUULabel: true,
-                            );
+                            return false;
                           },
+                          child: PasalResultsView(
+                            controller: _scrollController,
+                            items: _paginatedData,
+                            contextList: _filteredData,
+                            searchQuery: _searchQuery,
+                            footer: _totalPages > 1
+                                ? Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 20,
+                                    ),
+                                    child: _buildPaginationFooter(isDark),
+                                  )
+                                : const SizedBox(height: 80),
+                          ),
                         ),
-                      ),
-              ),
-            ],
-          );
-        },
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

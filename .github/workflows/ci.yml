@@ -81,8 +81,8 @@ jobs:
       - name: Install dependencies
         run: cd pasal_mobile_app && flutter pub get
 
-      - name: Test mobile session policy
-        run: cd pasal_mobile_app && flutter test test/unit/services/auth_service_test.dart
+      - name: Test mobile session and responsive paging
+        run: cd pasal_mobile_app && flutter test test/unit/services/auth_service_test.dart test/unit/widgets/adaptive_pasal_browser_test.dart test/unit/widgets/explore_pasal_results_test.dart
       
       - name: Build web
         run: cd pasal_mobile_app && flutter build web --release
