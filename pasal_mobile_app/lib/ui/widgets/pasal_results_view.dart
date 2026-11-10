@@ -6,7 +6,7 @@ import 'adaptive_pasal_browser.dart';
 import 'pasal_card.dart';
 import 'search_tier_header.dart';
 
-/// Variable-height grid rows keep long legal titles readable without fixed tile heights.
+/// Responsive rows share the tallest card's height without clipping legal titles.
 class PasalResultsView extends StatefulWidget {
   const PasalResultsView({
     super.key,
@@ -112,32 +112,40 @@ class _PasalResultsViewState extends State<PasalResultsView> {
                     SliverToBoxAdapter(child: group.header),
                   SliverList.builder(
                     itemCount: ((group.end - group.start) / columns).ceil(),
-                    itemBuilder: (context, row) => Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        for (var column = 0; column < columns; column++)
-                          Expanded(
-                            child: Padding(
-                              padding: EdgeInsets.only(
-                                right: column < columns - 1 ? 12 : 0,
+                    itemBuilder: (context, row) {
+                      final cards = Row(
+                        crossAxisAlignment: columns == 1
+                            ? CrossAxisAlignment.start
+                            : CrossAxisAlignment.stretch,
+                        children: [
+                          for (var column = 0; column < columns; column++)
+                            Expanded(
+                              child: Padding(
+                                padding: EdgeInsets.only(
+                                  right: column < columns - 1 ? 12 : 0,
+                                ),
+                                child:
+                                    group.start + row * columns + column <
+                                        group.end
+                                    ? PasalCard(
+                                        pasal:
+                                            widget.items[group.start +
+                                                row * columns +
+                                                column],
+                                        contextList: widget.contextList,
+                                        searchQuery: widget.searchQuery,
+                                        showUULabel: widget.showUULabel,
+                                      )
+                                    : const SizedBox.shrink(),
                               ),
-                              child:
-                                  group.start + row * columns + column <
-                                      group.end
-                                  ? PasalCard(
-                                      pasal:
-                                          widget.items[group.start +
-                                              row * columns +
-                                              column],
-                                      contextList: widget.contextList,
-                                      searchQuery: widget.searchQuery,
-                                      showUULabel: widget.showUULabel,
-                                    )
-                                  : const SizedBox.shrink(),
                             ),
-                          ),
-                      ],
-                    ),
+                        ],
+                      );
+                      // Measure only the current row (at most three cards), not the list.
+                      return columns == 1
+                          ? cards
+                          : IntrinsicHeight(child: cards);
+                    },
                   ),
                 ],
                 SliverToBoxAdapter(

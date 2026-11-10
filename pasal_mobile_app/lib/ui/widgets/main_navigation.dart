@@ -64,10 +64,14 @@ class _MainNavigationState extends State<MainNavigation> {
                   if (expanded)
                     Row(
                       children: [
-                        const Icon(
-                          Icons.balance_rounded,
-                          color: AppColors.primary,
-                          size: 28,
+                        Image.asset(
+                          isDark
+                              ? 'assets/images/logo-dark.png'
+                              : 'assets/images/logo.png',
+                          width: 36,
+                          height: 36,
+                          fit: BoxFit.contain,
+                          semanticLabel: 'Logo CariPasal',
                         ),
                         const SizedBox(width: 10),
                         const Expanded(
@@ -88,12 +92,16 @@ class _MainNavigationState extends State<MainNavigation> {
                       ],
                     )
                   else ...[
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      child: Icon(
-                        Icons.balance_rounded,
-                        color: AppColors.primary,
-                        size: 28,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Image.asset(
+                        isDark
+                            ? 'assets/images/logo-dark.png'
+                            : 'assets/images/logo.png',
+                        width: 36,
+                        height: 36,
+                        fit: BoxFit.contain,
+                        semanticLabel: 'Logo CariPasal',
                       ),
                     ),
                     if (canToggle)
@@ -166,7 +174,10 @@ class _MainNavigationState extends State<MainNavigation> {
                   const SizedBox(height: 32),
                   Material(
                     type: MaterialType.transparency,
-                    child: SettingsControls(sidebar: true, collapsed: !expanded),
+                    child: SettingsControls(
+                      sidebar: true,
+                      collapsed: !expanded,
+                    ),
                   ),
                 ],
               ),

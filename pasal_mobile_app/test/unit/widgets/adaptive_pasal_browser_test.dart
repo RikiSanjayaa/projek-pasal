@@ -8,6 +8,7 @@ import 'package:pasal_mobile_app/models/pasal_model.dart';
 import 'package:pasal_mobile_app/ui/screens/read_pasal_screen.dart';
 import 'package:pasal_mobile_app/ui/widgets/adaptive_pasal_browser.dart';
 import 'package:pasal_mobile_app/ui/widgets/pasal_card.dart';
+import 'package:pasal_mobile_app/ui/widgets/pasal_results_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 
@@ -118,6 +119,77 @@ void main() {
     await tester.tap(find.byTooltip('Kembali ke daftar'));
     await tester.pumpAndSettle();
     expect(tester.getSize(find.byType(PasalCard)).width, 1365);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+  testWidgets('grid cards share row height with unequal legal text', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1365, 900);
+    addTearDown(tester.view.reset);
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    DataService.useDatabase(db);
+    addTearDown(db.close);
+    await db
+        .into(db.undangUndangTable)
+        .insert(
+          UndangUndangTableCompanion.insert(
+            id: 'grid-law',
+            kode: 'UU',
+            nama: 'Hukum',
+          ),
+        );
+    final articles = [
+      PasalModel(
+        id: 'short',
+        undangUndangId: 'grid-law',
+        nomor: '1',
+        isi: 'Dicabut.',
+      ),
+      PasalModel(
+        id: 'long',
+        undangUndangId: 'grid-law',
+        nomor: '2',
+        judul: 'Ketentuan mengenai penyidikan, penuntutan, dan pelaksanaan pidana terhadap korporasi',
+        isi: List.filled(20, 'Ketentuan pidana bagi setiap orang.').join(' '),
+      ),
+      PasalModel(
+        id: 'medium',
+        undangUndangId: 'grid-law',
+        nomor: '3',
+        isi: 'Ketentuan ini berlaku sejak tanggal diundangkan.',
+      ),
+    ];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: PasalResultsView(items: articles, contextList: articles),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final cards = find.byType(PasalCard);
+    final height = tester.getSize(cards.at(1)).height;
+    for (var i = 0; i < articles.length; i++) {
+      expect(tester.getSize(cards.at(i)).height, closeTo(height, .01));
+      expect(
+        tester.getTopLeft(cards.at(i)).dy,
+        tester.getTopLeft(cards.first).dy,
+      );
+    }
+    expect(find.text(articles[1].judul!), findsOneWidget);
+    tester.view.physicalSize = const Size(390, 900);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getTopLeft(cards.at(1)).dy,
+      greaterThanOrEqualTo(tester.getBottomLeft(cards.first).dy),
+    );
+    expect(
+      tester.getSize(cards.first).height,
+      lessThan(tester.getSize(cards.at(1)).height),
+    );
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }

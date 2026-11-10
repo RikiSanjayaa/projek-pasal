@@ -76,15 +76,15 @@ Satu aplikasi Flutter untuk ponsel, tablet, dan desktop. Breakpoint memakai leba
 | 600–1023 | Rail 80 px, ikon tanpa label | Satu panel dengan grid mengikuti lebar konten. |
 | >=1024 | Sidebar 264 px, bisa diciutkan menjadi 80 px | Daftar memakai seluruh lebar sebelum pasal dipilih; pembaca muncul berdampingan bila konten tersedia minimal 720 px. |
 
-Sidebar punya pembatas, logo di samping brand saat expanded, pilihan tema, periksa update, dan akses akun langsung. Tampilan desktop tidak membuka drawer pengaturan tambahan. Pada ponsel, pengaturan tetap memakai drawer 400 px maksimum; dialog akun dan aksi logout dipakai bersama agar perilakunya sama.
+Sidebar punya pembatas, logo brand CariPasal sesuai tema (`logo.png`/`logo-dark.png`), periksa update, dan akses profil langsung. Logo tetap terlihat saat rail diciutkan. Pilihan tema Sistem/Terang/Gelap berada di dialog Profil bersama informasi akun dan aksi logout, bukan di sidebar. Tampilan desktop tidak membuka drawer pengaturan tambahan. Pada ponsel, pengaturan tetap memakai drawer 400 px maksimum dengan kontrol akun/tema yang sama.
 
-Daftar pasal memakai satu sampai tiga kolom sesuai lebar lokal, termasuk ketika kembali dari pembaca. Beranda dan Tersimpan memuat 30 pasal per halaman. Filter UU dan bab langsung terbuka pada desktop; kontrol ringkas tetap dipakai pada ponsel. Posisi grid disimpan sebelum pembaca dibuka dan dikembalikan saat ditutup, dibatasi panjang scroll yang tersedia.
+Daftar pasal memakai satu sampai tiga kolom sesuai lebar lokal, termasuk ketika kembali dari pembaca. Tinggi kartu dalam satu baris mengikuti kartu tertinggi agar isi pendek tetap rata, tanpa memotong judul panjang. Pengukuran tinggi hanya dilakukan untuk baris grid yang dibangun (maksimal tiga kartu); daftar satu kolom mempertahankan tinggi alami. Beranda dan Tersimpan memuat 30 pasal per halaman. Filter UU dan bab langsung terbuka pada desktop; kontrol ringkas tetap dipakai pada ponsel. Posisi grid disimpan sebelum pembaca dibuka dan dikembalikan saat ditutup, dibatasi panjang scroll yang tersedia.
 
 Login dibatasi 440 px, bacaan 760 px, konten non-browser 1200 px, sheet 640 px, dan dialog 560 px. Angka tersebut adalah batas maksimum; layar sempit tetap memakai ruang yang tersedia. Pembaca standalone menampilkan daftar bab saat ruang lokal minimal 1100 px. Beranda, Pustaka, dan Tersimpan menggunakan pembaca inline yang sama.
 
 Shell mempertahankan tab yang pernah dibuka melalui `IndexedStack`. Browser mempertahankan dua subtree daftar/pembaca melalui `Offstage`, sehingga query, pilihan UU/pasal, dan scroll tidak hilang saat resize. Mengganti pilihan pasal membuat state pembaca baru; prev/next di dalam pembaca tetap memakai konteks hasil yang dipilih. Back handler pada tab yang tidak aktif tidak menangkap navigasi kembali.
 
-Regresi resize memakai SQLite in-memory dan menguji query serta offset baca saat `1365 -> 390 -> 800 -> 1365`, lalu kembali ke daftar:
+Regresi memakai SQLite in-memory: query serta offset baca bertahan saat `1365 -> 390 -> 800 -> 1365`, lalu kembali ke daftar. Kartu dengan isi pendek, isi panjang, dan judul panjang diperiksa agar sejajar dalam grid dan tidak dipaksa sama tinggi saat menjadi satu kolom:
 
 ```bash
 flutter test test/unit/widgets/adaptive_pasal_browser_test.dart

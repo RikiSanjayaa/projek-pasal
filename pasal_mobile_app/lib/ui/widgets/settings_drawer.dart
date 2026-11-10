@@ -146,7 +146,7 @@ class _SettingsControlsState extends State<SettingsControls> {
   Future<void> _accountDialog() => showDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Akun'),
+      title: const Text('Profil'),
       content: const SizedBox(
         width: 340,
         child: SingleChildScrollView(
@@ -230,22 +230,6 @@ class _SettingsControlsState extends State<SettingsControls> {
         (ThemeMode.light, Icons.light_mode_outlined, 'Terang'),
         (ThemeMode.dark, Icons.dark_mode_outlined, 'Gelap'),
       ];
-      if (widget.collapsed) {
-        return PopupMenuButton<ThemeMode>(
-          tooltip: 'Tema aplikasi',
-          initialValue: mode,
-          icon: Icon(options.firstWhere((o) => o.$1 == mode).$2),
-          onSelected: themeController.setTheme,
-          itemBuilder: (_) => [
-            for (final option in options)
-              CheckedPopupMenuItem(
-                value: option.$1,
-                checked: option.$1 == mode,
-                child: Text(option.$3),
-              ),
-          ],
-        );
-      }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -410,16 +394,25 @@ class _SettingsControlsState extends State<SettingsControls> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.accountOnly) return _account();
+    if (widget.accountOnly) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [_account(), const Divider(height: 32), _themes()],
+      );
+    }
     return Column(
       crossAxisAlignment: widget.collapsed
           ? CrossAxisAlignment.center
           : CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (!widget.sidebar) ...[_account(), const Divider(height: 32)],
-        _themes(),
-        const SizedBox(height: 8),
+        if (!widget.sidebar) ...[
+          _account(),
+          const Divider(height: 32),
+          _themes(),
+          const SizedBox(height: 8),
+        ],
         _sync(),
         if (widget.sidebar) ...[
           const Divider(height: 24),
@@ -427,7 +420,7 @@ class _SettingsControlsState extends State<SettingsControls> {
             valueListenable: authService.userName,
             builder: (context, name, _) => widget.collapsed
                 ? IconButton(
-                    tooltip: 'Akun',
+                    tooltip: 'Profil',
                     onPressed: _accountDialog,
                     icon: const Icon(Icons.account_circle_outlined),
                   )
@@ -441,7 +434,7 @@ class _SettingsControlsState extends State<SettingsControls> {
                       style: const TextStyle(fontSize: 13),
                     ),
                     subtitle: const Text(
-                      'Akun',
+                      'Profil',
                       style: TextStyle(fontSize: 11),
                     ),
                     onTap: _accountDialog,
