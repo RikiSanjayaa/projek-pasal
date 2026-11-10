@@ -38,10 +38,12 @@ cd "E:\projeck git\projek-pasal"
 Script akan:
 
 - menjalankan `flutter pub get`;
-- menjalankan `flutter build web --release`;
+- menjalankan `dart run tool/build_web.dart --release`, yang membangun Flutter dengan runtime lokal lalu menghasilkan worker/cache manifest berversi;
 - memakai base path `/mobile/`;
 - memakai API kampus `https://ubgpasal.ubg.ac.id/api`;
 - menyalin hasil build ke folder root repo `mobile-web-dist/`.
+
+Jangan mengubah `index.html`, bootstrap, font manifest, atau aset setelah generator selesai: SHA-256 pada worker harus tetap cocok dengan byte yang dipublikasikan. Publikasikan seluruh bundle bersama `caripasal-sw.js`, `offline.js`, dan `offline-build.json`; skrip publish menolak bundle lama tanpa ketiganya. Pemanggilan `flutter build web` langsung tidak menyiapkan cache offline.
 
 Folder yang perlu dipush:
 
@@ -103,17 +105,10 @@ Script akan:
 Tambahkan blok ini di config Nginx domain `ubgpasal.ubg.ac.id`, di dalam `server { ... }`:
 
 ```nginx
-location ^~ /mobile/ {
-    alias /www/wwwroot/hukum-ubg.ac.id/projek-pasal/mobile/;
-    index index.html;
-    try_files $uri $uri/ /mobile/index.html;
-}
-
-location ~* \.wasm$ {
-    default_type application/wasm;
-    expires 7d;
-}
+include /www/wwwroot/hukum-ubg.ac.id/projek-pasal/deploy/aapanel-mobile-web.conf;
 ```
+
+Sesuaikan `root` di file include bila APP_ROOT berbeda. Konfigurasi memberi header COOP/COEP untuk database web, mencegah cache HTTP entrypoint/worker yang tertinggal, serta mengembalikan 404 untuk aset yang tidak ada. Nginx harus mengenali `.wasm` sebagai `application/wasm`. Worker yang hilang tidak boleh mendapat respons `index.html` dari fallback SPA.
 
 Setelah edit:
 
@@ -137,10 +132,12 @@ https://ubgpasal.ubg.ac.id/mobile/
 
 Jika masih tampil versi lama:
 
-- tekan `Ctrl + F5` di desktop;
-- di HP, buka private/incognito atau clear cache browser;
-- pastikan `mobile-web-dist/index.html` sudah berubah di GitHub;
-- pastikan server sudah menjalankan `git pull`.
+- sambungkan internet dan buka Profil/Pengaturan; periksa pemberitahuan versi baru;
+- tutup seluruh tab CariPasal dan aplikasi terpasang, lalu buka kembali agar worker baru dapat aktif;
+- pastikan `offline-build.json` serta seluruh bundle berasal dari build yang sama dan server sudah menjalankan `git pull`/publish;
+- jangan menyarankan hapus data situs atau incognito untuk memakai data offline yang sudah diunduh. Keduanya memakai atau membuat penyimpanan berbeda; hapus data situs menghapus data lokal.
+
+Uji setelah login dan sinkronisasi selesai: status harus **Siap digunakan offline**, matikan jaringan, reload, tutup/buka tab, lalu cari pasal dan periksa bookmark. Batas akses tetap maksimal 30 hari dan tidak melewati masa aktif akun. Uji instalasi/cold launch juga pada Android dan Safari/iOS fisik sebelum menjanjikan dukungan perangkat tersebut.
 
 ## 6. Catatan Cloudflare
 
@@ -167,8 +164,8 @@ Mobile web:
 - dibuka lewat browser di `/mobile/`;
 - bisa dipakai iPhone dan Android;
 - tidak perlu install APK;
-- bergantung browser dan koneksi saat membuka aplikasi;
-- tetap bisa memakai local storage/browser storage sesuai dukungan browser.
+- bisa reload/buka ulang tanpa jaringan setelah file aplikasi, data hukum, dan metadata akses siap tersimpan;
+- masih tunduk pada kebijakan penyimpanan browser dan batas akses akun/offline. Status terpasang saja tidak menjamin kesiapan data.
 
 APK:
 

@@ -142,6 +142,27 @@ Login dan GET /api/mobile/me mengembalikan:
 
 Deploy backend dan aplikasi mobile versi ini bersama-sama. Sesi mobile lama tanpa scope perangkat atau metadata akses harus login ulang; flag lokal lama `is_admin` tidak lagi memberi pengecualian. Sesi dashboard lama tetap dapat digunakan.
 
+### PWA dan reload offline
+
+Buka Profil (desktop/tablet) atau Pengaturan (ponsel), lalu periksa status offline. **Siap digunakan offline** membutuhkan file aplikasi lengkap, sinkronisasi data yang selesai dan masih ada di perangkat, serta akses akun/offline yang belum habis. Tanggal sinkronisasi, tanggal pembaruan data, dan batas akses ditampilkan terpisah. Tombol **Siapkan offline** memeriksa ulang file dan meminta penyimpanan persisten; penolakan browser tetap ditampilkan, bukan dianggap berhasil mendapat izin.
+
+Tombol **Pasang aplikasi** membuka prompt instalasi saat browser menyediakannya. Browser lain mendapat panduan menu, termasuk Safari → Bagikan → Tambahkan ke Layar Utama untuk iPhone/iPad. Saat berjalan sebagai aplikasi terpasang, tombol diganti status terpasang. Setelah memasang, buka dari ikon dan pastikan persiapan offline selesai di konteks tersebut. Terpasang tidak berarti sudah siap offline.
+
+Build web wajib memakai `cd pasal_mobile_app && dart run tool/build_web.dart --release`, atau wrapper PowerShell/Docker yang memanggilnya. Builder menyiapkan runtime lokal dan worker `caripasal-sw.js` dengan manifest SHA-256 seluruh file. Cache hanya berisi app-shell, bukan respons API, token, atau data akun. Data hukum tetap di database Drift. Versi baru menunggu seluruh tab/aplikasi versi lama ditutup; aktivasi hanya membersihkan cache shell lama, bukan database, bookmark, atau sesi.
+
+HTTPS atau localhost diperlukan. Browser masih dapat menghapus penyimpanan, dan menghapus data situs akan menghilangkan kesiapan offline. Login pertama dan unduh data tetap membutuhkan internet. Instalasi dan cold launch Safari/iOS serta Android terpasang perlu pengujian perangkat fisik; pengujian Chromium desktop tidak menggantikannya.
+
+Verifikasi otomatis dari root repo:
+
+```bash
+node --test pasal_mobile_app/test/web/*.cjs
+cd pasal_mobile_app
+flutter test test/unit/services/offline_build_test.dart
+```
+
+Tes bundle memeriksa URL aset dengan spasi dan tanda persen literal, termasuk nama file `%20`. Uji browser harus memakai profil yang sama setelah sinkronisasi: simpan satu pasal, matikan server atau jaringan, reload, lalu tutup seluruh proses browser dan buka lagi. Data hukum, bookmark, dan sesi yang masih dalam batas akses harus tetap tersedia.
+
+
 ## Alur data hukum
 
 ```mermaid
@@ -381,14 +402,10 @@ DOMAIN=ubgpasal.ubg.ac.id \
 bash deploy/aapanel-mobile-web-update.sh
 ```
 
-Config Nginx domain `ubgpasal.ubg.ac.id` harus punya blok:
+Config Nginx domain `ubgpasal.ubg.ac.id` harus memuat konfigurasi PWA di dalam blok `server` (sesuaikan `root` bila APP_ROOT berbeda):
 
 ```nginx
-location ^~ /mobile/ {
-    alias /www/wwwroot/hukum-ubg.ac.id/projek-pasal/mobile/;
-    index index.html;
-    try_files $uri $uri/ /mobile/index.html;
-}
+include /www/wwwroot/hukum-ubg.ac.id/projek-pasal/deploy/aapanel-mobile-web.conf;
 ```
 
 ### Catatan production

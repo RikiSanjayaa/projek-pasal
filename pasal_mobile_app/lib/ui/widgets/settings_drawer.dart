@@ -6,6 +6,7 @@ import '../../core/config/app_theme.dart';
 import 'interactive_surface.dart';
 import '../../core/config/theme_controller.dart';
 import '../../core/services/auth_service.dart';
+import 'offline_status_panel.dart';
 import '../../core/services/storage_info_service.dart';
 import '../../core/services/sync_manager.dart';
 import '../../core/services/sync_progress.dart';
@@ -146,7 +147,7 @@ class _SettingsControlsState extends State<SettingsControls> {
       );
     }
     final lease = authService.offlineAccessUntil.value;
-    if (lease != null)
+    if (!kIsWeb && lease != null)
       lines.add('Akses offline hingga ${DateFormatId.short(lease)}');
     return lines;
   }
@@ -413,7 +414,15 @@ class _SettingsControlsState extends State<SettingsControls> {
       return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [_account(), const Divider(height: 32), _themes()],
+        children: [
+          _account(),
+          if (kIsWeb) ...[
+            const Divider(height: 32),
+            const OfflineStatusPanel(),
+          ],
+          const Divider(height: 32),
+          _themes(),
+        ],
       );
     }
     return Column(
@@ -424,6 +433,10 @@ class _SettingsControlsState extends State<SettingsControls> {
       children: [
         if (!widget.sidebar) ...[
           _account(),
+          if (kIsWeb) ...[
+            const Divider(height: 32),
+            const OfflineStatusPanel(),
+          ],
           const Divider(height: 32),
           _themes(),
           const SizedBox(height: 8),
