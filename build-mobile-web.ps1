@@ -20,11 +20,12 @@ Write-Host ""
 Push-Location $MobileAppDir
 try {
   flutter pub get
-  flutter build web --release `
+  dart run tool/build_web.dart --release `
     --no-tree-shake-icons `
     --base-href=$BaseHref `
     --dart-define=API_BASE_URL=$ApiBaseUrl `
     --dart-define=WEB_APP_URL=$WebAppUrl
+  if ($LASTEXITCODE -ne 0) { throw "Offline web build failed" }
 }
 finally {
   Pop-Location
@@ -37,31 +38,6 @@ if (Test-Path -LiteralPath $OutputDir) {
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 Copy-Item -Path (Join-Path $MobileAppDir "build\web\*") -Destination $OutputDir -Recurse -Force
 
-$BuildIdPath = Join-Path $OutputDir ".last_build_id"
-$GitSha = (git -C $RepoRoot rev-parse --short HEAD).Trim()
-$BuildId = "$GitSha-$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())"
-Set-Content -LiteralPath $BuildIdPath -Value $BuildId -NoNewline
-
-$IndexPath = Join-Path $OutputDir "index.html"
-if (Test-Path -LiteralPath $IndexPath) {
-  $IndexHtml = Get-Content -LiteralPath $IndexPath -Raw
-  $IndexHtml = $IndexHtml -replace 'src="flutter_bootstrap\.js"', "src=`"flutter_bootstrap.js?v=$BuildId`""
-  Set-Content -LiteralPath $IndexPath -Value $IndexHtml -NoNewline
-}
-
-$BootstrapPath = Join-Path $OutputDir "flutter_bootstrap.js"
-if (Test-Path -LiteralPath $BootstrapPath) {
-  $BootstrapJs = Get-Content -LiteralPath $BootstrapPath -Raw
-  $BootstrapJs = $BootstrapJs -replace '"main\.dart\.js"', "`"main.dart.js?v=$BuildId`""
-  Set-Content -LiteralPath $BootstrapPath -Value $BootstrapJs -NoNewline
-}
-
-$FontManifestPath = Join-Path $OutputDir "assets\FontManifest.json"
-if (Test-Path -LiteralPath $FontManifestPath) {
-  $FontManifest = Get-Content -LiteralPath $FontManifestPath -Raw
-  $FontManifest = $FontManifest -replace 'fonts/MaterialIcons-Regular\.otf', "fonts/MaterialIcons-Regular.otf?v=$BuildId"
-  Set-Content -LiteralPath $FontManifestPath -Value $FontManifest -NoNewline
-}
 
 Write-Host ""
 Write-Host "Build copied to:"

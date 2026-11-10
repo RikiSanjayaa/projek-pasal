@@ -19,6 +19,13 @@ if [[ ! -f "$MOBILE_DIST_DIR/index.html" ]]; then
   exit 1
 fi
 
+for asset in caripasal-sw.js offline.js offline-build.json; do
+  if [[ ! -s "$MOBILE_DIST_DIR/$asset" ]]; then
+    printf 'Incomplete offline build: %s. Rebuild with ./build-mobile-web.ps1\n' "$asset" >&2
+    exit 1
+  fi
+done
+
 log "Publishing Flutter Web mobile build"
 mkdir -p "$MOBILE_DIR"
 rm -rf "$MOBILE_DIR"/*

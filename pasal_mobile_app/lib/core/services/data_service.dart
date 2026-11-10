@@ -51,6 +51,13 @@ class DataService {
     print("Drift database initialized");
   }
 
+  static Future<bool> hasLocalPasal() async {
+    final query = _database.selectOnly(_database.pasalTable)
+      ..addColumns([_database.pasalTable.id])
+      ..limit(1);
+    return (await query.get()).isNotEmpty;
+  }
+
   static Stream<SyncProgress>? get progressStream =>
       _progressController?.stream;
 

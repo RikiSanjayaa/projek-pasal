@@ -66,6 +66,24 @@ Berikut adalah panduan navigasi struktur kode untuk pengembang:
 
 ---
 
+## PWA offline dan instalasi
+
+Build web melalui satu entrypoint, bukan `flutter build web` langsung:
+
+```bash
+dart run tool/build_web.dart --release --base-href=/mobile/
+node --test test/web/*.cjs
+```
+
+Builder menonaktifkan CDN runtime Flutter, memakai template `web/flutter_bootstrap.js`, dan menghasilkan `caripasal-sw.js` serta `offline-build.json`. Seluruh file runtime, SQLite/Drift worker, font, dan aset dibubuhi SHA-256. Jangan menambal file setelah generator berjalan. Cache bernama berdasarkan scope dan versi; pemasangan worker baru gagal bila file kurang atau hash berbeda. Worker hanya menangani navigasi aplikasi dan aset yang dikenal, bukan API, token, atau respons autentikasi. Worker cleanup bawaan Flutter tidak dipublikasikan.
+
+Panel offline di Profil/Pengaturan menggabungkan kelengkapan cache app-shell, waktu sinkronisasi yang sudah selesai, keberadaan data di Drift, dan masa akses akun/offline. `Siapkan offline` meminta penyimpanan persisten dari browser dan memperbaiki file cache yang hilang; izin yang ditolak tetap ditampilkan. Aplikasi tetap dapat dipakai tanpa izin persisten, tetapi browser dapat membersihkan penyimpanannya. Masa akses tidak diperpanjang oleh cache atau instalasi.
+
+`Pasang aplikasi` memanggil prompt browser hanya setelah klik dan hanya bila event `beforeinstallprompt` tersedia. Prompt sekali pakai dibuang sesudah digunakan; pembatalan tidak dianggap terpasang. Tanpa prompt, tombol membuka panduan browser/Safari. `appinstalled` atau mode standalone mengubah tombol menjadi status terpasang. Lihat [batas API prompt](https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeinstallprompt_event).
+
+Pembaruan tidak memanggil `skipWaiting`: tab aktif tetap memakai shell lengkap versi lama. Tutup seluruh tab/PWA agar versi baru aktif. Aktivasi menghapus cache shell lama dalam scope yang sama, tidak menyentuh OPFS/IndexedDB, bookmark, atau sesi. Pengujian Chromium desktop tidak membuktikan instalasi/cold launch Safari/iOS atau Android fisik; keduanya tetap memerlukan pemeriksaan perangkat.
+
+
 ## Layout adaptif
 
 Satu aplikasi Flutter untuk ponsel, tablet, dan desktop. Breakpoint memakai lebar jendela dalam logical px, bukan user-agent. Pembagian panel juga memperhitungkan constraints lokal agar pembaca yang sempit tidak dipaksa memiliki sidebar.
