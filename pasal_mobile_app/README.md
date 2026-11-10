@@ -78,6 +78,8 @@ Satu aplikasi Flutter untuk ponsel, tablet, dan desktop. Breakpoint memakai leba
 
 Sidebar punya pembatas, logo brand CariPasal sesuai tema (`logo.png`/`logo-dark.png`), periksa update, dan akses profil langsung. Logo tetap terlihat saat rail diciutkan. Pilihan tema Sistem/Terang/Gelap berada di dialog Profil bersama informasi akun dan aksi logout, bukan di sidebar. Tampilan desktop tidak membuka drawer pengaturan tambahan. Pada ponsel, pengaturan tetap memakai drawer 400 px maksimum dengan kontrol akun/tema yang sama.
 
+Drawer Pengaturan berada di kanan layar dan menetapkan bentuknya sendiri: sudut kiri atas/bawah mengikuti radius sheet, sisi kanan rata. Bentuk ini tidak bergantung pada default drawer kiri Material karena panel dibuka melalui dialog.
+
 Daftar pasal memakai satu sampai tiga kolom sesuai lebar lokal, termasuk ketika kembali dari pembaca. Tinggi kartu dalam satu baris mengikuti kartu tertinggi agar isi pendek tetap rata, tanpa memotong judul panjang. Pengukuran tinggi hanya dilakukan untuk baris grid yang dibangun (maksimal tiga kartu); daftar satu kolom mempertahankan tinggi alami. Beranda dan Tersimpan memuat 30 pasal per halaman. Filter UU dan bab langsung terbuka pada desktop; kontrol ringkas tetap dipakai pada ponsel. Posisi grid disimpan sebelum pembaca dibuka dan dikembalikan saat ditutup, dibatasi panjang scroll yang tersedia.
 
 Login dibatasi 440 px, bacaan 760 px, konten non-browser 1200 px, sheet 640 px, dan dialog 560 px. Angka tersebut adalah batas maksimum; layar sempit tetap memakai ruang yang tersedia. Pembaca standalone menampilkan daftar bab saat ruang lokal minimal 1100 px. Beranda, Pustaka, dan Tersimpan menggunakan pembaca inline yang sama.

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/config/app_colors.dart';
+import '../../core/config/app_theme.dart';
 import '../../core/config/theme_controller.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/storage_info_service.dart';
@@ -68,6 +69,12 @@ class SettingsDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Drawer(
     width: (MediaQuery.sizeOf(context).width * .9).clamp(0.0, 400.0),
+    // This drawer is positioned explicitly, outside Scaffold.endDrawer.
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.horizontal(
+        left: Radius.circular(AppTheme.radiusSheet),
+      ),
+    ),
     backgroundColor: AppColors.card(
       Theme.of(context).brightness == Brightness.dark,
     ),
