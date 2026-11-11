@@ -9,6 +9,7 @@ import '../../models/undang_undang_model.dart';
 import '../../core/services/query_service.dart';
 import '../../core/utils/search_utils.dart';
 import '../../core/utils/bab_utils.dart';
+import '../utils/responsive_layout.dart';
 import '../widgets/explore_pasal_results.dart';
 import '../widgets/search_tier_header.dart';
 import '../widgets/main_layout.dart';
@@ -334,7 +335,14 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
 
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 5),
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  MediaQuery.sizeOf(context).width < ResponsiveLayout.medium
+                      ? 8
+                      : 24,
+                  20,
+                  5,
+                ),
                 child: AppShowcase(
                   showcaseKey: _searchKey,
                   title: 'Cari Pasal',
@@ -539,15 +547,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHeader(bool isDark) {
     return Container(
-      constraints: const BoxConstraints(minHeight: kToolbarHeight),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      constraints: BoxConstraints(
+        minHeight: MediaQuery.sizeOf(context).width < ResponsiveLayout.medium
+            ? 48
+            : kToolbarHeight,
+      ),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        MediaQuery.sizeOf(context).width < ResponsiveLayout.medium ? 0 : 16,
+        20,
+        0,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
+          Text(
             "Jelajahi Pasal",
             style: TextStyle(
-              fontSize: 26,
+              fontSize:
+                  MediaQuery.sizeOf(context).width < ResponsiveLayout.medium
+                  ? 20
+                  : 26,
               fontWeight: FontWeight.bold,
               height: 1.2,
             ),
