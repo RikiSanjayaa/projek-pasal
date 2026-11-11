@@ -96,18 +96,29 @@ class _LibraryScreenState extends State<LibraryScreen> {
               children: [
                 // Header section
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    MediaQuery.sizeOf(context).width < ResponsiveLayout.medium
+                        ? 0
+                        : 16,
+                    20,
+                    8,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Text(
                               "Pustaka Hukum",
                               style: TextStyle(
-                                fontSize: 26,
+                                fontSize:
+                                    MediaQuery.sizeOf(context).width <
+                                        ResponsiveLayout.medium
+                                    ? 20
+                                    : 26,
                                 fontWeight: FontWeight.bold,
                                 height: 1.2,
                               ),

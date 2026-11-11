@@ -5,6 +5,7 @@ import '../../core/services/archive_service.dart';
 import '../../core/services/query_service.dart';
 import '../../core/utils/search_utils.dart';
 import '../../models/pasal_model.dart';
+import '../utils/responsive_layout.dart';
 import '../widgets/main_layout.dart';
 import '../widgets/pasal_results_view.dart';
 import '../widgets/adaptive_pasal_browser.dart';
@@ -108,14 +109,25 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    MediaQuery.sizeOf(context).width < ResponsiveLayout.medium
+                        ? 0
+                        : 16,
+                    20,
+                    8,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         "Pasal Tersimpan",
                         style: TextStyle(
-                          fontSize: 26,
+                          fontSize:
+                              MediaQuery.sizeOf(context).width <
+                                  ResponsiveLayout.medium
+                              ? 20
+                              : 26,
                           fontWeight: FontWeight.bold,
                           height: 1.2,
                         ),

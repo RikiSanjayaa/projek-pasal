@@ -87,6 +87,8 @@ Pembaruan tidak memanggil `skipWaiting`: tab aktif tetap memakai shell lengkap v
 ## Layout adaptif
 
 Satu aplikasi Flutter untuk ponsel, tablet, dan desktop. Breakpoint memakai lebar jendela dalam logical px, bukan user-agent. Pembagian panel juga memperhitungkan constraints lokal agar pembaca yang sempit tidak dipaksa memiliki sidebar.
+Pada lebar ponsel, header memakai jarak vertikal lebih ringkas tanpa mengurangi safe area sistem. Navigasi bawah tetap sama pada iOS dan Android. Konfirmasi ukuran header dan Dynamic Island pada iPhone fisik, termasuk PWA terpasang.
+
 
 | Lebar jendela | Navigasi | Daftar dan bacaan |
 | --- | --- | --- |
