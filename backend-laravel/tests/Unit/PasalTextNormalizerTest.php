@@ -57,4 +57,16 @@ class PasalTextNormalizerTest extends TestCase
 
         $this->assertSame('(1) Hukum sebagaimana dimaksud pada ayat (1) berlaku dalam tempat hukum itu hidup.', $text);
     }
+
+    public function test_it_is_stable_when_applied_again(): void
+    {
+        // Teks sumber UU ITE Pasal 17: ayat sisipan (2a) menempel di baris "(2)". Satu putaran saja
+        // belum stabil, sehingga import lewat dashboard (dinormalisasi dua kali) dan lewat file berbeda.
+        $once = PasalTextNormalizer::normalizeBody("(1) Penyelenggaraan Transaksi Elektronik dapat dilakukan dalam lingkup publik atau privat.\n"
+            ."(2) Para pihak yang melakukan Transaksi Elektronik sebagaimana dimaksud pada ayat (1) wajib beriktikad baik dalam melakukan interaksi dan/atau pertukaran Informasi Elektronik dan/atau Dokumen Elektronik selama transaksi berlangsung.\n"
+            ."(2) (2a)\nTransaksi Elektronik yang memiliki risiko tinggi bagi para pihak menggunakan Tanda Tangan Elektronik yang diamankan dengan Sertifikat Elektronik.\n"
+            .'(3) Ketentuan lebih lanjut mengenai penyelenggaraan Transaksi Elektronik sebagaimana dimaksud pada ayat (1), ayat (2), dan ayat (2a) diatur dalam Peraturan Pemerintah.');
+
+        $this->assertSame($once, PasalTextNormalizer::normalizeBody($once));
+    }
 }
