@@ -17,19 +17,14 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $admin = AdminUser::updateOrCreate(
+        // Hanya membuat akun bila belum ada. Deploy menjalankan seeder setiap kali, jadi password
+        // yang sudah diganti admin tidak boleh ditimpa lagi dari .env.
+        $superAdmin = config("caripasal.super_admin");
+        $admin = AdminUser::withTrashed()->firstOrCreate(
+            ["email" => $superAdmin["email"]],
             [
-                "email" => env(
-                    "CARIPASAL_SUPER_ADMIN_EMAIL",
-                    "superadmin@caripasal.local",
-                ),
-            ],
-            [
-                "password" => env(
-                    "CARIPASAL_SUPER_ADMIN_PASSWORD",
-                    "ChangeMe123!",
-                ),
-                "nama" => env("CARIPASAL_SUPER_ADMIN_NAME", "Super Admin"),
+                "password" => $superAdmin["password"],
+                "nama" => $superAdmin["name"],
                 "role" => "super_admin",
                 "is_active" => true,
             ],

@@ -124,10 +124,9 @@ class PasswordResetController extends Controller
 
     private function defaultResetUrl(string $userType): string
     {
-        if ($userType === 'mobile') {
-            return rtrim((string) env('MOBILE_PASSWORD_RESET_URL', env('ADMIN_PASSWORD_RESET_URL', config('app.url').'/admin/reset-password')), '/');
-        }
+        $adminUrl = config('caripasal.password_reset_url.admin') ?: config('app.url').'/admin/reset-password';
+        $url = $userType === 'mobile' ? (config('caripasal.password_reset_url.mobile') ?: $adminUrl) : $adminUrl;
 
-        return rtrim((string) env('ADMIN_PASSWORD_RESET_URL', config('app.url').'/admin/reset-password'), '/');
+        return rtrim((string) $url, '/');
     }
 }
