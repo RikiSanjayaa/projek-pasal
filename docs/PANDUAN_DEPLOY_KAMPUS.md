@@ -28,6 +28,24 @@ Kalau folder atau domain di server berbeda, ganti nilai `APP_ROOT` dan `DOMAIN` 
 
 Server tetap tidak perlu Docker, Flutter, atau Python.
 
+## Apa yang terjadi pada data yang sudah ada
+
+Update ini tidak menghapus data hukum, akun admin, atau pengguna mobile. Data hanya ditambah atau
+ditimpa pada kondisi berikut:
+
+| Data di server | Saat migrasi/deploy | Saat import xlsx (langkah 5) |
+|---|---|---|
+| Pasal yang nomornya ada di file import (mis. KUHP `1`) | Tetap; status jadi "Perlu verifikasi" | Judul, isi, penjelasan, bab ditimpa dari file. Riwayat versi diganti bila file punya sheet `riwayat` (KUHP, UU ITE, KUHPER). Link lama tetap, link dari file ditambah |
+| Pasal yang nomornya tidak ada di file (pasal buatan admin, format lama `Pasal 1`) | Tetap | Tetap, tidak dihapus. Format lama dibersihkan manual di langkah 5.1 |
+| Kolom **kata kunci** (`keywords`) pasal | **Dihapus permanen**, diganti kolom `bab` | - |
+| Data UU `KUHP`, `KUHAP`, `UU_ITE` (nama, nama lengkap, deskripsi, tahun, status aktif) | Ditimpa seeder setiap deploy | - |
+| UU `KUHPER` | Dibuat baru (nonaktif) bila belum ada | - |
+| Akun admin, pengguna mobile, perangkat | Tetap. Password super admin diset ulang dari `.env` | - |
+| Sesi mobile | Harus login ulang | - |
+
+Sumber teks yang benar adalah file `data-import/*.xlsx`: hasil pipeline datahukum.com yang sudah
+dibandingkan dengan PDF resmi JDIH BPK.
+
 ## 1. Backup dulu
 
 ```bash
@@ -46,6 +64,16 @@ ls -lh ~/caripasal-sebelum-update-*.dump
 
 Jika `pg_dump` tidak ditemukan, pakai `/www/server/pgsql/bin/pg_dump` atau menu aaPanel
 **Database → PostgreSQL → Backup**.
+
+Simpan juga kata kunci pasal, karena kolom ini dihapus oleh migrasi. Jalankan **sebelum** langkah 4:
+
+```bash
+psql -h 127.0.0.1 -U caripasal_user -d caripasal -c "select count(*) as pasal_dengan_keywords from pasal where cardinality(keywords) > 0"
+psql -h 127.0.0.1 -U caripasal_user -d caripasal -c "\copy (select u.kode, p.nomor, array_to_string(p.keywords, '; ') as keywords from pasal p join undang_undang u on u.id = p.undang_undang_id where cardinality(p.keywords) > 0 order by 1, 2) to '$HOME/keywords-sebelum-update.csv' csv header"
+```
+
+Jika jumlahnya lebih dari 0, kirim `~/keywords-sebelum-update.csv` ke tim developer. Istilah
+pencarian sekarang dikelola di menu **Smart Search**.
 
 Jika `git status` menunjukkan file berubah, catat dulu perubahannya (`git diff > ~/perubahan-server.diff`)
 sebelum lanjut, karena script memakai `git pull --ff-only`.
@@ -196,6 +224,9 @@ muncul **Hasil Import**. KUHPerdata butuh sekitar 1–2 menit.
 | `KUHPER` | `data-import/kuhper-1847/01_kuhper_1847_ready.xlsx` | Pasal 2124, Link 418, riwayat 770 versi |
 
 Import aman diulang: pasal dicocokkan per (UU, nomor) lalu ditimpa, tidak dobel.
+
+Jika **Hasil Import** menampilkan error `Unique violation`, berarti pasal dengan nomor yang sama
+ada di **Pasal → Sampah**. Pulihkan atau hapus permanen pasal itu, lalu import ulang file yang sama.
 
 Semua pasal hasil import masuk menu **Verifikasi** dengan status "Perlu verifikasi". Pasal tetap
 tampil di aplikasi dengan label "Belum diverifikasi admin" sampai admin hukum memverifikasinya.
