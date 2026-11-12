@@ -362,16 +362,17 @@ Checklist untuk rilis yang membawa verifikasi, riwayat, Sumber Data, dan KUHPerd
 1. Backup database.
 2. Migrasi (`php artisan migrate --force`) sudah dijalankan oleh `deploy/aapanel-deploy.sh`; cek
    outputnya.
-3. Import ulang data KUHP/KUHAP dari `data-import/` lewat Admin > Import Data.
-4. KUHPerdata: migrasi sudah membuat UU kode `KUHPER` dalam keadaan nonaktif. Aktifkan di menu
-   Undang-Undang, lalu import xlsx-nya. File ini dikirim sebagai satu permintaan sekitar 2,5 MB, jadi
-   `client_max_body_size` Nginx untuk `/api/` minimal 20m (sudah ada di `deploy/aapanel-nginx.conf`)
-   dan `post_max_size` PHP minimal 8M.
-5. Pastikan `APP_LOCALE=id` dan `DATAHUKUM_FETCH_ENABLED=false` di env production.
-6. Bila nanti Sumber Data diaktifkan: pasang Python 3 dan venv dari `import-tools/requirements.txt`,
+3. Server dengan data lama: `php artisan caripasal:reset-data-hukum` menghapus permanen semua pasal
+   lalu mengisi ulang KUHP, KUHAP, KUHPerdata, dan UU ITE dari `data-import/` dalam satu transaksi
+   (UU tanpa sumber ikut dihapus, keempat UU diaktifkan). Perintah menolak berjalan bila sudah ada
+   pasal terverifikasi. Untuk menambah data ke server yang sudah berjalan, pakai Admin > Import Data;
+   import KUHPerdata sekitar 2,5 MB, jadi `client_max_body_size` Nginx untuk `/api/` minimal 20m
+   (sudah ada di `deploy/aapanel-nginx.conf`).
+4. Pastikan `APP_LOCALE=id` dan `DATAHUKUM_FETCH_ENABLED=false` di env production.
+5. Bila nanti Sumber Data diaktifkan: pasang Python 3 dan venv dari `import-tools/requirements.txt`,
    isi `IMPORT_PYTHON`, `IMPORT_TOOLS_DIR`, `IMPORT_CACHE_DIR`, lalu jalankan
    `php artisan queue:work --queue=imports,default --timeout=900` lewat Supervisor.
-7. Build ulang mobile web dan APK dengan Flutter 3.47.9. Perangkat yang sudah punya data akan
+6. Build ulang mobile web dan APK dengan Flutter 3.47.9. Perangkat yang sudah punya data akan
    diminta Update sekali supaya riwayat pasal ikut terunduh.
 
 ### Deploy mobile web ke `/mobile/`

@@ -1,9 +1,8 @@
 # Panduan Deploy CariPasal di Server Kampus (aaPanel, tanpa Docker)
 
 Untuk tim IT kampus. Server saat ini ada di commit `20c1d99`. Panduan ini memperbarui server ke
-`main` terbaru dan mengisi data hukum lengkap. Migrasi dari database `20c1d99`, seeder, import
-keempat file, admin dashboard, dan mobile web (login, sinkronisasi, buka ulang offline) sudah diuji
-lokal. Konfigurasi aaPanel/Nginx hanya bisa dicek di server dengan langkah 6.
+`main` terbaru, lalu **mengganti seluruh data hukum lama** dengan data lengkap dari repo. Ikuti
+langkah 1 sampai 8 berurutan; tidak ada data yang perlu dicek atau dipilih manual.
 
 | Item | Nilai |
 |---|---|
@@ -15,38 +14,23 @@ lokal. Konfigurasi aaPanel/Nginx hanya bisa dicek di server dengan langkah 6.
 
 Kalau folder atau domain di server berbeda, ganti nilai `APP_ROOT` dan `DOMAIN` di semua perintah.
 
-## Yang berubah sejak `20c1d99`
+## Ringkasan
 
-- 9 migrasi database baru: verifikasi pasal, riwayat perubahan, Sumber Data, bab, dan Smart Search.
-  Migrasi dijalankan otomatis oleh script deploy.
-- Data hukum lengkap: KUHP 625 pasal, KUHAP 369, UU ITE 63, KUHPerdata 2124. Data diimport lewat
-  admin dashboard (langkah 5).
-- Mobile web `/mobile/` sekarang bisa dibuka offline (PWA), jadi butuh blok Nginx baru.
-- Import KUHPerdata mengirim request sekitar 2,5 MB ke `/api/`, jadi Nginx perlu
-  `client_max_body_size 20m`.
-- Pengguna mobile harus login ulang satu kali setelah update.
+- Kode diperbarui dan 9 migrasi database dijalankan otomatis oleh script deploy.
+- Semua pasal lama (format `Pasal 1`, kata kunci lama, link, riwayat) **dihapus permanen** lalu
+  diisi ulang dari `data-import/*.xlsx`: KUHP 625 pasal, KUHAP 369, UU ITE 63, KUHPerdata 2124.
+  Teks ini hasil pipeline datahukum.com yang sudah dibandingkan dengan PDF resmi JDIH BPK.
+- Undang-undang lain selain keempat UU di atas ikut dihapus.
+- Akun admin, pengguna mobile, dan alias Smart Search **tetap**.
+- Pengguna mobile harus login ulang satu kali. Aplikasi lalu mengunduh ulang seluruh data, jadi
+  pasal lama juga hilang dari HP.
+- Mobile web `/mobile/` sekarang bisa dipakai offline (PWA) dan butuh blok Nginx baru.
+- Server tetap tidak perlu Docker, Flutter, atau Python.
 
-Server tetap tidak perlu Docker, Flutter, atau Python.
+Prosedur ini sudah diuji lokal pada database dari commit `20c1d99`. Konfigurasi aaPanel/Nginx hanya
+bisa dicek di server dengan langkah 8.
 
-## Apa yang terjadi pada data yang sudah ada
-
-Update ini tidak menghapus data hukum, akun admin, atau pengguna mobile. Data hanya ditambah atau
-ditimpa pada kondisi berikut:
-
-| Data di server | Saat migrasi/deploy | Saat import xlsx (langkah 5) |
-|---|---|---|
-| Pasal yang nomornya ada di file import (mis. KUHP `1`) | Tetap; status jadi "Perlu verifikasi" | Judul, isi, penjelasan, bab ditimpa dari file. Riwayat versi diganti bila file punya sheet `riwayat` (KUHP, UU ITE, KUHPER). Link lama tetap, link dari file ditambah |
-| Pasal yang nomornya tidak ada di file (pasal buatan admin, format lama `Pasal 1`) | Tetap | Tetap, tidak dihapus. Format lama dibersihkan manual di langkah 5.1 |
-| Kolom **kata kunci** (`keywords`) pasal | **Dihapus permanen**, diganti kolom `bab` | - |
-| Data UU `KUHP`, `KUHAP`, `UU_ITE` (nama, nama lengkap, deskripsi, tahun, status aktif) | Ditimpa seeder setiap deploy | - |
-| UU `KUHPER` | Dibuat baru (nonaktif) bila belum ada | - |
-| Akun admin, pengguna mobile, perangkat | Tetap. Password super admin diset ulang dari `.env` | - |
-| Sesi mobile | Harus login ulang | - |
-
-Sumber teks yang benar adalah file `data-import/*.xlsx`: hasil pipeline datahukum.com yang sudah
-dibandingkan dengan PDF resmi JDIH BPK.
-
-## 1. Backup dulu
+## 1. Backup
 
 ```bash
 cd /www/wwwroot/hukum-ubg.ac.id/projek-pasal
@@ -63,20 +47,10 @@ ls -lh ~/caripasal-sebelum-update-*.dump
 ```
 
 Jika `pg_dump` tidak ditemukan, pakai `/www/server/pgsql/bin/pg_dump` atau menu aaPanel
-**Database → PostgreSQL → Backup**.
+**Database → PostgreSQL → Backup**. Backup ini satu-satunya salinan data lama.
 
-Simpan juga kata kunci pasal, karena kolom ini dihapus oleh migrasi. Jalankan **sebelum** langkah 4:
-
-```bash
-psql -h 127.0.0.1 -U caripasal_user -d caripasal -c "select count(*) as pasal_dengan_keywords from pasal where cardinality(keywords) > 0"
-psql -h 127.0.0.1 -U caripasal_user -d caripasal -c "\copy (select u.kode, p.nomor, array_to_string(p.keywords, '; ') as keywords from pasal p join undang_undang u on u.id = p.undang_undang_id where cardinality(p.keywords) > 0 order by 1, 2) to '$HOME/keywords-sebelum-update.csv' csv header"
-```
-
-Jika jumlahnya lebih dari 0, kirim `~/keywords-sebelum-update.csv` ke tim developer. Istilah
-pencarian sekarang dikelola di menu **Smart Search**.
-
-Jika `git status` menunjukkan file berubah, catat dulu perubahannya (`git diff > ~/perubahan-server.diff`)
-sebelum lanjut, karena script memakai `git pull --ff-only`.
+Jika `git status` menunjukkan file berubah, simpan dulu (`git diff > ~/perubahan-server.diff`), lalu
+`git checkout -- .`, karena script memakai `git pull --ff-only`.
 
 ## 2. Cek prasyarat server
 
@@ -90,8 +64,8 @@ Semua baris harus `[OK]`. Yang dibutuhkan: PHP 8.3/8.4 dengan extension `pdo_pgs
 mbstring openssl curl zip xml gd`, fungsi `putenv` dan `proc_open` tidak di-disable, Composer,
 Node.js 22+, PostgreSQL.
 
-Script memakai PHP 8.4 secara default. Jika server memakai PHP 8.3, tambahkan di depan setiap
-perintah deploy pada langkah 4:
+Script memakai PHP 8.4 secara default. Jika server memakai PHP 8.3, tambahkan di depan perintah
+deploy pada langkah 4 dan 6:
 
 ```bash
 PHP_BIN=/www/server/php/83/bin/php PHP_FPM_SERVICE=/etc/init.d/php-fpm-83
@@ -113,7 +87,7 @@ location ^~ /admin/ {
 }
 
 location ^~ /api/ {
-    # Import xlsx KUHPerdata dikirim sebagai satu JSON sekitar 2,5 MB.
+    # Import xlsx dari dashboard (KUHPerdata sekitar 2,5 MB) dan unggah PDF naskah resmi.
     client_max_body_size 20m;
     try_files $uri /index.php?$query_string;
 
@@ -147,13 +121,12 @@ nginx -t && /etc/init.d/nginx reload
 Jika `nginx -t` gagal, jangan reload. Perbaiki dulu sampai lolos.
 
 PHP: aaPanel → **App Store** → PHP 8.x → **Setting** → **Configuration file**. Set
-`upload_max_filesize = 20M` dan `post_max_size = 24M`, lalu restart PHP. Nilai ini dipakai fitur
-unggah PDF naskah resmi di menu Undang-Undang.
+`upload_max_filesize = 20M` dan `post_max_size = 24M`, lalu restart PHP.
 
-## 4. Deploy
+## 4. Deploy backend dan admin dashboard
 
-Backend + admin dashboard (pull, composer, migrasi, seeder, build admin, restart PHP-FPM, reload
-Nginx, health check):
+Script ini menjalankan pull, composer, migrasi, seeder, build admin, restart PHP-FPM, reload Nginx,
+dan health check:
 
 ```bash
 cd /www/wwwroot/hukum-ubg.ac.id/projek-pasal
@@ -163,75 +136,72 @@ DOMAIN=ubgpasal.ubg.ac.id \
 bash deploy/aapanel-update.sh
 ```
 
-Output migrasi harus menampilkan 9 baris `DONE`, dari
+Output migrasi menampilkan 9 baris `DONE`, dari
 `2026_08_18_000001_include_keywords_in_pasal_search_vector` sampai
 `2026_11_12_000001_create_import_sources`. Script selesai dengan `Deployment complete` dan JSON
 `{"status":"ok",...}`.
 
-Mobile web (salin `mobile-web-dist/` yang sudah dibuild developer ke folder `mobile/`):
-
-```bash
-APP_ROOT=/www/wwwroot/hukum-ubg.ac.id/projek-pasal \
-DOMAIN=ubgpasal.ubg.ac.id \
-bash deploy/aapanel-mobile-web-update.sh
-```
-
-Script ini menolak build lama yang belum punya file offline (`caripasal-sw.js`, `offline.js`,
-`offline-build.json`). Jika muncul `Incomplete offline build`, hubungi developer untuk push ulang
-`mobile-web-dist/`.
-
-## 5. Isi data hukum (sekali saja)
-
-File data ada di folder `data-import/` dalam repo. Upload dari laptop yang membuka admin dashboard,
-jadi unduh dulu keempat file `.xlsx` dari GitHub atau salin dari server.
-
-### 5.1 Pindahkan pasal format lama ke Sampah
-
-Seeder dan import versi lama menyimpan nomor dengan awalan (`Pasal 1`), sedangkan data baru tanpa
-awalan (`1`). Kalau tidak dibersihkan, pasal akan muncul dobel di aplikasi.
-
-Cek (read-only):
+## 5. Ganti data hukum (sekali saja)
 
 ```bash
 cd /www/wwwroot/hukum-ubg.ac.id/projek-pasal/backend-laravel
-/www/server/php/84/bin/php artisan tinker --execute='foreach (App\Models\UndangUndang::withCount(["pasal as total", "pasal as format_lama" => fn ($q) => $q->where("nomor", "like", "Pasal %")])->orderBy("kode")->get() as $u) echo str_pad($u->kode, 8), " total=", $u->total, " format_lama=", $u->format_lama, PHP_EOL;'
+/www/server/php/84/bin/php artisan caripasal:reset-data-hukum
 ```
 
-Jika ada `format_lama` lebih dari 0, pindahkan ke Sampah. Data tidak hilang dan bisa dipulihkan
-dari **Pasal → Sampah**:
+(PHP 8.3: `/www/server/php/83/bin/php`.)
+
+Perintah menampilkan data yang akan dihapus, lalu bertanya konfirmasi. Ketik `yes` lalu Enter.
+Prosesnya sekitar 15 detik. Hasil yang benar:
+
+```text
+Selesai. Semua pasal berstatus "Perlu verifikasi".
++--------+-------+------+---------------+
+| Kode   | Pasal | Link | Versi riwayat |
++--------+-------+------+---------------+
+| KUHAP  | 369   | 179  | 0             |
+| KUHP   | 625   | 348  | 109           |
+| KUHPER | 2124  | 418  | 770           |
+| UU_ITE | 63    | 41   | 63            |
++--------+-------+------+---------------+
+```
+
+Semua langkah berjalan dalam satu transaksi. Jika muncul pesan `Gagal, semua perubahan
+dibatalkan`, database masih persis seperti sebelum perintah; kirim pesan error itu ke developer.
+
+Pasal hasil import masuk menu **Verifikasi** dengan status "Perlu verifikasi" dan tetap tampil di
+aplikasi dengan label "Belum diverifikasi admin" sampai admin hukum memverifikasinya. Setelah ada
+pasal yang diverifikasi, perintah ini menolak berjalan lagi supaya hasil verifikasi tidak terhapus.
+
+## 6. Publish mobile web
+
+Dijalankan setelah langkah 5, supaya HP yang membuka versi baru langsung mendapat data baru:
 
 ```bash
-/www/server/php/84/bin/php artisan tinker --execute='echo App\Models\Pasal::whereHas("undangUndang", fn ($q) => $q->whereIn("kode", ["KUHP", "KUHAP", "UU_ITE", "KUHPER"]))->where("nomor", "like", "Pasal %")->delete(), " pasal format lama dipindah ke Sampah", PHP_EOL;'
+cd /www/wwwroot/hukum-ubg.ac.id/projek-pasal
+
+APP_ROOT=/www/wwwroot/hukum-ubg.ac.id/projek-pasal \
+DOMAIN=ubgpasal.ubg.ac.id \
+SKIP_GIT=1 \
+bash deploy/aapanel-mobile-web-update.sh
 ```
 
-Pasal contoh dari seeder tidak dibuat ulang pada deploy berikutnya.
+Script menyalin `mobile-web-dist/` (sudah dibuild developer) ke folder `mobile/`, lalu mengecek
+`/mobile/` dan `/api/health`.
 
-### 5.2 Aktifkan KUHPerdata
+## 7. Amankan akun super admin
 
-Admin → **Undang-Undang** → baris `KUHPER` → **Edit** → nyalakan **Aktif** → **Simpan**. UU ini
-dibuat otomatis oleh migrasi dalam keadaan nonaktif, dan UU nonaktif tidak muncul di pilihan import.
+Akun bawaan `superadmin@caripasal.local` dengan password `ChangeMe123!` tercantum di repo publik.
+Akun ini bisa ada di server bila seeder pernah jalan tanpa membaca nilai `.env`. Cek sekali:
 
-### 5.3 Import empat file
+1. Login ke Admin dengan `CARIPASAL_SUPER_ADMIN_EMAIL` dan `CARIPASAL_SUPER_ADMIN_PASSWORD` dari
+   `backend-laravel/.env`.
+2. Buka **Akun Admin**. Jika ada `superadmin@caripasal.local` dan itu bukan akun yang dipakai login,
+   klik **Nonaktifkan** pada akun itu.
+3. Jika akun yang dipakai login adalah `superadmin@caripasal.local` atau passwordnya `ChangeMe123!`:
+   logout, klik **Lupa Password?** di halaman login, lalu atur password baru dari email reset
+   (butuh SMTP/Resend di `.env` sudah benar).
 
-Admin → **Import Data** → tab **Excel** → pilih UU → upload file → **Import Data**. Tunggu sampai
-muncul **Hasil Import**. KUHPerdata butuh sekitar 1–2 menit.
-
-| Pilih UU | File | Hasil yang benar |
-|---|---|---|
-| `KUHP` | `data-import/kuhp-2023/01_kuhp_2023_konsolidasi_ready.xlsx` | Pasal 625, Link 348, riwayat 109 versi |
-| `KUHAP` | `data-import/kuhap-2025/01_kuhap_2025_ready.xlsx` | Pasal 369, Link 179 |
-| `UU_ITE` | `data-import/uu-ite-2008/01_uu_ite_2008_konsolidasi_ready.xlsx` | Pasal 63, Link 41, riwayat 63 versi |
-| `KUHPER` | `data-import/kuhper-1847/01_kuhper_1847_ready.xlsx` | Pasal 2124, Link 418, riwayat 770 versi |
-
-Import aman diulang: pasal dicocokkan per (UU, nomor) lalu ditimpa, tidak dobel.
-
-Jika **Hasil Import** menampilkan error `Unique violation`, berarti pasal dengan nomor yang sama
-ada di **Pasal → Sampah**. Pulihkan atau hapus permanen pasal itu, lalu import ulang file yang sama.
-
-Semua pasal hasil import masuk menu **Verifikasi** dengan status "Perlu verifikasi". Pasal tetap
-tampil di aplikasi dengan label "Belum diverifikasi admin" sampai admin hukum memverifikasinya.
-
-## 6. Cek hasil
+## 8. Cek hasil
 
 ```bash
 curl -s https://ubgpasal.ubg.ac.id/api/health          # {"status":"ok",...}
@@ -244,16 +214,16 @@ Jika kosong, `include` Nginx pada langkah 3 belum aktif.
 
 Di browser:
 
-- Admin → **Dashboard**: 3181 pasal (lebih jika kampus menambah pasal sendiri), 4 undang-undang.
-- `https://ubgpasal.ubg.ac.id/mobile/`: login, tunggu sinkronisasi selesai, cari "pencurian".
-  Hasilnya harus ada dari KUHP.
+- Admin → **Dashboard**: 3181 pasal, 4 undang-undang.
+- `https://ubgpasal.ubg.ac.id/mobile/`: login, tunggu unduhan data selesai (3181 pasal), cari
+  "pencurian". Hasilnya harus ada dari KUHP.
 
 Jika `curl .../api/health` mengembalikan HTML `Just a moment...`, Cloudflare memberi challenge ke
 API. Buat rule: Hostname `ubgpasal.ubg.ac.id` AND URI Path starts with `/api/` → Skip
 (Managed Challenge, Bot Fight Mode, Browser Integrity Check). Admin dan `/mobile/` boleh tetap
 lewat Cloudflare.
 
-## 7. Update berikutnya
+## 9. Update berikutnya
 
 Setiap developer push update:
 
@@ -264,9 +234,9 @@ APP_ROOT=/www/wwwroot/hukum-ubg.ac.id/projek-pasal DOMAIN=ubgpasal.ubg.ac.id bas
 APP_ROOT=/www/wwwroot/hukum-ubg.ac.id/projek-pasal DOMAIN=ubgpasal.ubg.ac.id SKIP_GIT=1 bash deploy/aapanel-mobile-web-update.sh
 ```
 
-Langkah 3 dan 5 tidak perlu diulang.
+Langkah 3, 5, dan 7 tidak perlu diulang.
 
-## 8. Rollback
+## 10. Rollback
 
 Migrasi baru mengubah struktur tabel, jadi rollback = kembalikan kode dan database bersama-sama:
 
@@ -277,7 +247,7 @@ pg_restore -h 127.0.0.1 -U caripasal_user -d caripasal --clean --if-exists ~/car
 APP_ROOT=/www/wwwroot/hukum-ubg.ac.id/projek-pasal DOMAIN=ubgpasal.ubg.ac.id SKIP_GIT=1 bash deploy/aapanel-deploy.sh
 ```
 
-Setelah masalah selesai, kembali ke `main` dengan `git checkout main` lalu ulangi langkah 4.
+Setelah masalah selesai, kembali ke `main` dengan `git checkout main` lalu ulangi dari langkah 4.
 
 ## Masalah yang sering muncul
 
@@ -286,7 +256,9 @@ Setelah masalah selesai, kembali ke `main` dengan `git checkout main` lalu ulang
 | Script berhenti dengan `Missing PHP extension` | Extension belum aktif | aaPanel → PHP → Install extensions, lalu ulangi |
 | `PHP function disabled ... putenv/proc_open` | Fungsi di-disable aaPanel | aaPanel → PHP → Disabled functions → hapus `putenv`, `proc_open` |
 | `Not possible to fast-forward` | Ada perubahan manual di server | Simpan `git diff`, lalu `git checkout -- .` dan ulangi |
-| Import KUHPerdata gagal `413` | `client_max_body_size` belum ada di `/api/` | Langkah 3 |
+| Langkah 5: `Dibatalkan: N pasal sudah diverifikasi admin` | Perintah sudah pernah dijalankan dan admin mulai memverifikasi | Normal. Jangan dijalankan lagi |
+| Langkah 5: `Harus ada tepat satu file .xlsx` | Folder `data-import/` tidak lengkap | Jalankan `git status` dan `git pull --ff-only origin main`, lalu ulangi |
+| Import xlsx dari dashboard gagal `413` | `client_max_body_size` belum ada di `/api/` | Langkah 3 |
 | `/admin/` blank atau 404 | `alias` Nginx menunjuk folder lain | `alias` harus `.../projek-pasal/admin/`, folder dibuat oleh script deploy |
 | Mobile web masih versi lama | Tab lama masih terbuka | Tutup semua tab/aplikasi CariPasal lalu buka lagi. Jangan hapus data situs, karena data offline ikut terhapus |
 | Error `Permission denied` di `storage/logs` | Owner folder salah | `chown -R <user_deploy>:www backend-laravel/storage backend-laravel/bootstrap/cache` |
@@ -294,7 +266,7 @@ Setelah masalah selesai, kembali ke `main` dengan `git checkout main` lalu ulang
 
 Catatan:
 
-- Password super admin diambil dari `CARIPASAL_SUPER_ADMIN_PASSWORD` di `backend-laravel/.env` dan
-  diterapkan ulang setiap deploy. Ganti password super admin di `.env`, bukan dari dashboard.
+- `CARIPASAL_SUPER_ADMIN_*` di `.env` hanya dipakai saat akun itu belum ada; deploy tidak lagi
+  menimpa passwordnya. Ganti password lewat **Lupa Password?** di halaman login.
 - Fitur **Sumber Data** (ambil dari datahukum.com) tetap mati (`DATAHUKUM_FETCH_ENABLED=false`)
   sampai izin data keluar. Selama mati, server tidak butuh queue worker atau Python.
