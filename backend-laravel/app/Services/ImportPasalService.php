@@ -36,7 +36,7 @@ class ImportPasalService
             try {
                 $kode = $row['kode_uu'] ?? $row['kode'] ?? null;
                 $uuId = $row['undang_undang_id'] ?? null;
-                $uu = $uuId ? UndangUndang::find($uuId) : UndangUndang::where('kode', $kode)->first();
+                $uu = $uuId ? UndangUndang::find($uuId) : $this->findUndangUndangByKode($kode);
                 if (! $uu) {
                     throw new \RuntimeException('Undang-undang tidak ditemukan.');
                 }
@@ -102,7 +102,7 @@ class ImportPasalService
                 try {
                     $targetKode = $link['targetUU'] ?? $link['target_uu'] ?? $link['kode_uu'] ?? null;
                     $targetNomor = $link['targetNomor'] ?? $link['target_nomor'] ?? $link['nomor'] ?? null;
-                    $targetUu = UndangUndang::where('kode', $targetKode)->first();
+                    $targetUu = $this->findUndangUndangByKode($targetKode);
                     if (! $targetUu || ! $targetNomor) {
                         throw new \RuntimeException('Target link tidak lengkap atau UU target tidak ditemukan.');
                     }
@@ -140,6 +140,16 @@ class ImportPasalService
                 'links' => ['created' => $linkCreated, 'errors' => $linkErrors],
                 'riwayat' => ['pasal' => $historyPasal, 'versi' => $historyVersions],
             ];
+    }
+
+    /** Kode di file pipeline memakai tanda hubung (UU-ITE), database memakai underscore (UU_ITE). */
+    private function findUndangUndangByKode(?string $kode): ?UndangUndang
+    {
+        if ($kode === null || trim($kode) === '') {
+            return null;
+        }
+
+        return UndangUndang::whereRaw("replace(upper(kode), '_', '-') = ?", [strtoupper(str_replace('_', '-', trim($kode)))])->first();
     }
 
     public function importFile(UploadedFile $file, ?string $adminId = null, ?string $undangUndangId = null): array

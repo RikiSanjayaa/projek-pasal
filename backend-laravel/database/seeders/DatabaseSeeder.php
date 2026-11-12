@@ -75,6 +75,12 @@ class DatabaseSeeder extends Seeder
             return [$item["kode"] => $record];
         });
 
+        // Pasal contoh hanya untuk database baru. Deploy menjalankan seeder setiap kali;
+        // setelah data asli diimpor dan contoh dihapus (termasuk dari trash), jangan dibuat ulang.
+        if (Pasal::withTrashed()->where("undang_undang_id", $undangUndang["KUHP"]->id)->exists()) {
+            return;
+        }
+
         foreach (
             [
                 [
@@ -170,18 +176,12 @@ class DatabaseSeeder extends Seeder
             ]
             as $pasal
         ) {
-            Pasal::updateOrCreate(
-                [
-                    "undang_undang_id" => $undangUndang["KUHP"]->id,
-                    "nomor" => $pasal["nomor"],
-                ],
-                $pasal + [
-                    "undang_undang_id" => $undangUndang["KUHP"]->id,
-                    "is_active" => true,
-                    "created_by" => $admin->id,
-                    "updated_by" => $admin->id,
-                ],
-            );
+            Pasal::create($pasal + [
+                "undang_undang_id" => $undangUndang["KUHP"]->id,
+                "is_active" => true,
+                "created_by" => $admin->id,
+                "updated_by" => $admin->id,
+            ]);
         }
     }
 }
