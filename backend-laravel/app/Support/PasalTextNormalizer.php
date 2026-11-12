@@ -50,7 +50,25 @@ class PasalTextNormalizer
         return trim($nomor, " \t\n\r\0\x0B.,;:");
     }
 
+    /**
+     * Diulang sampai stabil: satu putaran belum tentu final (butir sisipan seperti "(2) (2a)" baru
+     * terpisah pada putaran kedua), dan hasil import harus sama lewat dashboard maupun file.
+     */
     public static function normalizeBody(mixed $value): string
+    {
+        $text = (string) $value;
+        for ($i = 0; $i < 5; $i++) {
+            $next = self::normalizeOnce($text);
+            if ($next === $text) {
+                break;
+            }
+            $text = $next;
+        }
+
+        return $text;
+    }
+
+    private static function normalizeOnce(string $value): string
     {
         $text = self::applyCommonCorrections($value);
         $text = str_replace(["\r\n", "\r", "\u{00A0}", '|', "\u{00A6}", "\u{00A2}", "\u{2022}", "\u{00B7}"], ["\n", "\n", ' ', ' ', ' ', ' ', ' ', ' '], $text);

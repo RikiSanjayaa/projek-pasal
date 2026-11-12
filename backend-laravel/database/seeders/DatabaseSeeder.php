@@ -17,19 +17,14 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $admin = AdminUser::updateOrCreate(
+        // Hanya membuat akun bila belum ada. Deploy menjalankan seeder setiap kali, jadi password
+        // yang sudah diganti admin tidak boleh ditimpa lagi dari .env.
+        $superAdmin = config("caripasal.super_admin");
+        $admin = AdminUser::withTrashed()->firstOrCreate(
+            ["email" => $superAdmin["email"]],
             [
-                "email" => env(
-                    "CARIPASAL_SUPER_ADMIN_EMAIL",
-                    "superadmin@caripasal.local",
-                ),
-            ],
-            [
-                "password" => env(
-                    "CARIPASAL_SUPER_ADMIN_PASSWORD",
-                    "ChangeMe123!",
-                ),
-                "nama" => env("CARIPASAL_SUPER_ADMIN_NAME", "Super Admin"),
+                "password" => $superAdmin["password"],
+                "nama" => $superAdmin["name"],
                 "role" => "super_admin",
                 "is_active" => true,
             ],
@@ -74,6 +69,12 @@ class DatabaseSeeder extends Seeder
 
             return [$item["kode"] => $record];
         });
+
+        // Pasal contoh hanya untuk database baru. Deploy menjalankan seeder setiap kali;
+        // setelah data asli diimpor dan contoh dihapus (termasuk dari trash), jangan dibuat ulang.
+        if (Pasal::withTrashed()->where("undang_undang_id", $undangUndang["KUHP"]->id)->exists()) {
+            return;
+        }
 
         foreach (
             [
@@ -170,18 +171,12 @@ class DatabaseSeeder extends Seeder
             ]
             as $pasal
         ) {
-            Pasal::updateOrCreate(
-                [
-                    "undang_undang_id" => $undangUndang["KUHP"]->id,
-                    "nomor" => $pasal["nomor"],
-                ],
-                $pasal + [
-                    "undang_undang_id" => $undangUndang["KUHP"]->id,
-                    "is_active" => true,
-                    "created_by" => $admin->id,
-                    "updated_by" => $admin->id,
-                ],
-            );
+            Pasal::create($pasal + [
+                "undang_undang_id" => $undangUndang["KUHP"]->id,
+                "is_active" => true,
+                "created_by" => $admin->id,
+                "updated_by" => $admin->id,
+            ]);
         }
     }
 }

@@ -1,2 +1,7 @@
 .local-logs/
 .env
+# Dibuat di server oleh script deploy aaPanel (admin) dan publish mobile web.
+/admin/
+/mobile/
+# Hasil build Flutter Web lokal; build produksi diunduh dari rilis GitHub.
+/mobile-web-dist/

@@ -51,7 +51,6 @@ projek-pasal/
   pasal_mobile_app/     Flutter mobile app (Android, iOS, web)
   import-tools/         Pipeline Python: datahukum.com + PDF BPK -> file import
   data-import/          Hasil pipeline yang siap diimport (xlsx + README per UU)
-  mobile-web-dist/      Hasil build Flutter Web yang dipublish ke server
   deploy/               Script dan konfigurasi aaPanel
   docs/                 Dokumentasi teknis dan screenshot
 ```
@@ -340,6 +339,9 @@ CI (`.github/workflows/ci.yml`) membangun admin dan mobile web di setiap pull re
 
 ## Deploy aaPanel
 
+Server kampus yang masih di versi lama: ikuti [Panduan Update](docs/PANDUAN_UPDATE_AAPANEL.md)
+(backup, Nginx, ganti data hukum, rollback). Instalasi baru: [Deployment](docs/AAPANEL_DEPLOYMENT.md).
+
 Update rutin:
 
 ```bash
@@ -359,17 +361,18 @@ Checklist untuk rilis yang membawa verifikasi, riwayat, Sumber Data, dan KUHPerd
 1. Backup database.
 2. Migrasi (`php artisan migrate --force`) sudah dijalankan oleh `deploy/aapanel-deploy.sh`; cek
    outputnya.
-3. Import ulang data KUHP/KUHAP dari `data-import/` lewat Admin > Import Data.
-4. KUHPerdata: buat UU kode `KUHPER` di menu Undang-Undang (isiannya ada di
-   `data-import/kuhper-1847/README_IMPORT.md`), lalu import xlsx-nya. File ini dikirim
-   sebagai satu permintaan sekitar 2,5 MB, jadi `client_max_body_size` Nginx untuk `/api/` minimal
-   20m (sudah ada di `deploy/aapanel-nginx.conf`) dan `post_max_size` PHP minimal 8M.
-5. Pastikan `APP_LOCALE=id` dan `DATAHUKUM_FETCH_ENABLED=false` di env production.
-6. Bila nanti Sumber Data diaktifkan: pasang Python 3 dan venv dari `import-tools/requirements.txt`,
+3. Server dengan data lama: `php artisan caripasal:reset-data-hukum` menghapus permanen semua pasal
+   lalu mengisi ulang KUHP, KUHAP, KUHPerdata, dan UU ITE dari `data-import/` dalam satu transaksi
+   (UU tanpa sumber ikut dihapus, keempat UU diaktifkan). Perintah menolak berjalan bila sudah ada
+   pasal terverifikasi. Untuk menambah data ke server yang sudah berjalan, pakai Admin > Import Data;
+   import KUHPerdata sekitar 2,5 MB, jadi `client_max_body_size` Nginx untuk `/api/` minimal 20m
+   (sudah ada di `deploy/aapanel-nginx.conf`).
+4. Pastikan `APP_LOCALE=id` dan `DATAHUKUM_FETCH_ENABLED=false` di env production.
+5. Bila nanti Sumber Data diaktifkan: pasang Python 3 dan venv dari `import-tools/requirements.txt`,
    isi `IMPORT_PYTHON`, `IMPORT_TOOLS_DIR`, `IMPORT_CACHE_DIR`, lalu jalankan
    `php artisan queue:work --queue=imports,default --timeout=900` lewat Supervisor.
-7. Build ulang mobile web dan APK dengan Flutter 3.47.9. Perangkat yang sudah punya data akan
-   diminta Update sekali supaya riwayat pasal ikut terunduh.
+6. Mobile web dibuild otomatis oleh CI (Flutter 3.47.9); APK dibuild ulang pengembang. Perangkat
+   yang sudah punya data akan diminta Update sekali supaya riwayat pasal ikut terunduh.
 
 ### Deploy mobile web ke `/mobile/`
 
@@ -379,34 +382,32 @@ Mobile web dipakai agar pengguna iPhone/Android bisa membuka aplikasi lewat brow
 https://ubgpasal.ubg.ac.id/mobile/
 ```
 
-Flutter Web dibuild di laptop (Flutter 3.47.9), lalu hasilnya dipush ke GitHub:
+Server tidak membuild Flutter dan hasil build tidak di-commit. Workflow
+`.github/workflows/mobile-web.yml` berjalan setiap push ke `main` yang mengubah
+`pasal_mobile_app/`: tes, build dengan API relatif `/api` dan base `/mobile/`, lalu unggah
+`caripasal-mobile-web-<id>.tar.gz` ke rilis GitHub `mobile-web`. `<id>` dicetak oleh
+`deploy/mobile-web-version.sh` (commit terakhir yang mengubah input build), sehingga server
+mengunduh build yang cocok dengan checkout-nya.
 
-```powershell
-.\build-mobile-web.ps1 `
-  -ApiBaseUrl "https://ubgpasal.ubg.ac.id/api" `
-  -WebAppUrl "https://ubgpasal.ubg.ac.id" `
-  -BaseHref "/mobile/"
-
-git add mobile-web-dist build-mobile-web.ps1 deploy/aapanel-publish-mobile-web.sh docs/MOBILE_WEB_AAPANEL.md README.md
-git commit -m "build: update mobile web kampus"
-git push origin main
-```
-
-Publish di server kampus:
+Publish di server kampus (setelah `git pull`):
 
 ```bash
 cd /www/wwwroot/hukum-ubg.ac.id/projek-pasal
 
 APP_ROOT=/www/wwwroot/hukum-ubg.ac.id/projek-pasal \
 DOMAIN=ubgpasal.ubg.ac.id \
+SKIP_GIT=1 \
 bash deploy/aapanel-mobile-web-update.sh
 ```
 
-Config Nginx domain `ubgpasal.ubg.ac.id` harus memuat konfigurasi PWA di dalam blok `server` (sesuaikan `root` bila APP_ROOT berbeda):
+Config Nginx domain `ubgpasal.ubg.ac.id` harus memuat konfigurasi PWA di dalam blok `server`
+(server dengan path lain menyalin isi file dan mengganti `root`):
 
 ```nginx
 include /www/wwwroot/hukum-ubg.ac.id/projek-pasal/deploy/aapanel-mobile-web.conf;
 ```
+
+Detail: [docs/MOBILE_WEB_AAPANEL.md](docs/MOBILE_WEB_AAPANEL.md).
 
 ### Catatan production
 
@@ -424,9 +425,9 @@ include /www/wwwroot/hukum-ubg.ac.id/projek-pasal/deploy/aapanel-mobile-web.conf
 - [Database Schema](docs/DATABASE.md)
 - [Pipeline data hukum](import-tools/README.md)
 - [Aplikasi mobile](pasal_mobile_app/README.md)
-- [Deploy CariPasal di aaPanel](docs/AAPANEL_DEPLOYMENT.md)
+- [Deployment CariPasal di aaPanel](docs/AAPANEL_DEPLOYMENT.md)
+- [Panduan Update CariPasal di aaPanel](docs/PANDUAN_UPDATE_AAPANEL.md)
 - [Deploy Flutter Web Mobile ke aaPanel](docs/MOBILE_WEB_AAPANEL.md)
-- [Panduan Admin Kampus untuk Uji Coba Mobile Web](docs/README_ADMIN_KAMPUS_UJI_COBA.md)
 - [Smart Search CariPasal](docs/SMART_SEARCH.md)
 - [Catatan Migrasi Historis](docs/LARAVEL_POSTGRESQL_MIGRATION_PLAN.md)
 

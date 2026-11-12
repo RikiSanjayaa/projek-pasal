@@ -1,0 +1,103 @@
+name: Mobile Web Release
+
+# Build Flutter Web sekali di CI lalu unggah ke rilis GitHub `mobile-web`.
+# Server aaPanel mengunduh file yang ID-nya sama (deploy/aapanel-publish-mobile-web.sh),
+# jadi server tidak butuh Flutter dan tidak ada hasil build yang di-commit.
+on:
+  push:
+    branches: [main]
+    # Harus sama dengan daftar path di deploy/mobile-web-version.sh.
+    paths:
+      - 'pasal_mobile_app/**'
+      - '.github/workflows/mobile-web.yml'
+      - 'deploy/mobile-web-version.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mobile-web-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # Run manual dari branch lain masuk rilis terpisah supaya rilis produksi tidak tersentuh.
+  RELEASE_TAG: ${{ github.ref == 'refs/heads/main' && 'mobile-web' || 'mobile-web-test' }}
+  KEEP_BUILDS: 10
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    name: Build and publish mobile web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Riwayat lengkap untuk menghitung ID build dari git log.
+          fetch-depth: 0
+
+      - name: Resolve build ID
+        id: build
+        run: |
+          id="$(bash deploy/mobile-web-version.sh)"
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          echo "name=caripasal-mobile-web-$id" >> "$GITHUB_OUTPUT"
+          if gh release view "$RELEASE_TAG" --json assets -q '.assets[].name' 2>/dev/null | grep -qx "caripasal-mobile-web-$id.tar.gz"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Build $id sudah ada di rilis $RELEASE_TAG, tidak dibuild ulang."
+          fi
+
+      - uses: subosito/flutter-action@v2
+        if: steps.build.outputs.exists != 'true'
+        with:
+          # Samakan dengan ARG FLUTTER_VERSION di pasal_mobile_app/Dockerfile.
+          flutter-version: '3.47.9'
+          channel: 'stable'
+
+      - name: Install dependencies
+        if: steps.build.outputs.exists != 'true'
+        working-directory: pasal_mobile_app
+        run: |
+          cp lib/core/config/env-example.dart lib/core/config/env.dart
+          flutter pub get
+
+      - name: Test
+        if: steps.build.outputs.exists != 'true'
+        run: |
+          (cd pasal_mobile_app && flutter test test/unit/services/auth_service_test.dart test/unit/widgets/adaptive_pasal_browser_test.dart test/unit/widgets/explore_pasal_results_test.dart test/unit/services/offline_build_test.dart)
+          node --test pasal_mobile_app/test/web/*.cjs
+
+      - name: Build web
+        if: steps.build.outputs.exists != 'true'
+        working-directory: pasal_mobile_app
+        # API relatif: mobile web selalu disajikan di domain yang sama dengan /api/,
+        # jadi satu build dipakai di semua server.
+        run: dart run tool/build_web.dart --release --no-tree-shake-icons --base-href=/mobile/ --dart-define=API_BASE_URL=/api
+
+      - name: Package
+        if: steps.build.outputs.exists != 'true'
+        run: |
+          name="${{ steps.build.outputs.name }}"
+          tar -czf "$name.tar.gz" -C pasal_mobile_app/build/web .
+          sha256sum "$name.tar.gz" > "$name.tar.gz.sha256"
+          ls -lh "$name.tar.gz"
+
+      - name: Upload to release
+        if: steps.build.outputs.exists != 'true'
+        run: |
+          name="${{ steps.build.outputs.name }}"
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --prerelease --target "$GITHUB_SHA" \
+              --title "Mobile web (build otomatis)" \
+              --notes "Build Flutter Web dari CI. Server mengunduh file yang ID-nya dicetak deploy/mobile-web-version.sh. Jangan unggah file manual."
+          fi
+          gh release upload "$RELEASE_TAG" "$name.tar.gz" "$name.tar.gz.sha256" --clobber
+
+      - name: Keep newest builds
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" \
+            -q '.assets | map(select(.name | endswith(".tar.gz"))) | sort_by(.created_at) | reverse | .['"$KEEP_BUILDS"':][] | .name' |
+            while read -r old; do
+              gh release delete-asset "$RELEASE_TAG" "$old" --yes
+              gh release delete-asset "$RELEASE_TAG" "$old.sha256" --yes || true
+            done

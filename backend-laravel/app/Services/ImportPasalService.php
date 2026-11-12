@@ -34,9 +34,12 @@ class ImportPasalService
 
         foreach ($rows as $index => $row) {
             try {
+                if (isset($row['links_error'])) {
+                    throw new \RuntimeException($row['links_error']);
+                }
                 $kode = $row['kode_uu'] ?? $row['kode'] ?? null;
                 $uuId = $row['undang_undang_id'] ?? null;
-                $uu = $uuId ? UndangUndang::find($uuId) : UndangUndang::where('kode', $kode)->first();
+                $uu = $uuId ? UndangUndang::find($uuId) : $this->findUndangUndangByKode($kode);
                 if (! $uu) {
                     throw new \RuntimeException('Undang-undang tidak ditemukan.');
                 }
@@ -102,7 +105,7 @@ class ImportPasalService
                 try {
                     $targetKode = $link['targetUU'] ?? $link['target_uu'] ?? $link['kode_uu'] ?? null;
                     $targetNomor = $link['targetNomor'] ?? $link['target_nomor'] ?? $link['nomor'] ?? null;
-                    $targetUu = UndangUndang::where('kode', $targetKode)->first();
+                    $targetUu = $this->findUndangUndangByKode($targetKode);
                     if (! $targetUu || ! $targetNomor) {
                         throw new \RuntimeException('Target link tidak lengkap atau UU target tidak ditemukan.');
                     }
@@ -142,10 +145,34 @@ class ImportPasalService
             ];
     }
 
+    /** Kode di file pipeline memakai tanda hubung (UU-ITE), database memakai underscore (UU_ITE). */
+    private function findUndangUndangByKode(?string $kode): ?UndangUndang
+    {
+        if ($kode === null || trim($kode) === '') {
+            return null;
+        }
+
+        return UndangUndang::whereRaw("replace(upper(kode), '_', '-') = ?", [strtoupper(str_replace('_', '-', trim($kode)))])->first();
+    }
+
     public function importFile(UploadedFile $file, ?string $adminId = null, ?string $undangUndangId = null): array
     {
-        $workbook = IOFactory::load($file->getRealPath());
-        $mapped = $this->sheetRows($workbook->getSheetByName('import') ?? $workbook->getSheet(0));
+        return $this->importPath($file->getRealPath(), $adminId, $undangUndangId);
+    }
+
+    /** Baca xlsx dengan aturan yang sama seperti parser di halaman Import Data dashboard. */
+    public function importPath(string $path, ?string $adminId = null, ?string $undangUndangId = null): array
+    {
+        // Hanya sheet yang dipakai dan tanpa styling: workbook KUHPerdata lengkap melewati memory_limit 128M.
+        $reader = IOFactory::createReaderForFile($path);
+        $names = $reader->listWorksheetNames($path);
+        $reader->setReadDataOnly(true);
+        $reader->setLoadSheetsOnly(array_values(array_unique(array_intersect([in_array('import', $names, true) ? 'import' : $names[0], 'riwayat'], $names))));
+        $workbook = $reader->load($path);
+        $mapped = array_map(
+            fn (array $item) => $this->withLinks($item),
+            $this->sheetRows($workbook->getSheetByName('import') ?? $workbook->getSheet(0)),
+        );
         if ($undangUndangId) {
             // File hasil pipeline tidak punya kolom kode UU; UU dipilih admin saat upload.
             $mapped = array_map(fn ($item) => $item + ['undang_undang_id' => $undangUndangId], $mapped);
@@ -162,11 +189,37 @@ class ImportPasalService
             }
             unset($item);
         }
+        // Workbook punya referensi melingkar; lepaskan sebelum menulis ke database.
+        $workbook->disconnectWorksheets();
+        unset($workbook, $historySheet);
 
         return $this->importRows($mapped, $adminId);
     }
 
-    /** @return list<array<string, mixed>> */
+    /** Kolom link{N}_targetUU / link{N}_targetNomor / link{N}_keterangan menjadi daftar links. */
+    private function withLinks(array $item): array
+    {
+        $links = [];
+        for ($i = 1; $i <= 20; $i++) {
+            $targetUu = $item["link{$i}_targetuu"] ?? null;
+            $targetNomor = $item["link{$i}_targetnomor"] ?? null;
+            unset($item["link{$i}_targetuu"], $item["link{$i}_targetnomor"]);
+            $keterangan = $item["link{$i}_keterangan"] ?? null;
+            unset($item["link{$i}_keterangan"]);
+            if ($targetUu !== null && $targetNomor !== null) {
+                $links[] = ['targetUU' => $targetUu, 'targetNomor' => $targetNomor, 'keterangan' => $keterangan];
+            } elseif ($targetUu !== null || $targetNomor !== null) {
+                $item['links_error'] = "link{$i}_targetUU dan link{$i}_targetNomor harus diisi keduanya.";
+            }
+        }
+        if ($links !== []) {
+            $item['links'] = $links;
+        }
+
+        return $item;
+    }
+
+    /** @return list<array<string, mixed>> Sel teks di-trim, sel kosong jadi null, baris kosong dilewati. */
     private function sheetRows(Worksheet $sheet): array
     {
         $rows = $sheet->toArray(null, true, true, true);
@@ -177,10 +230,12 @@ class ImportPasalService
             $item = [];
             foreach ($header as $column => $field) {
                 if ($field !== '') {
-                    $item[$field] = $row[$column] ?? null;
+                    $item[$field] = $this->nullableString($row[$column] ?? null);
                 }
             }
-            $mapped[] = $item;
+            if (array_filter($item, fn ($value) => $value !== null) !== []) {
+                $mapped[] = $item;
+            }
         }
 
         return $mapped;
