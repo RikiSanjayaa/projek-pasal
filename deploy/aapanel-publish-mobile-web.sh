@@ -37,10 +37,12 @@ if ! curl -fsSL --retry 3 -o "$tmp/$name" "$url" || ! curl -fsSL --retry 3 -o "$
   printf 'Cek https://github.com/%s/actions/workflows/mobile-web.yml lalu ulangi perintah ini.\n' "$GITHUB_REPO" >&2
   exit 1
 fi
-(cd "$tmp" && sha256sum -c "$name.sha256" >/dev/null) || {
+expected="$(cut -d ' ' -f1 "$tmp/$name.sha256")"
+actual="$(sha256sum "$tmp/$name" | cut -d ' ' -f1)"
+if [[ -z "$expected" || "$expected" != "$actual" ]]; then
   printf 'Checksum %s tidak cocok; file rusak saat diunduh. Ulangi perintah ini.\n' "$name" >&2
   exit 1
-}
+fi
 
 mkdir "$tmp/web"
 tar -xzf "$tmp/$name" -C "$tmp/web"

@@ -4,8 +4,9 @@ Panduan singkat untuk tim IT kampus. Server saat ini berada di commit `20c1d99` 
 port mapping postgres:5432 ke host"). Ikuti langkah 1 sampai 10 secara berurutan. Referensi
 lengkap (instalasi baru, Nginx, mobile web, email) ada di [AAPANEL_DEPLOYMENT.md](AAPANEL_DEPLOYMENT.md).
 
-Server tetap tidak memakai Docker, Flutter, atau Python. Semua langkah sudah diuji lokal pada
-database yang dibuat dari commit `20c1d99`.
+Server tetap tidak memakai Docker, Flutter, atau Python: mobile web dibuild GitHub Actions dan
+diunduh server dari rilis GitHub. Semua langkah sudah diuji lokal pada database yang dibuat dari
+commit `20c1d99`.
 
 ## Yang Perlu Diketahui Dulu
 
@@ -13,7 +14,7 @@ database yang dibuat dari commit `20c1d99`.
 |---|---|
 | 9 migration baru (verifikasi pasal, riwayat perubahan, bab, Smart Search, Sumber Data). Kolom kata kunci pasal dihapus. | **Wajib backup database** (langkah 3). Rollback hanya bisa dengan restore backup. |
 | Data hukum lama (nomor `Pasal 1`, kata kunci lama) diganti total dengan data lengkap dari repo: KUHP 625 pasal, KUHAP 369, UU ITE 63, KUHPerdata 2124. | Satu perintah (langkah 7). Semua pasal lama dan UU lain di luar keempat UU ini terhapus. Akun admin, pengguna mobile, dan alias Smart Search tetap. |
-| Mobile web `/mobile/` sekarang bisa dipakai offline (PWA). | Tambah satu baris `include` di Nginx (langkah 5). |
+| Mobile web `/mobile/` sekarang bisa dipakai offline (PWA) dan tidak lagi disimpan di repo; build dibuat GitHub Actions. | Tambah satu baris `include` di Nginx (langkah 5). Server butuh akses HTTPS ke `github.com` untuk mengunduh build (langkah 8). |
 | Import xlsx dan unggah PDF lewat dashboard mengirim request sampai 20 MB. | `client_max_body_size 20m` di Nginx, `upload_max_filesize`/`post_max_size` di PHP (langkah 5). |
 | Login mobile memakai sesi baru. | Pengguna mobile login ulang satu kali, lalu aplikasi mengunduh ulang seluruh data. |
 
@@ -39,8 +40,9 @@ diberi `DOMAIN=...` lagi.
 ```bash
 $PHP_BIN -v | head -1          # 8.3 atau 8.4
 node -v                        # 22 atau lebih baru
-git status --short             # sebaiknya kosong
+git status --short -uno        # sebaiknya kosong
 git log --oneline -1           # 20c1d99
+curl -fsSI https://github.com/RikiSanjayaa/projek-pasal/releases >/dev/null && echo github-ok
 bash deploy/aapanel-doctor.sh  # semua baris [OK]
 ```
 
@@ -185,8 +187,10 @@ Dijalankan setelah langkah 7, supaya HP yang membuka versi baru langsung mendapa
 SKIP_GIT=1 bash deploy/aapanel-mobile-web-update.sh
 ```
 
-Script menyalin `mobile-web-dist/` (sudah dibuild pengembang) ke folder `mobile/`, lalu mengecek
-`/mobile/` dan `/api/health`.
+Script mengunduh build mobile web yang cocok dengan kode hasil langkah 4 dari rilis GitHub
+`mobile-web`, mencocokkan checksum, menyalinnya ke folder `mobile/`, lalu mengecek `/mobile/` dan
+`/api/health`. Jika muncul `Build mobile web ... belum tersedia`, build otomatisnya masih berjalan
+di GitHub (beberapa menit setelah update di-push); tunggu sebentar lalu ulangi perintah yang sama.
 
 ## 9. Amankan Akun Super Admin
 
@@ -275,6 +279,8 @@ Langkah 5, 7, dan 9 tidak perlu diulang. Backup database tetap disarankan sebelu
 | Import xlsx dari dashboard gagal `413` | `client_max_body_size` belum ada di blok `/api/` (langkah 5). |
 | `/admin/` blank atau 404 | `alias` Nginx harus `.../projek-pasal/admin/`; folder dibuat oleh script deploy. |
 | Error `Permission denied` di `storage/logs` | `chown -R <user_ssh>:www backend-laravel/storage backend-laravel/bootstrap/cache` |
+| `Build mobile web ... belum tersedia` | Build otomatis di GitHub Actions belum selesai. Tunggu beberapa menit lalu ulangi langkah 8; status ada di tab Actions > Mobile Web Release. |
+| `curl: (6) Could not resolve host: github.com` atau timeout | Server tidak boleh keluar ke internet. Izinkan HTTPS keluar ke `github.com` dan `objects.githubusercontent.com`. |
 | Mobile web masih versi lama | Tutup semua tab/aplikasi CariPasal lalu buka lagi. Jangan hapus data situs, karena data offline ikut terhapus. |
 | Login mobile gagal "batas 3 perangkat aktif" | Admin > Akun Admin (atau Pengguna Mobile) > Perangkat mobile > Paksa keluar perangkat lama. |
 

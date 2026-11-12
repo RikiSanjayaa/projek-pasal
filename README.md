@@ -51,7 +51,6 @@ projek-pasal/
   pasal_mobile_app/     Flutter mobile app (Android, iOS, web)
   import-tools/         Pipeline Python: datahukum.com + PDF BPK -> file import
   data-import/          Hasil pipeline yang siap diimport (xlsx + README per UU)
-  mobile-web-dist/      Hasil build Flutter Web yang dipublish ke server
   deploy/               Script dan konfigurasi aaPanel
   docs/                 Dokumentasi teknis dan screenshot
 ```
@@ -372,8 +371,8 @@ Checklist untuk rilis yang membawa verifikasi, riwayat, Sumber Data, dan KUHPerd
 5. Bila nanti Sumber Data diaktifkan: pasang Python 3 dan venv dari `import-tools/requirements.txt`,
    isi `IMPORT_PYTHON`, `IMPORT_TOOLS_DIR`, `IMPORT_CACHE_DIR`, lalu jalankan
    `php artisan queue:work --queue=imports,default --timeout=900` lewat Supervisor.
-6. Build ulang mobile web dan APK dengan Flutter 3.47.9. Perangkat yang sudah punya data akan
-   diminta Update sekali supaya riwayat pasal ikut terunduh.
+6. Mobile web dibuild otomatis oleh CI (Flutter 3.47.9); APK dibuild ulang pengembang. Perangkat
+   yang sudah punya data akan diminta Update sekali supaya riwayat pasal ikut terunduh.
 
 ### Deploy mobile web ke `/mobile/`
 
@@ -383,34 +382,32 @@ Mobile web dipakai agar pengguna iPhone/Android bisa membuka aplikasi lewat brow
 https://ubgpasal.ubg.ac.id/mobile/
 ```
 
-Flutter Web dibuild di laptop (Flutter 3.47.9), lalu hasilnya dipush ke GitHub:
+Server tidak membuild Flutter dan hasil build tidak di-commit. Workflow
+`.github/workflows/mobile-web.yml` berjalan setiap push ke `main` yang mengubah
+`pasal_mobile_app/`: tes, build dengan API relatif `/api` dan base `/mobile/`, lalu unggah
+`caripasal-mobile-web-<id>.tar.gz` ke rilis GitHub `mobile-web`. `<id>` dicetak oleh
+`deploy/mobile-web-version.sh` (commit terakhir yang mengubah input build), sehingga server
+mengunduh build yang cocok dengan checkout-nya.
 
-```powershell
-.\build-mobile-web.ps1 `
-  -ApiBaseUrl "https://ubgpasal.ubg.ac.id/api" `
-  -WebAppUrl "https://ubgpasal.ubg.ac.id" `
-  -BaseHref "/mobile/"
-
-git add mobile-web-dist build-mobile-web.ps1 deploy/aapanel-publish-mobile-web.sh docs/MOBILE_WEB_AAPANEL.md README.md
-git commit -m "build: update mobile web kampus"
-git push origin main
-```
-
-Publish di server kampus:
+Publish di server kampus (setelah `git pull`):
 
 ```bash
 cd /www/wwwroot/hukum-ubg.ac.id/projek-pasal
 
 APP_ROOT=/www/wwwroot/hukum-ubg.ac.id/projek-pasal \
 DOMAIN=ubgpasal.ubg.ac.id \
+SKIP_GIT=1 \
 bash deploy/aapanel-mobile-web-update.sh
 ```
 
-Config Nginx domain `ubgpasal.ubg.ac.id` harus memuat konfigurasi PWA di dalam blok `server` (sesuaikan `root` bila APP_ROOT berbeda):
+Config Nginx domain `ubgpasal.ubg.ac.id` harus memuat konfigurasi PWA di dalam blok `server`
+(server dengan path lain menyalin isi file dan mengganti `root`):
 
 ```nginx
 include /www/wwwroot/hukum-ubg.ac.id/projek-pasal/deploy/aapanel-mobile-web.conf;
 ```
+
+Detail: [docs/MOBILE_WEB_AAPANEL.md](docs/MOBILE_WEB_AAPANEL.md).
 
 ### Catatan production
 

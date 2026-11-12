@@ -12,8 +12,8 @@ Server yang sudah berjalan dan ingin update ke versi terbaru: ikuti
 - Backend: Laravel 13, PHP 8.3 atau 8.4, Sanctum untuk token admin dan mobile.
 - Admin dashboard: React 19 + Vite 7, dibuild di server oleh script deploy dengan base path
   `/admin/`.
-- Mobile web: Flutter Web (PWA offline), dibuild pengembang di laptop dan di-commit ke
-  `mobile-web-dist/`. Server hanya menyalinnya ke `/mobile/`.
+- Mobile web: Flutter Web (PWA offline), dibuild GitHub Actions dan diunggah ke rilis GitHub
+  `mobile-web`. Server hanya mengunduh dan menyalinnya ke `/mobile/`.
 - Aplikasi Android (APK): dibuild pengembang, memanggil API yang sama.
 - Database: PostgreSQL. Migration memakai SQL khusus PostgreSQL (enum, array, trigger, jsonb).
 - Queue/cache/session: driver `database`, tabelnya dibuat migration.
@@ -40,8 +40,7 @@ Struktur folder di server:
 ├── backend-laravel/       Laravel API (.env ada di sini)
 ├── admin-dashboard/       source React, dibuild oleh script deploy
 ├── admin/                 hasil build admin, dibuat script deploy
-├── mobile-web-dist/       hasil build Flutter Web dari repo
-├── mobile/                salinan mobile-web-dist, dibuat script publish
+├── mobile/                build mobile web yang diunduh script publish
 ├── data-import/           xlsx data hukum
 └── deploy/                script dan potongan config aaPanel
 ```
@@ -56,7 +55,8 @@ Struktur folder di server:
 - Composer 2.
 - Node.js 22 atau lebih baru (build Vite 7).
 - PostgreSQL, hanya bisa diakses dari server (jangan dibuka ke publik).
-- Git dan Bash.
+- Git, Bash, `curl`, `tar`, `sha256sum`, dan akses HTTPS keluar ke `github.com` (git pull dan
+  unduh build mobile web).
 
 ## Setup Pertama
 
@@ -185,12 +185,10 @@ Sumber Data.
 
 ## Mobile Web
 
-Server tidak membuild Flutter. Pengembang membuild di laptop lalu commit `mobile-web-dist/`:
-
-```powershell
-.\build-mobile-web.ps1 -ApiBaseUrl "https://pasal.kampus.ac.id/api" `
-  -WebAppUrl "https://pasal.kampus.ac.id" -BaseHref "/mobile/"
-```
+Server tidak membuild Flutter. Setiap push ke `main` yang mengubah `pasal_mobile_app/`, workflow
+GitHub Actions Mobile Web Release menjalankan tes, membuild Flutter Web dengan API relatif `/api`
+dan base `/mobile/`, lalu mengunggah `caripasal-mobile-web-<id>.tar.gz` ke rilis GitHub
+`mobile-web`. Karena API-nya relatif, build yang sama berlaku untuk domain mana pun.
 
 Di server, setelah deploy:
 
@@ -199,13 +197,14 @@ cd "$APP_ROOT"
 SKIP_GIT=1 bash deploy/aapanel-mobile-web-update.sh
 ```
 
-Script menolak build yang belum punya file offline (`caripasal-sw.js`, `offline.js`,
-`offline-build.json`), menyalin `mobile-web-dist/` ke `$APP_ROOT/mobile`, reload Nginx, lalu
-mengecek `/mobile/` dan `/api/health`. Detail build dan pengujian offline:
-[MOBILE_WEB_AAPANEL.md](MOBILE_WEB_AAPANEL.md).
+Script menghitung `<id>` dari checkout server (`deploy/mobile-web-version.sh`, commit terakhir
+yang mengubah input build), mengunduh file itu beserta checksum-nya, menolak build tanpa file
+offline (`caripasal-sw.js`, `offline.js`, `offline-build.json`), menyalinnya ke `$APP_ROOT/mobile`,
+reload Nginx, lalu mengecek `/mobile/` dan `/api/health`. Bila workflow belum selesai (beberapa
+menit setelah push), script berhenti dengan pesan `belum tersedia` tanpa mengubah `mobile/`.
+Detail: [MOBILE_WEB_AAPANEL.md](MOBILE_WEB_AAPANEL.md).
 
-APK Android dibuild pengembang dengan `--dart-define=API_BASE_URL=https://$DOMAIN/api` dan
-`--dart-define=WEB_APP_URL=https://$DOMAIN`.
+APK Android dibuild pengembang dengan `--dart-define=API_BASE_URL=https://$DOMAIN/api`.
 
 ## Nginx aaPanel
 

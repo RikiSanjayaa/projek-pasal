@@ -5,7 +5,7 @@ name: Mobile Web Release
 # jadi server tidak butuh Flutter dan tidak ada hasil build yang di-commit.
 on:
   push:
-    branches: [main, review/deploy-kampus]
+    branches: [main]
     # Harus sama dengan daftar path di deploy/mobile-web-version.sh.
     paths:
       - 'pasal_mobile_app/**'
@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # Selain main, hasil uji masuk rilis terpisah supaya rilis produksi tidak tersentuh.
+  # Run manual dari branch lain masuk rilis terpisah supaya rilis produksi tidak tersentuh.
   RELEASE_TAG: ${{ github.ref == 'refs/heads/main' && 'mobile-web' || 'mobile-web-test' }}
   KEEP_BUILDS: 10
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
