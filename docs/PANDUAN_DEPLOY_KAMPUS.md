@@ -42,7 +42,8 @@ grep -E '^DB_(HOST|PORT|DATABASE|USERNAME)=' backend-laravel/.env
 Backup database (isi nama database/user sesuai output di atas, password diminta):
 
 ```bash
-pg_dump -h 127.0.0.1 -U caripasal_user -Fc caripasal > ~/caripasal-sebelum-update-$(date +%F).dump
+pg_dump -h 127.0.0.1 -U caripasal_user -Fc caripasal \
+  > ~/caripasal-sebelum-update-$(date +%F).dump
 ls -lh ~/caripasal-sebelum-update-*.dump
 ```
 
@@ -87,20 +88,22 @@ location ^~ /admin/ {
 }
 
 location ^~ /api/ {
-    # Import xlsx dari dashboard (KUHPerdata sekitar 2,5 MB) dan unggah PDF naskah resmi.
+    # Import xlsx dari dashboard (KUHPerdata ~2,5 MB) dan unggah PDF naskah resmi.
     client_max_body_size 20m;
     try_files $uri /index.php?$query_string;
 
     include fastcgi_params;
-    fastcgi_param SCRIPT_FILENAME /www/wwwroot/hukum-ubg.ac.id/projek-pasal/backend-laravel/public/index.php;
-    fastcgi_param DOCUMENT_ROOT /www/wwwroot/hukum-ubg.ac.id/projek-pasal/backend-laravel/public;
+    fastcgi_param SCRIPT_FILENAME
+        /www/wwwroot/hukum-ubg.ac.id/projek-pasal/backend-laravel/public/index.php;
+    fastcgi_param DOCUMENT_ROOT
+        /www/wwwroot/hukum-ubg.ac.id/projek-pasal/backend-laravel/public;
     fastcgi_param SCRIPT_NAME /index.php;
     fastcgi_param REQUEST_URI $request_uri;
     fastcgi_param HTTPS on;
     fastcgi_pass unix:/tmp/php-cgi-84.sock;
 }
 
-# Mobile web PWA: header COOP/COEP, tanpa cache entrypoint, 404 untuk aset yang tidak ada.
+# Mobile web PWA: header COOP/COEP, tanpa cache entrypoint, 404 untuk aset hilang.
 include /www/wwwroot/hukum-ubg.ac.id/projek-pasal/deploy/aapanel-mobile-web.conf;
 
 location ~ \.php$ {
@@ -230,8 +233,14 @@ Setiap developer push update:
 ```bash
 cd /www/wwwroot/hukum-ubg.ac.id/projek-pasal
 
-APP_ROOT=/www/wwwroot/hukum-ubg.ac.id/projek-pasal DOMAIN=ubgpasal.ubg.ac.id bash deploy/aapanel-update.sh
-APP_ROOT=/www/wwwroot/hukum-ubg.ac.id/projek-pasal DOMAIN=ubgpasal.ubg.ac.id SKIP_GIT=1 bash deploy/aapanel-mobile-web-update.sh
+APP_ROOT=/www/wwwroot/hukum-ubg.ac.id/projek-pasal \
+DOMAIN=ubgpasal.ubg.ac.id \
+bash deploy/aapanel-update.sh
+
+APP_ROOT=/www/wwwroot/hukum-ubg.ac.id/projek-pasal \
+DOMAIN=ubgpasal.ubg.ac.id \
+SKIP_GIT=1 \
+bash deploy/aapanel-mobile-web-update.sh
 ```
 
 Langkah 3, 5, dan 7 tidak perlu diulang.
@@ -243,8 +252,13 @@ Migrasi baru mengubah struktur tabel, jadi rollback = kembalikan kode dan databa
 ```bash
 cd /www/wwwroot/hukum-ubg.ac.id/projek-pasal
 git checkout 20c1d99
-pg_restore -h 127.0.0.1 -U caripasal_user -d caripasal --clean --if-exists ~/caripasal-sebelum-update-YYYY-MM-DD.dump
-APP_ROOT=/www/wwwroot/hukum-ubg.ac.id/projek-pasal DOMAIN=ubgpasal.ubg.ac.id SKIP_GIT=1 bash deploy/aapanel-deploy.sh
+pg_restore -h 127.0.0.1 -U caripasal_user -d caripasal --clean --if-exists \
+  ~/caripasal-sebelum-update-YYYY-MM-DD.dump
+
+APP_ROOT=/www/wwwroot/hukum-ubg.ac.id/projek-pasal \
+DOMAIN=ubgpasal.ubg.ac.id \
+SKIP_GIT=1 \
+bash deploy/aapanel-deploy.sh
 ```
 
 Setelah masalah selesai, kembali ke `main` dengan `git checkout main` lalu ulangi dari langkah 4.
