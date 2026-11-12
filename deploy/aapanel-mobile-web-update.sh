@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # One-command updater for the Flutter Web mobile page.
-# This intentionally does not build Flutter on the server. The server only pulls
-# the committed mobile-web-dist artifact and publishes it to /mobile/.
+# The server never builds Flutter: GitHub Actions builds mobile web and publishes it as a
+# release file, and aapanel-publish-mobile-web.sh downloads the build for this checkout.
 
 APP_ROOT="${APP_ROOT:-/www/wwwroot/hukum-ubg.ac.id/projek-pasal}"
 DOMAIN="${DOMAIN:-ubgpasal.ubg.ac.id}"
@@ -45,8 +45,8 @@ else
   log "Skipping git update because SKIP_GIT=1"
 fi
 
-require_file "$APP_ROOT/mobile-web-dist/index.html"
 require_file "$APP_ROOT/deploy/aapanel-publish-mobile-web.sh"
+require_file "$APP_ROOT/deploy/mobile-web-version.sh"
 
 log "Publishing mobile web"
 APP_ROOT="$APP_ROOT" \

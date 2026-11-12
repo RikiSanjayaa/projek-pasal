@@ -39,6 +39,10 @@ check_command "Composer" "$PHP_BIN" "$COMPOSER_BIN" -V
 check_command "Node" node -v
 check_command "NPM" npm -v
 check_command "Git" git --version
+check_command "curl (unduh mobile web)" curl --version
+check_command "tar" tar --version
+check_command "sha256sum" sha256sum --version
+check_command "GitHub Releases" curl -fsSI https://github.com/RikiSanjayaa/projek-pasal/releases
 
 section "PHP Extensions"
 for ext in pdo_pgsql pgsql fileinfo mbstring openssl curl zip xml gd; do
