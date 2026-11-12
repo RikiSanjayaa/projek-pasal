@@ -340,8 +340,8 @@ CI (`.github/workflows/ci.yml`) membangun admin dan mobile web di setiap pull re
 
 ## Deploy aaPanel
 
-Server kampus: ikuti [Panduan Deploy Kampus](docs/PANDUAN_DEPLOY_KAMPUS.md) (update dari server lama,
-Nginx, import data, rollback).
+Server kampus yang masih di versi lama: ikuti [Panduan Update](docs/PANDUAN_UPDATE_AAPANEL.md)
+(backup, Nginx, ganti data hukum, rollback). Instalasi baru: [Deployment](docs/AAPANEL_DEPLOYMENT.md).
 
 Update rutin:
 
@@ -428,9 +428,9 @@ include /www/wwwroot/hukum-ubg.ac.id/projek-pasal/deploy/aapanel-mobile-web.conf
 - [Database Schema](docs/DATABASE.md)
 - [Pipeline data hukum](import-tools/README.md)
 - [Aplikasi mobile](pasal_mobile_app/README.md)
-- [Deploy CariPasal di aaPanel](docs/AAPANEL_DEPLOYMENT.md)
+- [Deployment CariPasal di aaPanel](docs/AAPANEL_DEPLOYMENT.md)
+- [Panduan Update CariPasal di aaPanel](docs/PANDUAN_UPDATE_AAPANEL.md)
 - [Deploy Flutter Web Mobile ke aaPanel](docs/MOBILE_WEB_AAPANEL.md)
-- [Panduan Deploy Kampus (aaPanel)](docs/PANDUAN_DEPLOY_KAMPUS.md)
 - [Smart Search CariPasal](docs/SMART_SEARCH.md)
 - [Catatan Migrasi Historis](docs/LARAVEL_POSTGRESQL_MIGRATION_PLAN.md)
 
