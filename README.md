@@ -340,6 +340,9 @@ CI (`.github/workflows/ci.yml`) membangun admin dan mobile web di setiap pull re
 
 ## Deploy aaPanel
 
+Server kampus: ikuti [Panduan Deploy Kampus](docs/PANDUAN_DEPLOY_KAMPUS.md) (update dari server lama,
+Nginx, import data, rollback).
+
 Update rutin:
 
 ```bash
@@ -360,10 +363,10 @@ Checklist untuk rilis yang membawa verifikasi, riwayat, Sumber Data, dan KUHPerd
 2. Migrasi (`php artisan migrate --force`) sudah dijalankan oleh `deploy/aapanel-deploy.sh`; cek
    outputnya.
 3. Import ulang data KUHP/KUHAP dari `data-import/` lewat Admin > Import Data.
-4. KUHPerdata: buat UU kode `KUHPER` di menu Undang-Undang (isiannya ada di
-   `data-import/kuhper-1847/README_IMPORT.md`), lalu import xlsx-nya. File ini dikirim
-   sebagai satu permintaan sekitar 2,5 MB, jadi `client_max_body_size` Nginx untuk `/api/` minimal
-   20m (sudah ada di `deploy/aapanel-nginx.conf`) dan `post_max_size` PHP minimal 8M.
+4. KUHPerdata: migrasi sudah membuat UU kode `KUHPER` dalam keadaan nonaktif. Aktifkan di menu
+   Undang-Undang, lalu import xlsx-nya. File ini dikirim sebagai satu permintaan sekitar 2,5 MB, jadi
+   `client_max_body_size` Nginx untuk `/api/` minimal 20m (sudah ada di `deploy/aapanel-nginx.conf`)
+   dan `post_max_size` PHP minimal 8M.
 5. Pastikan `APP_LOCALE=id` dan `DATAHUKUM_FETCH_ENABLED=false` di env production.
 6. Bila nanti Sumber Data diaktifkan: pasang Python 3 dan venv dari `import-tools/requirements.txt`,
    isi `IMPORT_PYTHON`, `IMPORT_TOOLS_DIR`, `IMPORT_CACHE_DIR`, lalu jalankan
@@ -426,7 +429,7 @@ include /www/wwwroot/hukum-ubg.ac.id/projek-pasal/deploy/aapanel-mobile-web.conf
 - [Aplikasi mobile](pasal_mobile_app/README.md)
 - [Deploy CariPasal di aaPanel](docs/AAPANEL_DEPLOYMENT.md)
 - [Deploy Flutter Web Mobile ke aaPanel](docs/MOBILE_WEB_AAPANEL.md)
-- [Panduan Admin Kampus untuk Uji Coba Mobile Web](docs/README_ADMIN_KAMPUS_UJI_COBA.md)
+- [Panduan Deploy Kampus (aaPanel)](docs/PANDUAN_DEPLOY_KAMPUS.md)
 - [Smart Search CariPasal](docs/SMART_SEARCH.md)
 - [Catatan Migrasi Historis](docs/LARAVEL_POSTGRESQL_MIGRATION_PLAN.md)
 
