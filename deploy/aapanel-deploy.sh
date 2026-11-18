@@ -23,6 +23,8 @@ HEALTH_URL="${HEALTH_URL:-https://$DOMAIN/api/health}"
 if [[ -z "$COMPOSER_BIN" ]]; then
   if [[ -x /usr/local/bin/composer ]]; then
     COMPOSER_BIN=/usr/local/bin/composer
+  elif command -v composer >/dev/null 2>&1; then
+    COMPOSER_BIN=$(command -v composer)
   elif [[ -x "$HOME/bin/composer" ]]; then
     COMPOSER_BIN="$HOME/bin/composer"
   else

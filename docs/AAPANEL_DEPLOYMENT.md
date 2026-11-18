@@ -133,6 +133,11 @@ bash deploy/aapanel-doctor.sh
 Doctor mengecek PHP, Composer, Node/NPM, Git, extension PHP, fungsi `putenv`/`proc_open`, folder
 writable Laravel, socket PHP-FPM aaPanel di `/tmp`, dan service PHP-FPM. Semua baris harus `[OK]`.
 
+Doctor dan script deploy memakai pencarian Composer yang sama: nilai `COMPOSER_BIN` jika
+diatur, lalu `/usr/local/bin/composer`, Composer di `PATH`, dan `$HOME/bin/composer`.
+Untuk lokasi khusus, gunakan `export COMPOSER_BIN=/path/ke/composer` sebelum menjalankan
+kedua script, tanpa mengedit file di `deploy/`.
+
 ## Deploy
 
 ```bash
