@@ -1,0 +1,20 @@
+# Used by backend-laravel/Dockerfile.production, which builds from the repo root.
+.git
+.github
+admin-dashboard
+pasal_mobile_app
+data-import
+docs
+tests
+deploy
+**/node_modules
+**/vendor
+**/.env
+**/.env.*
+**/__pycache__
+**/*.log
+backend-laravel/storage
+backend-laravel/.phpunit.cache
+backend-laravel/tests
+import-tools/.cache
+import-tools/tests

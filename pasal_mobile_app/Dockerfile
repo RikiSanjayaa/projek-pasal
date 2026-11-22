@@ -51,6 +51,9 @@ RUN set -a && . /tmp/mobile.env && set +a && dart run tool/build_web.dart --rele
 # Stage 2: Serve with Nginx
 FROM nginx:alpine
 
+ARG VCS_REF=dev
+LABEL org.opencontainers.image.revision=$VCS_REF
+
 # Copy custom nginx config
 COPY nginx.conf /etc/nginx/nginx.conf
 

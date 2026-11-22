@@ -1,0 +1,57 @@
+# syntax=docker/dockerfile:1
+
+# Production runtime: PHP-FPM behind deploy/nginx/backend.conf.
+# Build from the repository root so import-tools is available:
+#   docker build -f backend-laravel/Dockerfile.production -t caripasal-app .
+
+FROM php:8.4-fpm-bookworm AS php-build
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends $PHPIZE_DEPS libfreetype6-dev libjpeg62-turbo-dev libpng-dev libicu-dev libzip-dev libpq-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j2 bcmath gd intl pdo_pgsql pgsql zip opcache \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM php:8.4-fpm-bookworm
+
+WORKDIR /var/www/html
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates unzip libfreetype6 libjpeg62-turbo libpng16-16 libicu72 libzip4 libpq5 python3 python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=php-build /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
+COPY --from=php-build /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+COPY import-tools/requirements.txt /opt/import-tools/requirements.txt
+RUN python3 -m venv /opt/import-venv \
+    && /opt/import-venv/bin/pip install --no-cache-dir --prefer-binary -r /opt/import-tools/requirements.txt
+
+COPY --chmod=u=rwX,go=rX import-tools/prepare_import.py import-tools/datahukum_pipeline.py import-tools/source_config.py import-tools/secure_fetch.py import-tools/reviewed_rules.py /opt/import-tools/
+
+ENV IMPORT_TOOLS_DIR=/opt/import-tools \
+    IMPORT_PYTHON=/opt/import-venv/bin/python \
+    IMPORT_CACHE_DIR=/var/www/html/storage/app/import-cache \
+    IMPORT_DOCUMENTS_DIR=/var/www/html/storage/app/private/law-documents
+
+COPY backend-laravel/composer.json backend-laravel/composer.lock ./
+RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader --no-scripts
+
+COPY --chmod=u=rwX,go=rX backend-laravel/ ./
+
+RUN mkdir -p storage/app/public storage/app/import-cache storage/app/private/law-documents storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && composer dump-autoload --no-dev --optimize \
+    && chown root:root . \
+    && chmod 755 . \
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R ug+rwX storage bootstrap/cache
+
+ARG VCS_REF=dev
+LABEL org.opencontainers.image.revision=$VCS_REF
+
+USER www-data
+
+EXPOSE 9000
+
+CMD ["php-fpm", "-F"]
