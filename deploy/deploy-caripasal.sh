@@ -7,10 +7,10 @@ case "$TAG" in
     *) echo "TAG harus diawali sha-<commit>" >&2; exit 2 ;;
 esac
 
-APP_DIR=${DEPLOY_PATH:-/home/aji/deployments/caripasal}
+APP_DIR=${DEPLOY_PATH:-$HOME/deployments/caripasal}
 COMPOSE=compose.production.yml
 IMAGE_PREFIX=${IMAGE_PREFIX:-ghcr.io/rikisanjayaa}
-BACKUP_SCRIPT=${BACKUP_SCRIPT:-/home/aji/deployments/backup-prod.sh}
+BACKUP_SCRIPT=${BACKUP_SCRIPT:-$HOME/deployments/backup-prod.sh}
 ADMIN_PORT=${ADMIN_PORT:-8081}
 MOBILE_PORT=${MOBILE_PORT:-8082}
 cd "$APP_DIR"

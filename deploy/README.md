@@ -23,6 +23,8 @@ deploy/php/production.ini
 
 Isi `app.env` dan `bootstrap.env` tidak masuk git. Salin dari server lama atau buat dari template yang sesuai.
 
+Script deploy default ke `$HOME/deployments/caripasal` dan `$HOME/deployments/backup-prod.sh`. Jika user deploy memakai home lain, letakkan folder deployment dan script backup di bawah home user itu.
+
 ## Deploy
 
 ```bash
