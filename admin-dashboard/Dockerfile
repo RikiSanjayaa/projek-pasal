@@ -12,11 +12,16 @@ RUN npm ci
 # Copy semua source code
 COPY . .
 
-# Build Aplikasi (Jalankan tsc -b && vite build sesuai package.json)
-RUN cp .env.docker .env.production && npm run build
+# Build Aplikasi (Jalankan tsc -b && vite build sesuai package.json).
+# .env.docker bersifat lokal; CI memakai contoh yang di-track.
+RUN if [ -f .env.docker ]; then cp .env.docker .env.production; else cp .env.docker.example .env.production; fi \
+    && npm run build
 
 # --- TAHAP 2: SERVE (NGINX) ---
 FROM nginx:alpine
+
+ARG VCS_REF=dev
+LABEL org.opencontainers.image.revision=$VCS_REF
 
 # Hapus config default
 RUN rm /etc/nginx/conf.d/default.conf
