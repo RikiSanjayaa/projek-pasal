@@ -45,6 +45,41 @@ docker compose -f compose.production.yml exec backend wget -qO- http://127.0.0.1
 
 `backend` hanya mendengarkan di jaringan Docker. Port publik ada di `admin` dan `mobile`.
 
+## Deploy lewat GitHub Actions
+
+Workflow `.github/workflows/deploy.yml` hanya berjalan manual (`workflow_dispatch`). Isi input `tag`, misalnya `sha-27dfcf2`. Workflow tidak membangun image; ia memanggil `deploy/deploy-caripasal.sh` di server.
+
+Script server akan:
+
+1. menyimpan `deploy.env` lama;
+2. menarik image baru;
+3. menjalankan `backup-prod.sh`;
+4. mengganti image di `deploy.env`;
+5. `up -d` dan cek `/api/health`, admin, dan mobile;
+6. rollback ke `deploy.env` lama jika health gagal.
+
+Secret repository atau environment `production`:
+
+| Secret | Isi |
+|---|---|
+| `DEPLOY_HOST` | Hostname atau IP server |
+| `DEPLOY_USER` | User SSH khusus deploy |
+| `DEPLOY_SSH_KEY` | Private key user deploy |
+| `DEPLOY_KNOWN_HOSTS` | Output `ssh-keyscan -H <host>` |
+| `DEPLOY_PORT` | Opsional, default 22 |
+
+Gunakan user deploy khusus dan key khusus. Jangan memakai key pribadi. Aktifkan required reviewer pada environment `production` jika tersedia.
+
+## Test lab
+
+Script lab menjalankan image GHCR yang sama di project Docker terpisah, port `28081` dan `28082`, dengan database kosong, lalu menghapus semuanya:
+
+```bash
+TAG=sha-27dfcf2 ./deploy/lab-caripasal.sh
+```
+
+Script memerlukan Docker dan akses GHCR. Script ini tidak menyentuh volume atau container produksi.
+
 ## Binding port
 
 Default:
@@ -52,6 +87,8 @@ Default:
 ```yaml
 ADMIN_BIND=0.0.0.0
 MOBILE_BIND=0.0.0.0
+ADMIN_PORT=8081
+MOBILE_PORT=8082
 ```
 
 Setelah aaPanel menjadi reverse proxy, ubah menjadi:
