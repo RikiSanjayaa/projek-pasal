@@ -86,7 +86,7 @@ services:
     pull_policy: ${CARIPASAL_PULL_POLICY:-always}
     restart: unless-stopped
     ports:
-      - '${ADMIN_BIND:-0.0.0.0}:8081:80'
+      - '${ADMIN_BIND:-0.0.0.0}:${ADMIN_PORT:-8081}:80'
     depends_on:
       backend:
         condition: service_healthy
@@ -101,7 +101,7 @@ services:
     pull_policy: ${CARIPASAL_PULL_POLICY:-always}
     restart: unless-stopped
     ports:
-      - '${MOBILE_BIND:-0.0.0.0}:8082:80'
+      - '${MOBILE_BIND:-0.0.0.0}:${MOBILE_PORT:-8082}:80'
     depends_on:
       backend:
         condition: service_healthy
