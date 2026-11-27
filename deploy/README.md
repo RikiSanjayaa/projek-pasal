@@ -49,7 +49,14 @@ docker compose -f compose.production.yml exec backend wget -qO- http://127.0.0.1
 
 ## Deploy lewat GitHub Actions
 
-Workflow `.github/workflows/deploy.yml` hanya berjalan manual (`workflow_dispatch`). Isi input `tag`, misalnya `sha-27dfcf2`. Workflow tidak membangun image; ia mengirim satu perintah `deploy caripasal <tag>` ke `deploy/deploy-gateway.sh` di server.
+Workflow `.github/workflows/deploy.yml` berjalan dua cara:
+
+- **Otomatis**: setelah workflow `images` selesai sukses untuk `main`, tag `sha-<7 karakter commit>` langsung dikirim ke server. Artinya merge ke `main` akan men-deploy begitu build image selesai.
+- **Manual**: `workflow_dispatch` dengan input `tag`, misalnya `sha-27dfcf2`. Dipakai untuk rollback ke commit lama atau deploy ulang.
+
+Untuk mematikan deploy otomatis, hapus blok `workflow_run` pada `on:` di file itu; `workflow_dispatch` tetap bekerja.
+
+Workflow tidak membangun image; ia mengirim satu perintah `deploy caripasal <tag>` ke `deploy/deploy-gateway.sh` di server.
 
 Pasang gateway dan script di server:
 
