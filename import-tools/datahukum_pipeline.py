@@ -131,6 +131,8 @@ class LawConfig:
     berlaku_sejak: str = ""  # YYYY-MM-DD, untuk sheet riwayat
     repealed_text: str = REPEALED_TEXT  # isi pasal yang dihapus/dicabut
     mk_notes: dict[str, str] = field(default_factory=dict)
+    # Class penanda anotasi sumber (mis. putusan MK atau tanda tinjauan) yang bukan identitas versi UU.
+    annotation_classes: frozenset[str] = frozenset()
     # (kolom, teks salah, teks benar); skrip berhenti kalau teks salahnya tidak ditemukan.
     text_fixes: dict[str, list[tuple[str, str, str]]] = field(default_factory=dict)
     # Perbaikan pada satu versi rumusan (class versi, kolom, teks salah, teks benar), diterapkan saat
@@ -604,6 +606,8 @@ def parse_datahukum(
     config = replace(config, doc_class=original_identity(soup, config))
     amendments = amendments_from_html(soup, config, warnings) if config.amendments_from_html else config.amendments
     known_classes = {config.doc_class} | {a.doc_class for a in amendments}
+    if config.annotation_classes & known_classes:
+        raise PipelineError("Penanda anotasi versi tidak boleh berupa versi UU.")
     clean = TextCleaner(body.get_text(" "))
     structure = soup.select("div.buku, div.bab, div.bag, div.para")
     # Nested DOM ancestry remains authoritative when source data-parent-id values are malformed.
@@ -644,7 +648,7 @@ def parse_datahukum(
 
         content = pasal.select_one("div.content")
         explanation = pasal.select_one("div.penjelasan")
-        unknown_versions |= (version_classes(content) | version_classes(explanation)) - known_classes
+        unknown_versions |= (version_classes(content) | version_classes(explanation)) - known_classes - config.annotation_classes
         versions = build_versions(nomor, content, explanation, config, amendments, clean)
         if not versions:
             raise PipelineError(f"Pasal {nomor} tidak punya rumusan yang bisa dibaca.")

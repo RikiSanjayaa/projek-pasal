@@ -86,6 +86,17 @@ class DynamicVersionsTest(unittest.TestCase):
         result = self.run_html(html)
         self.assertEqual(result['unknown_versions'], ['uu-unmapped'])
 
+    def test_declared_annotation_class_is_not_reported_as_unknown_version(self):
+        html = FIXTURE.read_text(encoding='utf-8').replace('section class="uu-31945"', 'section class="uu-31945 MK12025 un"', 1)
+        self.assertEqual(self.run_html(html)['unknown_versions'], ['MK12025', 'un'])
+        declared = self.run_html(html, annotation_classes=['MK12025', 'un'])
+        self.assertEqual(declared['unknown_versions'], [])
+
+    def test_annotation_class_cannot_alias_a_known_law_version(self):
+        html = FIXTURE.read_text(encoding='utf-8').replace('section class="uu-31945"', 'section class="uu-31945 uu-21945"', 1)
+        with self.assertRaises(PipelineError):
+            self.run_html(html, annotation_classes=['uu-21945'])
+
     def test_ambiguous_original_identity_requires_explicit_configuration(self):
         html = FIXTURE.read_text(encoding='utf-8').replace('class="uu uu--original uu-01945"', 'class="uu uu--original uu-01945 uu-11945"')
         with self.assertRaises(PipelineError):

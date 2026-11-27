@@ -9,6 +9,11 @@
     "tahun": 2023,
     "datahukum_url": "https://www.datahukum.com/peraturan/UU_1_Tahun_2023.html",
     "doc_class": "uu-12023",
+    "annotation_classes": [
+      "MK2822025",
+      "MK272026",
+      "un"
+    ],
     "bpk_detail_url": "https://peraturan.bpk.go.id/Details/234935/uu-no-1-tahun-2023",
     "bpk_pdf_url": "https://peraturan.bpk.go.id/Download/287456/UU%20Nomor%201%20Tahun%202023.pdf",
     "body_pages": [
@@ -116,8 +121,8 @@
       "90": [
         [
           "isi",
-          "\nKetentuan sebagaimana dimaksud pada ayat (1) huruf b",
-          "\n(2) Ketentuan sebagaimana dimaksud pada ayat (1) huruf b"
+          "paling lama 5 (lima) tahun. Ketentuan sebagaimana dimaksud pada ayat (1) huruf b",
+          "paling lama 5 (lima) tahun.\n(2) Ketentuan sebagaimana dimaksud pada ayat (1) huruf b"
         ],
         [
           "isi",
@@ -231,8 +236,8 @@
         ],
         [
           "isi",
-          "\nCC. ",
-          "\ncc. "
+          "CC. Pasal 37",
+          "cc. Pasal 37"
         ]
       ]
     },
@@ -1001,7 +1006,7 @@
         [
           "uu-192016",
           "isi",
-          "surat elektronik\n!electronic mni9,",
+          "surat elektronik !electronic mni9,",
           "surat elektronik (electronic mail),"
         ],
         [
@@ -1047,12 +1052,6 @@
           "isi",
           "danJ atau",
           "dan/atau"
-        ],
-        [
-          "uu-12024",
-          "penjelasan",
-          "bukti lerkait",
-          "bukti terkait"
         ]
       ],
       "15": [
@@ -1069,18 +1068,6 @@
           "isi",
           "pelindongan",
           "pelindungan"
-        ],
-        [
-          "uu-12024",
-          "penjelasan",
-          "dan fAur yang",
-          "dan fitur yang"
-        ],
-        [
-          "uu-12024",
-          "penjelasan",
-          "maupon psikis",
-          "maupun psikis"
         ]
       ],
       "16B": [
@@ -1113,12 +1100,6 @@
           "isi",
           "Transalxsi",
           "Transaksi"
-        ],
-        [
-          "uu-12024",
-          "penjelasan",
-          "klausola baku",
-          "klausula baku"
         ]
       ],
       "23": [
@@ -1189,20 +1170,6 @@
           "Cukup jelas"
         ]
       ],
-      "40A": [
-        [
-          "uu-12024",
-          "penjelasan",
-          "penambahan fltur",
-          "penambahan fitur"
-        ],
-        [
-          "uu-12024",
-          "penjelasan",
-          "me ujudkan",
-          "mewujudkan"
-        ]
-      ],
       "42": [
         [
           "uu-112008",
@@ -1259,12 +1226,6 @@
         [
           "uu-12024",
           "isi",
-          "(empat) tahon",
-          "(empat) tahun"
-        ],
-        [
-          "uu-12024",
-          "isi",
           "mengyntungkan",
           "menguntungkan"
         ],
@@ -1287,20 +1248,6 @@
           "isi",
           "mengakibatkan kemgian",
           "mengakibatkan kerugian"
-        ],
-        [
-          "uu-12024",
-          "isi",
-          "(3) Setiap Orang yang dengan sengaja dan tanpa hak mendistribusikan",
-          "(2) Setiap Orang yang dengan sengaja dan tanpa hak mendistribusikan"
-        ]
-      ],
-      "45B": [
-        [
-          "uu-192016",
-          "penjelasan",
-          "!cyber btt!Iying) yang mengandurig susar ancaman kekerasan atau meriakut-nakuti",
-          "(cyber bullying) yang mengandung unsur ancaman kekerasan atau menakut-nakuti"
         ]
       ]
     },
