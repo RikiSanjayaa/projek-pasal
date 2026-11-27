@@ -65,6 +65,12 @@ def load_config(path: Path) -> LawConfig:
                 raise PipelineError('Rentang halaman PDF tidak valid.')
             value[key] = tuple(pair)
         value['amendments'] = tuple(amendment(a) for a in value.get('amendments', []))
+        annotation_classes = value.get('annotation_classes', [])
+        if not isinstance(annotation_classes, list) or any(
+            not isinstance(name, str) or not re.fullmatch(r'[A-Za-z0-9-]+', name) for name in annotation_classes
+        ):
+            raise PipelineError('Penanda anotasi versi tidak valid.')
+        value['annotation_classes'] = frozenset(annotation_classes)
         overrides = {}
         for key, raw in value.get('amendment_overrides', {}).items():
             # Overrides have the same fields as Amendment except identity may come from HTML.
