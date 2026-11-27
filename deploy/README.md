@@ -91,12 +91,39 @@ ADMIN_PORT=8081
 MOBILE_PORT=8082
 ```
 
-Setelah aaPanel menjadi reverse proxy, ubah menjadi:
+Setelah aaPanel menjadi reverse proxy dan routing hostname berhasil diuji, simpan binding di `deploy.env` agar tetap berlaku pada deploy berikutnya:
+
+```dotenv
+ADMIN_BIND=127.0.0.1
+MOBILE_BIND=127.0.0.1
+```
+
+Terapkan hanya ke frontend tanpa menjalankan ulang init, migrasi, atau seeder:
 
 ```bash
-export ADMIN_BIND=127.0.0.1
-export MOBILE_BIND=127.0.0.1
+docker compose --env-file deploy.env -f compose.production.yml up -d --no-deps --no-build --pull never admin mobile
 ```
+
+Vhost aaPanel kampus memakai `admin-caripasal.ubg.ac.id` ke `http://127.0.0.1:8081` dan `caripasal.ubg.ac.id` ke `http://127.0.0.1:8082`. Verifikasi API melalui nginx lokal, bukan hanya langsung ke port Docker:
+
+```bash
+curl -f -H 'Host: admin-caripasal.ubg.ac.id' http://127.0.0.1/api/health
+curl -f -H 'Host: caripasal.ubg.ac.id' http://127.0.0.1/api/health
+```
+
+Routing HTTP origin tidak memerlukan sertifikat. SSL dan akses melalui Cloudflare harus diuji terpisah setelah dikonfigurasi admin kampus.
+
+### HTTPS dan PWA kampus
+
+Pemeriksaan 23 November 2026: `APP_URL` backend memakai `https://admin-caripasal.ubg.ac.id`, cookie sesi memakai `Secure`, dan port admin/mobile tetap terikat ke `127.0.0.1:8081` serta `127.0.0.1:8082`. TLS berakhir di aaPanel; upstream Docker tetap HTTP loopback.
+
+Origin `https://caripasal.ubg.ac.id` berhasil merender halaman login Flutter. Manifest sama dengan `https://app-caripasal.sanjaya.uk/manifest.json`, termasuk `display: standalone` dan ikon 192/512. Service worker `/caripasal-sw.js` aktif; pemeriksaan Chrome `Page.getAppManifest` dan `Page.getInstallabilityErrors` tidak mengembalikan error. Ini membuktikan kesiapan origin, bukan pemasangan pada ponsel pengguna.
+
+Pemeriksaan respons penolakan publik membuktikan Cloudflare mengirim Challenge Page untuk `/manifest.json`: HTTP 403, `cf-mitigated: challenge`, `content-type: text/html`, dan judul `Just a moment...`. Ray ID pemeriksaan adalah `a5ecb1ac0be092f2-SIN` pada 23 November 2026, 02:20:19 UTC. Ini bukan penolakan manifest oleh kode Flutter. Identifikasi Service/Rule pemicu melalui Security Events sebelum membuat pengecualian; jangan menonaktifkan seluruh proteksi situs atau autentikasi API.
+
+Koreksi laporan pengguna: pengujian mobile yang sebelumnya dianggap berhasil ternyata membuka URL homelab, bukan kampus. Desktop kampus bekerja, tetapi pemasangan PWA mobile kampus masih terbuka; console pengguna menunjukkan fetch manifest 403. Kesiapan origin tidak membuktikan jalur publik sudah dapat mengambil manifest.
+
+Admin/pengguna melaporkan Force HTTPS sudah dikerjakan. Konfirmasi ini berasal dari pengguna, bukan pengujian ulang redirect atau pembacaan mode SSL Cloudflare dalam sesi ini. Pertahankan upstream loopback di atas.
 
 ## Rollback
 
