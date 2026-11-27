@@ -18,10 +18,10 @@ fi
 
 case "${app:-}" in
     caripasal)
-        exec /home/aji/deployments/caripasal/deploy/deploy-caripasal.sh "$tag"
+        exec env TAG="$tag" /home/aji/deployments/caripasal/deploy/deploy-caripasal.sh
         ;;
     sita)
-        exec /home/aji/deployments/sita/deploy-sita.sh "$tag"
+        exec env TAG="$tag" /home/aji/deployments/sita/deploy-sita.sh
         ;;
     *)
         echo "ditolak: app tidak dikenal" >&2
