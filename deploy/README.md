@@ -49,9 +49,22 @@ docker compose -f compose.production.yml exec backend wget -qO- http://127.0.0.1
 
 ## Deploy lewat GitHub Actions
 
-Workflow `.github/workflows/deploy.yml` hanya berjalan manual (`workflow_dispatch`). Isi input `tag`, misalnya `sha-27dfcf2`. Workflow tidak membangun image; ia memanggil `deploy/deploy-caripasal.sh` di server.
+Workflow `.github/workflows/deploy.yml` hanya berjalan manual (`workflow_dispatch`). Isi input `tag`, misalnya `sha-27dfcf2`. Workflow tidak membangun image; ia mengirim satu perintah `deploy caripasal <tag>` ke `deploy/deploy-gateway.sh` di server.
 
-Script server akan:
+Pasang gateway dan script di server:
+
+```text
+~/deployments/deploy-gateway.sh                     0755
+~/deployments/caripasal/deploy/deploy-caripasal.sh  0755
+```
+
+Izinkan key deploy hanya untuk perintah itu, bukan shell bebas. Baris di `~/.ssh/authorized_keys` milik user deploy:
+
+```text
+restrict,command="/home/<deploy-user>/deployments/deploy-gateway.sh" ssh-ed25519 AAAA... github-actions-deploy
+```
+
+Gateway menolak segalanya kecuali `deploy <caripasal|sita> sha-<hex>`, lalu menjalankan script dengan `TAG` di environment. Script server akan:
 
 1. menyimpan `deploy.env` lama;
 2. menarik image baru;

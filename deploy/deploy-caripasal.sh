@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${TAG:?TAG wajib diisi, contoh sha-27dfcf2}"
+TAG=${1:-${TAG:-}}
 case "$TAG" in
     sha-[0-9a-f]*) ;;
-    *) echo "TAG harus diawali sha-<commit>" >&2; exit 2 ;;
+    *) echo "TAG wajib, contoh: sha-27dfcf2" >&2; exit 2 ;;
 esac
 
 APP_DIR=${DEPLOY_PATH:-$HOME/deployments/caripasal}
